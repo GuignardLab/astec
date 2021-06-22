@@ -1,5 +1,4 @@
 import os
-import imp
 import sys
 import copy
 import operator
@@ -8,8 +7,8 @@ import numpy as np
 
 from scipy.stats.stats import pearsonr
 
-from astec.utils import common
-import properties
+import astec.utils.common as common
+import astec.algorithms.properties as properties
 from astec.components.spatial_image import SpatialImage
 from astec.io.image import imread, imsave
 from astec.wrapping import cpp_wrapping
@@ -281,7 +280,7 @@ class PostCorrectionParameters(common.PrefixedParameter):
             print("Error: '" + parameter_file + "' is not a valid file. Exiting.")
             sys.exit(1)
 
-        parameters = imp.load_source('*', parameter_file)
+        parameters = common.load_source(parameter_file)
         self.update_from_parameters(parameters)
 
 

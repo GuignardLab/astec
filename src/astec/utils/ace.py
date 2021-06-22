@@ -1,7 +1,6 @@
 
 import os
 import sys
-import imp
 import operator
 import multiprocessing
 
@@ -279,7 +278,7 @@ class AceParameters(common.PrefixedParameter):
             print("Error: '" + parameter_file + "' is not a valid file. Exiting.")
             sys.exit(1)
 
-        parameters = imp.load_source('*', parameter_file)
+        parameters = common.load_source(parameter_file)
         self.update_from_parameters(parameters)
 
     ############################################################

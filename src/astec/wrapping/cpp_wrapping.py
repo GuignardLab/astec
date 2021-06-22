@@ -351,9 +351,9 @@ def mc_seed_edit(the_seeds, res_seeds, fusion_file=None, seeds_file=None, other_
 
     command_line = path_to_exec + " " + the_seeds
     command_line += " " + res_seeds
-    if fusion_file is not None and fusion_file is not '':
+    if fusion_file is not None and fusion_file != '':
         command_line += " -fusion " + fusion_file
-    if seeds_file is not None and seeds_file is not '':
+    if seeds_file is not None and seeds_file != '':
         command_line += " -seeds " + seeds_file
 
     if other_options is not None:

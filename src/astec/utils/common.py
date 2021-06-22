@@ -1,7 +1,7 @@
 
 import os
 import sys
-import imp
+import importlib
 import re
 import time
 import subprocess
@@ -777,24 +777,24 @@ class RawdataChannel(PrefixedParameter):
     ############################################################
 
     def get_angle_path(self, angle_id):
-        if angle_id is 0:
+        if angle_id == 0:
             return os.path.join(self._parent_directory, self._main_directory, self.angle0_sub_directory)
-        elif angle_id is 1:
+        elif angle_id == 1:
             return os.path.join(self._parent_directory, self._main_directory, self.angle1_sub_directory)
-        elif angle_id is 2:
+        elif angle_id == 2:
             return os.path.join(self._parent_directory, self._main_directory, self.angle2_sub_directory)
-        elif angle_id is 3:
+        elif angle_id == 3:
             return os.path.join(self._parent_directory, self._main_directory, self.angle3_sub_directory)
         return None
 
     def get_image_name(self, angle_id, time_value):
-        if angle_id is 0:
+        if angle_id == 0:
             return self._angle0_file_prefix + self.timepoint_to_str(time_value)
-        elif angle_id is 1:
+        elif angle_id == 1:
             return self._angle1_file_prefix + self.timepoint_to_str(time_value)
-        elif angle_id is 2:
+        elif angle_id == 2:
             return self._angle2_file_prefix + self.timepoint_to_str(time_value)
-        elif angle_id is 3:
+        elif angle_id == 3:
             return self._angle3_file_prefix + self.timepoint_to_str(time_value)
         return None
 
@@ -1984,12 +1984,12 @@ class Experiment(PrefixedParameter):
 
     def _embryo_name_from_embryo_path(self):
         sp = self._embryo_path.split(os.path.sep)
-        if len(sp) is 0:
+        if len(sp) == 0:
             return
-        if sp[-1] is not '':
+        if sp[-1] != '':
             self._set_embryo_name(sp[-1])
             return
-        if len(sp) >= 2 and sp[-2] is not '':
+        if len(sp) >= 2 and sp[-2] != '':
             self._set_embryo_name(sp[-2])
             return
         return
@@ -2020,7 +2020,7 @@ class Experiment(PrefixedParameter):
             print("\t Exiting.")
             sys.exit(1)
 
-        parameters = imp.load_source('*', parameter_file)
+        parameters = load_source(parameter_file)
 
         self._update_embryo_path_from_parameters(parameters)
         self._update_embryo_name_from_parameters(parameters)
@@ -2244,7 +2244,7 @@ class Experiment(PrefixedParameter):
 
     def _fix_fusion_directories(self):
         n_channels = self.rawdata_dir.get_number_channels()
-        if n_channels is 1:
+        if n_channels == 1:
             return
         n_dirs = self.fusion_dir.get_number_directories()
         if n_dirs >= n_channels:
@@ -2254,7 +2254,7 @@ class Experiment(PrefixedParameter):
         new_dir_suffix = []
         if type(dir_suffix) is str:
             for c in range(n_channels):
-                if c is 0:
+                if c == 0:
                     new_dir_suffix.append(dir_suffix)
                 else:
                     new_dir_suffix.append(dir_suffix + "_CHANNEL_" + str(c+1))
@@ -2497,7 +2497,7 @@ class RegistrationParameters(PrefixedParameter):
             print("Error: '" + parameter_file + "' is not a valid file. Exiting.")
             sys.exit(1)
 
-        parameters = imp.load_source('*', parameter_file)
+        parameters = load_source(parameter_file)
         self.update_from_parameters(parameters)
 
     ############################################################
@@ -2582,7 +2582,7 @@ def get_parameter_file(parameter_file):
     if parameter_file is not None and os.path.isfile(parameter_file):
         return parameter_file
     new_parameter_file = input('   Provide the parameter file: ')
-    if new_parameter_file is None or new_parameter_file is '':
+    if new_parameter_file is None or new_parameter_file == '':
         print("getParameterFile: no parameter file. Exiting.")
         sys.exit(1)
     if not os.path.isfile(new_parameter_file):
@@ -2888,6 +2888,21 @@ def find_file(data_path, file_prefix, file_type=None, callfrom=None, local_monit
         # return None
 
     return filenames[0]
+
+
+def load_source(path):
+    proc = "load_source"
+    if path is None:
+        return None
+    if not os.path.isfile(path):
+        print(proc + ": '" + path + "' is not a valid file.")
+        print("\t Exiting.")
+        sys.exit(1)
+
+    spec = importlib.util.spec_from_file_location('parameters', path)
+    parameters = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(parameters)
+    return parameters
 
 
 #

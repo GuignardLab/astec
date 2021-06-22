@@ -1,13 +1,12 @@
 
 import os
-import imp
 import sys
 import time
 import numpy as np
 from scipy import ndimage as nd
 
 from astec.utils import common
-import ace
+from astec.utils import ace
 from astec.utils import reconstruction
 from astec.components.spatial_image import SpatialImage
 from astec.io.image import imread, imsave
@@ -125,7 +124,7 @@ class WatershedParameters(common.PrefixedParameter):
             print("Error: '" + parameter_file + "' is not a valid file. Exiting.")
             sys.exit(1)
 
-        parameters = imp.load_source('*', parameter_file)
+        parameters = common.load_source(parameter_file)
         self.update_from_parameters(parameters)
 
 
@@ -231,7 +230,7 @@ class SeedEditionParameters(common.PrefixedParameter):
             print("Error: '" + parameter_file + "' is not a valid file. Exiting.")
             sys.exit(1)
 
-        parameters = imp.load_source('*', parameter_file)
+        parameters = common.load_source(parameter_file)
         self.update_from_parameters(parameters)
 
     ############################################################
@@ -440,7 +439,7 @@ class MarsParameters(WatershedParameters, SeedEditionParameters):
             print("Error: '" + parameter_file + "' is not a valid file. Exiting.")
             sys.exit(1)
 
-        parameters = imp.load_source('*', parameter_file)
+        parameters = common.load_source(parameter_file)
         self.update_from_parameters(parameters)
 
 
@@ -479,11 +478,11 @@ def build_seeds(input_image, difference_image, output_seed_image, experiment, pa
         monitoring.to_log_and_console(proc + ": bad type for 'parameters' parameter", 1)
         sys.exit(1)
 
-    if operation_type.lower() is 'min' and input_image is None:
+    if operation_type.lower() == 'min' and input_image is None:
         monitoring.to_log_and_console(proc + ": null input image for h-min computation", 1)
         sys.exit(1)
 
-    if operation_type.lower() is 'max' and difference_image is None:
+    if operation_type.lower() == 'max' and difference_image is None:
         monitoring.to_log_and_console(proc + ": null difference image for h-max computation", 1)
         sys.exit(1)
 
@@ -603,7 +602,7 @@ def build_seeds(input_image, difference_image, output_seed_image, experiment, pa
         indexmax = [i for i, j in enumerate(volumes) if j == max(volumes)]
         if len(indexmax) > 1:
             monitoring.to_log_and_console("       several regional extrema have a maximal count", 2)
-        if int(labels[indexmax[0]]) is not 1:
+        if int(labels[indexmax[0]]) != 1:
             monitoring.to_log_and_console("       relabel seed #" + str(labels[indexmax[0]]) + " into 1 (background)", 2)
             newlabel = max(labels) + 1
             seeds[seeds == 1] = newlabel

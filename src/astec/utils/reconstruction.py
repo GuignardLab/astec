@@ -1,10 +1,9 @@
 import os
-import imp
 import sys
 
 import astec.utils.common as common
-import astec.algorithms.ace as ace
-from astec.wrapping.cpp_wrapping as cpp_wrapping
+import astec.utils.ace as ace
+import astec.wrapping.cpp_wrapping as cpp_wrapping
 
 monitoring = common.Monitoring()
 
@@ -338,7 +337,7 @@ class ReconstructionParameters(ace.AceParameters):
             print("Error: '" + parameter_file + "' is not a valid file. Exiting.")
             sys.exit(1)
 
-        parameters = imp.load_source('*', parameter_file)
+        parameters = common.load_source(parameter_file)
         self.update_from_parameters(parameters)
 
     ############################################################

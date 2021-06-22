@@ -1,15 +1,13 @@
 import os
-import imp
 import sys
 import copy
 import collections
 import numpy as np
 import random
 import math
-import operator
 
-from astec.utils import common
-import properties
+import astec.utils.common as common
+import astec.algorithms.properties as properties
 
 #
 #
@@ -132,7 +130,7 @@ class NamingParameters(common.PrefixedParameter):
             print("Error: '" + parameter_file + "' is not a valid file. Exiting.")
             sys.exit(1)
 
-        parameters = imp.load_source('*', parameter_file)
+        parameters = common.load_source(parameter_file)
         self.update_from_parameters(parameters)
 
 
@@ -251,11 +249,11 @@ def diagnosis(prop, time_digits_for_cell_id=4, verbose=True):
     name = prop['cell_name']
     contact = prop['cell_contact_surface']
 
-    reverse_lineage = {v: k for k, values in lineage.iteritems() for v in values}
+    reverse_lineage = {v: k for k, values in lineage.items() for v in values}
 
     div = 10 ** time_digits_for_cell_id
 
-    cells = list(set(lineage.keys()).union(set([v for values in lineage.values() for v in values])))
+    cells = list(set(lineage.keys()).union(set([v for values in list(lineage.values()) for v in values])))
     cells = sorted(cells)
 
     cells_per_time = {}
@@ -367,13 +365,13 @@ def diagnosis(prop, time_digits_for_cell_id=4, verbose=True):
         monitoring.to_log_and_console("\t   #cells at last time = " +
                                       str(len(cells_per_time[max(cells_per_time.keys())])))
         # compte le nombre de noms
-        monitoring.to_log_and_console("\t - names in lineage = " + str(len(collections.Counter(name.keys()).keys())))
+        monitoring.to_log_and_console("\t - names in lineage = " + str(len(list(collections.Counter(list(name.keys())).keys()))))
 
         for t in names_per_time:
             multiples = {k: names_per_time[t].count(k) for k in set(names_per_time[t]) if names_per_time[t].count(k) > 1}
             if multiples != {}:
                 monitoring.to_log_and_console("\t - there are " + str(len(multiples)) + " repeated names at time " + str(t))
-                for n, p in multiples.iteritems():
+                for n, p in multiples.items():
                     monitoring.to_log_and_console("\t   " + str(n) + " is repeated " + str(p) + " times ")
 
         if error_name != {}:
@@ -423,7 +421,7 @@ def _build_test_set(prop, time_digits_for_cell_id=4, ncells=64):
     # get cells to count cells per time point
     #
     lineage = returned_prop['cell_lineage']
-    cells = list(set(lineage.keys()).union(set([v for values in lineage.values() for v in values])))
+    cells = list(set(lineage.keys()).union(set([v for values in list(lineage.values()) for v in values])))
     cells = sorted(cells)
 
     div = 10 ** time_digits_for_cell_id
@@ -454,7 +452,7 @@ def _build_test_set(prop, time_digits_for_cell_id=4, ncells=64):
 
     monitoring.to_log_and_console(str(proc) + ": rename from time point " + str(draw))
 
-    cells = returned_prop['cell_name'].keys()
+    cells = list(returned_prop['cell_name'].keys())
     for c in cells:
         if int(c) // div != draw:
             del returned_prop['cell_name'][c]
@@ -633,7 +631,7 @@ def _add_neighborhoods(previous_neighborhoods, prop, reference_name, time_digits
     # remove empty names
     # leading or trailing spaces
     #
-    cells = prop['cell_name'].keys()
+    cells = list(prop['cell_name'].keys())
     for c in cells:
         if prop['cell_name'][c] == '':
             del prop['cell_name'][c]
@@ -650,7 +648,7 @@ def _add_neighborhoods(previous_neighborhoods, prop, reference_name, time_digits
     #
     # get the daughter cells just after division
     #
-    reverse_lineage = {v: k for k, values in lineage.iteritems() for v in values}
+    reverse_lineage = {v: k for k, values in lineage.items() for v in values}
     daughters = [lineage[c][0] for c in lineage if len(lineage[c]) == 2]
     daughters += [lineage[c][1] for c in lineage if len(lineage[c]) == 2]
 
@@ -780,7 +778,7 @@ def build_neighborhoods(referenceFiles, time_digits_for_cell_id, add_symmetric_n
 def _build_common_contact_surfaces(tmp0, tmp1, vect0, vect1):
     if tmp1 == {}:
         return tmp0, tmp1, vect0, vect1
-    names1 = tmp1.keys()
+    names1 = list(tmp1.keys())
     for n1 in names1:
         # the name could have been deleted at case 2
         if n1 not in tmp1:
@@ -922,7 +920,7 @@ def _ci_one_division(neighborhoods, mother):
         if len(newscore) == 0:
             return corrections
         elif len(newscore) == 1:
-            ref = newscore.keys()[0]
+            ref = list(newscore.keys())[0]
         else:
             ref = max(newscore, key=lambda key: newscore[key])
         corrections[i] = (ref, newscore[ref]-score)
@@ -1165,7 +1163,7 @@ def _networkx_neighborhood_consistency(neighborhoods, min_discrepancy=0):
     percents = []
     for mother_name in mother_names:
         percents.append(100.0 * float(len(discrepancy[mother_name])) / float(tested_couples[mother_name]))
-    [sorted_percents, sorted_mothers] = zip(*sorted(zip(percents, mother_names), reverse=True))
+    [sorted_percents, sorted_mothers] = list(zip(*sorted(zip(percents, mother_names), reverse=True)))
 
     f = open("networkx_figure" + '.py', "w")
 
@@ -1331,7 +1329,7 @@ def _write_neighborhood_consistency(txt, mother_names, references, tested_couple
     percents = []
     for mother_name in mother_names:
         percents.append(100.0 * float(len(discrepancy[mother_name])) / float(tested_couples[mother_name]))
-    [sorted_percents, sorted_mothers] = zip(*sorted(zip(percents, mother_names), reverse=True))
+    [sorted_percents, sorted_mothers] = list(zip(*sorted(zip(percents, mother_names), reverse=True)))
 
     msg = "\n*** " + str(txt) + " = " + str(len(mother_names))
     monitoring.to_log_and_console(msg)
@@ -1694,8 +1692,8 @@ def _old_analyse_scores(scores):
     # cell ids
     # cell name candidates
     # reference names
-    ids = scores.keys()
-    candidates = scores[ids[0]].keys()
+    ids = list(scores.keys())
+    candidates = list(scores[ids[0]].keys())
     references = set(scores[ids[0]][candidates[0]].keys()).intersection(set(scores[ids[0]][candidates[1]].keys()),
                                                                         set(scores[ids[1]][candidates[0]].keys()),
                                                                         set(scores[ids[1]][candidates[1]].keys()))
@@ -1767,8 +1765,8 @@ def _old_analyse_scores_2021_05_18(scores, debug=False):
     # cell ids
     # cell name candidates
     # reference names
-    ids = scores.keys()
-    candidates = scores[ids[0]].keys()
+    ids = list(scores.keys())
+    candidates = list(scores[ids[0]].keys())
     #
     # selection des references qui ont les 2 voisinages
     #
@@ -1879,8 +1877,8 @@ def _analyse_scores_2021_05_25(scores, debug=False):
     # cell ids
     # cell name candidates
     # reference names
-    ids = scores.keys()
-    candidates = scores[ids[0]].keys()
+    ids = list(scores.keys())
+    candidates = list(scores[ids[0]].keys())
     #
     # selection des references qui ont les 2 voisinages
     #
@@ -2011,8 +2009,8 @@ def _analyse_scores(scores, debug=False):
     # cell ids
     # cell name candidates
     # reference names
-    ids = scores.keys()
-    candidates = scores[ids[0]].keys()
+    ids = list(scores.keys())
+    candidates = list(scores[ids[0]].keys())
     #
     # selection des references qui ont les 2 voisinages
     #
@@ -2172,7 +2170,7 @@ def _propagate_naming(prop, neighborhoods, time_digits_for_cell_id=4):
     # remove empty names
     # leading or trailing spaces
     #
-    cells = prop['cell_name'].keys()
+    cells = list(prop['cell_name'].keys())
     for c in cells:
         if prop['cell_name'][c] == '':
             del prop['cell_name'][c]
@@ -2189,8 +2187,8 @@ def _propagate_naming(prop, neighborhoods, time_digits_for_cell_id=4):
     #
     #
     #
-    reverse_lineage = {v: k for k, values in lineage.iteritems() for v in values}
-    cells = list(set(lineage.keys()).union(set([v for values in lineage.values() for v in values])))
+    reverse_lineage = {v: k for k, values in lineage.items() for v in values}
+    cells = list(set(lineage.keys()).union(set([v for values in list(lineage.values()) for v in values])))
 
     #
     #
@@ -2358,7 +2356,7 @@ def _propagate_naming(prop, neighborhoods, time_digits_for_cell_id=4):
         # here we have a dictionary of divisions to be named (key = mother id, value = array of sister ids)
         #
         if True:
-            for mother, daughters in division_to_be_named.iteritems():
+            for mother, daughters in division_to_be_named.items():
                 debug = prop['cell_name'][mother] in debug_cells
                 #
                 # scores is a dictionary of dictionary
@@ -2457,7 +2455,7 @@ def naming_process(experiment, parameters):
         sys.exit(1)
 
     # clean from empty names
-    cells = prop['cell_name'].keys()
+    cells = list(prop['cell_name'].keys())
     for c in cells:
         if prop['cell_name'][c] == '':
             del prop['cell_name'][c]

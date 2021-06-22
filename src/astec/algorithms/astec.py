@@ -1,6 +1,5 @@
 
 import os
-import imp
 import sys
 import shutil
 import time
@@ -9,11 +8,11 @@ import numpy as np
 from scipy import ndimage as nd
 import copy
 
-from astec.utils import common
-import ace
-import mars
-from astec.utils import reconstruction
-import properties
+import astec.utils.common as common
+import astec.utils.ace as ace
+import astec.algorithms.mars as mars
+import astec.utils.reconstruction as reconstruction
+import astec.algorithms.properties as properties
 from astec.utils import morphsnakes
 from astec.components.spatial_image import SpatialImage
 from astec.io.image import imread, imsave
@@ -184,7 +183,7 @@ class MorphoSnakeParameters(common.PrefixedParameter):
             print("Error: '" + parameter_file + "' is not a valid file. Exiting.")
             sys.exit(1)
 
-        parameters = imp.load_source('*', parameter_file)
+        parameters = common.load_source(parameter_file)
         self.update_from_parameters(parameters)
 
 
@@ -597,7 +596,7 @@ class AstecParameters(mars.WatershedParameters, MorphoSnakeParameters):
             print("Error: '" + parameter_file + "' is not a valid file. Exiting.")
             sys.exit(1)
 
-        parameters = imp.load_source('*', parameter_file)
+        parameters = common.load_source(parameter_file)
         self.update_from_parameters(parameters)
 
 
@@ -1882,7 +1881,7 @@ def _volume_decrease_correction(astec_name, previous_segmentation, segmentation_
                 monitoring.to_log_and_console('          .. (8)  cell ' + str(mother_c) + ': weird, has found '
                                               + str(n_found_seeds) + " seeds instead of 3", 2)
         else:
-            if s[0] is 0 and s[-1] is 0:
+            if s[0] == 0 and s[-1] == 0:
                 monitoring.to_log_and_console('          .. (9a) cell ' + str(mother_c) +
                                               ': no h-minima found, no correction ', 2)
             elif s[0] > 4 and s[-1] > 4:
@@ -2613,7 +2612,7 @@ def astec_process(previous_time, current_time, lineage_tree_information, experim
     #
     monitoring.to_log_and_console('    watershed from previous segmentation', 2)
 
-    if parameters.propagation_strategy is 'seeds_from_previous_segmentation':
+    if parameters.propagation_strategy == 'seeds_from_previous_segmentation':
         segmentation_from_previous = astec_image
     else:
         segmentation_from_previous = common.add_suffix(astec_name, '_watershed_from_previous',
@@ -2631,7 +2630,7 @@ def astec_process(previous_time, current_time, lineage_tree_information, experim
     # we're done. Update the properties
     #
 
-    if parameters.propagation_strategy is 'seeds_from_previous_segmentation':
+    if parameters.propagation_strategy == 'seeds_from_previous_segmentation':
         #
         # update volumes and lineage
         #
@@ -2769,7 +2768,7 @@ def astec_process(previous_time, current_time, lineage_tree_information, experim
 
     monitoring.to_log_and_console('    watershed from selection of seeds', 2)
 
-    if parameters.propagation_strategy is 'seeds_selection_without_correction':
+    if parameters.propagation_strategy == 'seeds_selection_without_correction':
         segmentation_from_selection = astec_image
     else:
         segmentation_from_selection = common.add_suffix(astec_name, '_watershed_from_selection',
@@ -2784,7 +2783,7 @@ def astec_process(previous_time, current_time, lineage_tree_information, experim
     # we're done. Update the properties
     #
 
-    if parameters.propagation_strategy is 'seeds_selection_without_correction':
+    if parameters.propagation_strategy == 'seeds_selection_without_correction':
         #
         # update volumes and lineage
         #

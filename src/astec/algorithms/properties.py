@@ -1,6 +1,5 @@
 
 import os
-import imp
 import sys
 
 import pickle as pkl
@@ -60,7 +59,7 @@ class CellPropertiesParameters(object):
             print("Error: '" + parameter_file + "' is not a valid file. Exiting.")
             sys.exit(1)
 
-        parameters = imp.load_source('*', parameter_file)
+        parameters = common.load_source(parameter_file)
 
         if hasattr(parameters, 'properties_nb_proc'):
             if parameters.properties_nb_proc is not None:

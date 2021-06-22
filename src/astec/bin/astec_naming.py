@@ -30,7 +30,7 @@ def _set_options(my_parser):
     """
     proc = "_set_options"
     if not isinstance(my_parser, ArgumentParser):
-        print proc + ": argument is not of type ArgumentParser"
+        print(proc + ": argument is not of type ArgumentParser")
         return
     #
     # common parameters
