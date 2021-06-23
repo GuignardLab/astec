@@ -28,3 +28,29 @@ anaconda_master :
     - conda_build
   only:
   - master
+
+pages:
+  stage: deploy
+  script:
+  - conda env create -f ./pkg/env/astec-dev.yaml
+  - source activate astec-dev
+  - python -m pip install .
+  - cd doc
+  - make clean && make html
+  - mv build/html ../public
+  retry:
+    max: 2
+    when: runner_system_failure
+  artifacts:
+    expire_in: 1 hour
+    paths:
+    - public
+  dependencies: []
+  rules:
+      - if: '$CI_COMMIT_BRANCH == "feature*"'
+        when: manual
+      - if: '$CI_COMMIT_BRANCH == "develop"'
+        when: manual
+      - if: '$CI_COMMIT_BRANCH == "master"'
+        when: on_success
+
