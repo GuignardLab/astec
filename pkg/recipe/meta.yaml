@@ -26,5 +26,5 @@ requirements:
     - python  >=3.7
     - vt
     - numpy
-    - tiffile
+    - tifffile
     - h5py
