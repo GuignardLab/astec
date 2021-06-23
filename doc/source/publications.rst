@@ -1,0 +1,6 @@
+Publications & bibliography
+===========================
+
+.. bibliography::
+   :all:
+

@@ -10,3 +10,6 @@ dependencies:
   - scipy
   - h5py
   - tifffile
+  - sphinx
+  - sphinxcontrib-bibtex
+  - markupsafe <2.0
