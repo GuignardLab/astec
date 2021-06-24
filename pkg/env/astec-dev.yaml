@@ -9,6 +9,7 @@ dependencies:
   - numpy
   - scipy
   - h5py
+  - nibabel
   - tifffile
   - sphinx
   - sphinxcontrib-bibtex

@@ -1,0 +1,7 @@
+numpy~=1.20.2
+h5py~=3.2.1
+astec~=0.0.1
+nibabel~=3.2.1
+tifffile~=2021.4.8
+scipy~=1.6.2
+setuptools~=52.0.0

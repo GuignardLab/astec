@@ -8,7 +8,6 @@ from scipy import ndimage as nd
 from astec.utils import common
 from astec.utils import ace
 from astec.utils import reconstruction
-from astec.components.spatial_image import SpatialImage
 from astec.io.image import imread, imsave
 from astec.wrapping import cpp_wrapping
 

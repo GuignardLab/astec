@@ -5,6 +5,7 @@ from astec.components.spatial_image import SpatialImage
 from astec.io.format.h5 import read_h5
 from astec.io.format.inrimage import read_inrimage, write_inrimage
 from astec.io.format.metaimage import read_metaimage, write_metaimage
+from astec.io.format.nii import read_nii, write_nii
 from astec.io.format.tif import read_tif, write_tif
 
 def imread(filename):
@@ -50,6 +51,8 @@ def imread(filename):
         return read_tif(filename)
     elif ext in [".h5", ".hdf5"]:
         return read_h5(filename)
+    elif ext in [".nii"]:
+        return read_nii(filename)
     else:
         raise IOError("Such image extension not handled yet: %s" % filename)
 
@@ -91,5 +94,7 @@ def imsave(filename, img):
         write_metaimage(filename, img)
     elif ext in [".tiff", ".tif"]:
         write_tif(filename, img)
+    elif ext in [".nii"]:
+        write_nii(filename, img)
     else:
         raise IOError("Such image extension not handled yet: %s" % filename)
