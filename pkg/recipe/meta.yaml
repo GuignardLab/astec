@@ -1,0 +1,30 @@
+package:
+  name: astec
+  version: {{ GIT_DESCRIBE_TAG }}
+
+source:
+  path: ../../
+
+build:
+  number: 0
+
+about:
+  home: https://team.inria.fr/morpheme
+  license: GPL
+  license_file: ../../LICENSE.txt
+  summary: ASTEC package
+  dev_url: https://gitlab.inria.fr/astec/astec
+  doc_source_url: https://astec.gitlabpages.inria.fr/astec
+
+requirements:
+  build:
+    - setuptools
+    - python  >=3.7
+  host:
+    - python  >=3.7
+  run:
+    - python  >=3.7
+    - vt
+    - numpy
+    - tifffile
+    - h5py
