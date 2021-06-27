@@ -1,0 +1,466 @@
+\documentclass{article}
+\usepackage{fullpage}
+\usepackage{amsfonts}
+\usepackage[usenames,dvipsnames]{xcolor}
+\usepackage[linesnumbered,boxed]{algorithm2e}
+\def \mycolor {red}
+
+\newenvironment{remarque}{\color{red}\begin{description}\item[Rq:]}
+{\end{description}\color{black}}
+
+\begin{document}
+
+\subsection{Nomenclature}
+
+\begin{itemize}
+\item $S^{\star}_t$ segmentation de $I_{t}$, suppos\'ee correcte
+\item $\tilde{S}_{t+1}$ segmentation de $I_{t+1}$ avec la segmentation projet\'ee de $I_{t}$ (les graines sont les cellules \'erod\'ees de $S^{\star}_t$ projet\'ees sur $I_{t+1}$).
+\item $Seeds_{t+1}$ image des graines obtenues par s\'election \`a partir de plusieurs images de $h$-minima
+\item $\hat{S}_{t+1}$ segmentation de $I_{t+1}$ \`a partir de $Seeds_{t+1}$
+\end{itemize}
+
+
+\subsection{\texttt{\_cell\_based\_h\_minima()}}
+
+On calcule plusieurs images de $h$-minima r\'egionaux $Seeds^{h}_{t+1}$, avec $h \in [h_{min}, h_{max}]$. On calcule d'abord une image de minima qui contient des minima de hauteur comprise entre 1 et $h$, et on ne s\'electionne que les minima de hauteur $h$ avec un seuillage par hyst\'er\'esis. 
+
+On ne conserve que les minima qui sont enti\`erement inclus dans une seule cellule de $\tilde{S}_{t+1}$. On \'elimine donc les graines qui chevauchent plusieurs cellules. 
+\begin{remarque}
+De telles graines renseigneraient pourtant sur le contraste entre 2 cellules adjacentes (sous l'hypoth\`ese que les fronti\`eres des cellules dans $\tilde{S}_{t+1}$ soient correctement localis\'ees).
+\end{remarque}
+\begin{remarque}
+Dans \texttt{ASTEC/ASTEC.py}, le calcul de ces $h$-minima \'etait fait dans \verb|get_seeds()|, mais la v\'erification que ces graines \'etaient effectivement incluses dans les cellules de $\tilde{S}_{t+1}$ \'etait faite dans \verb|get_seeds_from_optimized_parameters()|, soit apr\`es l'appel \`a \verb|get_back_parameters()|. 
+Potentiellement des graines s\'electionn\'ees dans \verb|get_back_parameters()| pouvaient donc \^etre \'elimin\'ees dans \verb|get_seeds_from_optimized_parameters()|.
+\end{remarque}
+
+\subsection{\texttt{\_select\_seed\_parameters()}}
+
+\begin{verbatim}
+    for c, s in n_seeds.iteritems():
+        nb_2 = np.sum(np.array(s) == 2)
+        nb_3 = np.sum(np.array(s) >= 2)
+        score = nb_2*nb_3
+        if (s.count(1) or s.count(2)) != 0:
+            if score >= tau:
+                #
+                # obviously s.count(2) != 0
+                # the largest h that gives 2 seeds is kept
+                #
+                h, sigma = parameter_seeds[c][np.where(np.array(s) == 2)[0][0]]
+                nb_final = 2
+            elif s.count(1) != 0:
+                #
+                # score < tau and s.count(1) != 0
+                # the largest h that gives 1 seeds is kept
+                #
+                h, sigma = parameter_seeds[c][np.where(np.array(s) == 1)[0][0]]
+                nb_final = 1
+            else:
+                #
+                # score < tau and s.count(1) == 0 then obviously s.count(2)) != 0
+                # the largest h that gives 1 seeds is kept
+                #
+                h, sigma = parameter_seeds[c][np.where(np.array(s) == 2)[0][0]]
+                nb_final = 2
+            selected_parameter_seeds[c] = [h, sigma, nb_final]
+        #
+        # s.count(1) == 0 and  s.count(2) == 0
+        #
+        elif s.count(3) != 0:
+            h, sigma = parameter_seeds[c][s.index(3)]
+            selected_parameter_seeds[c] = [h, sigma, 3]
+        else:
+            unseeded_cells.append(c)
+            selected_parameter_seeds[c] = [0, 0, 0]
+    return selected_parameter_seeds, unseeded_cells
+\end{verbatim}
+
+\color{\mycolor}
+Cette fonction est l'\'equivalent de \verb|get_back_parameters()|  dans \verb|ASTEC.py|.
+
+\begin{itemize}
+\itemsep -0.5ex
+\item On a $h_{min}=4$, $h_{max}=18$ et on parcourt les $h$ avec un pas  $\delta h$ de 2. L'ensemble des $h$ test\'es n'est $[h_{min}, h_{max}] \subset \mathbb{N}$ mais $\{4, 6, 8, 10, 12, 14, 16, 18\}$.
+\item On calcule $NB_2$ par \verb|nb_2=np.sum(np.array(s)==2)|, c'est le nombre de $h$ qui donnent 2 graines. Elle d\'epend donc de $\delta h$
+\item On calcule $NB_3$ par \verb|nb_3=np.sum(np.array(s)>=2)|, c'est le nombre de $h$ qui donnent 2 graines ou plus. Elle d\'epend aussi de $\delta h$. On a \'evidemment $NB_3 \geq NB_2$
+\end{itemize}
+
+La r\`egle impl\'ement\'ee est 
+\begin{enumerate}
+\itemsep -0.5ex
+\item S'il existe des $h$ donnant 1 ou 2 graines (la question de la division se pose donc)
+\begin{enumerate}
+\itemsep -0.5ex
+\item si le score $s(c) = NB_2 \cdot NB_3 \geq \tau$, alors on garde 2 graines. Comme $\tau = 25$, cela signifie que s'il y a au moins 5 valeurs de $h$ qui donnent 2 graines, alors on divisera la cellule.
+\item sinon ($s(c) = NB_2 \cdot NB_3 <\tau$) et il existe des $h$ donnant 1 graine, alors on garde une graine
+\item sinon ($s(c) = NB_2 \cdot NB_3 <\tau$ et il n'existe pas de $h$ donnant 1 graine) on garde 2 graines [ce cas doit difficilement survenir, il faut que beaucoup de $h$ ne donnent aucune graine, puis que les suivants donnent au moins 2 graines].
+\end{enumerate}
+\item sinon (il n'existe pas de $h$ donnant 1 ou 2 graines) et il existe des $h$ donnant 3 graines, alors on garde 3 graines.
+\begin{remarque}
+Toutefois, dans la fonction \verb|get_seeds_from_optimized_parameters()| (dans \verb|ASTEC.py| ou \verb|_build_seeds_from_selected_parameters()| dans \verb|astecnew.py|)
+cr\'eant l'image des graines num\'erot\'ees \`a partir des diff\'erentes images de $h$-minima, on ne r\'ecup\`ere que les deux premi\`eres composantes num\'erot\'ees \ldots On cr\'ee donc une division, avec un choix artificiel/al\'eatoire des cellules filles.
+
+[A CORRIGER ?! par exemple en fusionnant 2 des 3 graines]
+
+\end{remarque}
+
+\item sinon  (il n'existe pas de $h$ donnant 1 ou 2 ou 3 graines), on dit qu'il n'y a pas de graines
+\begin{remarque}
+Pourquoi ne pas consid\'erer le cas 3 graines comme le cas 4 graines ?
+\end{remarque}
+\end{enumerate}
+On r\'ecup\`ere le premier $h$ donnant le nombre choisi de graines. Comme les $h$ sont parcourus par ordre d\'ecroissant, c'est donc le plus grand $h$ donnant ce nombre de graines qui est retenu.
+\color{black}
+
+
+\subsection{\texttt{\_volume\_checking()}}
+
+\color{black}
+\begin{verbatim}
+[...]
+    output = _volume_diagnosis(prev_volumes, curr_volumes, correspondences, parameters)
+    large_volume_ratio, small_volume_ratio, small_volume_daughter, all_daughter_label = output
+[...]
+    seed_label_max = max(all_daughter_label)
+[...]
+    has_change_happened = False
+    labels_to_be_fused = []
+[...]
+    if len(small_volume_ratio) > 0:
+[...]
+    for mother_c in small_volume_ratio:
+[...]
+        s = n_seeds[mother_c]
+[...]
+        nb_2 = np.sum(np.array(s) == 2)
+        nb_3 = np.sum(np.array(s) >= 2)
+        score = nb_2 * nb_3
+
+        if s.count(1) > 0 or s.count(2) > 0:
+            if score >= parameters.seed_selection_tau:
+                nb_final = 2
+            elif s.count(1) != 0:
+                nb_final = 1
+            else:
+                nb_final = 2
+[...]
+            if nb_final == 1 and s.count(2) != 0:
+                h_min, sigma = parameter_seeds[mother_c][s.index(2)]
+                seed_image_name = common.add_suffix(membrane_image, "_seed_h" + str('{:03d}'.format(h_min)),
+[...]
+                bb = bounding_boxes[mother_c]
+                submask_mother_c = np.zeros_like(prev_seg[bb])
+                submask_mother_c[prev_seg[bb] == mother_c] = mother_c
+                n_found_seeds, labeled_found_seeds = _extract_seeds(mother_c, submask_mother_c, seed_image_name, bb)
+                if n_found_seeds == 2:
+                    new_correspondences = [seed_label_max+1, seed_label_max+2]
+[...]
+                    selected_seeds_image[selected_seeds_image == correspondences[mother_c][0]] = 0
+                    selected_seeds_image[bb][labeled_found_seeds == 1] = seed_label_max + 1
+                    selected_seeds_image[bb][labeled_found_seeds == 2] = seed_label_max + 2
+                    correspondences[mother_c] = new_correspondences
+[...]
+            elif (nb_final == 1 or nb_final == 2) and (np.array(s) > 2).any():
+[...]
+                h_min, sigma = parameter_seeds[mother_c][-1]
+                seed_image_name = common.add_suffix(membrane_image, "_seed_h" + str('{:03d}'.format(h_min)),
+[...]
+                bb = bounding_boxes[mother_c]
+                submask_daughter_c = np.zeros_like(curr_seg[bb])
+                for daughter_c in correspondences[mother_c]:
+                    submask_daughter_c[curr_seg[bb] == daughter_c] = mother_c
+                submask_mother_c = np.zeros_like(prev_seg[bb])
+                submask_mother_c[prev_seg[bb] == mother_c] = mother_c
+                aux_seed_image = imread(seed_image_name)
+                seeds_c = np.zeros_like(curr_seg[bb])
+                seeds_c[(aux_seed_image[bb] != 0) & (submask_daughter_c == mother_c)] = 1
+                seeds_c[(aux_seed_image[bb] != 0) & (submask_daughter_c == 0) & (submask_mother_c == mother_c)] = 2
+[...]
+                if 2 in seeds_c:
+                    new_correspondences = [seed_label_max + 1, seed_label_max + 2]
+[...]
+                    for daughter_c in correspondences[mother_c]:
+                        selected_seeds_image[selected_seeds_image == daughter_c] = 0
+                    selected_seeds_image[bb][seeds_c == 1] = seed_label_max + 1
+                    selected_seeds_image[bb][seeds_c == 2] = seed_label_max + 2
+                    correspondences[mother_c] = new_correspondences
+                    selected_parameter_seeds[mother_c] = [h_min, sigma, 2]
+                    seed_label_max += 2
+                    has_change_happened = True
+[...]
+            elif nb_final == 1:
+[...]
+                selected_seeds_image[selected_seeds_image == correspondences[mother_c][0]] = 0
+                selected_seeds_image[deformed_seeds_image == mother_c] = correspondences[mother_c]
+                selected_parameter_seeds[mother_c] = [-1, -1, 1]
+                has_change_happened = True
+[...]
+        elif s.count(3) != 0:
+[...]
+            h_min, sigma = parameter_seeds[mother_c][s.index(3)]
+            seed_image_name = common.add_suffix(membrane_image, "_seed_h" + str('{:03d}'.format(h_min)),
+[...]
+            bb = bounding_boxes[mother_c]
+            submask_mother_c = np.zeros_like(prev_seg[bb])
+            submask_mother_c[prev_seg[bb] == mother_c] = mother_c
+            n_found_seeds, labeled_found_seeds = _extract_seeds(mother_c, submask_mother_c, seed_image_name, bb,
+                                                                accept_3_seeds=True)
+            if n_found_seeds == 3:
+                new_correspondences = [seed_label_max + 1, seed_label_max + 2, seed_label_max + 3]
+[...]
+                for daughter_c in correspondences[mother_c]:
+                    selected_seeds_image[selected_seeds_image == daughter_c] = 0
+                selected_seeds_image[bb][labeled_found_seeds == 1] = seed_label_max + 1
+                selected_seeds_image[bb][labeled_found_seeds == 2] = seed_label_max + 2
+                selected_seeds_image[bb][labeled_found_seeds == 3] = seed_label_max + 3
+                correspondences[mother_c] = new_correspondences
+                selected_parameter_seeds[mother_c] = [h_min, sigma, n_found_seeds]
+                seed_label_max += 3
+                has_change_happened = True
+                labels_to_be_fused.append(new_correspondences)
+[...]
+        else:
+            monitoring.to_log_and_console('        .. (8) cell ' + str(mother_c) + ': detected seed numbers wrt h was '
+                                          + str(s), 2)
+[...]
+
+    if len(large_volume_ratio) > 0:
+        monitoring.to_log_and_console('      cell(s) with large increase of volume are not processed (yet)', 2)
+
+[...]
+
+    if len(small_volume_daughter) > 0:
+        monitoring.to_log_and_console('      process cell(s) with too small daughters', 2)
+        for mother_c, daughter_c in small_volume_daughter:
+            selected_seeds_image[selected_seeds_image == daughter_c] = 0
+            daughters_c = correspondences[mother_c]
+            daughters_c.remove(daughter_c)
+            if daughters_c:
+                correspondences[mother_c] = daughters_c
+            else:
+                correspondences.pop(mother_c)
+        has_change_happened = True
+[...]
+\end{verbatim}
+
+\color{\mycolor}
+On traite les cellules (m\`eres) ayant eu une forte diminution de volume.
+
+La r\`egle impl\'ement\'ee est 
+\begin{enumerate}
+\itemsep -0.5ex
+\item S'il existe des $h$ donnant 1 ou 2 graines (les tests suivants sont identiques \`a ceux de \verb|_select_seed_parameters()|)
+\begin{enumerate}
+\itemsep -0.5ex
+\item si le score $s(c) = NB_2 \cdot NB_3 \geq \tau$, alors on garde 2 graines. Comme $\tau = 25$, cela signifie que s'il y a au moins 5 valeurs de $h$ qui donnent 2 graines, alors on divisera la cellule ($N_{daughter}=2$).
+\item sinon ($s(c) = NB_2 \cdot NB_3 <\tau$) et il existe des $h$ donnant 1 graine, alors on garde une graine ($N_{daughter}=1$)
+\item sinon ($s(c) = NB_2 \cdot NB_3 <\tau$ et il n'existe pas de $h$ donnant 1 graine) on garde 2 graines [ce cas doit difficilement survenir, il faut que beaucoup de $h$ ne donnent aucune graine, puis que les suivants donnent au moins 2 graines] ($N_{daughter}=2$).
+\end{enumerate}
+
+On fait ensuite les op\'erations suivantes
+\begin{enumerate}
+\itemsep -0.5ex
+\item Si $N_{daughter}=1$ et qu'il existe un $h$ donnant 2 graines, on prend les $h$-minima pour le plus grand $h$ donnant 2 graines, et on recup\`ere ces 2 graines.
+\begin{remarque} [Question pour Leo] on cr\'ee donc une division l\`a o \`u on n'en voulait pas ?!
+\end{remarque}
+\item sinon si $N_{daughter}=1$ ou $N_{daughter}=2$ et qu'il existe un $h$ donnant plus de 2 graines, on prend les $h$-minima pour le plus petit $h$ (c-\`a-d $h_{min}$).
+Les graines dans $\tilde{S}_{t+1}(mother) \cap \bigcup S(daugther)$, c-\`a-d les graines \`a la fois dans la segmentation construite avec les \'erod\'es des cellules m\`eres et la segmentation courante sont \'etiquet\'ees 1, tandis que celles uniquement dans $\tilde{S}_{t+1}(mother)$ (donc pas dans la segmentation courante $\bigcup S(daugther)$ sont \'etiquet\'ees 2. Potentiellement, ces graines \`a '2' permettent de r\'ecup\'erer de la mati\`ere pour les filles, donc de r\'eduire la diminution de volumes.
+S'il y a effectivement des '2',
+avec ces '1' et ces '2', on cr\'ee 2 graines pour la segmentation, donc on force $N_{daughter}=2$.
+\begin{remarque} [Question pour Leo] 1) on cr\'ee donc une division l\`a o\`u on n'en voulait pas ?! 2) Pourquoi ne pas avoir v\'erifi\'e, dans le cas pr\'ec\'edent, qu'il y avait bien des nouvelles graines donnant potentiellement plus de mati\`ere ?!
+\end{remarque}
+\item sinon si $N_{daughter}=1$ (il n'y a pas de $h$ donnant plus de une graine), on r\'ecup\`ere la graine \'erod\'ee de $\tilde{S}_{t+1}(mother)$
+\end{enumerate}
+
+\item sinon  (il n'existe pas de $h$ donnant 1 ou 2 ou 3 graines). Cela peut arriver si la cellule fille avait d\'ej\`a \'et\'e cr\'e\'ee gr\^ace \`a l'\'erod\'e de la cellule m\`ere,
+
+\end{enumerate}
+
+
+\color{black}
+
+
+\subsection{\texttt{astec\_process()}}
+\color{black}
+\begin{verbatim}
+[...]
+    membrane_image = reconstruction.build_membrane_image(current_time, experiment, parameters,
+                                                         previous_time=previous_time)
+[...]
+\end{verbatim}
+\color{\mycolor}
+Reconstruction d'une image de membrane 
+(\verb|reconstruction.build_membrane_image()|), typiquement appel au rehaussement de membrane et fusion avec l'image originale.
+
+\color{black}
+\begin{verbatim}
+[...]
+    previous_segmentation = experiment.get_segmentation_image(previous_time)
+[...]
+    undeformed_seeds = common.add_suffix(previous_segmentation, '_undeformed_seeds_from_previous',
+                                         new_dirname=experiment.astec_dir.get_tmp_directory(),
+                                         new_extension=experiment.default_image_suffix)
+    _build_seeds_from_previous_segmentation(previous_segmentation, undeformed_seeds, parameters)
+    deformed_seeds = common.add_suffix(previous_segmentation, '_deformed_seeds_from_previous',
+                                       new_dirname=experiment.astec_dir.get_tmp_directory(),
+                                       new_extension=experiment.default_image_suffix)
+    deformation = reconstruction.get_deformation_from_current_to_previous(current_time, experiment,
+                                                                          parameters, previous_time)
+    cpp_wrapping.apply_transformation(undeformed_seeds, deformed_seeds, deformation,
+                                      interpolation_mode='nearest', monitoring=monitoring)
+[...]
+    if parameters.propagation_strategy is 'seeds_from_previous_segmentation':
+        segmentation_from_previous = astec_image
+    else:
+        segmentation_from_previous = common.add_suffix(membrane_image, '_watershed_from_previous',
+                                                       new_dirname=experiment.astec_dir.get_tmp_directory(),
+                                                       new_extension=experiment.default_image_suffix)
+    mars.watershed(deformed_seeds, membrane_image, segmentation_from_previous, experiment, parameters)
+[...]
+\end{verbatim}
+\color{\mycolor}
+Calcul de $\tilde{S}_{t+1}$, c'est-\`a-dire une estimation de la segmentation de $I_{t+1}$ \` partir de celle de $I_{t}$, sans division cellulaire
+\begin{enumerate}
+\itemsep -0.5ex
+\item Les cellules de $S^{\star}_{t}$ sont \'erod\'ees pour former l'image de graines $S^{e}_{t}$ (\verb|undeformed_seeds|)
+\begin{remarque}
+L'\'erosion se fait en 26-connexit\'e, avec un nombre d'it\'erations diff\'erent pour les cellules (10) et le fond (25)). 
+\end{remarque}
+\item Cette image de graines est transform\'ee vers $I_{t+1}$
+pour donner $S^{e}_{t+1 \leftarrow t}$ (\verb|deformed_seeds|)
+\begin{displaymath}
+S^{e}_{t+1 \leftarrow t} = S^{e}_{t} \circ \mathcal{T}_{t \leftarrow t+1}
+\end{displaymath}
+\item On r\'ealise une ligne de partage des eaux pour obtenir l'image $\tilde{S}_{t+1}$ (\verb|segmentation_from_previous|). 
+\end{enumerate}
+
+\color{black}
+\begin{verbatim}
+[...]
+    n_seeds, parameter_seeds = _cell_based_h_minima(segmentation_from_previous, cells, bounding_boxes, membrane_image,
+                                                    experiment, parameters)
+[...]
+    selected_parameter_seeds, unseeded_cells = _select_seed_parameters(n_seeds, parameter_seeds,
+[...]
+    selected_seeds = common.add_suffix(membrane_image, '_seeds_from_selection',
+                                       new_dirname=experiment.astec_dir.get_tmp_directory(),
+                                       new_extension=experiment.default_image_suffix)
+
+    output = _build_seeds_from_selected_parameters(selected_parameter_seeds, segmentation_from_previous, deformed_seeds,
+                                                   selected_seeds, cells, unseeded_cells, bounding_boxes,
+                                                   membrane_image, experiment, parameters)
+
+    label_max, correspondences, divided_cells = output
+[...]
+    segmentation_from_selection = common.add_suffix(membrane_image, '_watershed_from_selection',
+                                                    new_dirname=experiment.astec_dir.get_tmp_directory(),
+                                                    new_extension=experiment.default_image_suffix)
+    mars.watershed(selected_seeds, membrane_image, segmentation_from_selection, experiment, parameters)
+\end{verbatim}
+\color{\mycolor}
+\begin{enumerate}
+\itemsep -0.5ex
+\item \verb|_cell_based_h_minima()| calcule, pour chaque cellule de $\tilde{S}_{t+1}$, le nombre de $h$-minima (les graines) pour un ensemble de valeurs de $h$.
+
+\item \verb|_select_seed_parameters()| calcule, pour chaque cellule de $\tilde{S}_{t+1}$, le nombre de graines qui sera retenu (et donc un $h$ optimal). Ce nombre peut varier de 0 \`a 3. 
+
+\item \verb|_build_seeds_from_selected_parameters()| cr\'ee l'image des graines $Seeds_{t+1}$ \`a partir des $h$ s\'electionn\'es auparavant. Ajoute aussi une graine pour le fond.
+
+\item \verb|mars.watershed()| r\'ealise une segmentation de $I_{t+1}$ \`a partir de $Seeds_{t+1}$. Cette segmentation est not\'ee $\hat{S}_{t+1}$.
+
+\end{enumerate}
+
+\color{black}
+
+
+
+
+
+
+
+
+
+
+
+
+
+\pagebreak
+
+
+
+
+
+\begin{itemize}
+
+\item reconstruction d'une image de membrane 
+(\verb|reconstruction.build_membrane_image()|)
+
+\item calcul de $\tilde{S}_{t+1}$, c'est-\`a-dire la segmentation $S^{\star}_{t}$ d\'eform\'ee \`a $t+1$ 
+\begin{displaymath}
+\tilde{S}_{t+1} = S^{\star}_{t} \circ \mathcal{T}_{t \leftarrow t+1}
+\end{displaymath}
+
+\item calcul des images de graines $\mathrm{Seeds}^{h}_{t+1}$ pour $h \in [h_{min}, h_{max}]$ (\verb|_cell_based_h_minima()|)
+
+\item s\'election des param\`etres, ie du nombre de graines pour chaque cellule "m\`ere" (\verb|_select_seed_parameters()|)
+
+\end{itemize}
+
+
+
+
+
+\section{Segmentation de l'image \`a $t+1$}
+
+\subsection{$h$-minima}
+
+On calcule plusieurs images de $h$-minima r\'egionaux $Seeds^{h}_{t+1}$, avec $h \in [h_{min}, h_{max}]$. On calcule d'abord une image de minima qui contient des minima de hauteur comprise entre 1 et $h$, et on ne s\'electionne que les minima de hauteur $h$ avec un seuillage par hyst\'er\'esis. 
+
+On ne conserve que les minima qui sont enti\`erement inclus dans une seule cellule de $\tilde{S}_{t+1}$. On \'elimine donc les graines qui chevauchent plusieurs cellules. 
+\begin{remarque}
+De telles graines renseigneraient pourtant sur le contraste entre 2 cellules adjacentes (sous l'hypoth\`ese que les fronti\`eres des cellules dans $\tilde{S}_{t+1}$ soient correctement localis\'ees).
+\end{remarque}
+
+
+
+
+\subsection{\texttt{get\_seeds\_from\_optimized\_parameters()}}
+
+La fonction \verb|get_seeds_from_optimized_parameters()| (dans \verb|ASTEC.py| ou \verb|_build_seeds_from_selected_parameters()| dans \verb|astecnew.py|) construit une image de graines \`a partir des param\`etres retenus dans \verb|get_back_parameters()|.
+
+\begin{itemize}
+\item 1 graine: on r\'ecup\`ere la graine dans $Seeds^{h}_{t+1}$ pour la cellule $c$
+
+\item 2 graines: on r\'ecup\`ere les 2 graines dans  $Seeds^{h}_{t+1}$ pour la cellule $c$
+
+\item 3 graines: on ne r\'ecup\`ere que 2 graines (les deux premi\`eres num\'erot\'ees) dans  $Seeds^{h}_{t+1}$ pour la cellule $c$.
+\begin{remarque}
+Ce comportement doit \^etre corrig\'e.
+\end{remarque}
+
+\item 0 graine: on regarde si le volume de la cellule $c$ (dans $\tilde{S}_{t+1}$) est suffisamment grand (sup\'erieur \`a 100). 
+Si oui, on r\'ecup\`ere alors la graine correspondante dans $S^e_{t+1 \leftarrow t} = S^e_t \circ \mathcal{T}_{t \leftarrow t+1}$ (cellules de $S^{\star}_t$ \'erod\'ees (10 it\'erations en 26-connexit\'e) puis transform\'ees).
+\begin{remarque}
+Il y a ici une potentielle fin de lin\'eage.
+\end{remarque}
+
+\item fond: on r\'ecup\`ere toutes les graines de $Seeds^{h_{min}}_{t+1}$ qui correspondent \`a la cellule $1$ (le fond). 
+
+\end{itemize}
+
+On 
+
+
+\subsection{\texttt{volume\_checking()}}
+
+Cherche \`a corriger des erreurs d\'etect\'ees par des changements de volume trop importants.
+
+Pour une cellule $c^{t}\_i$
+
+
+\cite{guignard:tel-01278725}
+
+\bibliographystyle{unsrt}
+\bibliography{bib-astec}
+
+\end{document}

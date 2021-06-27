@@ -1,0 +1,16 @@
+name: astec-dev
+channels:
+  - defaults
+  - conda-forge
+  - morpheme
+dependencies:
+  - vt
+  - python >=3.7
+  - numpy
+  - scipy
+  - h5py
+  - nibabel
+  - tifffile
+  - sphinx
+  - sphinxcontrib-bibtex
+  - markupsafe <2.0

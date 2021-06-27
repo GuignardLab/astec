@@ -1,0 +1,159 @@
+\chapter{User guide: command line interfaces}
+\label{chap:clis}
+
+The Astec distribution contains 4 sub-directories
+
+\mbox{}
+\dirtree{%
+.1 path/to/astec/.
+.2 documentation/.
+.2 src/.
+.2 tutorial/.
+}
+\mbox{}
+
+\begin{itemize}
+\itemsep -0.5ex
+\item \texttt{documentation/} contains this documentation
+\item \texttt{src/} contains the command line interfaces (CLIs)  and the code.
+\item \texttt{tutorial/} contains a tutorial (see chap. \ref{chap:tutorial}) along with a toy example.
+\end{itemize}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+%
+%
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\section{Data organization}
+
+It is assumed that there will be one directory per experiment. This
+directory contains the acquired data, but will also contain the result
+data as depicted below. See section \ref{sec:cli:parameters:data} for more details.
+
+\mbox{}
+\dirtree{%
+.1 /path/to/experiment/.
+.2 RAWDATA/.
+.3 \ldots.
+.2 FUSE/.
+.3 \ldots.
+.2 SEG/.
+.3 \ldots.
+.2 POST/.
+.3 \ldots .
+}
+\mbox{}
+
+\texttt{RAWDATA/} is assumed to contain the raw data (ie acquired
+images from the MuViSPIM microscope), while the other subdirectories
+will contain processing results.
+
+
+\section{Command line interfaces common options}
+\label{sec:cli:common}
+
+\begin{description}
+  \itemsep -0.5ex
+\item[\texttt{-h, --help}] \mbox{}\\
+  prints a help message
+\item[\texttt{-p \underline{file}, --parameters \underline{file}}] \mbox{}\\\
+  set the parameter file to be parsed
+\item[\texttt{-e \underline{path}, --embryo-rep \underline{path}}] \mbox{}\\\
+  set the
+  \texttt{\underline{path}} to the directory where the
+  \texttt{RAWDATA/} directory is located.
+  Can also be given in the parameter file by the variable \texttt{PATH\_EMBRYO}.
+\item[\texttt{-k, --keep-temporary-files}] \mbox{}\\\
+  allows to keep the temporary files. Not to be routinely used.
+\item[\texttt{-f, --force}] \mbox{}\\\
+  forces execution, even if (temporary) result files
+  are already existing
+\item[\texttt{-v, --verbose}] \mbox{}\\\
+  increases verboseness (both at console and in the log file)
+\item[\texttt{-nv, --no-verbose}] \mbox{}\\\
+  no verboseness
+\item[\texttt{-d, --debug }] \mbox{}\\\
+  increases debug information (in the log file)
+\item[\texttt{-nd, --no-debug}] \mbox{}\\\
+  no debug information
+\item[\texttt{-pp, --print-param}] \mbox{}\\\
+  print parameters in console and exit. A parameter file has to be provided (\texttt{-p} option). Allows to check the parameters that will be used before any processing; it is also a means to have access to the whole parameter list. 
+\end{description}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% 1-fuse.py
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\input{astec-cli-1-fuse}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% 1.5-intraregistration.py
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\input{astec-cli-1-5-intraregistration}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% 2-mars.py
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\input{astec-cli-2-mars}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  3-manualcorrection.py
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\input{astec-cli-3-manualcorrection.tex}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% 4-astec.py
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\input{astec-cli-4-astec}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% 5-postcorrection.py
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\input{astec-cli-5-postcorrection}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% X-embryoproperties.py
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\input{astec-cli-X-embryproperties.tex}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% input segmentation
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\input{astec-cli-input-segmentation}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% parameters
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\input{astec-cli-parameters}

@@ -1,0 +1,51 @@
+\documentclass{report}
+\usepackage{fullpage}
+\usepackage{url}
+\usepackage{gensymb}
+\usepackage{framed}
+\usepackage{dirtree}
+\usepackage{amssymb}
+\usepackage{graphicx}
+%\usepackage[squaren,Gray]{SIunits}
+\usepackage{sistyle}
+
+\setcounter{secnumdepth}{4}
+
+\newenvironment{attention}{\begin{description}\item[{[\textsc{Pay attention}]}]}{\end{description}}
+
+\newenvironment{note}{\begin{description}\item[{[\textsc{Note:}]}]}{\end{description}}
+
+\newcommand{\option}[1]{{\texttt{'#1'}}}
+
+\newenvironment{code}[1]{\mbox{}\\[1ex]\hspace*{-#1cm}\begin{minipage}{150mm}\begin{quote}\tt}{\end{quote}\end{minipage}\mbox{}\\[1ex]}
+
+
+
+\bibliographystyle{alpha}
+
+
+
+\begin{document}
+
+\title{ASTEC: adaptive segmentation and tracking of embryonic cells}
+\author{}
+\date{January, 2020}
+\maketitle
+
+\setcounter{tocdepth}{3}
+\tableofcontents
+
+\input{astec-installation.tex}
+
+% \input{astec-overview.tex}
+
+\input{astec-tutorial.tex}
+
+\input{astec-clis.tex}
+
+
+
+
+\bibliography{bib-astec}
+
+\end{document}

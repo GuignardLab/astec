@@ -1,0 +1,3 @@
+
+convert -crop 640x187+30+46 figures-input-segmentation/Diapositive1.png build-input-segmentation.png
+

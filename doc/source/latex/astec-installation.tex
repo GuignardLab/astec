@@ -1,0 +1,132 @@
+
+\chapter{Installation}
+
+ASTEC (acronym of ``adaptive segmentation and tracking of embryonic
+cells'' \cite{guignard:tel-01278725}) has been designed for unix-like
+systems (e.g. Linux, or MacOS).
+%
+It has been developed with \texttt{python2.7} and was not tested for
+\texttt{python3.0}.
+%
+It is a set of \texttt{python} scripts, built over a set of \texttt{C} commands.
+
+
+There are two distributions. The first one can be retrieved from
+\url{github.com/astec-segmentation/astec-2019-published} and includes
+both the \texttt{python} and the \texttt{C} codes. The installation
+procedure is dedicated to this distribution.
+
+The second one is devoluted to more advanced users that may want to
+benefit from future developements of the ASTEC distribution:
+\begin{itemize}
+\itemsep -0.5ex
+\item \texttt{python} scripts can be retrieved from
+  \url{github.com/astec-segmentation/astec}
+\item \texttt{C} code can be retrieved from
+  \url{gitlab.inria.fr/morpheme/vt}
+\item optional third-party librairies can be retrieved from  \url{gitlab.inria.fr/morpheme/vt-third-party}
+\end{itemize}  
+
+Both \url{github.com/astec-segmentation/astec-2019-published} and
+\url{github.com/astec-segmentation/astec} contains the following 4
+sub-directories
+
+\mbox{}
+\dirtree{%
+.1 astec[-2019-published/].
+.2  documentation/.
+.2 src/.
+.2 tutorial/.
+}
+\mbox{}
+
+\begin{itemize}
+\itemsep -0.5ex
+\item \texttt{documentation/} contains this documentation.
+\item \texttt{src/} contains the \texttt{python} scripts and files (as
+  well as the \texttt{C} codes for the \texttt{astec-2019-published} distribution).
+\item \texttt{tutorial/} contains a toy data set and the associated
+  parameter files. See chapter \ref{chap:tutorial}.
+\end{itemize}  
+
+
+\section{\texttt{github.com/astec-segmentation/astec}}
+
+\subsection{Linux system}
+
+This section describes the required command to install the ASTEC
+distribution on a Linux system (was tested on a Ubuntu system
+(18.04.2, 64 bits) installed on a virtual
+machine\footnote{\url{virtualbox.org}}) so the tutorial (chapter \ref{chap:tutorial}) can be run.
+
+\begin{enumerate}
+% \itemsep -0.5ex
+\item Get the distribution. It is recommended (but not necessary) to
+  use \texttt{git}, so keeping up to date with the distribution will
+  be easier.   \texttt{git} can be installed with
+  \begin{code}{0.8}
+  \$ sudo apt install git
+  \end{code}
+  Then, choose the directory where to install the ASTEC distribution,
+  and download it
+  \begin{code}{0.8}
+    \$ cd /wherever/one/wants/ \\
+    \$ git clone https://github.com/astec-segmentation/astec-2019-published.git
+  \end{code}
+  It creates the directory
+  \texttt{/wherever/one/wants/astec-2019-published/} that will be
+  denoted \texttt{/path/to/astec/} from now on.
+
+
+\item Prepare the compilation of the \texttt{C} code. Compilation is done within the
+  \texttt{cmake}\footnote{\url{cmake.org}} framework. The standard
+  Ubuntu distribution comes with a \texttt{C} compiler but not with a
+  \texttt{C++} one. Last a development version of the \texttt{zlib} is
+  required. The next few lines allow to install the required components.
+  \begin{code}{0.8}
+    \$ sudo apt install cmake \\
+    \$ sudo apt install cmake-curses-gui \\
+    \$ sudo apt install g++ \\
+    \$ sudo apt install zlib1g-dev
+  \end{code}
+\item Compile the \texttt{C} code.
+    \begin{code}{0.8}
+    \$ cd /path/to/astec/ \\
+    \$ cd src/ASTEC/CommunFunctions/cpp/vt/ \\
+    \$ mkdir build \\
+    \$ cd build \\
+    \$ cmake ../ \\
+    \$ make \\
+  \end{code}
+
+\item Install the required \texttt{python} libraries. As mentioned,
+  ASTEC has been developed with \texttt{python2.7}. \texttt{pip} is
+  here used for the installation of the \texttt{python}
+  libraries. Required libraries are \texttt{numpy}, \texttt{scipy},
+  \texttt{libtiff}, and \texttt{h5py}.
+  \begin{code}{0.8}
+    \$ sudo apt install python2.7 \\
+    \$ sudo apt install python-pip \\
+    \$ sudo pip install numpy \\
+    \$ sudo pip install scipy \\
+    \$ sudo pip install libtiff \\
+    \$ sudo pip install h5py \\
+  \end{code}
+
+\item Make the ASTEC scripts/commands available as on-line commands.
+It can be done in a terminal (but will be valid only for this terminal)
+\begin{code}{0.8}
+  \$ export PATH=\${PATH}:/path/to/astec/src
+\end{code}
+or by adding the above line in the right setup file (e.g. \texttt{.bashrc}, \texttt{.profile}, \ldots).
+
+\end{enumerate}
+
+
+
+
+
+
+
+
+

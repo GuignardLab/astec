@@ -1,0 +1,99 @@
+\section{\texttt{2-mars.py}}
+\label{sec:cli:mars}
+
+\subsection{Mars method overview}
+
+The name \texttt{mars} comes from \cite{fernandez:hal-00521491} where \texttt{MARS} is the acronym of \textit{multiangle image acquisition, 3D reconstruction and cell segmentation}.
+
+This method aims at producing a segmentation of a membrane cell image (e.g.  a fused image) into a segmentation image. This segmentation image is a integer-valued image where each integer labeled an unique cell in the image. By convention, '1' is the background label, while cells have labels greater than 2. It is made of the following steps:
+
+
+\begin{enumerate}
+\itemsep -0.5ex
+\item \label{it:mars:seed:pre:processing} Pre-processing of the input image to produce 
+the input seed image for seed computation.
+This is described in section \ref{sec:cli:input:image:preprocessing}. The parameters that governed the pre-processing are described in section \ref{sec:cli:parameters:preprocessing} and prefixed by \texttt{seed\_}.
+\item \label{it:mars:seed:extraction} Seed extraction through the computation of the $h$-minima of the input seed image
+\item \label{it:mars:seed:correction} Eventually seed correction
+\item \label{it:mars:membrane:pre:processing} Pre-processing of the input image to produce 
+the input membrane image for the seeded watershed.
+This is described in section \ref{sec:cli:input:image:preprocessing}. The parameters that governed the pre-processing are described in section \ref{sec:cli:parameters:preprocessing} and prefixed by \texttt{membrane\_}.
+\item \label{it:mars:seed:watershed} A seeded watershed.
+\end{enumerate}
+
+
+
+
+
+\subsection{Output data}
+
+The results are stored in sub-directories
+\texttt{SEG/SEG\_<EXP\_SEG>} under the
+\texttt{/path/to/experiment/} directory where where \texttt{<EXP\_SEG>} is the value of the variable \texttt{EXP\_SEG} (its
+default value is '\texttt{RELEASE}'). 
+
+\dirtree{%
+.1 /path/to/experiment/.
+.2 \ldots.
+.2 SEG/.
+.3 SEG\_<EXP\_SEG>/.
+.4 <EN>\_mars\_t<begin>.inr.
+.4 LOGS/.
+.4 RECONSTRUCTION/.
+.2 \ldots.
+}
+
+
+
+
+\subsection{Steps \ref{it:mars:seed:pre:processing} and \ref{it:mars:membrane:pre:processing}: input image pre-processing}
+\label{sec:cli:mars:input:images}
+
+
+The input image (typically the fused image representing the cell membranes/walls) can be pre-processed before use in the seeded watershed.
+The pre-processing can be different for the seed input image (the one that will be used to extract the seeds) and the membrane input image (the one that will be used as the height image for the seeded watershed).
+Details about the pre-processing can be found in section \ref{sec:cli:input:image:preprocessing}.
+
+Default settings are
+\begin{verbatim}
+intensity_transformation = 'Identity'
+intensity_enhancement = None
+\end{verbatim}
+meaning that the original fused image is used for both inputs. Different pre-processing can be done. E.g.
+\begin{verbatim}
+seed_intensity_transformation = 'Identity'
+membrane_intensity_transformation = 'normalization_to_u8'
+intensity_enhancement = None
+\end{verbatim}
+comes to use the original image for the seed extraction, but its normalization into 8 bits as the height image for the seeded watershed.
+
+If the input image is transformed before segmented, the transformed images can be saved in the directory \texttt{SEG/SEG\_<EXP\_SEG>/RECONSTRUCTION/} if the value of the variable \texttt{keep\_reconstruction} is set to \texttt{True}.
+
+\subsection{Step \ref{it:mars:seed:extraction}: seed extraction}
+\label{sec:cli:mars:seed:extraction}
+
+The seed extraction is made of the following steps:
+\begin{enumerate}
+\itemsep -0.5ex
+\item Gaussian smoothing of the input image, the gaussian standard deviation being given by the variable \texttt{seed\_sigma}.
+\item Extraction of the $h$-minima of the previous image, $h$  being given by the variable \texttt{seed\_hmin}.
+\item Hysteresis thresholding (and labeling)  of the $h$-minima image, with a high threshold equal to \texttt{seed\_high\_threshold} (default is $h$)  and and a low threshold equal to $1$. It then only selects the $h$-minima that have an actual depth of $h$.
+\end{enumerate}
+
+
+\subsection{Step \ref{it:mars:seed:correction}: seed correction}
+\label{sec:cli:mars:seed:correction}
+
+Several rounds of correction of the computed seeds can be done. At each round, different seeds can be assigned the same label (and this will fuse the further reconstructed cells) or new seeds (each new seed is a single voxel) can be added. See the \option{seed\_edition\_files} variable for details.
+
+When correcting seeds, it is advised to launch \texttt{2-mars.py}  with the \option{-k} option. Indeed, temporary files, as the seed image, are kept in a temporary directory located in the \texttt{SEG/SEG\_'EXP\_SEG'/} directory and then re-used, and not recomputed at each \texttt{2-mars.py} use.
+
+
+
+
+\subsection{Step \ref{it:mars:seed:watershed}: seeded watershed}
+
+
+Given the seeds, the watershed is performed on the smoothed input membrane image (gaussian standard deviation being given by the variable \texttt{membrane\_sigma}).
+
+

@@ -1,0 +1,133 @@
+\section{\texttt{4-astec.py}}
+\label{sec:cli:astec}
+
+The name \texttt{astec} comes from the Phd work of L. Guignard \cite{guignard:tel-01278725} where \texttt{ASTEC} is the acronym of \textit{adaptive segmentation and tracking of embryonic cells}.
+
+This method aims at producing a segmentation of each membrane cell image  (e.g. a fused image) temporal sequence. This is a method of segmentation by propagation: it used the segmentation of the previous timepoint (say $t-1$) to constraint the segmentation at the aimed timepoint (say $t$).
+
+
+\subsection{Astec method overview}
+
+Astec principle is to guide the segmentation of the $t$ timepoint image $I_{t}$ with the segmentation $S^\star_{t-1}$ of the $t-1$ timepoint image $I_{t-1}$.
+
+\begin{enumerate}
+\item \label{it:astec:projected:segmentation} A first segmentation of $I_{t}$, $\tilde{S}_{t}$, is computed by a seeded watershed, where the seeds are the eroded cells of $S^\star_{t-1}$, projected onto $I_{t}$. By construction, no cell division can occur.
+\item \label{it:astec:optimal:seeds} $h$-minima (see also section 
+\ref{sec:cli:mars:seed:extraction}) are computed over a range of $h$ values. Studying the numbers of $h$-minima located in each cell of $\tilde{S}_{t}$ gives an indication whether there might be a cell division or not. From this study a seed image $Seeds_{t}$ is computed, and then a new segmentation image $\hat{S}_{t}$.
+\item \label{it:astec:volume:checking} Some potential errors are detected by checking whether there is a significant volume decrease from a cell of $S^\star_{t-1}$ and its corresponding cells in $\hat{S}_{t}$. For such cells, seeds may be recomputed, as well as the $\hat{S}_{t}$ segmentation.
+\item \label{it:astec:multiple:label:fusion} It may occur, in step \ref{it:astec:volume:checking}, that some cell from $S^\star_{t-1}$ correspond to 3 cells in $\hat{S}_{t}$. This step aims at correcting this.
+\item \label{it:astec:outer:volume:checking} Some other potential errors are detected by checking whether there is a significant volume decrease from a cell of $S^\star_t$ and its corresponding cells in $\hat{S}_{t}$ due to a background invasion. For such cells, morphosnakes \cite{marquez-neil:pami:2014} are computed to try to recover cell loss.
+\item \label{it:astec:morphosnake:correction} The morphosnake correction operated in step \ref{it:astec:outer:volume:checking} may invade the background too much. This step aims at correcting this.
+\end{enumerate}
+
+
+
+
+
+
+
+\subsection{Output data}
+\label{sec:cli:astec:output:data}
+
+The results are stored in sub-directories
+\texttt{SEG/SEG\_<EXP\_SEG>} under the
+\texttt{/path/to/experiment/} directory where where \texttt{<EXP\_SEG>} is the value of the variable \texttt{EXP\_SEG} (its
+default value is '\texttt{RELEASE}'). 
+
+\dirtree{%
+.1 /path/to/experiment/.
+.2 \ldots.
+.2 SEG/.
+.3 SEG\_<EXP\_SEG>/.
+.4 <EN>\_seg\_lineage.xml.
+.4 <EN>\_seg\_t<begin>.mha.
+.4 <EN>\_seg\_t<$\ldots$>.inr.
+.4 <EN>\_seg\_t<end>.mha.
+.4 LOGS/.
+.4 RECONSTRUCTION/.
+.2 \ldots.
+}
+
+
+
+\subsection{Input image pre-processing}
+\label{sec:cli:astec:input:images}
+
+
+The input image (typically the fused image representing the cell membranes/walls) can be pre-processed before use in the astec stage (as for \texttt{2-mars.py}, see section \ref{sec:cli:mars:input:images})/
+The pre-processing can be different for the 
+\begin{itemize}
+\itemsep -0.5ex
+\item the seed input image (the one that will be used to compute the $h$-minima),
+\item the membrane input image (the one that will be used as the height image for the seeded watersheds), and
+\item the morphosnake input image (the one that will be used to define the morphosnake energy).
+\end{itemize}
+
+Pre-processing parameters, described in section \ref{sec:cli:parameters:preprocessing}, and prefixed respectively by \texttt{seed\_}, \texttt{membrane\_} and \texttt{morphosnake\_} allow to tune these pre-processing.
+Hence, the lines
+\begin{verbatim}
+seed_intensity_transformation = 'Identity'
+membrane_intensity_transformation = 'normalization_to_u8'
+morphosnake_intensity_transformation = 'Identity'
+intensity_enhancement = None
+\end{verbatim}
+come to choose the original image for both the seed extraction and the morphosnake stage, but its normalization on 8 bits for the seeded watershed (this corresponds to the choice of the historical version of astec).
+
+
+\subsection{Step \ref{it:astec:projected:segmentation}: $\tilde{S}_{t}$}
+
+A first segmentation of $I_{t}$, $\tilde{S}_{t}$, is computed by a seeded watershed, where the seeds are built from the eroded cells of $S^\star_{t-1}$.
+\begin{itemize}
+\item \texttt{previous\_seg\_method} = \texttt{'erode\_then\_deform'} 
+  \mbox{} \\
+  The cells of $S^\star_{t-1}$ are first eroded, yielding the image $S^e_{t-1}$, then this image is mapped onto $I_{t}$ frame thanks to the transformation $\mathcal{T}_{t-1 \leftarrow t}$, resulting in the eroded seed image $S^e_{t-1 \leftarrow t} = S^e_{t-1} \circ \mathcal{T}_{t-1 \leftarrow t}$. This is the historical astec behavior.
+\item \texttt{previous\_seg\_method} = \texttt{'deform\_then\_erode'} 
+  \mbox{} \\ 
+  $S^\star_{t-1}$ is first mapped onto $I_{t}$ frame thanks to the transformation $\mathcal{T}_{t-1 \leftarrow t}$, resulting in the image $S^\star_{t-1 \leftarrow t} = S^\star_{t-1} \circ \mathcal{T}_{t-1 \leftarrow t}$. Cells of $S^\star_{t-1 \leftarrow t}$ are then eroded to get $S^e_{t-1 \leftarrow t}$
+\end{itemize}
+
+This seed image, $S^e_{t-1 \leftarrow t}$, plus the membrane input image are used as input for a seeded watershed, and yield $\tilde{S}_{t}$. 
+By construction, no cell division can occur in $\tilde{S}_{t}$ with respect to $S^\star_{t-1}$.
+
+If the variable \texttt{propagation\_strategy} is set to 
+\texttt{'seeds\_from\_previous\_segmentation'}, 
+the segmentation propagation stops and $\tilde{S}_{t}$ is the final result. 
+
+
+\subsection{Step \ref{it:astec:optimal:seeds}: $\hat{S}_{t}$}
+
+The $h$-minima are computed in the seed input image for a range of $h \in [h_{min}, h_{max}]$, with a step of $\delta h$.
+
+$h_{min}$, $h_{max}$ and $\delta h$ are set respectively by the variables
+\texttt{watershed\_seed\_hmin\_min\_value},
+\texttt{watershed\_seed\_hmin\_max\_value}, and
+\texttt{watershed\_seed\_hmin\_delta\_value}.
+
+For a given cell of $\tilde{S}_{t}$,
+if there is no cell division, and if the $h$-minima are well detected, ther should be only one $h$-minima included in the cell for all values of $h$.
+However, if a cell division occurs, there should be mostly teo $h$-minima included in the cell. 
+Then, 
+the study of the number of $h$-minima strictly included allows to decide whether a cell division has occur (see \cite{guignard:tel-01278725,guignard:hal-02903409} for details).
+
+This step results in the image $\hat{S}_{t}$.
+
+If the variable \texttt{propagation\_strategy} is set to 
+\texttt{'seeds\_selection\_without\_correction'}, 
+the segmentation propagation stops and $\hat{S}_{t}$ is the final result. 
+
+
+\subsection{Steps \ref{it:astec:volume:checking} and \ref{it:astec:multiple:label:fusion}: volume checking}
+
+Some potential errors are detected by checking whether there is a large volume decrease from a cell of $S^\star_{t-1}$ and its corresponding cells in $\hat{S}_{t}$. For such cells, seeds are recomputed, as well as the $\hat{S}_{t}$ segmentation.
+
+It may occur, in step \ref{it:astec:volume:checking}, that some cell from $S^\star_{t-1}$ correspond, after correction, to 3 cells in $\hat{S}_{t}$. A second step aims at correcting this.
+
+\subsection{Steps \ref{it:astec:outer:volume:checking} and \ref{it:astec:morphosnake:correction}: morphosnake correction}
+
+This step is performed if \texttt{morphosnake\_correction} is set to \texttt{True}.
+
+Some other potential errors are detected by checking whether there is a significant volume decrease from a cell of $S^\star_t$ and its corresponding cells in $\hat{S}_{t}$ due to a background invasion. For such cells, morphosnakes \cite{marquez-neil:pami:2014} are computed to try to recover cell loss.
+
+
+
+

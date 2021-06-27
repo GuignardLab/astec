@@ -1,0 +1,1089 @@
+\section{Parameters}
+\label{sec:cli:parameters}
+
+
+The different command line interfaces, or CLIs, (\texttt{1-fuse.py}, \texttt{2-mars.py}, etc.) requires a parameter file (which is nothing but a \texttt{python} file) that contains both information on the experiment (path to the experiment directory, on the sub-directory names -- see section \ref{sec:cli:parameters:data}) as well as specific parameters for the CLIs.
+
+\subsection{Prefixed parameters}
+
+Some of the parameter sets are said to be \textit{prefixed}, such as the two sets of pre-processing parameters for the \texttt{2-mars.py} CLI (see section \ref{sec:cli:parameters:mars}). Indeed, the pre-processing can be set differently for the seed input image and the membrane input image (eg see section \ref{sec:cli:mars}).
+
+Prefixing parameters allows to either set \textit{all} the parameters with the same name together or set them \textit{independently}.
+
+As exemplified in section \ref{sec:cli:mars:input:images}, 
+the parameter file lines (where the variables are not prefixed)
+\begin{verbatim}
+intensity_transformation = 'normalization_to_u8'
+intensity_enhancement = None
+\end{verbatim}
+will set the corresponding pre-processing parameters for both the seed and the membrane image pre-processing.
+However, using prefixes, as in the lines
+\begin{verbatim}
+seed_intensity_transformation = 'Identity'
+membrane_intensity_transformation = 'normalization_to_u8'
+intensity_enhancement = None
+\end{verbatim}
+allows to set them independently.
+
+This mechanism is designed to simplify the parameter file, but may have undesired consequences. Indeed, using the basic variable names of the registration parameters (see section \ref{sec:cli:parameters:registration})  for the \texttt{4-astec.py} CLI will change all registration parameters included in the pre-processing parameters.
+
+To check whether the parameters have been set correctly, one can either use
+the \texttt{--print-param} CLI option (see section \ref{sec:cli:common}) beforehand, or to a posteriori check the used parameter in the \texttt{log} file. 
+  
+  
+
+\subsection{Common parameters}
+\label{sec:cli:parameters:common}
+
+\begin{itemize}
+\itemsep -0.5ex
+\item \texttt{begin}:
+  first time point to be processed (\texttt{1-fuse.py}, 
+  \texttt{4-astec.py} or \texttt{5-postcorrection.py}) 
+  or single time point to be processed
+  (\texttt{2-mars.py} or \texttt{3-manualcorrection.py}).
+\item \texttt{end}:
+  last time point to be processed (\texttt{1-fuse.py}, 
+  \texttt{4-astec.py} or \texttt{5-postcorrection.py}).
+\item \texttt{delta}:
+  interval between two time points to be processed. Set to 1 by default.
+  Fragile.
+\item \texttt{raw\_delay}:
+  Delay to be added to the time points to build the file names. 
+  Fragile.
+\item \texttt{time\_digits\_for\_filename}:
+  number of digits used to build the file names.
+\item \texttt{time\_digits\_for\_cell\_id}:
+  number of digits used to define unique cellule id. in lineage file.
+  The unique id of cell $c$ at time $t$ is $t \times 10^d + c$ where
+  $d$ is set by \texttt{time\_digits\_for\_cell\_id}.
+\item \texttt{default\_image\_suffix}:
+  used for both the result and the temporary data.
+  \begin{itemize}
+  \item \texttt{'inr'}: Inrimage format, historical choice.
+  \item \texttt{'mha'}: MetaImage format, readable by Fiji.
+  \item \texttt{'tif'}: not advised, since the tiff format does not allow
+  to keep the voxel size along the z direction (at least in a 
+  standardized way).
+  \end{itemize}
+\item \texttt{result\_image\_suffix}:
+  used for both the result data.
+\item \texttt{result\_lineage\_suffix}:
+  \begin{itemize}
+  \item \texttt{'pkl'}: 
+  \item \texttt{'xml'}: 
+  \end{itemize}
+\end{itemize}
+
+
+\subsection{Data organisation parameters}
+\label{sec:cli:parameters:data}
+
+\begin{figure}
+\mbox{}
+\dirtree{%
+.1 \texttt{<PATH\_EMBRYO>}/.
+.2 \texttt{<DIR\_RAWDATA>}/.
+.3 \texttt{<DIR\_LEFTCAM\_STACKZERO>}/.
+.4 \texttt{<acquisition\_leftcam\_image\_prefix>000.zip}.
+.4 \texttt{<acquisition\_leftcam\_image\_prefix>001.zip}.
+.4 \ldots.
+.3 \texttt{<DIR\_RIGHTCAM\_STACKZERO>}/.
+.4 \texttt{<acquisition\_rightcam\_image\_prefix>000.zip}.
+.4 \texttt{<acquisition\_rightcam\_image\_prefix>001.zip}.
+.4 \ldots.
+.3 \texttt{<DIR\_LEFTCAM\_STACKONE>}/.
+.4 \texttt{<acquisition\_leftcam\_image\_prefix>000.zip}.
+.4 \texttt{<acquisition\_leftcam\_image\_prefix>001.zip}.
+.4 \ldots.
+.3 \texttt{<DIR\_RIGHTCAM\_STACKONE>}/.
+.4 \texttt{<acquisition\_rightcam\_image\_prefix>000.zip}.
+.4 \texttt{<acquisition\_rightcam\_image\_prefix>001.zip}.
+.4 \ldots.
+.2 \ldots.
+}
+\mbox{}
+\caption{\label{fig:data:rawdata:1} Typical organisation of mono-channel data. See also section \protect\ref{sec:cli:fuse:input:data}.}
+\end{figure}
+
+\begin{figure}
+\mbox{}
+\dirtree{%
+.1 \texttt{<PATH\_EMBRYO>}/.
+.2 \texttt{<DIR\_RAWDATA>}/.
+.3 \texttt{<DIR\_LEFTCAM\_STACKZERO>}/.
+.4 \texttt{<acquisition\_leftcam\_image\_prefix>000.zip}.
+.4 \ldots.
+.3 \texttt{<DIR\_RIGHTCAM\_STACKZERO>}/.
+.4 \texttt{<acquisition\_rightcam\_image\_prefix>000.zip}.
+.4 \ldots.
+.3 \texttt{<DIR\_LEFTCAM\_STACKONE>}/.
+.4 \texttt{<acquisition\_leftcam\_image\_prefix>000.zip}.
+.4 \ldots.
+.3 \texttt{<DIR\_RIGHTCAM\_STACKONE>}/.
+.4 \texttt{<acquisition\_rightcam\_image\_prefix>000.zip}.
+.4 \ldots.
+.3 \texttt{<DIR\_LEFTCAM\_STACKZERO\_CHANNEL\_2>}/.
+.4 \texttt{<acquisition\_leftcam\_image\_prefix>000.zip}.
+.4 \ldots.
+.3 \texttt{<DIR\_RIGHTCAM\_STACKZERO\_CHANNEL\_2>}/.
+.4 \texttt{<acquisition\_rightcam\_image\_prefix>000.zip}.
+.4 \ldots.
+.3 \texttt{<DIR\_LEFTCAM\_STACKONE\_CHANNEL\_2>}/.
+.4 \texttt{<acquisition\_leftcam\_image\_prefix>000.zip}.
+.4 \ldots.
+.3 \texttt{<DIR\_RIGHTCAM\_STACKONE\_CHANNEL\_2>}/.
+.4 \texttt{<acquisition\_rightcam\_image\_prefix>000.zip}.
+.4 \ldots.
+.2 \ldots.
+}
+\mbox{}
+\caption{\label{fig:data:rawdata:2} Typical organisation of multi-channel data. See also section \protect\ref{sec:cli:fuse:input:data}.}
+\end{figure}
+
+\begin{figure}
+\mbox{}
+\dirtree{%
+.1 \texttt{<PATH\_EMBRYO>}/.
+.2 \texttt{<DIR\_RAWDATA>}/.
+.3 \texttt{<DIR\_LEFTCAM\_STACKZERO>}/.
+.4 \texttt{<acquisition\_leftcam\_image\_prefix>000.zip}.
+.4 \ldots.
+.3 \texttt{<DIR\_RIGHTCAM\_STACKZERO>}/.
+.4 \texttt{<acquisition\_rightcam\_image\_prefix>000.zip}.
+.4 \ldots.
+.3 \texttt{<DIR\_LEFTCAM\_STACKONE>}/.
+.4 \texttt{<acquisition\_leftcam\_image\_prefix>000.zip}.
+.4 \ldots.
+.3 \texttt{<DIR\_RIGHTCAM\_STACKONE>}/.
+.4 \texttt{<acquisition\_rightcam\_image\_prefix>000.zip}.
+.4 \ldots.
+.2 \texttt{<DIR\_RAWDATA\_CHANNEL\_2>}/.
+.3 \texttt{<DIR\_LEFTCAM\_STACKZERO>}/.
+.4 \texttt{<acquisition\_leftcam\_image\_prefix>000.zip}.
+.4 \ldots.
+.3 \texttt{<DIR\_RIGHTCAM\_STACKZERO>}/.
+.4 \texttt{<acquisition\_rightcam\_image\_prefix>000.zip}.
+.4 \ldots.
+.3 \texttt{<DIR\_LEFTCAM\_STACKONE>}/.
+.4 \texttt{<acquisition\_leftcam\_image\_prefix>000.zip}.
+.4 \ldots.
+.3 \texttt{<DIR\_RIGHTCAM\_STACKONE>}/.
+.4 \texttt{<acquisition\_rightcam\_image\_prefix>000.zip}.
+.4 \ldots.
+.2 \ldots.
+}
+\mbox{}
+\caption{\label{fig:data:rawdata:3} Alternative organisation of multi-channel data. See also section \protect\ref{sec:cli:fuse:input:data}.}
+\end{figure}
+
+\begin{figure}
+\mbox{}
+\dirtree{%
+.1 \texttt{<PATH\_EMBRYO>}/.
+.2 \texttt{<DIR\_RAWDATA>}/.
+.3 \ldots.
+.2 \texttt{<FUSE>}/.
+.3 \texttt{FUSE\_<EXP\_FUSE>}/.
+.4 \texttt{<EN>\_fuse\_t000.<result\_image\_suffix>}.
+.4 \texttt{<EN>\_fuse\_t001.<result\_image\_suffix>}.
+.4 \ldots.
+.2 \ldots.
+}
+\mbox{}
+\caption{\label{fig:data:fusion} Typical organisation of fused images. See also section \protect\ref{sec:cli:fuse:output:data}.}
+\end{figure}
+
+\begin{itemize}
+\itemsep -0.5ex
+\item \texttt{DIR\_LEFTCAM\_STACKONE} 
+see section \ref{sec:cli:fuse:input:data}, 
+see figures \ref{fig:data:rawdata:1}, 
+\ref{fig:data:rawdata:2}, 
+and \ref{fig:data:rawdata:3}.
+\item \texttt{DIR\_LEFTCAM\_STACKONE\_CHANNEL\_2} 
+see section \ref{sec:cli:fuse:input:data}
+\item \texttt{DIR\_LEFTCAM\_STACKONE\_CHANNEL\_3} 
+see section \ref{sec:cli:fuse:input:data}
+\item \texttt{DIR\_LEFTCAM\_STACKZERO} 
+see section \ref{sec:cli:fuse:input:data},
+see figures \ref{fig:data:rawdata:1}, 
+\ref{fig:data:rawdata:2}, 
+and \ref{fig:data:rawdata:3}.
+\item \texttt{DIR\_LEFTCAM\_STACKZERO\_CHANNEL\_2} 
+see section \ref{sec:cli:fuse:input:data}
+\item \texttt{DIR\_LEFTCAM\_STACKZERO\_CHANNEL\_3} 
+see section \ref{sec:cli:fuse:input:data}
+\item \texttt{DIR\_RAWDATA} 
+see section \ref{sec:cli:fuse:input:data},
+see figures \ref{fig:data:rawdata:1}, 
+\ref{fig:data:rawdata:2}, 
+and \ref{fig:data:rawdata:3}.
+\item \texttt{DIR\_RAWDATA\_CHANNEL\_2} 
+see section \ref{sec:cli:fuse:input:data}
+\item \texttt{DIR\_RAWDATA\_CHANNEL\_3} 
+see section \ref{sec:cli:fuse:input:data}
+\item \texttt{DIR\_RIGHTCAM\_STACKONE} 
+see section \ref{sec:cli:fuse:input:data},
+see figures \ref{fig:data:rawdata:1}, 
+\ref{fig:data:rawdata:2}, 
+and \ref{fig:data:rawdata:3}.
+\item \texttt{DIR\_RIGHTCAM\_STACKONE\_CHANNEL\_2} 
+see section \ref{sec:cli:fuse:input:data}
+\item \texttt{DIR\_RIGHTCAM\_STACKONE\_CHANNEL\_3} 
+see section \ref{sec:cli:fuse:input:data}
+\item \texttt{DIR\_RIGHTCAM\_STACKZERO} 
+see section \ref{sec:cli:fuse:input:data},
+see figures \ref{fig:data:rawdata:1}, 
+\ref{fig:data:rawdata:2}, 
+and \ref{fig:data:rawdata:3}.
+\item \texttt{DIR\_RIGHTCAM\_STACKZERO\_CHANNEL\_2} 
+see section \ref{sec:cli:fuse:input:data}
+\item \texttt{DIR\_RIGHTCAM\_STACKZERO\_CHANNEL\_3} 
+see section \ref{sec:cli:fuse:input:data}
+\item \texttt{EN}: 
+  the so=called \textit{embryo} name. 
+  All files will be named after this name.
+  E.g. see section \ref{sec:cli:fuse:output:data}.
+see section \ref{sec:cli:fuse:output:data},
+see figure \ref{fig:data:fusion}.
+\item \texttt{EXP\_FUSE}:
+  String (\texttt{str} type) or list (\texttt{list} type) of
+  strings. It indicates what are the fused images directories, 
+  of the form \texttt{<PATH\_EMBRYO>/FUSE/FUSE\_<EXP\_FUSE>}.
+\begin{verbatim}
+EXP_FUSE = 'exp1'
+EXP_FUSE = ['exp1', 'exp2']
+\end{verbatim}
+  are then both valid. 
+  Default value of \texttt{EXP\_FUSE} is \texttt{'RELEASE'}.
+  See section \ref{sec:cli:fuse:output:data},
+  see figure \ref{fig:data:fusion}.
+\item \texttt{EXP\_FUSE\_CHANNEL\_2} 
+see section \ref{sec:cli:fuse:output:data}
+\item \texttt{EXP\_FUSE\_CHANNEL\_3} 
+see section \ref{sec:cli:fuse:output:data}
+\item \texttt{PATH\_EMBRYO}: 
+  path to the \textit{experiment}.
+  If not present, the current directory is used.
+  See section \ref{sec:cli:fuse:input:data},
+  see figures \ref{fig:data:rawdata:1}, 
+\ref{fig:data:rawdata:2}, 
+\ref{fig:data:rawdata:3}, and
+\ref{fig:data:fusion}
+\item \texttt{acquisition\_leftcam\_image\_prefix}  
+see section \ref{sec:cli:fuse:input:data},
+see figures \ref{fig:data:rawdata:1}, 
+\ref{fig:data:rawdata:2}, 
+and \ref{fig:data:rawdata:3}.
+\item \texttt{acquisition\_rightcam\_image\_prefix}  
+see section \ref{sec:cli:fuse:input:data},
+see figures \ref{fig:data:rawdata:1}, 
+\ref{fig:data:rawdata:2}, 
+and \ref{fig:data:rawdata:3}.
+\end{itemize}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\subsection{Ace parameters}
+\label{sec:cli:parameters:ace}
+
+Ace stand for \textit{Automated Cell Extractor}. [G[L]]ACE methods aim at detecting and enhancing membranes in a 3D images (see also section \ref{sec:cli:input:image:preprocessing:membrane}).
+\begin{enumerate}
+\itemsep -0.5ex
+\item \label{it:ace:detection} Hessian-based detection of 2-D manifolds, computation of a center-membrane image.
+\item \label{it:ace:thresholding} Thresholding of the center-membrane image to get a binary image.
+\item \label{it:ace:tensor} Reconstruction of a membrane images from the binary image through tensor voting.
+\end{enumerate}
+
+\begin{itemize}
+\itemsep -0.5ex
+\item \texttt{sigma\_membrane}:
+  this is the gaussian sigma that is used to compute image derivatives
+  (in real units), used in step \ref{it:ace:detection}.
+\item \texttt{hard\_thresholding}:
+  \texttt{True} or \texttt{False}.
+  If set to \texttt{True}, a hard threshold (set by variable 
+  \texttt{hard\_threshold}) is used instead of an automated threshold.
+\item \texttt{hard\_threshold}
+\item \texttt{manual}: \texttt{True} or \texttt{False}.
+  By default, this parameter is set to False. If failure, 
+  (meaning that thresholds are very bad, meaning that the binarized 
+  image is very bad), set this parameter to True and relaunch the
+  computation on the test image. If the method fails again, "play" 
+  with the value of \texttt{manual\_sigma} ... and good luck.
+\item \texttt{manual\_sigma}:
+  Axial histograms fitting initialization parameter for the computation 
+  of membrane image binarization axial thresholds (this parameter is 
+  used if \texttt{manual} is set to \texttt{True}). 
+  One may need to test different values of 
+  \texttt{manual\_sigma}. We suggest to test values between 5 and 25 
+  in case of initial failure. Good luck.
+\item \texttt{sensitivity}: membrane binarization parameter.
+  Use larger values (smaller than or equal to 1.0) to increase 
+  the quantity of binarized membranes to be used for tensor voting.
+\item \texttt{sigma\_TV}: 
+  parameter which defines the voting scale for membrane structures 
+  propagation by tensor voting method (real coordinates). This parameter
+  should be set between \SI{3}{\micro m} (little cells) and 
+  \SI{4.5}{\micro m} (big gaps in 
+  the binarized membrane image).
+\item \texttt{sigma\_LF}:
+  Additional smoothing parameter for reconstructed image 
+  (in real coordinates).
+  It seems that the default value = \SI{0.9}{\micro m} is 
+  ok for standard use.
+\item \texttt{sample}:
+  Set the fraction of the binarized membranes (obtained at step  
+  \ref{it:ace:thresholding}) further used for tensor voting.
+  It allows tensor voting computation speed optimisation (do not 
+  touch if not bewared): the more sample, the higher the cost.
+\item \texttt{sample\_random\_seed}:
+  Drawing a sample from the binarized membranes (see parameter 
+  \texttt{sample}) is a stochastic process. Setting this parameter 
+  to some \texttt{int} value allows to make this stochastic process 
+  reproducible.
+\item \texttt{bounding\_box\_dilation}
+\item \texttt{default\_image\_suffix}
+\end{itemize}
+
+
+
+
+
+
+
+
+
+
+\subsection{Morphosnake parameters}
+\label{sec:cli:parameters:morphosnake}
+
+\begin{itemize}
+\itemsep -0.5ex
+\item \texttt{dilation\_iterations}: 
+  dilation of the cell bounding box for computation purpose.
+\item \texttt{iterations}:
+  maximal number of morphosnake iterations.
+\item \texttt{delta\_voxel}: 
+  error on voxel count to define a stopping criteria.
+\item \texttt{energy}:
+  \begin{itemize}
+  \item \texttt{'gradient'}: uses the same formula as in 
+  \cite{marquez-neil:pami:2014}, as in the historical 
+  astec version. But seems to be a poor choice.
+  \item \texttt{'image'}: uses directly the image as the energy image.
+  \end{itemize}
+\item \texttt{smoothing}:
+  internal parameter for the morphosnake.
+\item \texttt{balloon}:
+  internal parameter for the morphosnake.
+\item \texttt{processors}: number of processors used for the 
+  morphosnake correction.
+\item \texttt{mimic\_historical\_astec}:
+  \texttt{True} or \texttt{False}. 
+  If set to \texttt{True}, same implementation than the historical 
+  astec version. Kept for comparison purpose.
+\end{itemize}
+
+
+
+
+
+
+
+
+
+
+\subsection{Preprocessing parameters}
+\label{sec:cli:parameters:preprocessing}
+
+The input image may be pre-processed before being used as
+\begin{itemize}
+\itemsep -0.5ex
+\item either the \textit{membrane} image (ie the height image) for watershed segmentation,
+\item or the \textit{seed} image (ie the image with which the regional minima are computed),
+\item or the \textit{morphosnake} image (ie the image with which the morphosnake energy is computed).
+\end{itemize}
+For more details, see section \ref{sec:cli:input:image:preprocessing}.
+
+\begin{itemize}
+\itemsep -0.5ex
+\item Ace parameters
+  (see section \ref{sec:cli:parameters:ace})
+  
+\item \texttt{intensity\_transformation}:
+set the (histogram based) intensity transformation of the original image
+(see section \ref{sec:cli:input:image:preprocessing:histogram})
+\begin{itemize}
+\itemsep -0.5ex
+\item \texttt{None}: no intensity transformation of the original image is used to pre-process the input image.
+\item \texttt{'identity'}: the input image is used without any transformation.
+\item \texttt{'normalization\_to\_u8'}: the input image (usually encoded on 16 bits) is normalized onto 8 bits. The values corresponding to percentiles given by the variables \texttt{normalization\_min\_percentile} and  \texttt{normalization\_max\_percentile} are mapped respectively on 0 and 255.
+\item \texttt{'cell\_normalization\_to\_u8'}: same principle than \texttt{'normalization\_to\_u8'} but values mapped on 0 and 255 are computed on a cell basis (cells are the ones of $S^{\star}_{t-1} \circ \mathcal{T}_{t-1 \leftarrow t}$ -- see \cite{guignard:tel-01278725} for notations --, ie the segmentation obtained for the previous time point $t-1$ and deformed onto the frame at the current time point $t$). This can be used only with \texttt{4-astec.py}
+(section \ref{sec:cli:astec}).
+This feature has been added for tests, but has not demonstrated yet any benefit.
+\end{itemize}
+
+\item \texttt{intensity\_enhancement}
+set the membrane enhancement transformation of the original image
+(see section \ref{sec:cli:input:image:preprocessing:membrane})
+\begin{itemize}
+\itemsep -0.5ex
+\item \texttt{None}: no membrane enhancement of the original image is used to pre-process the input image.
+\item \texttt{'GACE'}:
+stands for \textit{Global Automated Cell Extractor}. It tries to reconstructed a membrane image through a membrane detector, an automated thresholding and a tensor voting step. The automated thresholding is computed once for the whole image.
+\item \texttt{'GLACE'}: stands for \textit{Grouped Local Automated Cell Extractor}. It differs from one step from \texttt{GACE}: the threshold of extrema image is not computed globally (as in \texttt{GACE}), but one threshold is computed per cell of $S^{\star}_{t-1} \circ \mathcal{T}_{t-1 \leftarrow t}$, from the extrema values of the cell bounding box.
+This can be used only with \texttt{4-astec.py}
+(section \ref{sec:cli:astec}).
+\end{itemize}
+
+\item \texttt{outer\_contour\_enhancement}
+
+\item \texttt{reconstruction\_images\_combination}:
+  \begin{itemize}
+  \item \texttt{'addition'}
+  \item \texttt{'maximum'}
+  \end{itemize}
+\item \texttt{cell\_normalization\_min\_method}:
+  set the cell area where is computed the percentile value that 
+  will give the $0$ value in the normalized image
+  \begin{itemize}
+  \item \texttt{'cell'}
+  \item \texttt{'cellborder'}
+  \item \texttt{'cellinterior'}
+  \end{itemize}
+\item \texttt{cell\_normalization\_max\_method}:
+  set the cell area where is computed the percentile value that 
+  will give the $255$ value in the normalized image
+  \begin{itemize}
+  \item \texttt{'cell'}
+  \item \texttt{'cellborder'}
+  \item \texttt{'cellinterior'}
+  \end{itemize}
+\item \texttt{normalization\_min\_percentile}
+\item \texttt{normalization\_max\_percentile}
+\item \texttt{cell\_normalization\_sigma}:
+the \texttt{'cell\_normalization\_to\_u8'} method computes a couple $(I_{min}, I_{max})$ for each cell of $S^{\star}_{t-1} \circ \mathcal{T}_{t-1 \leftarrow t}$, yielding discontinuities in the $I_{min}$ and $I_{max}$ from cell to cell. To normalize the whole image, images of $I_{min}$ and $I_{max}$ are built and then smoothed with a gaussian kernel (sigma given by the variable \texttt{cell\_normalization\_sigma}.
+\item \texttt{intensity\_transformation}
+\item Registration parameters 
+  (see section \ref{sec:cli:parameters:registration}) prefixed 
+  by \texttt{linear\_registration\_}
+\item Registration parameters 
+  (see section \ref{sec:cli:parameters:registration}) prefixed 
+  by \texttt{nonlinear\_registration\_}
+\item \texttt{keep\_reconstruction}:
+  \texttt{True} or \texttt{False}. Is set to \texttt{True}, 
+  pre-processed images are kept in a \texttt{RECONSTRUCTION/} directory.
+\end{itemize}
+
+
+
+
+
+
+
+
+
+
+\subsection{Registration parameters}
+\label{sec:cli:parameters:registration}
+
+\begin{itemize}
+\itemsep -0.5ex
+\item \texttt{compute\_registration}
+\item \texttt{pyramid\_highest\_level}:
+  highest level of the pyramid image for registration.
+  Registration is done hierarchically with a pyramid of images. At 
+  each pyramid level, image dimensions are divided by 2.
+  Setting this variable to 6 means that registration starts with images 
+  whose dimensions are 1/64th of the original image.
+\item \texttt{pyramid\_lowest\_level}:
+  lowest level of the pyramid image for registration. Setting it
+  to 0 means that the lowest level is with the image itself.
+  Setting it to 1 or even 2 allows to gain computational time.
+\item \texttt{gaussian\_pyramid}
+\item \texttt{transformation\_type}
+\item \texttt{elastic\_sigma}
+\item \texttt{transformation\_estimation\_type}
+\item \texttt{lts\_fraction}
+\item \texttt{fluid\_sigma}
+\item \texttt{normalization}
+\end{itemize}
+
+
+
+
+
+
+
+
+
+
+\subsection{Seed edition parameters}
+\label{sec:cli:parameters:seed:edition}
+
+\begin{itemize}
+\itemsep -0.5ex
+\item \texttt{seed\_edition\_dir}:
+\item \texttt{seed\_edition\_file}:
+  if run with \texttt{'-k'}, temporary files, including the computed 
+  seeds are kept into a temporary directory, and can be corrected in
+  several rounds
+\begin{verbatim}
+seed_edition_file = [['seeds_to_be_fused_001.txt', 'seeds_to_be_created_001.txt'], \
+                     ['seeds_to_be_fused_002.txt', 'seeds_to_be_created_002.txt'],
+                     ...
+                     ['seeds_to_be_fused_00X.txt', 'seeds_to_be_created_00X.txt']]
+\end{verbatim}
+  Each line of a \texttt{seeds\_to\_be\_fused\_00x.txt} file contains 
+  the labels to be fused, e.g. "10 4 2 24". A same label can be found 
+  in several lines, meaning that all the labels of these lines will be 
+  fused. Each line of \texttt{seeds\_to\_be\_created\_00x.txt} contains 
+  the coordinates of a seed to be added.
+\end{itemize}
+
+
+\subsection{Watershed parameters}
+\label{sec:cli:parameters:watershed}
+
+\begin{itemize}
+\itemsep -0.5ex
+\item \texttt{seed\_sigma}:
+  gaussian sigma for smoothing of initial image for seed extraction
+  (real coordinates).
+\item \texttt{seed\_hmin}:
+  $h$ value for the extraction of the $h$-minima,
+\item \texttt{seed\_high\_threshold}:
+  regional minima thresholding. 
+\item \texttt{membrane\_sigma}:
+  gaussiab sigma for smoothing of reconstructed image for image 
+  regularization prior to segmentation
+  (real coordinates).
+\end{itemize}
+
+
+
+
+
+
+
+
+
+
+\subsection{\texttt{1-fuse.py} parameters}
+\label{sec:cli:parameters:fuse}
+
+
+\begin{itemize}
+\itemsep -0.5ex
+\item \texttt{acquisition\_orientation}:
+  image orientation (\texttt{'right'} or \texttt{'left'})
+  gives the rotation (with respect to the Y axis) of the left camera 
+  frame of stack \#0 to be aligned with the the left camera 
+  frame of stack \#1.
+  \begin{itemize}
+  \itemsep -0.5ex
+  \item \texttt{'right'}: +90 degrees
+  \item \texttt{'left'}: -90 degrees
+  \end{itemize}
+  See section \ref{sec:cli:fuse:important:parameters}.
+\item \texttt{acquisition\_mirrors}:
+  mirroring of the right camera image along the X-axis.
+  Right camera images may have to be mirrored along the X-axis 
+  to be aligned with the left camera images.
+  \begin{itemize}
+  \itemsep -0.5ex
+  \item \texttt{True}: +90 degrees
+  \item \texttt{False}: -90 degrees
+  \end{itemize}
+  Since it should depend on the apparatus,
+  this parameter should not change for all acquisitions 
+  performed by the same microscope.
+  See section \ref{sec:cli:fuse:important:parameters}.
+\item \texttt{acquisition\_resolution}:
+  acquisition voxel size
+  e.g. 
+  \begin{verbatim}
+  raw_resolution = (.21, .21, 1.)
+  \end{verbatim}
+  see section \ref{sec:cli:fuse:important:parameters}
+\item \texttt{acquisition\_stack0\_leftcamera\_z\_stacking}:
+  see \texttt{acquisition\_leftcamera\_z\_stacking}.
+\item \texttt{acquisition\_stack1\_leftcamera\_z\_stacking}:
+  see \texttt{acquisition\_leftcamera\_z\_stacking}.
+\item \texttt{acquisition\_slit\_line\_correction}:
+  \texttt{True} or \texttt{False}.
+  See section \ref{sec:cli:fuse:overview}.
+\item \texttt{target\_resolution}:
+  isotropic voxel size of the fusion result (fused images).
+  See section \ref{sec:cli:fuse:output:data}.
+  
+\item \texttt{fusion\_strategy}:
+  \begin{itemize}
+  \itemsep -0.5ex
+  \item \texttt{'direct-fusion'}: each acquisition is linearly 
+  co-registered with the first acquisition (stack \#0, left camera). 
+  Used registration parameters are the ones  prefixed by 
+  \texttt{fusion\_preregistration\_} and 
+  \texttt{fusion\_registration\_}.
+  Then weights and images are transformed thanks to the 
+  computed transformations.
+  \item \texttt{'hierarchical-fusion'}: from the couple 
+  (left camera, right camera), each stack is reconstructed (with the
+  registration parameters prefixed by 
+  \texttt{fusion\_preregistration\_} and 
+  \texttt{fusion\_registration\_}), following the same scheme than 
+  the direct fusion but with only 2 images. 
+  Then stack\#1 is (non-)linearly co-registered with stack \#0 with the
+  registration parameters prefixed by 
+  \texttt{fusion\_stack\_preregistration\_} and 
+  \texttt{fusion\_stack\_registration\_}.
+   Images and weights associated with stack\#1 are then (non-)linearly 
+   transformed. Finally a weighted linear combination gives the result.
+  \end{itemize}
+  See section \ref{sec:cli:fuse:image:coregistration}
+  
+\item \texttt{acquisition\_cropping}:
+  \texttt{True} or \texttt{False}. If set to \texttt{True}, 
+  the acquisitions stacks are cropped before fusion.
+  See section \ref{sec:cli:fuse:raw:data:cropping}
+\item \texttt{acquisition\_cropping\_margin\_x\_0}:
+  extra margin for the left side of the X direction.
+\item \texttt{acquisition\_cropping\_margin\_x\_1}:
+  extra margin for the right side of the X direction.
+\item \texttt{acquisition\_cropping\_margin\_y\_0}:
+  extra margin for the left side of the Y direction.
+\item \texttt{acquisition\_cropping\_margin\_y\_1}:
+  extra margin for the right side of the Y direction.
+\item \texttt{acquisition\_cropping\_margin\_x}: 
+  allows to set both \texttt{acquisition\_cropping\_margin\_x\_0} and
+  \texttt{acquisition\_cropping\_margin\_x\_1}
+\item \texttt{acquisition\_cropping\_margin\_y}: 
+  allows to set both \texttt{acquisition\_cropping\_margin\_y\_0} and
+  \texttt{acquisition\_cropping\_margin\_y\_1}
+\item \texttt{acquisition\_cropping\_margin}: 
+  allows to set the four margin variables.
+  
+\item Registration parameters 
+  (see section \ref{sec:cli:parameters:registration}) prefixed 
+  by \texttt{fusion\_preregistration\_}
+\item Registration parameters 
+  (see section \ref{sec:cli:parameters:registration}) prefixed 
+  by \texttt{fusion\_registration\_}
+\item Registration parameters 
+  (see section \ref{sec:cli:parameters:registration}) prefixed 
+  by \texttt{fusion\_stack\_preregistration\_}
+\item Registration parameters 
+  (see section \ref{sec:cli:parameters:registration}) prefixed 
+  by \texttt{fusion\_stack\_registration\_}
+  
+\item \texttt{xzsection\_extraction}:
+  \texttt{True} or \texttt{False}.
+  Setting \texttt{xzsection\_extraction} to \texttt{True} allows 
+  to extract XZ-sections of the 4 co-registered stacks as well as 
+  the weighting function images. It provides an efficient way to check
+  whether the \texttt{acquisition\_leftcamera\_z\_stacking} variable 
+  was correcly set.
+  See section \ref{sec:cli:fuse:stack:fusion}
+  
+\item \texttt{fusion\_cropping}:
+  \texttt{True} or \texttt{False}. If set to \texttt{True}, 
+  the fusion result is cropped.
+  see section \ref{sec:cli:fuse:fused:data:cropping}
+\item \texttt{fusion\_cropping\_margin\_x\_0}
+\item \texttt{fusion\_cropping\_margin\_x\_1}
+\item \texttt{fusion\_cropping\_margin\_y\_0}
+\item \texttt{fusion\_cropping\_margin\_y\_1}
+\item \texttt{fusion\_cropping\_margin\_x}:
+  allows to set both \texttt{fusion\_cropping\_margin\_x\_0}
+  and \texttt{fusion\_cropping\_margin\_x\_1}
+\item \texttt{fusion\_cropping\_margin\_y}:
+  allows to set both \texttt{fusion\_cropping\_margin\_y\_0}
+  and \texttt{fusion\_cropping\_margin\_y\_1}
+\item \texttt{fusion\_cropping\_margin}:
+  allows to set the four margin variables.
+  
+\item \texttt{acquisition\_leftcamera\_z\_stacking}:
+  allows to set both \texttt{acquisition\_stack0\_leftcamera\_z\_stacking} 
+  and \texttt{acquisition\_stack1\_leftcamera\_z\_stacking}.
+  Gives the order of stacking of in the Z direction
+  \begin{itemize}
+  \itemsep -0.5ex
+  \item \texttt{'direct'}: from the high-contrasted images (small values of z) to the fuzzy/blurred ones (large values of z)
+  \item \texttt{'inverse'}: the other way around.
+  \end{itemize}
+  See section \ref{sec:cli:fuse:important:parameters}.
+
+\item \texttt{fusion\_weighting}: 
+  set the weighting function for the weighted sum of the registered
+  acquisition stacks (for all channels to be processed).
+  \begin{itemize}
+  \itemsep -0.5ex
+  \item \texttt{'uniform'}: uniform (or constant) weighting, it comes 
+  to the average of the resampled co-registered stacks
+  \item \texttt{'ramp'}: the weights are linearly increasing or 
+  decreasing along the Z axis
+  \item \texttt{'corner'}: the weights are constant in a corner portion 
+  of the stack, defined by two diagonals in the XZ-section
+  \item \texttt{'guignard'}: original historical weighting function, 
+  described in Leo Guignard's Phd thesis \cite{guignard:tel-01278725}, 
+  that puts more weight to sections close to the camera and take
+  also account the traversed material.
+  \end{itemize}
+  See section \ref{sec:cli:fuse:stack:fusion}.
+\item \texttt{fusion\_weighting\_channel\_1}:
+  set the weighting function for the weighted sum of the registered
+  acquisition stacks for the first channel (in case of multi-channel
+  acquisition).
+\item \texttt{fusion\_weighting\_channel\_2}:
+  set the weighting function for the weighted sum of the registered
+  acquisition stacks for the second channel (in case of multi-channel
+  acquisition).
+\item \texttt{fusion\_weighting\_channel\_3}:
+  set the weighting function for the weighted sum of the registered
+  acquisition stacks for the third channel (in case of multi-channel
+  acquisition).
+\end{itemize}
+
+The following parameters are kept for backward compatibility:
+\begin{itemize}
+\itemsep -0.5ex
+\item \texttt{fusion\_crop} 
+  same as \texttt{fusion\_cropping}
+\item \texttt{fusion\_margin\_x\_0}
+  same as \texttt{fusion\_cropping\_margin\_x\_0}
+\item \texttt{fusion\_margin\_x\_1}
+  same as \texttt{fusion\_cropping\_margin\_x\_1}
+\item \texttt{fusion\_margin\_y\_0}
+  same as \texttt{fusion\_cropping\_margin\_y\_0}
+\item \texttt{fusion\_margin\_y\_1}
+  same as \texttt{fusion\_cropping\_margin\_y\_1}
+\item \texttt{fusion\_xzsection\_extraction} 
+  same as \texttt{xzsection\_extraction}
+\item \texttt{raw\_crop} 
+  same as \texttt{acquisition\_cropping}
+\item \texttt{raw\_margin\_x\_0}
+  same as \texttt{acquisition\_cropping\_margin\_x\_0}
+\item \texttt{raw\_margin\_x\_1}
+  same as \texttt{acquisition\_cropping\_margin\_x\_1}
+\item \texttt{raw\_margin\_y\_0}
+  same as \texttt{acquisition\_cropping\_margin\_y\_0}
+\item \texttt{raw\_margin\_y\_1}
+  same as \texttt{acquisition\_cropping\_margin\_y\_1}
+\item \texttt{raw\_mirrors} 
+  same as \texttt{acquisition\_mirrors}
+\item \texttt{raw\_ori} 
+  same as \texttt{acquisition\_orientation}
+\item \texttt{raw\_resolution} 
+  same as \texttt{acquisition\_resolution}
+\end{itemize}
+
+\begin{itemize}
+\itemsep -0.5ex
+\item \texttt{begin} 
+  see section \ref{sec:cli:fuse:important:parameters}
+\item \texttt{delta}
+\item \texttt{end} 
+  see section \ref{sec:cli:fuse:important:parameters}
+\item \texttt{fusion\_weighting}
+\item \texttt{fusion\_weighting\_channel\_1}
+\item \texttt{fusion\_weighting\_channel\_2}
+\item \texttt{fusion\_weighting\_channel\_3}
+\item \texttt{raw\_delay}
+\end{itemize}
+
+
+
+
+
+
+
+
+
+
+\subsection{\texttt{1.5-intraregistration.py} parameters}
+\label{sec:cli:parameters:intraregistration}
+
+These parameters are prefixed by \texttt{intra\_registration\_}.
+\begin{itemize}
+\itemsep -0.5ex
+\item Registration parameters 
+(see section \ref{sec:cli:parameters:registration}) 
+
+\item \texttt{reference\_index}:
+  defines the still image after transformation compositions it will 
+  only translated, except if \texttt{reference\_transformation\_file} 
+  or \texttt{reference\_transformation\_angles} are set.
+  See section \ref{sec:cli:intraregistration:template}.
+\item \texttt{reference\_transformation\_file}:
+  resampling transformation to be applied to the reference image 
+  (and to the whole serie) after transformation compositions.
+  See section \ref{sec:cli:intraregistration:template}.
+\item \texttt{reference\_transformation\_angles}:
+  list of rotations wrt the X, Y,or Z axis that defines the resampling
+  transformation.
+\begin{verbatim}
+reference_transformation_angles = 'X 30 Y 50'
+\end{verbatim}
+  represents a rotation of 30 degree around the X axis followed by a 
+  rotation of 50 degrees around the Y axis.
+  
+  Beware: rotation composition depends on the order, so 
+  \texttt{'X 30 Y 50'} is not equivalent to \texttt{'Y 50 X 30'}.
+
+\item \texttt{template\_type}
+\item \texttt{template\_threshold}
+\item \texttt{margin}
+\item \texttt{resolution}
+\item \texttt{rebuild\_template}:
+  \texttt{True} or \texttt{False}.
+  If set to \texttt{True}, force to recompute the template as well as the
+  transformations from existing co-registrations (that are not
+  re-computed). It is useful when a first intra-registration has been
+  done with only the fusion images: a second intra-registration with
+  the segmentation images as template can be done without recomputing 
+  the co-registrations.
+\item \texttt{sigma\_segmentation\_images}
+\item \texttt{resample\_fusion\_images}
+\item \texttt{resample\_segmentation\_images}
+\item \texttt{resample\_post\_segmentation\_images}
+\item \texttt{movie\_fusion\_images}
+\item \texttt{movie\_segmentation\_images}
+\item \texttt{movie\_post\_segmentation\_images}
+\item \texttt{xy\_movie\_fusion\_images}
+\item \texttt{xz\_movie\_fusion\_images}
+\item \texttt{yz\_movie\_fusion\_images}
+\item \texttt{xy\_movie\_segmentation\_images}
+\item \texttt{xz\_movie\_segmentation\_images}
+\item \texttt{yz\_movie\_segmentation\_images}
+\item \texttt{xy\_movie\_post\_segmentation\_images}
+\item \texttt{xz\_movie\_post\_segmentation\_images}
+\item \texttt{yz\_movie\_post\_segmentation\_images}
+\item \texttt{maximum\_fusion\_images}
+\item \texttt{maximum\_segmentation\_images}
+\item \texttt{maximum\_post\_segmentation\_images}
+\end{itemize}
+
+
+
+
+
+
+
+
+
+
+\subsection{\texttt{2-mars.py} parameters}
+\label{sec:cli:parameters:mars}
+
+These parameters are prefixed by \texttt{mars\_}.
+ 
+\begin{itemize}
+\itemsep -0.5ex
+\item \texttt{first\_time\_point}:
+  first time point to be segmented by the mars method.
+  Overrides the value of the \texttt{begin} variable.
+\item \texttt{last\_time\_point}:
+  last time point to be segmented by the mars method.
+\item Watershed parameters 
+  (see section \ref{sec:cli:parameters:watershed})
+\item Seed edition parameters
+  (see section \ref{sec:cli:parameters:seed:edition})
+\item Preprocessing parameters
+  (see section \ref{sec:cli:parameters:preprocessing})
+  prefixed by \texttt{seed\_}
+\item Preprocessing parameters
+  (see section \ref{sec:cli:parameters:preprocessing})
+  prefixed by \texttt{membrane\_}
+\end{itemize}
+
+
+
+
+
+
+
+
+
+
+\subsection{\texttt{3-manualcorrection.py} parameters}
+\label{sec:cli:parameters:manualcorrection}
+
+\begin{itemize}
+\itemsep -0.5ex
+\item \texttt{first\_time\_point}:
+  first time point to be corrected.
+  Overrides the value of the \texttt{begin} variable.
+\item \texttt{last\_time\_point}:
+  lats time point to be corrected.
+\item \texttt{input\_image}:
+  defines the input file names (to be used when correcting
+  other files than the \texttt{2-mars.py} output file.
+\item \texttt{output\_image}:
+  defines the output file names (to be used when correcting
+  other files than the \texttt{2-mars.py} output file.
+\item \texttt{mapping\_file}:
+  path to mapping file for manual correction of a segmentation (ie label)
+  image. See above the syntax of this file.
+  \begin{itemize}
+  \itemsep -0.5ex
+  \item 1 line per label association
+  \item background label has value 1
+  \item the character \texttt{\#} denotes commented lines 
+  \end{itemize}
+  Example of \texttt{mapping\_file}:
+\begin{verbatim}
+# here the input label 8 will be mapped with new value 7, etc...
+8 7
+9 2  
+4 64 
+29 23
+# ... etc ...
+# background labels
+30 1 
+89 1 
+\end{verbatim}
+\end{itemize}
+
+
+
+
+
+
+
+
+
+
+\subsection{\texttt{4-astec.py} parameters}
+\label{sec:cli:parameters:astec}
+
+
+These parameters are prefixed by \texttt{astec\_}.
+ 
+\begin{itemize}
+\itemsep -0.5ex
+\item Watershed parameters 
+  (see section \ref{sec:cli:parameters:watershed})
+\item Preprocessing parameters
+  (see section \ref{sec:cli:parameters:preprocessing})
+  prefixed by \texttt{seed\_}
+\item Preprocessing parameters
+  (see section \ref{sec:cli:parameters:preprocessing})
+  prefixed by \texttt{membrane\_}
+\item Preprocessing parameters
+  (see section \ref{sec:cli:parameters:preprocessing})
+  prefixed by \texttt{morphosnake\_}
+\item Morphosnake parameters
+  (see section \ref{sec:cli:parameters:morphosnake})
+\item \texttt{propagation\_strategy}:
+  \begin{itemize}
+  \item \texttt{'seeds\_from\_previous\_segmentation'}
+  \item \texttt{'seeds\_selection\_without\_correction'}
+  \end{itemize}
+\item \texttt{previous\_seg\_method}:
+  how to build the seeds $S^e_{t-1 \leftarrow t}$ 
+  for the computation of $\tilde{S}_{t}$
+  \begin{itemize}
+  \item \texttt{'deform\_then\_erode'}: $S^{\star}_{t-1}$ is transformed
+  towards $I_t$ frame through $\mathcal{T}_{t-1 \leftarrow t}$, and then
+  the cells and the background  are eroded.
+  \item \texttt{'erode\_then\_deform'}: historical method. The cells 
+  and the background of $S^{\star}_{t-1}$ are eroded, and then transformed
+  towards $I_t$ frame through $\mathcal{T}_{t-1 \leftarrow t}$.
+  \end{itemize}
+\item \texttt{previous\_seg\_erosion\_cell\_iterations}:
+  set the cell erosion size for $S^e_{t-1 \leftarrow t}$ computation. 
+\item \texttt{previous\_seg\_erosion\_background\_iterations}:
+  set the background erosion size for $S^e_{t-1 \leftarrow t}$ computation. 
+\item \texttt{previous\_seg\_erosion\_cell\_min\_size}:
+  size threshold. Cells whose size is below this threshold will 
+  be discarded seeds in $S^e_{t-1 \leftarrow t}$ 
+
+\item \texttt{watershed\_seed\_hmin\_min\_value}:
+  set the $h_{min}$ value of the $[h_{min}, h_{max}]$ interval.
+\item \texttt{watershed\_seed\_hmin\_max\_value}:
+  set the $h_{max}$ value of the $[h_{min}, h_{max}]$ interval.
+\item \texttt{watershed\_seed\_hmin\_delta\_value}
+  set the $\delta h$ to go from one $h$ to the next in the 
+  $[h_{min}, h_{max}]$ interval.
+  
+\item \texttt{background\_seed\_from\_hmin}:
+  \texttt{True} or \texttt{False}. 
+  Build the background seed at time point $t$ by cell propagation.  
+\item \texttt{background\_seed\_from\_previous}:
+  \texttt{True} or \texttt{False}.
+  Build the background seed at time point $t$ by using the background 
+  seed from $S^e_{t-1 \leftarrow t}$. 
+  Fragile. 
+  
+\item \texttt{seed\_selection\_tau}:
+  Set the $\tau$ value for division decision (seed selection step).
+ 
+\item \texttt{minimum\_volume\_unseeded\_cell}:
+  Volume threshold for cells without found seeds in the seed 
+  selection step. Cells with volume (in $\tilde{S}_t$) whose size is below
+  this threshold and for which no seed was found are discarded.
+
+\item \texttt{volume\_ratio\_tolerance}:
+  Ratio threshold to decide whether there is a volume decrease 
+  (due to the background) for morphosnake correction.
+\item \texttt{volume\_ratio\_threshold}:
+  Ratio threshold to decide whether there is a large volume decrease
+  for segmentation consistency checking.
+\item \texttt{volume\_minimal\_value}:
+  Size threshold for seed correction step. For a given cell at time 
+  point $t-1$, if the corresponding cell(s) at time point $t$ has(ve) 
+  volume below this threshold, they are discarded (and the cell at time 
+  point $t-1$ has no lineage.
+  
+\item \texttt{morphosnake\_correction}:
+  \texttt{True} or \texttt{False}. 
+\item \texttt{outer\_correction\_radius\_opening}
+\end{itemize}
+
+
+
+
+
+
+
+
+
+
+\subsection{\texttt{5-postcorrection.py} parameters}
+\label{sec:cli:parameters:postcorrection}
+
+These parameters are prefixed by \texttt{postcorrection\_}.
+
+\begin{itemize}
+\itemsep -0.5ex
+\item \texttt{volume\_minimal\_value}
+  branch ending with leaf cell below this value are candidate for deletion. Expressed in voxel unit.
+\item \texttt{lifespan\_minimal\_value}
+\item \texttt{test\_early\_division}
+\item \texttt{test\_volume\_correlation}
+\item \texttt{correlation\_threshold}
+\item \texttt{test\_postponing\_division}
+\item \texttt{postponing\_correlation\_threshold}
+\item \texttt{postponing\_minimal\_length}
+\item \texttt{postponing\_window\_length}
+\item \texttt{lineage\_diagnosis}
+  performs a kind of diagnosis on the lineage before and after the post-correction.
+\end{itemize}
+
+
+
+
+
