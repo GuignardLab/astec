@@ -539,15 +539,31 @@ class AstecParameters(mars.WatershedParameters, MorphoSnakeParameters):
 
         self.watershed_seed_hmin_min_value = self.read_parameter(parameters, 'watershed_seed_hmin_min_value',
                                                                  self.watershed_seed_hmin_min_value)
+        self.watershed_seed_hmin_min_value = self.read_parameter(parameters, 'hmin_min_value',
+                                                                 self.watershed_seed_hmin_min_value)
+        self.watershed_seed_hmin_min_value = self.read_parameter(parameters, 'hmin_min',
+                                                                 self.watershed_seed_hmin_min_value)
+        self.watershed_seed_hmin_min_value = self.read_parameter(parameters, 'h_min_min_value',
+                                                                 self.watershed_seed_hmin_min_value)
         self.watershed_seed_hmin_min_value = self.read_parameter(parameters, 'h_min_min',
                                                                  self.watershed_seed_hmin_min_value)
 
         self.watershed_seed_hmin_max_value = self.read_parameter(parameters, 'watershed_seed_hmin_max_value',
                                                                  self.watershed_seed_hmin_max_value)
+        self.watershed_seed_hmin_max_value = self.read_parameter(parameters, 'hmin_max_value',
+                                                                 self.watershed_seed_hmin_max_value)
+        self.watershed_seed_hmin_max_value = self.read_parameter(parameters, 'hmin_max',
+                                                                 self.watershed_seed_hmin_max_value)
+        self.watershed_seed_hmin_max_value = self.read_parameter(parameters, 'h_min_max_value',
+                                                                 self.watershed_seed_hmin_max_value)
         self.watershed_seed_hmin_max_value = self.read_parameter(parameters, 'h_min_max',
                                                                  self.watershed_seed_hmin_max_value)
 
         self.watershed_seed_hmin_delta_value = self.read_parameter(parameters, 'watershed_seed_hmin_delta_value',
+                                                                   self.watershed_seed_hmin_delta_value)
+        self.watershed_seed_hmin_delta_value = self.read_parameter(parameters, 'hmin_delta_value',
+                                                                   self.watershed_seed_hmin_delta_value)
+        self.watershed_seed_hmin_delta_value = self.read_parameter(parameters, 'h_min_delta_value',
                                                                    self.watershed_seed_hmin_delta_value)
 
         #
@@ -2578,6 +2594,9 @@ def astec_process(previous_time, current_time, lineage_tree_information, experim
         deformation = reconstruction.get_deformation_from_current_to_previous(current_time, experiment,
                                                                               parameters.membrane_reconstruction,
                                                                               previous_time)
+        if deformation is None:
+            monitoring.to_log_and_console("    .. " + proc + ": error when getting deformation field")
+            return False
         cpp_wrapping.apply_transformation(previous_segmentation, deformed_segmentation, deformation,
                                           interpolation_mode='nearest', monitoring=monitoring)
 

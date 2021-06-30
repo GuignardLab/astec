@@ -141,7 +141,7 @@ def _set_options(my_parser):
 #
 
 
-if __name__ == '__main__':
+def main():
 
     #
     # initialization
@@ -423,3 +423,13 @@ if __name__ == '__main__':
         # monitoring.to_log_and_console("")
         # monitoring.to_log_and_console("Total execution time = "+str(time.mktime(endtime)-time.mktime(start_time))+"sec")
         # monitoring.to_log_and_console("")
+
+#
+#
+# main call
+#
+#
+
+
+if __name__ == '__main__':
+    main()

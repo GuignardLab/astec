@@ -602,7 +602,8 @@ def build_seeds(input_image, difference_image, output_seed_image, experiment, pa
         if len(indexmax) > 1:
             monitoring.to_log_and_console("       several regional extrema have a maximal count", 2)
         if int(labels[indexmax[0]]) != 1:
-            monitoring.to_log_and_console("       relabel seed #" + str(labels[indexmax[0]]) + " into 1 (background)", 2)
+            monitoring.to_log_and_console("       relabel seed #" + str(labels[indexmax[0]]) + " into 1 (background)",
+                                          2)
             newlabel = max(labels) + 1
             seeds[seeds == 1] = newlabel
             seeds[seeds == labels[indexmax[0]]] = 1
@@ -899,7 +900,7 @@ def mars_process(current_time, experiment, parameters):
         monitoring.to_log_and_console("\t Exiting.")
         sys.exit(1)
 
-    if parameters.seed_reconstruction.is_equal(parameters.membrane_reconstruction):
+    if parameters.seed_reconstruction.is_equal(parameters.membrane_reconstruction, debug=(monitoring.debug > 0)):
         monitoring.to_log_and_console("    .. seed image is identical to membrane image", 2)
         seed_image = membrane_image
     else:

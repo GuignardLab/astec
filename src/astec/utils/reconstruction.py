@@ -346,69 +346,69 @@ class ReconstructionParameters(ace.AceParameters):
     #
     ############################################################
 
-    def is_equal(self, p):
+    def is_equal(self, p, debug=False):
         proc = "is_equal"
-        _trace_ = False
         if self.intensity_prenormalization != p.intensity_prenormalization:
-            if _trace_:
-                print(proc + "not equal at 'intensity_prenormalization'")
+            if debug:
+                print(proc + ": not equal at 'intensity_prenormalization'")
             return False
         if self.prenormalization_min_percentile != p.prenormalization_min_percentile:
-            if _trace_:
-                print(proc + "not equal at 'prenormalization_min_percentile'")
+            if debug:
+                print(proc + ": not equal at 'prenormalization_min_percentile'")
             return False
         if self.prenormalization_max_percentile != p.prenormalization_max_percentile:
-            if _trace_:
-                print(proc + "not equal at 'prenormalization_max_percentile'")
+            if debug:
+                print(proc + ": not equal at 'prenormalization_max_percentile'")
             return False
         if self.intensity_transformation != p.intensity_transformation:
-            if _trace_:
-                print(proc + "not equal at 'intensity_transformation'")
+            if debug:
+                print(proc + ": not equal at 'intensity_transformation'")
             return False
         if self.intensity_transformation != p.intensity_transformation:
-            if _trace_:
-                print(proc + "not equal at 'intensity_transformation'")
+            if debug:
+                print(proc + ": not equal at 'intensity_transformation'")
             return False
         if self.intensity_enhancement != p.intensity_enhancement:
-            if _trace_:
-                print(proc + "not equal at 'intensity_enhancement'")
+            if debug:
+                print(proc + ": not equal at 'intensity_enhancement'")
             return False
         if self.outer_contour_enhancement != p.outer_contour_enhancement:
-            if _trace_:
-                print(proc + "not equal at 'outer_contour_enhancement'")
+            if debug:
+                print(proc + ": not equal at 'outer_contour_enhancement'")
             return False
         if self.reconstruction_images_combination != p.reconstruction_images_combination:
-            if _trace_:
-                print(proc + "not equal at 'reconstruction_images_combination'")
+            if debug:
+                print(proc + ": not equal at 'reconstruction_images_combination'")
             return False
         if self.cell_normalization_min_method != p.cell_normalization_min_method:
-            if _trace_:
-                print(proc + "not equal at 'cell_normalization_min_method'")
+            if debug:
+                print(proc + ": not equal at 'cell_normalization_min_method'")
             return False
         if self.cell_normalization_max_method != p.cell_normalization_max_method:
-            if _trace_:
-                print(proc + "not equal at 'cell_normalization_max_method'")
+            if debug:
+                print(proc + ": not equal at 'cell_normalization_max_method'")
             return False
         if self.normalization_min_percentile != p.normalization_min_percentile:
-            if _trace_:
-                print(proc + "not equal at 'normalization_min_percentile'")
+            if debug:
+                print(proc + ": not equal at 'normalization_min_percentile'")
             return False
         if self.normalization_max_percentile != p.normalization_max_percentile:
-            if _trace_:
-                print(proc + "not equal at 'normalization_max_percentile'")
+            if debug:
+                print(proc + ": not equal at 'normalization_max_percentile'")
             return False
         if self.cell_normalization_sigma != p.cell_normalization_sigma:
-            if _trace_:
-                print(proc + "not equal at 'cell_normalization_sigma'")
+            if debug:
+                print(proc + ": not equal at 'cell_normalization_sigma'")
             return False
         if self.intensity_sigma != p.intensity_sigma:
-            if _trace_:
-                print(proc + "not equal at 'intensity_sigma'")
+            if debug:
+                print(proc + ": not equal at 'intensity_sigma'")
+                print("self.intensity_sigma = " + str(self.intensity_sigma) + " - p.intensity_sigma = " + str(p.intensity_sigma))
             return False
 
         if ace.AceParameters.is_equal(self, p) is False:
-            if _trace_:
-                print(proc + "not equal at 'AceParameters'")
+            if debug:
+                print(proc + ": not equal at 'AceParameters'")
             return False
 
         return True

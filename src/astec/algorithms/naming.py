@@ -880,11 +880,13 @@ def _ci_global_score(neighbors, references, debug=False):
 
 
 def _ci_switch_daughters(neighbors, reference, daughters):
-    for c in neighbors[0][reference]:
+    n = copy.deepcopy(neighbors[0][reference])
+    for c in n:
         if c == daughters[1]:
             neighbors[0][reference][daughters[0]] = neighbors[0][reference][daughters[1]]
             del neighbors[0][reference][daughters[1]]
-    for c in neighbors[1][reference]:
+    n = copy.deepcopy(neighbors[1][reference])
+    for c in n:
         if c == daughters[0]:
             neighbors[1][reference][daughters[1]] = neighbors[1][reference][daughters[0]]
             del neighbors[1][reference][daughters[0]]
