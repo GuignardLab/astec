@@ -11,6 +11,9 @@ dependencies:
   - h5py
   - nibabel
   - tifffile
+  - matplotlib
+  - networkx
+  - ipython
   - sphinx
   - sphinxcontrib-bibtex
   - markupsafe <2.0

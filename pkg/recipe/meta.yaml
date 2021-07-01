@@ -21,8 +21,13 @@ requirements:
     - setuptools
     - python  {{ python }}
   run:
-    - python
     - vt
+    - python
     - numpy
-    - tifffile
+    - scipy
     - h5py
+    - nibabel
+    - tifffile
+    - matplotlib
+    - networkx
+    - ipython
