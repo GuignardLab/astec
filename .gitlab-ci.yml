@@ -4,7 +4,7 @@ conda_build:
   stage: build
   script:
     - apt update
-    - apt install libc libtiff5-dev
+    - apt install libc6 libtiff5-dev
     - conda install conda-build git
     - mkdir conda-bld
     - conda build ./pkg/recipe/ -c morpheme -c conda-forge --user morpheme --output-folder conda-bld/
