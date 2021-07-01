@@ -1,12 +1,12 @@
 package:
   name: astec
-  version: {{ GIT_DESCRIBE_TAG }}
+  version: {{ environ.get('GIT_DESCRIBE_TAG', 'default') }}
 
 source:
   path: ../../
 
 build:
-  number: 0
+  number: {{ environ.get('GIT_DESCRIBE_NUMBER', 0)}}
 
 about:
   home: https://team.inria.fr/morpheme
