@@ -3078,6 +3078,14 @@ def astec_control(experiment, parameters):
                                       + str(type(parameters)))
         sys.exit(1)
 
+    if experiment.first_time_point is None:
+        monitoring.to_log_and_console(str(proc) + ": first time point was not set: ")
+        sys.exit(1)
+
+    if experiment.last_time_point is None:
+        monitoring.to_log_and_console(str(proc) + ": last time point was not set: ")
+        sys.exit(1)
+
     #
     # copy monitoring information
     #

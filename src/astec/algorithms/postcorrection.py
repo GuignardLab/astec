@@ -498,7 +498,7 @@ def _get_leaves(direct_lineage, reverse_lineage, volume, experiment, parameters)
         lengths.append(len(branch))
         division_cell = reverse_lineage.get(branch[-1], '')
         division_cells.append(division_cell)
-        if division_cell is not '':
+        if division_cell != '':
             division_times.append(int(division_cell / 10 ** time_digits_for_cell_id))
         else:
             branch.reverse()
