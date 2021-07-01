@@ -43,7 +43,15 @@ sudo apt-get install libtiff5-dev
 ```
 
 #### Conda package
-To be released soon.
+To create a conda environment named `astec` and install `astec` package, in a terminal do:
+```shell
+conda create -n astec -c morpheme -c conda-forge astec
+```
+Then to test astec install, activate the environment and try to import it: 
+```shell
+conda activate astec
+python -c "import astec"
+```
 
 #### From sources in a conda environment
 You first have to clone the ASTEC project from its INRIA GitLab repository:
