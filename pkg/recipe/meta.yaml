@@ -9,12 +9,11 @@ build:
   number: {{ environ.get('GIT_DESCRIBE_NUMBER', 0)}}
 
 about:
-  home: https://team.inria.fr/morpheme
+  home: https://astec.gitlabpages.inria.fr/astec
   license: GPL
   license_file: ../../LICENSE.txt
   summary: ASTEC package
   dev_url: https://gitlab.inria.fr/astec/astec
-  doc_source_url: https://astec.gitlabpages.inria.fr/astec
 
 requirements:
   build:
@@ -31,3 +30,17 @@ requirements:
     - matplotlib
     - networkx
     - ipython
+
+test:
+  imports:
+    - vt
+    - astec
+  commands:
+    - astec_fusion -h
+    - astec_mars -h
+    - astec_manual_correction -h
+    - astec_astec -h
+    - astec_postcorrection -h
+    - astec_intraregistration -h
+    - astec_embryoproperties -h
+    - astec_naming -h
