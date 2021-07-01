@@ -1,3 +1,4 @@
+=================================
 Welcome to astec's documentation!
 =================================
 
@@ -7,11 +8,13 @@ Its development has been pursued, and it was used to process 3D+t movies acquire
 
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 3
    :caption: Contents:
 
+   installation.rst
+   cli.rst
+   astec_fuse.rst
    overview.rst
    reference.rst
-   cli.rst
    publications.rst
 

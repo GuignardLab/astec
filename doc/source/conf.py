@@ -33,7 +33,8 @@ release = '2.0.0'
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.intersphinx',
-    'sphinxcontrib.bibtex'
+    'sphinxcontrib.bibtex',
+    'sphinx.ext.autosectionlabel'
 ]
 
 bibtex_bibfiles = ['latex/bib-astec.bib']

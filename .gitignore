@@ -75,7 +75,6 @@ build*/
 bin/
 binaries/
 external/*/doc
-Doc/
 lib/
 
 # CMakeLists temporary files #

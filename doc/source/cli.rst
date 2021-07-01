@@ -1,8 +1,33 @@
+-----------------------------------
+User guide: command line interfaces
+-----------------------------------
+
+Data organization
+=================
+
+It is assumed that there will be one directory per experiment. This
+directory contains the acquired data, but will also contain the result
+data as depicted below.
+	  
+.. code-block:: none
+
+   $ /path/to/experiment/
+   ├── RAWDATA/
+   │  └── ...
+   ├── FUSE
+   │  └── ...
+   ├── SEG
+   │  └── ...
+   └── POST
+      └── ...
+
+
+
 Command Line Interface
 ======================
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
    :caption: Contents:
 
 Astec
