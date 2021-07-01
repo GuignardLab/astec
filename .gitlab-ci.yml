@@ -36,6 +36,7 @@ pages:
   script:
   - conda env create -f ./pkg/env/astec-dev.yaml
   - source activate astec-dev
+  - conda install make
   - python -m pip install .
   - cd doc
   - make clean && make html
