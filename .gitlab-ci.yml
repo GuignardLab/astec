@@ -4,10 +4,10 @@ conda_build:
   stage: build
   script:
     - apt update
-    - apt install libc6 libtiff5-dev -y
-    - conda install conda-build git python=3.8
+    - apt install libc6 -y
+    - conda install conda-build git
     - mkdir conda-bld
-    - conda build ./pkg/recipe/ -c morpheme -c conda-forge --user morpheme --output-folder conda-bld/
+    - conda build ./pkg/recipe/ -c morpheme -c conda-forge --output-folder conda-bld/
   artifacts:
     paths:
       - conda-bld
@@ -19,7 +19,7 @@ anaconda_master :
   stage: deploy
   script:
   - conda update --all
-  - conda install conda-build anaconda-client python=3.8
+  - conda install conda-build anaconda-client
   - conda convert -p osx-64 conda-bld/linux-64/astec-* --output-dir conda-bld/
   - anaconda --token=$ANACONDA_TOKEN upload conda-bld/linux-64/astec-* --force --user morpheme
   - anaconda --token=$ANACONDA_TOKEN upload conda-bld/osx-64/astec-* --force --user morpheme
