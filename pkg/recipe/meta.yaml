@@ -34,12 +34,3 @@ requirements:
 test:
   imports:
     - astec
-  commands:
-    - astec_fusion -h
-    - astec_mars -h
-    - astec_manual_correction -h
-    - astec_astec -h
-    - astec_postcorrection -h
-    - astec_intraregistration -h
-    - astec_embryoproperties -h
-    - astec_naming -h
