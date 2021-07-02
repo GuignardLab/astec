@@ -1,7 +1,7 @@
 -----------------------------------
 User guide: command line interfaces
 -----------------------------------
-
+   
 Data organization
 =================
 
@@ -21,6 +21,8 @@ data as depicted below.
    └── POST
       └── ...
 
+.. include:: astec_fuse.rst
+      
 
 
 Command Line Interface

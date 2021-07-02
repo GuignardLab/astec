@@ -6,14 +6,13 @@ ASTEC, for **Adaptive Segmentation and Tracking of Embryonic Cells**, was first 
 
 Its development has been pursued, and it was used to process 3D+t movies acquired by the MuViSPIM light-sheet microscope :cite:p:`guignard:hal-02903409`.
 
-
 .. toctree::
    :maxdepth: 3
-   :caption: Contents:
-
+   :caption: Contents
+   :numbered:
+   
    installation.rst
    cli.rst
-   astec_fuse.rst
    overview.rst
    reference.rst
    publications.rst

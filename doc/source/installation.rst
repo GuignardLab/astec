@@ -1,11 +1,10 @@
 ------------
 Installation
 ------------
-
-
+   
 Only works for Linux or MacOs systems.
 
-I.  User installation (without git)
+User installation (without git)
 ===================================
 
 Requires conda.
@@ -22,7 +21,7 @@ Requires conda.
 
    conda activate astec-test
 
-II. User installation (with git)
+User installation (with git)
 ================================
 
 Requires conda and git.
@@ -48,7 +47,7 @@ It creates an astec directory.
 		    
    conda activate astec
 
-III. Developer installation (with git)
+Developer installation (with git)
 ======================================
 
 Requires conda and git.
