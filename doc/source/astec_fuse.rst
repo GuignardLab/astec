@@ -1,7 +1,13 @@
-`astec_fuse`
-============
+.. role:: python(code)
+   :language: python
 
 
+
+``astec_fuse``
+==============
+
+
+.. _cli-fuse-overview:
 
 Fusion method overview
 ----------------------
@@ -16,8 +22,8 @@ The fusion is made of the following steps.
 
 4. Optionally, a mirroring of the images:
    
-   * if the ``acquisition_mirrors`` variable is set to ``False``, a mirroring along the X axis of the *right camera* images (see also section :ref:`Important parameters in the parameter file`), and
-   * if the ``acquisition_leftcamera_z_stacking`` variable is set to ``'inverse'``, a mirroring along the Z axis of both *left camera* and *right camera* images (see also section :ref:`Important parameters in the parameter file`).
+   * if the :python:`acquisition_mirrors` variable is set to :python:`False`, a mirroring along the X axis of the *right camera* images (see also section :ref:`cli-fuse-important-parameters`), and
+   * if the ``acquisition_leftcamera_z_stacking`` variable is set to ``'inverse'``, a mirroring along the Z axis of both *left camera* and *right camera* images (see also section :ref:`cli-fuse-important-parameters`).
 
 5. Co-registration of the 3 last images onto the first one (the acquisition from the left camera for stack #0) considered as a reference. The reference image is resampled again, to get an isotropic voxel (whose size is given by ``target_resolution``), i.e. the voxel size is the same along the 3 directions: X, Y, Z. There are two alternative methods.
    
@@ -48,6 +54,8 @@ The fusion is made of the following steps.
 
 
 
+.. _cli-fuse-important-parameters:
+
 Important parameters in the parameter file
 ------------------------------------------
 
@@ -70,20 +78,19 @@ acquisition parameters is crucial; these parameters are
 
    * ``'direct'``: *z* increases from the high-contrasted images to the blurred ones  (see figure :ref:`acquisition-spim-right`).
    * ``'inverse'``: *z* increases from the blurred images to the high-contrasted ones (see figure :ref:`acquisition-spim-left`).
-
      
-   Looking at XZ-sections of the registered images (see figures :ref:`fusion-uniform-combination`, :ref:`fusion-ramp-combination`, :ref:`fusion-corner-combination`, and :ref:`fusion-guignard-combination`) provides an efficient means to check whether this parameter is correctly set (see also section :ref:`Step 6: linear combination of co-registered image stacks`).
+   Looking at XZ-sections of the registered images (see figures :ref:`fusion-uniform-combination`, :ref:`fusion-ramp-combination`, :ref:`fusion-corner-combination`, and :ref:`fusion-guignard-combination`) provides an efficient means to check whether this parameter is correctly set (see also section :ref:`cli-fuse-linear-combination`).
 
 * ``acquisition_resolution`` (or ``raw_resolution}`` is the voxel size (along the 3
     dimensions X, Y and Z) of the acquired images.
-    
+
 * ``target_resolution`` is the desired isotropic (the
     same along the 3 dimensions) voxel size for the result fusion
     images.
-    
+
 * ``begin`` gives the index of the first time point to be
   processed.
-  
+
 * ``end`` gives the index of the last time point to be processed.
 
 When one may not be sure of the ``raw_ori``, ``raw_mirrors``, and  ``acquisition_leftcamera_z_stacking`` right values, it is advised to perform the
@@ -92,21 +99,24 @@ fusion on only one time point (by indicating the same index for both
 variable couple (``raw_ori``, ``raw_mirrors``), i.e. (``'left'``, ``False``),
 (``'left'``, ``True``), (``'right'``, ``False``), and (``'right'``, ``True``).
 It comes to write four parameter files that differ only for the
-parameters ``raw_ori``, ``raw_mirrors``, and ``EXP_FUSE``  (to store the fusion result in different directories, see section :ref:`Output data`).
+parameters ``raw_ori``, ``raw_mirrors``, and ``EXP_FUSE``  (to store the fusion result in different directories, see section :ref:`cli-fuse-output-data`).
 For these first experiments, it is advised 
 
-* to set ``target_resolution`` to a large value, in order to speed up the
-calculations, and
+* to set ``target_resolution`` to a large value, in order to speed up
+  the calculations, and
 
-* to set  ``fusion_xzsection_extraction`` to ``True``, in order to check whether ``acquisition_leftcamera_z_stacking`` was correctly set (see also section :ref:`Step 6: linear combination of co-registered image stacks`).
+* to set  ``fusion_xzsection_extraction`` to ``True``, in order to check whether ``acquisition_leftcamera_z_stacking`` was correctly set (see also section :ref:`cli-fuse-linear-combination`).
 
 Please recall that ``raw_ori`` should depend on the acquisition apparatus (ie the microscope), and should not change for all the other acquisitions on the same microscope (unless the microscope settings change). Then, for most experiments, one change only to test the value of 
 ``raw_ori``.
 
 Please note that changing the value of ``acquisition_leftcamera_z_stacking`` implies to change also the value of ``acquisition_orientation``.
 
-Input data
-----------
+
+.. _cli-fuse-input-data:
+
+Fusion / input data
+-------------------
 
 Input data (acquired images from the MuViSPIM microscope, see figures :ref:`acquisition-spim-right` and :ref:`acquisition-spim-left`) are assumed
 to be organized in a separate ``RAWDATA/`` directory in the 
@@ -126,7 +136,7 @@ to be organized in a separate ``RAWDATA/`` directory in the
 
 .. code-block:: none
 
-   $ /path/to/experiment/
+   /path/to/experiment/
    ├── RAWDATA/
    │  ├── LC/
    │  │  ├── Stack0000/
@@ -152,7 +162,7 @@ where ``xxx`` denotes a three digit number (e.g. 000, 001, ...) denoting the tim
 
 Hence a parameter file containing
 
-.. code-block:: none
+.. code-block:: python
 
    PATH_EMBRYO = /path/to/experiment/
    begin = 0
@@ -189,7 +199,7 @@ Then, to parse the following data architecture
 
 .. code-block:: none
 
-   $ /path/to/experiment/
+   /path/to/experiment/
    ├── my_raw_data/
    │  ├── LeftCamera/
    │  │  ├── FirstStack/
@@ -205,7 +215,7 @@ Then, to parse the following data architecture
 
 one has to add the following lines in the parameter file
 
-.. code-block:: none
+.. code-block:: python
 		
    DIR_RAWDATA = 'my_raw_data'
    DIR_LEFTCAM_STACKZERO = 'LeftCamera/FirstStack'
@@ -230,7 +240,7 @@ the same directory, but obviously with different names as in
 
 .. code-block:: none
 
-   $ /path/to/experiment/
+   /path/to/experiment/
    ├── RAWDATA/
    │  ├── stack_0_channel_0/
    │  │  ├── Cam_Left_00xxx.zip
@@ -247,7 +257,7 @@ the same directory, but obviously with different names as in
 The parameter file has then to contain the following lines to indicate
 the directory names.
 
-.. code-block:: none
+.. code-block:: python
 
    DIR_LEFTCAM_STACKZERO = 'stack_0_channel_0'
    DIR_RIGHTCAM_STACKZERO = 'stack_0_channel_0'
@@ -262,7 +272,7 @@ This is the purpose of the variables ``acquisition_leftcam_image_prefix`` and  `
 The parameter file has then to contain the following lines not only to indicate
 the directory names but also the image file name prefixes.
 
-.. code-block:: none
+.. code-block:: python
 
    DIR_LEFTCAM_STACKZERO = 'stack_0_channel_0'
    DIR_RIGHTCAM_STACKZERO = 'stack_0_channel_0'
@@ -273,8 +283,8 @@ the directory names but also the image file name prefixes.
 
 
    
-Multichannel acquisition
-~~~~~~~~~~~~~~~~~~~~~~~~
+Fusion / input data / multichannel acquisition
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 In case of multichannel acquisition, the fusion is computed for the
 first channel, and the computed parameters (e.g. transformations,
@@ -316,9 +326,10 @@ left and the right cameras are searched in the directories
    <PATH_EMBRYO>/<DIR_RAWDATA>/<DIR_RIGHTCAM_STACKONE_CHANNEL_3>
 
 
+.. _cli-fuse-output-data:
 
-Output data
------------
+Fusion / output data
+--------------------
 
 The variable ``target_resolution`` allows to set the desired isotropic (the
 same along the 3 dimensions) voxel size for the result fusion
@@ -333,7 +344,7 @@ The resulting fused images are stored in sub-directory ``FUSE/FUSE_<EXP_FUSE>`` 
 
 .. code-block:: none
 
-   $ /path/to/experiment/
+   /path/to/experiment/
    ├── RAWDATA/
    │  └── ...
    ├── FUSE/
@@ -344,14 +355,14 @@ The resulting fused images are stored in sub-directory ``FUSE/FUSE_<EXP_FUSE>`` 
 where ``<EXP_FUSE>`` is the value of the variable ``EXP_FUSE`` (its
 default value is ``'RELEASE'``). Hence, the line
 
-.. code-block:: none
+.. code-block:: python
 		
    EXP_FUSE = 'TEST'
 
 in the parameter file will create the directory``FUSE/FUSE_TEST/`` in which the fused images are stored. For instance, when testing for the values of the variable couple
 (``raw_ori``, ``raw_mirrors``), a first parameter file may contain
 
-.. code-block:: none
+.. code-block:: python
 		
    EXP_FUSE = 'TEST'
    raw_ori = 'left'
@@ -362,7 +373,7 @@ in the parameter file will create the directory``FUSE/FUSE_TEST/`` in which the 
 
 a second parameter file may contain
 
-.. code-block:: none
+.. code-block:: python
 		
    EXP_FUSE = 'TEST'
    raw_ori = 'left'
@@ -375,7 +386,7 @@ etc. The resulting fused images will then be in different directories.
 
 .. code-block:: none
 
-   $ /path/to/experiment/
+   /path/to/experiment/
    ├── RAWDATA/
    │  └── ...
    ├── FUSE/
@@ -399,15 +410,15 @@ index encoded by a 3-digit integer (with 0 padding).
 
 
 
-Multichannel acquisition
-~~~~~~~~~~~~~~~~~~~~~~~~
+Fusion / output data / multichannel acquisition
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 If a single name is given in the variable ``EXP_FUSE``, this name will be used to build the directory name for
 the resulting fused images of the first channel, and the other directory names are built after this first name by adding a suffix ``_CHANNEL_2`` for the 2nd channel, ``_CHANNEL_3`` for the 3rd channel,  etc.
 
 If the parameter file contains
 
-.. code-block:: none
+.. code-block:: python
 	
    EXP_FUSE = 'MULTI'
 
@@ -415,7 +426,7 @@ The resulting fused images will then be the following directories
 
 .. code-block:: none
 
-   $ /path/to/experiment/
+   /path/to/experiment/
    ├── RAWDATA/
    │  └── ...
    ├── FUSE/
@@ -431,7 +442,7 @@ the resulting fused images of the corresponding channels (the first name of the 
 
 If the parameter file contains
 
-.. code-block:: none
+.. code-block:: python
 	
    EXP_FUSE = ['1CHANNEL', '2CHANNEL']
 
@@ -439,7 +450,7 @@ The resulting fused images will then be the following directories
 
 .. code-block:: none
 
-   $ /path/to/experiment/
+   /path/to/experiment/
    ├── RAWDATA/
    │  └── ...
    ├── FUSE/
@@ -450,6 +461,7 @@ The resulting fused images will then be the following directories
    ...
 
 
+.. _cli-fuse-raw-data-cropping:
 
 Step 3 parameters: raw data cropping
 ------------------------------------
@@ -458,18 +470,19 @@ For computational cost purposes, raw data (images acquired by the MuViSPIM micro
 
 To desactivate this cropping, the line
 
-.. code-block:: none
+.. code-block:: python
 	
    raw_crop = False
 
 has to be added in the parameter file.
 
 
+.. _cli-fuse-image-registration:
 
 Step 5 parameters: image co-registration
 ----------------------------------------
 
-To fuse the images, they are co-registered onto a reference one. Co-registration are conducted only on the first channel (in case of multiple channel acquisitions), and the computed transformations are also applied onto the other channels. The reference image is chosen as being the acquisition from the left camera for the first stack (also denoted stack \#0). The co-registration strategy is given by the variable ``fusion_strategy`` in the parameter file.
+To fuse the images, they are co-registered onto a reference one. Co-registration are conducted only on the first channel (in case of multiple channel acquisitions), and the computed transformations are also applied onto the other channels. The reference image is chosen as being the acquisition from the left camera for the first stack (also denoted stack #0). The co-registration strategy is given by the variable ``fusion_strategy`` in the parameter file.
 
 
 
@@ -487,13 +500,13 @@ Fusion *direct* strategy
 
 In the parameter file, the line
 
-.. code-block:: none
+.. code-block:: python
 	
    fusion_strategy = 'direct-fusion'
 
 will set the co-registration strategy to the one described in  :cite:p:`guignard:tel-01278725` and  :cite:p:`guignard:hal-02903409`: each acquisition image is linearly co-registered with the reference one, i.e. the one from the left camera and for the first stack.
 
-Let us denote by :math:`I^{0}_{LC}` the left camera image of stack #0, the three other images are :math:`I^{0}_{RC}`, :math:`I^{1}_{LC}`, and :math:`I^{1}_{RC}`. By (linear) co-registration (see section :ref:`Acquisitions linear co-registration`) of these image with :math:`I^{0}_{LC}`, the 3 transformations
+Let us denote by :math:`I^{0}_{LC}` the left camera image of stack #0, the three other images are :math:`I^{0}_{RC}`, :math:`I^{1}_{LC}`, and :math:`I^{1}_{RC}`. By (linear) co-registration (see section :ref:`cli-fuse-linear-registration`) of these image with :math:`I^{0}_{LC}`, the 3 transformations
 :math:`T_{I^{0}_{RC} \leftarrow I^{0}_{LC}}`,
 :math:`T_{I^{1}_{LC} \leftarrow I^{0}_{LC}}`, and
 :math:`T_{I^{1}_{RC} \leftarrow I^{0}_{LC}}`
@@ -517,16 +530,16 @@ Fusion *hierarchical* strategy
 
 In the parameter file, the line
 
-.. code-block:: none
+.. code-block:: python
 	
    fusion_strategy = 'hierarchical-fusion'
 
-defines a hierarchical  co-registration  strategy. First, the right camera image of each stack is linearly co-registered (see section :ref:`Acquisitions linear co-registration`) on its left camera counterpart, yielding the transformations
+defines a hierarchical  co-registration  strategy. First, the right camera image of each stack is linearly co-registered (see section :ref:`cli-fuse-linear-registration`) on its left camera counterpart, yielding the transformations
 :math:`T_{I^{0}_{RC} \leftarrow I^{0}_{LC}}` and
 :math:`T_{I^{1}_{RC} \leftarrow I^{1}_{LC}}`.
 According that the left and right camera images of a stack are acquired simultaneously, a linear transformation is then completely adequate to co-register them.
 
-This allows to fuse (see section :ref:`Step 6: linear combination of co-registered image stacks`) the two acquisition of the corresponding left and right cameras into a single stack:
+This allows to fuse (see section :ref:`cli-fuse-linear-combination`) the two acquisition of the corresponding left and right cameras into a single stack:
 
 .. math::
    :nowrap:
@@ -538,7 +551,7 @@ This allows to fuse (see section :ref:`Step 6: linear combination of co-register
           + \omega^{1}_{RC} I^{1}_{RC} \circ T_{I^{1}_{RC} \leftarrow I^{1}_{LC}}                         
    \end{eqnarray*}
 
-The reconstructed stacks are then (potentially non-linearly, see section :ref:`Stacks non-linear co-registration`) co-registered together, yielding the transformation :math:`T_{I^{1} \leftarrow I^{0}}`. This allows to get the 
+The reconstructed stacks are then (potentially non-linearly, see section :ref:`cli-fuse-nonlinear-registration`) co-registered together, yielding the transformation :math:`T_{I^{1} \leftarrow I^{0}}`. This allows to get the 
 :math:`T_{I^{1}_{RC} \leftarrow I^{0}_{RC}}` and
 :math:`T_{I^{1}_{LC} \leftarrow I^{0}_{RC}}` transformations
       
@@ -554,6 +567,7 @@ The reconstructed stacks are then (potentially non-linearly, see section :ref:`S
 Using a non-linear registration in this last step allows to compensate for some distortions that may occur between the two stacks #0 and #1. Please note that stack #0 is then assumed to be the non-distorted reference while left and right camera image of stack #1 will be deformed before fusion.
 
 
+.. _cli-fuse-linear-registration:
 
 Acquisitions linear co-registration
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -564,7 +578,7 @@ Variables that controls the linear co-registrations are either prefixed by ``fus
 To verify whether a good quality registration can be conducted, the searched transformation type can be changed for a simpler one than affine. 
 Adding the following line in the parameter file.
 
-.. code-block:: none
+.. code-block:: python
 	
    fusion_registration_transformation_type = translation
 
@@ -574,18 +588,20 @@ Hyper-intensities areas may bias the threshold calculation used for the automati
 
 This pre-registration can be activated by adding the following line in the parameter file.
 
-.. code-block:: none
+.. code-block:: python
 	
    fusion_preregistration_compute_registration = True
 
 
-   
+.. _cli-fuse-nonlinear-registration:
+
 Stacks non-linear co-registration
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Variables that controls the non-linear co-registrations are either prefixed by ``fusion_stack_preregistration_`` or by ``fusion_stack_registration_``. They are defined similarly as the one of acquisitions co-registration. 
 
 
+.. _cli-fuse-linear-combination:
 
 Step 6: linear combination of co-registered image stacks
 --------------------------------------------------------
@@ -607,8 +623,7 @@ The resampled co-registered image stacks are fused together by the means of a we
 
    Fusion with constant weighting function.
 
-   At the left, XZ-sections of 4 co-registered stacks. 
-At the right, the linear combination of the 4 co-registered stacks with an uniform (or constant) weighting function. It comes to make an average of the 4 co-registered stacks.
+   At the left, XZ-sections of 4 co-registered stacks. At the right, the linear combination of the co-registered stacks with an uniform (or constant) weighting function. It comes to make an average of the 4 co-registered stacks. 
 
 .. _fusion-ramp-combination:
 .. figure:: ./latex/figures/fusion-ramp-combination.png
@@ -643,41 +658,42 @@ The variable ``fusion_weighting`` can be set to
 * ``'uniform'``: it comes to the average of the resampled co-registered stacks (see figure :ref:`fusion-uniform-combination`). Such a weighting does not depend on the stacks to be fused.
 * ``'ramp'``: the weights are linearly increasing along the Z axis (see figure :ref:`fusion-ramp-combination`).
 * ``'corner'``: the weights are constant in a corner portion of the stack, defined by two diagonals in the XZ-section (see figure :ref:`fusion-corner-combination`). It somehow mimics a stitching of the 4 resampled co-registered image stacks, where the information is kept from the most informative image.
-* ``'guignard'``: the weighting function is the one described in :cite:p:`guignard:`tel-01278725`. More weight are given to sections close to the camera and it also takes into account the traversed material (see figure :ref:`fusion-guignard-combination`). 
+* ``'guignard'``: the weighting function is the one described in :cite:p:`guignard:tel-01278725`. More weight are given to sections close to the camera and it also takes into account the traversed material (see figure :ref:`fusion-guignard-combination`). 
 
 Weighting functions are designed so that the weights decrease with Z for the left camera images and increase with Z for the left camera images. So, setting the ``acquisition_leftcamera_z_stacking`` variable to the wrong value (``'direct'`` instead of ``'inverse'``, or vice-versa) may then decrease the fusion quality. 
 
 Looking at XZ-sections of the co-registered image stacks, as well as the weighting function images, (see figures :ref:`fusion-uniform-combination`, :ref:`fusion-ramp-combination`, :ref:`fusion-corner-combination`, and :ref:`fusion-guignard-combination`) provides a direct and efficient means to check whether this parameter is correctly set. Such sections can be extracted by setting the ``fusion_xzsection_extraction`` parameter to ``True``. It creates ``XZSECTION_<xxx>/`` subdirectories (one per time point, ``<xxx>`` being the time point index) in the ``FUSE/FUSE_<EXP_FUSE>/`` directory.
 
-\mbox{}
-\dirtree{%
-.1 /path/to/experiment/.
-.2 RAWDATA/.
-.3 \ldots.
-.2 FUSE/.
-.3 FUSE_<EXP_FUSE>/.
-.4 \ldots.
-.4 XZSECTION_<xxx>/.
-.4 \ldots.
-}
-\mbox{}
+.. code-block:: none
 
-
+   /path/to/experiment/
+   ├── ...
+   ├── RAWDATA/
+   │  └── ...
+   ├── FUSE/
+   │  └── FUSE_<EXP_SEG>/
+   │     ├── ...
+   │     ├── XZSECTION_<xxx>/
+   │     │  └── ...
+   │     └── ...
+   ...
+   
 When using the variable ``fusion_weighting``, the same weights (computed on the first channel to be processed) are used for all fusion. However, different weighting functions can be used for the channels to be fused by using the variables  ``fusion_weighting_channel_[1,2,3]``, eg
 
-.. code-block:: none
+.. code-block:: python
 	
    fusion_weighting_channel_1 = 'guignard'
    fusion_weighting_channel_2 = 'uniform'
 
 
-   
+.. _cli-fuse-fused-data-cropping:
+
 Step 7: fused data cropping
 ------------------------------------------------
 
 To save disk storage, fused images are cropped at the end of the fusion stage. To desactivate this cropping, the line
 
-.. code-block:: none
+.. code-block:: python
 	
    fusion_crop = False
 
@@ -689,12 +705,12 @@ Troubleshooting
 ---------------
 
 * The fused images are obviously wrong.
-   1. Are the values of the variable couple (``raw_ori``, ``raw_mirrors``) the right ones? Conduct experiments as suggested in section :ref:`Important parameters in the parameter file`  (see also section :ref:`Output data`) to get the right values.
+   1. Are the values of the variable couple (``raw_ori``, ``raw_mirrors``) the right ones? Conduct experiments as suggested in section :ref:`cli-fuse-important-parameters`  (see also section :ref:`cli-fuse-output-data`) to get the right values.
    2. The registration may have failed.
-      a. Try to register with a simpler transformation type (i.e. translation) and/or with a two-steps registration (see section :ref:`Step 5 parameters: image co-registration`).
+      a. Try to register with a simpler transformation type (i.e. translation) and/or with a two-steps registration (see section :ref:`cli-fuse-image-registration`).
 * The imaged sample is cropped by the image border in the fused image.
    1. Check whether the imaged sample was not already cropped in the raw data.
-   2. The automated cropping may have failed. It is more likely to happen when cropping the raw data, so deactivate it (see section :ref:`Step 3 parameters: raw data cropping`). If it still happens, try to deactivate also the fused image cropping   (see section :ref:`Step 7: fused data cropping`).
+   2. The automated cropping may have failed. It is more likely to happen when cropping the raw data, so deactivate it (see section :ref:`cli-fuse-raw-data-cropping`). If it still happens, try to deactivate also the fused image cropping   (see section :ref:`cli-fuse-fused-data-cropping`).
 
 
 

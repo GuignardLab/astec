@@ -98,3 +98,12 @@ Requires `conda` and `git`.
     want you want if you aim at contributing to the astec
     project. This last command has to be repeated (within the conda
     environment every time the astec code has been modified).
+
+
+## Tutorial
+
+A tutorial can be found at [gitlab.inria.fr/astec/astec-tutorial](https://gitlab.inria.fr/astec/astec-tutorial).
+
+## Documentation
+
+A documentation can be found at [astec.gitlabpages.inria.fr/astec/](https://astec.gitlabpages.inria.fr/astec/).
