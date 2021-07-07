@@ -33,9 +33,6 @@ Principle
 Command line interfaces common options
 --------------------------------------
 
-\label{sec:cli:common}
-
-
 ``-h, --help``
    prints a help message
    
