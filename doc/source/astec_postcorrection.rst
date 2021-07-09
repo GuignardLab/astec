@@ -1,4 +1,4 @@
-``astec-postcorrection``
+``astec_postcorrection``
 ========================
 
 
