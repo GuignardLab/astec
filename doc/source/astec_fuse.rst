@@ -296,6 +296,24 @@ left and the right cameras are searched in the directories
 
 .. code-block:: none
 
+   <PATH_EMBRYO>/<DIR_RAWDATA>/<DIR_LEFTCAM_STACKZERO_CHANNEL_1>
+   <PATH_EMBRYO>/<DIR_RAWDATA>/<DIR_RIGHTCAM_STACKZERO_CHANNEL_1>
+
+while the images acquired at the second angulation by the
+left and the right cameras are searched in the directories
+
+.. code-block:: none
+
+   <PATH_EMBRYO>/<DIR_RAWDATA>/<DIR_LEFTCAM_STACKONE_CHANNEL_1>
+   <PATH_EMBRYO>/<DIR_RAWDATA>/<DIR_RIGHTCAM_STACKONE_CHANNEL_1>
+
+
+For a third channel, 
+the images acquired at the first angulation by the
+left and the right cameras are searched in the directories
+
+.. code-block:: none
+
    <PATH_EMBRYO>/<DIR_RAWDATA>/<DIR_LEFTCAM_STACKZERO_CHANNEL_2>
    <PATH_EMBRYO>/<DIR_RAWDATA>/<DIR_RIGHTCAM_STACKZERO_CHANNEL_2>
 
@@ -306,24 +324,6 @@ left and the right cameras are searched in the directories
 
    <PATH_EMBRYO>/<DIR_RAWDATA>/<DIR_LEFTCAM_STACKONE_CHANNEL_2>
    <PATH_EMBRYO>/<DIR_RAWDATA>/<DIR_RIGHTCAM_STACKONE_CHANNEL_2>
-
-
-For a third channel, 
-the images acquired at the first angulation by the
-left and the right cameras are searched in the directories
-
-.. code-block:: none
-
-   <PATH_EMBRYO>/<DIR_RAWDATA>/<DIR_LEFTCAM_STACKZERO_CHANNEL_3>
-   <PATH_EMBRYO>/<DIR_RAWDATA>/<DIR_RIGHTCAM_STACKZERO_CHANNEL_3>
-
-while the images acquired at the second angulation by the
-left and the right cameras are searched in the directories
-
-.. code-block:: none
-
-   <PATH_EMBRYO>/<DIR_RAWDATA>/<DIR_LEFTCAM_STACKONE_CHANNEL_3>
-   <PATH_EMBRYO>/<DIR_RAWDATA>/<DIR_RIGHTCAM_STACKONE_CHANNEL_3>
 
 
 .. _cli-fuse-output-data:

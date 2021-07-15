@@ -25,13 +25,13 @@ Requires `conda`.
 `astec-test`)
 
 	```bash
-	conda create -n astec-test -c morpheme -c conda-forge astec
+	conda create -n astec -c morpheme -c conda-forge astec
 	```
 
 2. Activate the built conda environment
 
 	```bash
-	conda activate astec-test
+	conda activate astec
 	```
 
 ### II - User installation (with git)
