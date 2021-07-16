@@ -1,11 +1,13 @@
-image: conda/miniconda3-centos6
+image: conda/miniconda3
 
 conda_build:
   stage: build
   script:
+    - apt update
+    - apt install libc6 -y
     - conda install conda-build git
     - mkdir conda-bld
-    - conda build ./pkg/recipe/ -c morpheme -c conda-forge --user morpheme --output-folder conda-bld/
+    - conda build ./pkg/recipe/ -c morpheme -c conda-forge --output-folder conda-bld/
   artifacts:
     paths:
       - conda-bld
@@ -34,6 +36,7 @@ pages:
   script:
   - conda env create -f ./pkg/env/astec-dev.yaml
   - source activate astec-dev
+  - conda install make
   - python -m pip install .
   - cd doc
   - make clean && make html

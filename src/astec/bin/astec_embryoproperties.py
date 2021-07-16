@@ -58,8 +58,8 @@ def _set_options(my_parser):
                            action='store', nargs='*', dest='outputFeatures', const=None,
                            help="features to be extracted from the lineage: 'lineage', 'h_min', 'volume', 'surface'" +
                                 ", 'sigma', 'label_in_time', 'barycenter', 'fate', 'fate2', 'fate3', 'fate4'" +
-                                ", 'all-cells', 'principal-value', 'name', 'contact', 'history', 'principal-vector'" +
-                                ", 'name-score', 'compactness'")
+                                ", 'all-cells', 'principal-value', 'apicobasal-length', 'name', 'contact', 'history'" +
+                                ", 'principal-vector', 'name-score', 'cell-compactness'")
 
     my_parser.add_argument('--check', '--check-volume-lineage',
                            action='store_const', dest='check_volume_lineage',

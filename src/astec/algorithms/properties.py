@@ -204,6 +204,8 @@ keydictionary = {'lineage': {'output_key': 'cell_lineage',
                                'input_keys': ['all_cells', 'All Cells', 'All_Cells', 'all cells', 'tot_cells']},
                  'principal-value': {'output_key': 'cell_principal_values',
                                      'input_keys': ['cell_principal_values', 'Principal values']},
+                 'apicobasal-length': {'output_key': 'cell_apicobasal_length',
+                                     'input_keys': ['cell_apicobasal_length']},
                  'name': {'output_key': 'cell_name',
                           'input_keys': ['cell_name', 'Names', 'names', 'cell_names']},
                  'contact': {'output_key': 'cell_contact_surface',
@@ -2041,6 +2043,9 @@ def diagnosis(d, features, diagnosis_parameters, time_digits_for_cell_id=4):
                     elif outk == keydictionary['principal-value']['output_key']:
                         pass
                         # monitoring.to_log_and_console("    diagnosis of '" + str(k) + "' not implemented yet", 1)
+                    elif outk == keydictionary['apicobasal-length']['output_key']:
+                        pass
+                        # monitoring.to_log_and_console("    diagnosis of '" + str(k) + "' not implemented yet", 1)
                     elif outk == keydictionary['name']['output_key']:
                         _diagnosis_name(d[outk], d[keydictionary['lineage']['output_key']], outk,
                                         time_digits_for_cell_id=time_digits_for_cell_id)
@@ -2648,7 +2653,7 @@ def write_tlp_file(tlpfilename, dictionary):
         # property as single double
         #
         elif p == keydictionary['volume']['output_key'] or p == keydictionary['surface']['output_key'] \
-                or p == keydictionary['compactness']['output_key']:
+                or p == keydictionary['apicobasal-length']['output_key'] or p == keydictionary['compactness']['output_key']:
             prop = dictionary[p]
             default = np.median(list(prop.values()))
             f.write("(property 0 double \"" + str(p) + "\"\n")
