@@ -2,16 +2,19 @@
 
 This file contains instructions for installing and running the ASTEC reconstruction algorithm.
 
-ASTEC is a **Segmentation and Tracking algorithm from Contact-dependent cell communications drive morphological invariance during ascidian embryogenesis**.
+ASTEC stands for **Adaptive Segmentation and Tracking of Embryonic
+Cells**, and was first developed during L. Guignard PhD thesis,
+**Quantitative analysis of animal morphogenesis: from high-throughput
+laser imaging to 4D virtual embryo in ascidians**, _Léo Guignard_,
+2015, https://tel.archives-ouvertes.fr/tel-01278725.
 
-This work was originaly published on **bioRxiv** in 2018:
+This work was then published on **bioRxiv** in 2018:
 
 **Contact-dependent cell-cell communications drive morphological invariance during ascidian embryogenesis**, _Léo Guignard, Ulla-Maj Fiuza, Bruno Leggio, Emmanuel Faure, Julien Laussu, Lars Hufnagel, Grégoire Malandain, Christophe Godin, Patrick Lemaire_, bioRxiv 2018; doi: https://doi.org/10.1101/238741.
 
 It was later published in **Science** in 2020:
 
 **Contact area–dependent cell communication and the morphological invariance of ascidian embryogenesis**, _Léo Guignard, Ulla-Maj Fiuza, Bruno Leggio, Julien Laussu, Emmanuel Faure, Gaël Michelin, Kilian Biasuz, Lars Hufnagel, Grégoire Malandain, Christophe Godin, Patrick Lemaire_, Science 2020; doi: https://doi.org/10.1126/science.aar5663.
-
 
 ## Installation
 
@@ -55,6 +58,11 @@ Requires `conda` and `git`.
 	conda env create -f pkg/env/astec.yaml
 	```
 
+   If already created, the conda environment can be updated with
+	```bash
+	conda env update -f pkg/env/astec.yaml
+	```
+
 3. Activate the built conda environment
 
 	```bash
@@ -75,12 +83,18 @@ Requires `conda` and `git`.
 
 	It creates an `astec` directory.
 
-2. Create a conda environment named `astec`
+2. Create a conda environment named `astec-dev`
 
 	```bash
 	cd astec
 	conda env create -f pkg/env/astec-dev.yaml
 	```
+
+   If already created, the conda environment can be updated with
+	```bash
+	conda env update -f pkg/env/astec-dev.yaml
+	```
+
 
 3. Activate the built conda environment
 
