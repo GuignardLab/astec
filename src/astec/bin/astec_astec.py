@@ -181,6 +181,9 @@ def main():
     parameters = astec.AstecParameters()
 
     parameters.update_from_parameter_file(parameter_file)
+    parameters.membrane_reconstruction.set_suffixes()
+    parameters.seed_reconstruction.set_suffixes(parameters.membrane_reconstruction)
+    parameters.morphosnake_reconstruction.set_suffixes(parameters.membrane_reconstruction)
 
     parameters.write_parameters(monitoring.log_filename)
 

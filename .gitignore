@@ -72,10 +72,10 @@ Thumbs.db
 .svn/
 build/
 build*/
-bin/
 binaries/
 external/*/doc
 lib/
+*.egg-info/
 
 # CMakeLists temporary files #
 ##############################

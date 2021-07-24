@@ -321,8 +321,10 @@ class MarsParameters(WatershedParameters, SeedEditionParameters):
         SeedEditionParameters.__init__(self, prefix=prefix)
         #
         # reconstruction parameters
-        self.seed_reconstruction = reconstruction.ReconstructionParameters(prefix=[self._prefix, "seed_"])
-        self.membrane_reconstruction = reconstruction.ReconstructionParameters(prefix=[self._prefix, "membrane_"])
+        self.seed_reconstruction = reconstruction.ReconstructionParameters(prefix=[self._prefix, "seed_"],
+                                                                           suffix="_seed")
+        self.membrane_reconstruction = reconstruction.ReconstructionParameters(prefix=[self._prefix, "membrane_"],
+                                                                               suffix="_membrane")
         self.seed_reconstruction.intensity_sigma = 0.6
         self.membrane_reconstruction.intensity_sigma = 0.15
         return
@@ -889,10 +891,10 @@ def mars_process(current_time, experiment, parameters):
     # - membrane extraction
     #
 
-    monitoring.to_log_and_console("    .. reconstruct membrane image", 2)
+    monitoring.to_log_and_console("  .. reconstruct membrane image", 2)
     reconstruction.monitoring.copy(monitoring)
     membrane_image = reconstruction.build_reconstructed_image(current_time, experiment,
-                                                              parameters.membrane_reconstruction, suffix="_membrane")
+                                                              parameters.membrane_reconstruction)
 
     if membrane_image is None or not os.path.isfile(membrane_image):
         monitoring.to_log_and_console("       '" + str(membrane_image).split(os.path.sep)[-1]
@@ -904,8 +906,8 @@ def mars_process(current_time, experiment, parameters):
         monitoring.to_log_and_console("    .. seed image is identical to membrane image", 2)
         seed_image = membrane_image
     else:
-        seed_image = reconstruction.build_reconstructed_image(current_time, experiment, parameters.seed_reconstruction,
-                                                              suffix="_seed")
+        monitoring.to_log_and_console("  .. reconstruct seed image", 2)
+        seed_image = reconstruction.build_reconstructed_image(current_time, experiment, parameters.seed_reconstruction)
 
     #
     # compute the seeded watershed
