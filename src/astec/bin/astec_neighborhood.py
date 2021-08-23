@@ -11,7 +11,8 @@ import sys
 #
 
 import astec.utils.common as common
-import astec.algorithms.naming as naming
+import astec.algorithms.neighborhood as aneighborhood
+import astec.utils.neighborhood as uneighborhood
 import astec.algorithms.properties as properties
 from astec.wrapping.cpp_wrapping import path_to_vt
 
@@ -42,18 +43,6 @@ def _set_options(my_parser):
     my_parser.add_argument('-e', '--embryo-rep',
                            action='store', dest='embryo_path', const=None,
                            help='path to the embryo data')
-
-    #
-    # other options
-    #
-
-    my_parser.add_argument('-i', '--input',
-                           action='store', nargs='*', dest='inputFile', const=None,
-                           help='input pkl or xml lineage file. Set fates and write result in ouput file.')
-
-    my_parser.add_argument('-o', '--output',
-                           action='store', nargs='*', dest='outputFile', const=None,
-                           help='output pkl or xml lineage file')
 
     #
     # control parameters
@@ -125,26 +114,12 @@ def main():
     experiment.update_from_args(args)
 
     if args.printParameters:
-        parameters = naming.NamingParameters()
+        parameters = uneighborhood.NeighborhoodParameters()
         if args.parameterFile is not None and os.path.isfile(args.parameterFile):
             experiment.update_from_parameter_file(args.parameterFile)
             parameters.update_from_parameter_file(args.parameterFile)
         experiment.print_parameters(directories=[])
         parameters.print_parameters()
-        sys.exit(0)
-
-    #
-    # read input file(s) from args, write output file from args
-    #
-
-    time_digits_for_cell_id = experiment.get_time_digits_for_cell_id()
-
-    if args.parameterFile is None:
-        prop = properties.read_dictionary(args.inputFile, inputpropertiesdict={})
-        prop = properties.set_fate_from_names(prop, time_digits_for_cell_id=time_digits_for_cell_id)
-        prop = properties.set_color_from_fate(prop)
-        if args.outputFile is not None:
-            properties.write_dictionary(args.outputFile, prop)
         sys.exit(0)
 
     #
@@ -195,7 +170,8 @@ def main():
     # copy monitoring information into other "files"
     # so the log filename is known
     #
-    naming.monitoring.copy(monitoring)
+    aneighborhood.monitoring.copy(monitoring)
+    uneighborhood.monitoring.copy(monitoring)
     properties.monitoring.copy(monitoring)
 
     #
@@ -205,7 +181,7 @@ def main():
     # 3. write parameters into the logfile
     #
 
-    parameters = naming.NamingParameters()
+    parameters = uneighborhood.NeighborhoodParameters()
     parameters.update_from_parameter_file(parameter_file)
     # parameters.write_parameters(monitoring.log_filename)
 
@@ -213,7 +189,7 @@ def main():
     # processing
     #
 
-    naming.naming_process(experiment, parameters)
+    aneighborhood.neighborhood_process(experiment, parameters)
 
     #
     # end of execution

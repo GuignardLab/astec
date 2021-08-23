@@ -37,6 +37,7 @@ setup_kwds = dict(
             'astec_intraregistration=astec.bin.astec_intraregistration:main',
             'astec_embryoproperties=astec.bin.astec_embryoproperties:main',
             'astec_naming=astec.bin.astec_naming:main',
+            'astec_neighborhood=astec.bin.astec_neighborhood:main',
         ],
     },
     keywords='',

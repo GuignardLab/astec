@@ -156,7 +156,10 @@ class PrefixedParameter(object):
         for p in self._prefixes:
             desc = p + parameter_description
             if hasattr(parameters, desc):
-                returned_attr = getattr(parameters, desc)
+                if isinstance(default_value, list) and len(default_value) > 0:
+                    returned_attr = default_value + getattr(parameters, desc)
+                else:
+                    returned_attr = getattr(parameters, desc)
         return returned_attr
 
     def _fulldesc(self, desc):
@@ -475,6 +478,15 @@ def _rmtree_directory_list(directories, min_index=-1):
             shutil.rmtree(d)
     return
 
+
+def _get_history_filename(cli_name):
+    if cli_name is None:
+        local_cli_name = 'unknown'
+    else:
+        local_cli_name = os.path.basename(cli_name)
+        if local_cli_name[-3:] == '.py':
+            local_cli_name = local_cli_name[:-3]
+    return local_cli_name + '-history.log'
 #
 #
 #
@@ -524,7 +536,6 @@ class RawdataChannel(PrefixedParameter):
         doc += "(DIR_dirCAM_STACKx) or its default value.\n"
         doc += "\n"
         self.doc['rawdata_overview'] = doc
-
 
         doc = "\t directory where are located the subdirectories containing the"
         doc += "\t acquisition images."
@@ -610,7 +621,7 @@ class RawdataChannel(PrefixedParameter):
     #
     ############################################################
 
-    def print_configuration(self):
+    def print_configuration(self, spaces=0):
         if self.is_empty():
             print('    RawdataChannel ' + str(self._channel_id) + ' is empty')
             return
@@ -636,7 +647,7 @@ class RawdataChannel(PrefixedParameter):
         print('    - _time_digits_for_acquisition = ' + str(self._time_digits_for_acquisition))
         return
 
-    def write_configuration_in_file(self, logfile):
+    def write_configuration_in_file(self, logfile, spaces=0):
         logfile.write('    RawdataChannel ' + str(self._channel_id))
         if self.is_empty():
             logfile.write(' is empty\n')
@@ -776,6 +787,9 @@ class RawdataChannel(PrefixedParameter):
     #
     ############################################################
 
+    def get_main_directory(self):
+        return self._main_directory
+
     def get_angle_path(self, angle_id):
         if angle_id == 0:
             return os.path.join(self._parent_directory, self._main_directory, self.angle0_sub_directory)
@@ -823,11 +837,10 @@ class RawdataChannel(PrefixedParameter):
     ############################################################
 
     def compare_to_channel(self, c):
-        if self._main_directory != c._main_directory \
-            or (self.angle0_sub_directory != c.angle0_sub_directory \
-                 and self.angle1_sub_directory != c.angle1_sub_directory \
-                 and self.angle2_sub_directory != c.angle2_sub_directory \
-                 and self.angle3_sub_directory != c.angle3_sub_directory):
+        if self._main_directory != c.get_main_directory() or (self.angle0_sub_directory != c.angle0_sub_directory
+                                                              and self.angle1_sub_directory != c.angle1_sub_directory
+                                                              and self.angle2_sub_directory != c.angle2_sub_directory
+                                                              and self.angle3_sub_directory != c.angle3_sub_directory):
             return
         self.__init__(self._channel_id)
         return
@@ -924,7 +937,7 @@ class RawdataSubdirectory(object):
     def update_from_parameters(self, parameters):
         for i in range(self._n_max_channels):
             self.channel[i].update_from_parameters(parameters)
-        for i in range(1,self._n_max_channels):
+        for i in range(1, self._n_max_channels):
             self.channel[i].compare_to_channel(self.channel[0])
         return
 
@@ -1036,7 +1049,7 @@ class GenericSubdirectory(PrefixedParameter):
     #
     ############################################################
 
-    def print_configuration(self):
+    def print_configuration(self, spaces=0):
         self._set_directory()
         self._set_log_directory()
         self._set_rec_directory()
@@ -1070,7 +1083,7 @@ class GenericSubdirectory(PrefixedParameter):
                 for i in range(len(self._directory)):
                     logfile.write("      #" + str(i) + ": '" + str(self.get_directory(i)) + "'\n")
 
-    def write_configuration_in_file(self, logfile):
+    def write_configuration_in_file(self, logfile, spaces=0):
         self._set_directory()
         self._set_log_directory()
         self._set_rec_directory()
@@ -1341,13 +1354,7 @@ class GenericSubdirectory(PrefixedParameter):
     ############################################################
 
     def get_history_filename(self, cli_name):
-        if cli_name is None:
-            local_cli_name = 'unknown'
-        else:
-            local_cli_name = os.path.basename(cli_name)
-            if local_cli_name[-3:] == '.py':
-                local_cli_name = local_cli_name[:-3]
-        return os.path.join(self.get_log_directory(), local_cli_name + '-history.log')
+        return os.path.join(self.get_log_directory(), _get_history_filename(cli_name))
 
     #
     # manage directories
@@ -1403,13 +1410,13 @@ class FuseSubdirectory(GenericSubdirectory):
 
         self._xzsection_directory = list()
 
-    def print_configuration(self):
+    def print_configuration(self, spaces=0):
         self._set_directory()
         print("  - subpath/to/fusion is")
         GenericSubdirectory.print_configuration(self)
         return
 
-    def write_configuration_in_file(self, logfile):
+    def write_configuration_in_file(self, logfile, spaces=0):
         self._set_directory()
         logfile.write("  - subpath/to/fusion is \n")
         GenericSubdirectory.write_configuration_in_file(self, logfile)
@@ -1461,13 +1468,13 @@ class IntraregSubdirectory(GenericSubdirectory):
         self._sub_directory_suffix = 'RELEASE'
         self._file_suffix = "_intrareg"
 
-    def print_configuration(self):
+    def print_configuration(self, spaces=0):
         self._set_directory()
         print("  - subpath/to/intraregistration is")
         GenericSubdirectory.print_configuration(self)
         return
 
-    def write_configuration_in_file(self, logfile):
+    def write_configuration_in_file(self, logfile, spaces=0):
         self._set_directory()
         logfile.write("  - subpath/to/intraregistration is \n")
         GenericSubdirectory.write_configuration_in_file(self, logfile)
@@ -1507,13 +1514,13 @@ class MarsSubdirectory(GenericSubdirectory):
         self._sub_directory_suffix = 'RELEASE'
         self._file_suffix = "_mars"
 
-    def print_configuration(self):
+    def print_configuration(self, spaces=0):
         self._set_directory()
         print("  - subpath/to/mars is")
         GenericSubdirectory.print_configuration(self)
         return
 
-    def write_configuration_in_file(self, logfile):
+    def write_configuration_in_file(self, logfile, spaces=0):
         self._set_directory()
         logfile.write("  - subpath/to/mars is \n")
         GenericSubdirectory.write_configuration_in_file(self, logfile)
@@ -1554,13 +1561,12 @@ class AstecSubdirectory(GenericSubdirectory):
         self._sub_directory_suffix = 'RELEASE'
         self._file_suffix = "_seg"
 
-    def print_configuration(self):
+    def print_configuration(self, spaces=0):
         self._set_directory()
         print("  - subpath/to/seg is")
         GenericSubdirectory.print_configuration(self)
-        return
 
-    def write_configuration_in_file(self, logfile):
+    def write_configuration_in_file(self, logfile, spaces=0):
         self._set_directory()
         logfile.write("  - subpath/to/seg is \n")
         GenericSubdirectory.write_configuration_in_file(self, logfile)
@@ -1598,13 +1604,12 @@ class PostSubdirectory(GenericSubdirectory):
         self._sub_directory_suffix = 'RELEASE'
         self._file_suffix = "_post"
 
-    def print_configuration(self):
+    def print_configuration(self, spaces=0):
         self._set_directory()
         print("  - subpath/to/postcorrection is")
         GenericSubdirectory.print_configuration(self)
-        return
 
-    def write_configuration_in_file(self, logfile):
+    def write_configuration_in_file(self, logfile, spaces=0):
         self._set_directory()
         logfile.write("  - subpath/to/postcorrection is \n")
         GenericSubdirectory.write_configuration_in_file(self, logfile)
@@ -1699,7 +1704,7 @@ class Experiment(PrefixedParameter):
         self.post_dir = PostSubdirectory()
         self.intrareg_dir = IntraregSubdirectory()
 
-        self.working_dir = GenericSubdirectory()
+        self.working_dir = None
 
         #
         #
@@ -1721,7 +1726,7 @@ class Experiment(PrefixedParameter):
         self.doc['default_image_suffix'] = doc
         self.default_image_suffix = 'mha'
         doc = "\t Possible values are 'xml', 'pkl'\n"
-        doc = "\t Defines the lineage and properties file format\n"
+        doc += "\t Defines the lineage and properties file format\n"
         self.doc['result_lineage_suffix'] = doc
         self.result_lineage_suffix = 'xml'
 
@@ -1731,7 +1736,7 @@ class Experiment(PrefixedParameter):
     #
     ############################################################
 
-    def print_configuration(self):
+    def print_configuration(self, spaces=0):
         print("")
         print('Experiment configuration')
 
@@ -1760,7 +1765,10 @@ class Experiment(PrefixedParameter):
         print('- intra-registration directory is')
         self.intrareg_dir.print_configuration()
         print('- working directory is')
-        self.working_dir.print_configuration()
+        if self.working_dir is not None:
+            self.working_dir.print_configuration()
+        else:
+            print(" 'None'")
 
         print('- result_image_suffix = ' + str(self.result_image_suffix))
         print('- default_image_suffix = ' + str(self.default_image_suffix))
@@ -1804,7 +1812,10 @@ class Experiment(PrefixedParameter):
                 logfile.write('- intra-registration directory is \n')
                 self.intrareg_dir.write_configuration_in_file(logfile)
                 logfile.write('- working directory is \n')
-                self.working_dir.write_configuration_in_file(logfile)
+                if self.working_dir is not None:
+                    self.working_dir.write_configuration_in_file(logfile)
+                else:
+                    logfile.write(" 'None'\n")
 
                 logfile.write('- result_image_suffix = ' + str(self.result_image_suffix) + '\n')
                 logfile.write('- default_image_suffix = ' + str(self.default_image_suffix) + '\n')
@@ -1901,7 +1912,10 @@ class Experiment(PrefixedParameter):
         return
 
     def update_history_at_start(self, cli_name=None, start_time=None, parameter_file=None, path_to_vt=None):
-        history_filename = self.working_dir.get_history_filename(cli_name)
+        if self.working_dir is not None:
+            history_filename = self.working_dir.get_history_filename(cli_name)
+        else:
+            history_filename = _get_history_filename(cli_name)
         with open(history_filename, 'a') as logfile:
             logfile.write("\n")
             if start_time is not None:
@@ -1922,7 +1936,10 @@ class Experiment(PrefixedParameter):
         return
 
     def update_history_execution_time(self, cli_name=None, start_time=None, end_time=None):
-        history_filename = self.working_dir.get_history_filename(cli_name)
+        if self.working_dir is not None:
+            history_filename = self.working_dir.get_history_filename(cli_name)
+        else:
+            history_filename = _get_history_filename(cli_name)
         with open(history_filename, 'a') as logfile:
             logfile.write('# Total execution time = ' + str(time.mktime(end_time) - time.mktime(start_time)) + ' sec\n')
             logfile.write("\n\n")
@@ -1933,8 +1950,10 @@ class Experiment(PrefixedParameter):
             return
         if directory is not None:
             local_directory = directory
-        else:
+        elif self.working_dir is not None:
             local_directory = self.working_dir.get_log_directory()
+        else:
+            local_directory = os.getcwd()
 
         d = _timestamp_to_str(timestamp)
         if len(thefile.split('.')) > 1:
@@ -2027,10 +2046,10 @@ class Experiment(PrefixedParameter):
 
         self.first_time_point = _read_parameter(parameters, 'first_time_point', self.first_time_point)
         self.first_time_point = _read_parameter(parameters, 'begin', self.first_time_point)
-        if self.first_time_point is None:
-            print(proc + ": it is mandatory to specify the first time point")
-            print("\t Exiting.")
-            sys.exit(1)
+        # if self.first_time_point is None:
+        #     print(proc + ": it is mandatory to specify the first time point")
+        #     print("\t Exiting.")
+        #     sys.exit(1)
 
         self.last_time_point = _read_parameter(parameters, 'last_time_point', self.last_time_point)
         self.last_time_point = _read_parameter(parameters, 'end', self.last_time_point)
@@ -2101,7 +2120,10 @@ class Experiment(PrefixedParameter):
         return self._embryo_path
 
     def get_log_dirname(self):
-        return os.path.join(self.working_dir.get_log_directory())
+        if self.working_dir is not None:
+            return os.path.join(self.working_dir.get_log_directory())
+        else:
+            return os.getcwd()
 
     def get_segmentation_image(self, time_value, verbose=True):
         proc = 'Experiment.get_segmentation_image'
@@ -2319,7 +2341,7 @@ class RegistrationParameters(PrefixedParameter):
         # parameters
         #
         doc = "\t Highest level of the pyramid image use for registration\n"
-        doc = "\t \n"
+        doc += "\t \n"
         doc += "\t Registration is performed within a hierarchical scheme, ie\n"
         doc += "\t an image pyramid is built, with the image dimensions \n"
         doc += "\t decreasing from one pyramid level to the next. The \n"

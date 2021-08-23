@@ -1824,7 +1824,7 @@ def _volume_decrease_correction(astec_name, previous_segmentation, segmentation_
                             monitoring.to_log_and_console('                  seeds from h=' + str(h_min) + ' image')
                             monitoring.to_log_and_console('                  parameter_seeds[mother_c]='
                                                           + str(parameter_seeds[mother_c]))
-                            monitoring.to_log_and_console('                  s='+ str(s))
+                            monitoring.to_log_and_console('                  s=' + str(s))
                         #
                         # remove previous seed
                         # add new seeds, note that they might be several seeds per label '1' or '2'
