@@ -5,7 +5,7 @@ import astec.utils.neighborhood as uneighborhood
 # figures
 #
 
-def figures_neighborhood_consistency(neighborhoods, filename='figures_consistency.py'):
+def figures_neighborhood_consistency(neighborhoods, parameters, filename='figures_consistency.py'):
     """
     Build a file to draw figures of 'consistency' between reference embryos for mother cells
     Parameters
@@ -20,7 +20,7 @@ def figures_neighborhood_consistency(neighborhoods, filename='figures_consistenc
     -------
 
     """
-    references, tested_couples, discrepancy = uneighborhood.get_neighborhood_consistency(neighborhoods)
+    references, tested_couples, discrepancy = uneighborhood.get_neighborhood_consistency(neighborhoods, parameters)
     if len(discrepancy) == 0:
         return
 
@@ -198,7 +198,7 @@ def figures_neighborhood_consistency(neighborhoods, filename='figures_consistenc
     f.close()
 
 
-def figures_neighborhood_score(neighborhoods, filename='figures_score.py'):
+def figures_neighborhood_score(neighborhoods, parameters):
     """
     Build a file to draw figures of 'consistency' between reference embryos for mother cells
     Parameters
@@ -206,13 +206,19 @@ def figures_neighborhood_score(neighborhoods, filename='figures_score.py'):
     neighborhoods: nested dictionary of neighborhood, where the keys are ['cell name']['reference name']
         where 'reference name' is the name of the reference lineage, and neighborhood a dictionary of contact surfaces
         indexed by cell names (only for the first time point after the division)
-    filename
-    min_discrepancy
+    parameters
 
     Returns
     -------
 
     """
+
+    filename = 'figures_score'
+    file_suffix = None
+    if parameters.figurefile_suffix is not None and isinstance(parameters.figurefile_suffix, str) and \
+        len(parameters.figurefile_suffix) > 0:
+        file_suffix = '_' + parameters.figurefile_suffix
+    filename += file_suffix + '.py'
 
     #
     # get the references per mother_name
@@ -239,15 +245,26 @@ def figures_neighborhood_score(neighborhoods, filename='figures_score.py'):
                 if n2 <= n1:
                     continue
                 if d[0] in neighborhoods and (n1 in neighborhoods[d[0]] and n2 in neighborhoods[d[0]]):
-                    s0 = uneighborhood.get_score(neighborhoods[d[0]][n1], neighborhoods[d[0]][n2])
+                    s0 = uneighborhood.get_score(neighborhoods[d[0]][n1], neighborhoods[d[0]][n2],
+                                                 parameters.neighborhood_comparison)
                 else:
                     s0 = None
                 if d[1] in neighborhoods and (n1 in neighborhoods[d[1]] and n2 in neighborhoods[d[1]]):
-                    s1 = uneighborhood.get_score(neighborhoods[d[1]][n1], neighborhoods[d[1]][n2])
+                    s1 = uneighborhood.get_score(neighborhoods[d[1]][n1], neighborhoods[d[1]][n2],
+                                                 parameters.neighborhood_comparison)
                 else:
                     s1 = None
+                #
+                # get_score() is in [0, 1]:
+                # 0: perfect agreement
+                # 1: full disagreement
+                #
+                # edgeValues will be in [0, 1]
+                # 0: weak edge
+                # 1: string edge
+                #
                 if s0 is not None and s1 is not None:
-                    edgeValues[n][n1][n2] = 0.5 * (s0 + s1)
+                    edgeValues[n][n1][n2] = 1.0 - 0.5 * (s0 + s1)
                 # elif s0 is not None:
                 #     edges[n][n1][n2] = s0
                 # elif s1 is not None:
@@ -256,10 +273,11 @@ def figures_neighborhood_score(neighborhoods, filename='figures_score.py'):
                 values[n] = values.get(n, []) + list(edgeValues[n][n1].values())
     #
     # values[n] is a list of all the score values for any couple of atlases exhibiting the division of 'n'
+    # max_values[n] is the worst value for a comparison of two atlases exhibiting the division of 'n'
     #
-    min_values = {}
+    max_values = {}
     for n in values.keys():
-        min_values[n] = min(values[n])
+        max_values[n] = 1.0 - min(values[n])
 
     f = open(filename, "w")
 
@@ -268,8 +286,8 @@ def figures_neighborhood_score(neighborhoods, filename='figures_score.py'):
     f.write("import matplotlib.pyplot as plt\n")
 
     cellidentifierlist = []
-    for mother_name in min_values:
-        min_value = 100.0 * min_values[mother_name]
+    for mother_name in max_values:
+        max_value = 100.0 * max_values[mother_name]
 
         # identifier for mother cell
         cellidentifier = mother_name[0:2]+mother_name[3:7]
@@ -279,11 +297,15 @@ def figures_neighborhood_score(neighborhoods, filename='figures_score.py'):
             cellidentifier += 'S'
         else:
             cellidentifier += 'S'
-        fileidentifier = 'S{:03d}_'.format(int(min_value)) + cellidentifier
-        cellidentifier += '_S{:03d}'.format(int(min_value))
+        fileidentifier = 'S{:03d}_'.format(int(max_value)) + cellidentifier
+        cellidentifier += '_S{:03d}'.format(int(max_value))
 
         cellidentifierlist.append(cellidentifier)
 
+        #
+        # edges[n1][n2] in [1,5] is an integer giving the weight of an edge
+        # the smallest the weight, the weakest the edge
+        #
         edges = {}
         for n1 in references[mother_name]:
             if n1 not in edgeValues[mother_name]:
@@ -294,7 +316,7 @@ def figures_neighborhood_score(neighborhoods, filename='figures_score.py'):
                     continue
                 if n2 <= n1:
                     continue
-                edges[n1][n2] = int(5.0 * edgeValues[mother_name][n1][n2])
+                edges[n1][n2] = int(1.0 + 4.0 * edgeValues[mother_name][n1][n2])
 
         f.write("\n")
         f.write("\n")
@@ -308,6 +330,9 @@ def figures_neighborhood_score(neighborhoods, filename='figures_score.py'):
         f.write("    G_" + cellidentifier + ".add_nodes_from(" + str(nodes) + ")\n")
         f.write("\n")
 
+        #
+        # for each edge weight, get the edge weight, and use the right edge value for colorization
+        #
         edgelist = {}
         edgecolor = {}
         for n1 in edges:
@@ -342,12 +367,18 @@ def figures_neighborhood_score(neighborhoods, filename='figures_score.py'):
             f.write(", width=" + str(i))
             f.write(")\n")
         title = "division of " + str(mother_name)
-        title += ", min score value = " + '{:.2f}'.format(min_values[mother_name])
+        title += ", max score value = " + '{:.2f}'.format(max_values[mother_name])
 
         f.write("    ax.set_title(\"" + str(title) + "\")\n")
         f.write("    if savefig:\n")
-        f.write("        plt.savefig('" + str(fileidentifier) + "'" + " + '.png')\n")
-        f.write("        plt.savefig('" + str(cellidentifier) + "'" + " + '.png')\n")
+        f.write("        plt.savefig('" + str(fileidentifier))
+        if file_suffix is not None:
+            f.write(file_suffix)
+        f.write("'" + " + '.png')\n")
+        f.write("        plt.savefig('" + str(cellidentifier))
+        if file_suffix is not None:
+            f.write(file_suffix)
+        f.write("'" + " + '.png')\n")
         f.write("    else:\n")
         f.write("        plt.show()\n")
 

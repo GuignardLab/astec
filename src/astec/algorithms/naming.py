@@ -276,7 +276,7 @@ def _test_naming(prop, reference_prop, discrepancies):
 #
 ########################################################################################
 
-def _build_scores(mother, daughters, ancestor_name, prop, neighborhoods, time_digits_for_cell_id=4):
+def _build_scores(mother, daughters, ancestor_name, prop, neighborhoods, parameters, time_digits_for_cell_id=4):
     proc = "_build_scores"
 
     #
@@ -350,9 +350,8 @@ def _build_scores(mother, daughters, ancestor_name, prop, neighborhoods, time_di
             if sister is not None:
                 contact[sister_name] = prop['cell_contact_surface'][d][sister]
             for reference_name in neighborhoods[name]:
-                title = None
                 score[d][name][reference_name] = uneighborhood.get_score(contact, neighborhoods[name][reference_name],
-                                                                         title=title)
+                                                                         parameters.neighborhood_comparison)
             if sister is not None:
                 del contact[sister_name]
     return score
@@ -726,12 +725,12 @@ def _analyse_scores(scores, debug=False):
         print("sum_agreement00 = " + str(sum_agreement00))
         print("sum_agreement01 = " + str(sum_agreement01))
 
-    if sum_agreement00 > sum_agreement01:
+    if sum_agreement00 < sum_agreement01:
         name[ids[0]] = candidates[0]
         name[ids[1]] = candidates[1]
         name_certainty[ids[0]] = int(100.0 * sum_agreement00 / (sum_agreement00 + sum_agreement01))
         name_certainty[ids[1]] = int(100.0 * sum_agreement00 / (sum_agreement00 + sum_agreement01))
-    elif sum_agreement01 > sum_agreement00:
+    elif sum_agreement01 < sum_agreement00:
         name[ids[0]] = candidates[1]
         name[ids[1]] = candidates[0]
         name_certainty[ids[0]] = int(100.0 * sum_agreement01 / (sum_agreement00 + sum_agreement01))
@@ -1061,7 +1060,7 @@ def naming_process(experiment, parameters):
     #
     # naming propagation
     #
-    prop = _propagate_naming(prop, neighborhoods)
+    prop = _propagate_naming(prop, neighborhoods, parameters)
     prop = properties.set_fate_from_names(prop, time_digits_for_cell_id=time_digits_for_cell_id)
     prop = properties.set_color_from_fate(prop)
     #

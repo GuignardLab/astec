@@ -52,8 +52,8 @@ def neighborhood_process(experiment, parameters):
                                                      time_digits_for_cell_id=time_digits_for_cell_id)
 
     if True:
-        # neighborhoodf.figures_neighborhood_consistency(neighborhoods)
-        neighborhoodf.figures_neighborhood_score(neighborhoods)
+        # neighborhoodf.figures_neighborhood_consistency(neighborhoods, parameters)
+        neighborhoodf.figures_neighborhood_score(neighborhoods, parameters)
 
     if parameters.neighborhood_improvement:
-       neighborhood.global_score_improvement(neighborhoods)
+       neighborhood.global_score_improvement(neighborhoods, parameters)

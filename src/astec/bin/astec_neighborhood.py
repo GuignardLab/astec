@@ -183,7 +183,7 @@ def main():
 
     parameters = uneighborhood.NeighborhoodParameters()
     parameters.update_from_parameter_file(parameter_file)
-    # parameters.write_parameters(monitoring.log_filename)
+    parameters.write_parameters(monitoring.log_filename)
 
     #
     # processing
