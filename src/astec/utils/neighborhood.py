@@ -3,6 +3,7 @@ import sys
 import copy
 import collections
 import math
+import functools
 
 import astec.utils.common as common
 import astec.algorithms.properties as properties
@@ -46,11 +47,17 @@ class NeighborhoodParameters(common.PrefixedParameter):
         self.add_symmetric_neighborhood = True
 
         doc = "\t if 'True', differentiate the cells of the symmetric half-embryo.\n"
-        doc += "\t if 'False', consider all the cells of the symmetric half-embryo.\n"
+        doc += "\t If 'False', consider all the cells of the symmetric half-embryo.\n"
         doc += "\t as a single cell.\n"
         doc += "\t Default is 'True'"
         self.doc['differentiate_other_half'] = doc
         self.differentiate_other_half = True
+
+        doc = "\t The same cell has different neighbors from an atlas to the other.\n"
+        doc += "\t If 'True' build and keep an unique common neighborhood (set of\n"
+        doc += "\t neighbors) for all atlases."
+        self.doc['use_common_neighborhood'] = doc
+        self.use_common_neighborhood = False
 
         #
         doc = "\t Defines the neighborhood comparison. Neighborhoods are normalized before"
@@ -97,6 +104,7 @@ class NeighborhoodParameters(common.PrefixedParameter):
 
         self.varprint('add_symmetric_neighborhood', self.add_symmetric_neighborhood)
         self.varprint('differentiate_other_half', self.differentiate_other_half)
+        self.varprint('use_common_neighborhood', self.use_common_neighborhood)
         self.varprint('neighborhood_comparison', self.neighborhood_comparison)
 
         self.varprint('neighborhood_diagnosis', self.neighborhood_diagnosis)
@@ -117,6 +125,7 @@ class NeighborhoodParameters(common.PrefixedParameter):
 
         self.varwrite(logfile, 'add_symmetric_neighborhood', self.add_symmetric_neighborhood)
         self.varwrite(logfile, 'differentiate_other_half', self.differentiate_other_half)
+        self.varwrite(logfile, 'use_common_neighborhood', self.use_common_neighborhood)
         self.varwrite(logfile, 'neighborhood_comparison', self.neighborhood_comparison)
 
         self.varwrite(logfile, 'neighborhood_diagnosis', self.neighborhood_diagnosis)
@@ -144,6 +153,8 @@ class NeighborhoodParameters(common.PrefixedParameter):
         self.differentiate_other_half = self.read_parameter(parameters, 'differentiate_other_half',
                                                             self.differentiate_other_half)
 
+        self.use_common_neighborhood = self.read_parameter(parameters, 'use_common_neighborhood',
+                                                           self.use_common_neighborhood)
         self.neighborhood_comparison = self.read_parameter(parameters, 'neighborhood_comparison',
                                                            self.neighborhood_comparison)
 
@@ -181,6 +192,13 @@ def get_daughter_names(name):
     # p value (cell index)
     # left or right character '_' or '*'
     #
+
+    # fake returns
+    if name == 'background':
+        return ['background', 'background']
+    if name == 'other-half':
+        return ['other-half', 'other-half']
+
     abvalue = name.split('.')[0][0]
     stage = name.split('.')[0][1:]
     p = name.split('.')[1][0:4]
@@ -204,6 +222,13 @@ def get_mother_name(name):
     # p value (cell index)
     # left or right character '_' or '*'
     #
+
+    # fake returns
+    if name == 'background':
+        return 'background'
+    if name == 'other-half':
+        return 'other-half'
+
     abvalue = name.split('.')[0][0]
     stage = name.split('.')[0][1:]
     p = name.split('.')[1][0:4]
@@ -211,6 +236,8 @@ def get_mother_name(name):
     #
     # build parent names
     #
+    if int(stage) == 0:
+        return None
     parent = abvalue + str(int(stage)-1) + "."
     if int(p) % 2 == 1:
         parent += '{:0{width}d}'.format((int(p)+1) // 2, width=4)
@@ -691,7 +718,7 @@ def get_neighborhood_consistency(neighborhoods, parameters):
                 same_choice = get_score(neighborhoods[cell_name][ref1], neighborhoods[cell_name][ref2],
                                         parameters.neighborhood_comparison)
                 sister_choice = get_score(neighborhoods[cell_name][ref1], neighborhoods[sister_name][ref2],
-                                        parameters.neighborhood_comparison)
+                                          parameters.neighborhood_comparison)
 
                 mother_name = get_mother_name(cell_name)
 
@@ -840,7 +867,7 @@ def _check_leftright_consistency(neighborhoods, parameters):
                 same_choice = get_score(neighborhoods[daughter][reference], symsameneigh,
                                         parameters.neighborhood_comparison)
                 sister_choice = get_score(neighborhoods[daughter][reference], symsisterneigh,
-                                        parameters.neighborhood_comparison)
+                                          parameters.neighborhood_comparison)
 
                 if same_choice < sister_choice:
                     continue
@@ -1065,6 +1092,7 @@ def global_score_improvement(neighborhoods, parameters):
     ----------
     neighborhoods: dictionary of dictionaries. First level of keys is the cell name (name of a daughter), and the
                    second level of keys is the reference embryo name.
+    parameters:
     Returns
     -------
     There is no returned values. It just prints out some change suggestions.
@@ -1288,6 +1316,192 @@ def _add_neighborhoods(previous_neighborhoods, prop, parameters, atlas_name, tim
 #
 ########################################################################################
 
+
+def _compare_cell(a, b):
+    #
+    # sort
+    # - stages in decreasing values
+    # - [a, b] in increasing value
+    # - p in in increasing value
+    # - [*, _] in increasing value
+    #
+    if a == 'background':
+        return -1
+    if b == 'background':
+        return 1
+    if a == 'other-half':
+        return -1
+    if b == 'other-half':
+        return 1
+    astage = int(a.split('.')[0][1:])
+    bstage = int(b.split('.')[0][1:])
+    if astage < bstage:
+        return 1
+    elif astage > bstage:
+        return -1
+    aabvalue = a.split('.')[0][0]
+    babvalue = b.split('.')[0][0]
+    if aabvalue < babvalue:
+        return -1
+    elif aabvalue > babvalue:
+        return 1
+    ap = int(a.split('.')[1][0:4])
+    bp = int(b.split('.')[1][0:4])
+    if ap < bp:
+        return -1
+    elif ap > bp:
+        return 1
+    alrvalue = a.split('.')[1][4]
+    blrvalue = b.split('.')[1][4]
+    if alrvalue < blrvalue:
+        return -1
+    elif alrvalue > blrvalue:
+        return 1
+    return 0
+
+
+def _print_neighborhood(neighborhood, desc=None):
+    """
+    Designed for debug purposes
+    Parameters
+    ----------
+    neighborhood
+    desc
+
+    Returns
+    -------
+
+    """
+    if desc is not None:
+        txt = " " + str(desc) + " = "
+    else:
+        txt = " N = "
+    neighs = list(neighborhood.keys())
+    neighs = sorted(neighs, key=functools.cmp_to_key(_compare_cell))
+    txt += "{"
+    i = 0
+    for n in neighs:
+        txt += "'" + str(n) + "': " + str(neighborhood[n])
+        if n != neighs[-1]:
+            txt += ", "
+        i += 1
+        if i % 4 == 0 and n != neighs[-1]:
+            txt += "\n\t"
+
+    txt += "}"
+    print(txt)
+
+
+def _is_ancestor_in_stages(neigh, neighbors_by_stage):
+    """
+
+    Parameters
+    ----------
+    neigh: the cell name to be consider
+    neighbors_by_stage: cell names to be compared to
+    stages: all stages in decreasing order
+
+    Returns
+    -------
+
+    """
+
+    if neigh == 'background' or neigh == 'other-half':
+        return False
+
+    stage = int(neigh.split('.')[0][1:])
+    stages = list(neighbors_by_stage.keys())
+    stages = sorted(stages, key=lambda x: int(x), reverse=True)
+
+    for s in stages:
+        if int(s) >= int(stage) or int(s) == 0:
+            continue
+        diff = int(stage) - int(s)
+        mother = neigh
+        for i in range(diff):
+            mother = get_mother_name(mother)
+        if mother in neighbors_by_stage[s]:
+            return True
+    return False
+
+
+def build_common_neighborhoods(neighborhoods):
+
+    # neighborhoods is a dictionary of dictionaries
+    # ['cell name']['reference name']['neighboring cell']
+    # first key is a cell name (daughter cell)
+    # second key is the reference from which the neighborhood has been extracted
+    # a neighborhood itself is a dictionary indexed by the neighboring cell names
+    proc = "build_common_neighborhoods"
+
+    common_neighborhoods = copy.deepcopy(neighborhoods)
+
+    for cell in neighborhoods:
+
+        #
+        # get the neighbors for each atlas
+        #
+        neighbors_by_stage = {}
+        for r in neighborhoods[cell]:
+            for n in neighborhoods[cell][r]:
+                if n == 'background' or n == 'other-half':
+                    neighbors_by_stage[0] = neighbors_by_stage.get(0, []) + [n]
+                    continue
+                stage = int(n.split('.')[0][1:])
+                neighbors_by_stage[stage] = neighbors_by_stage.get(stage, []) + [n]
+        # suppress duplicate
+        for s in neighbors_by_stage:
+            neighbors_by_stage[s] = list(sorted(set(neighbors_by_stage[s])))
+
+        #
+        # get the stages in decreasing order
+        #
+        stages = list(neighbors_by_stage.keys())
+        stages = sorted(stages, key=lambda x: int(x), reverse=True)
+
+        for s in stages:
+            for neigh in neighbors_by_stage[s]:
+                #
+                # should the neighbor be replaced by its mother?
+                #
+                if _is_ancestor_in_stages(neigh, neighbors_by_stage):
+                    #
+                    # replace the neighbor by its mother
+                    # 1. add mother to previous stage neighbors (if required)
+                    # 2. add daughter contact surfaces
+                    #
+                    mother = get_mother_name(neigh)
+                    previous_stage = int(s)-1
+                    if mother not in neighbors_by_stage[previous_stage]:
+                        neighbors_by_stage[previous_stage] += [mother]
+
+                    d = get_daughter_names(mother)
+
+                    for r in neighborhoods[cell]:
+                        if mother in common_neighborhoods[cell][r]:
+                            pass
+                        else:
+                            common_neighborhoods[cell][r][mother] = 0.0
+                            for i in range(2):
+                                if d[i] in common_neighborhoods[cell][r]:
+                                    common_neighborhoods[cell][r][mother] += common_neighborhoods[cell][r][d[i]]
+                                    del common_neighborhoods[cell][r][d[i]]
+                else:
+                    #
+                    # keep the neighbor
+                    #
+                    for r in common_neighborhoods[cell]:
+                        if neigh in common_neighborhoods[cell][r]:
+                            pass
+                        else:
+                            common_neighborhoods[cell][r][neigh] = 0.0
+        #
+        # cell is processed
+        #
+
+    return common_neighborhoods
+
+
 def build_neighborhoods(atlasfiles, parameters, time_digits_for_cell_id=4):
     """
 
@@ -1340,6 +1554,9 @@ def build_neighborhoods(atlasfiles, parameters, time_digits_for_cell_id=4):
     # of two reference embryos is lower than the score of this daughter cell (of one reference)
     # and its sister cell (of the other reference). Thus, the consistency is a measure in
     # [0, 4]: 0 means a total consistency while 4 designs a total inconsistency.
+
+    if parameters.use_common_neighborhood:
+        neighborhoods = build_common_neighborhoods(neighborhoods)
 
     if parameters.neighborhood_diagnosis:
         neighborhood_consistency_diagnosis(neighborhoods, parameters)

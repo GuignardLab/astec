@@ -752,7 +752,7 @@ def _analyse_scores(scores, debug=False):
 #
 ########################################################################################
 
-def _propagate_naming(prop, neighborhoods, time_digits_for_cell_id=4):
+def _propagate_naming(prop, neighborhoods, parameters, time_digits_for_cell_id=4):
     proc = "_propagate_naming"
 
     if 'cell_lineage' not in prop:
@@ -964,7 +964,7 @@ def _propagate_naming(prop, neighborhoods, time_digits_for_cell_id=4):
                 # the length of the array is the occurrence of [n in daughter_names(mother)] in the
                 # neighborhood dictionary
                 #
-                scores = _build_scores(mother, daughters, ancestor_name, prop, neighborhoods,
+                scores = _build_scores(mother, daughters, ancestor_name, prop, neighborhoods, parameters,
                                        time_digits_for_cell_id=time_digits_for_cell_id)
                 if debug:
                     print("scores = " + str(scores))
@@ -1060,7 +1060,7 @@ def naming_process(experiment, parameters):
     #
     # naming propagation
     #
-    prop = _propagate_naming(prop, neighborhoods, parameters)
+    prop = _propagate_naming(prop, neighborhoods, parameters, time_digits_for_cell_id=time_digits_for_cell_id)
     prop = properties.set_fate_from_names(prop, time_digits_for_cell_id=time_digits_for_cell_id)
     prop = properties.set_color_from_fate(prop)
     #
