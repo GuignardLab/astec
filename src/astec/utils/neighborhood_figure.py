@@ -1,20 +1,24 @@
 
+import sys
+
 import astec.utils.neighborhood as uneighborhood
 
 #
 # figures
 #
 
+
 def figures_neighborhood_consistency(neighborhoods, parameters, filename='figures_consistency.py'):
     """
+    may be obsolete
     Build a file to draw figures of 'consistency' between reference embryos for mother cells
     Parameters
     ----------
     neighborhoods: nested dictionary of neighborhood, where the keys are ['cell name']['reference name']
         where 'reference name' is the name of the reference lineage, and neighborhood a dictionary of contact surfaces
         indexed by cell names (only for the first time point after the division)
+    parameters
     filename
-    min_discrepancy
 
     Returns
     -------
@@ -213,10 +217,10 @@ def figures_neighborhood_score(neighborhoods, parameters):
 
     """
 
-    filename = 'figures_score'
+    filename = 'figures_neighborhood_score'
     file_suffix = None
     if parameters.figurefile_suffix is not None and isinstance(parameters.figurefile_suffix, str) and \
-        len(parameters.figurefile_suffix) > 0:
+            len(parameters.figurefile_suffix) > 0:
         file_suffix = '_' + parameters.figurefile_suffix
     filename += file_suffix + '.py'
 
@@ -239,9 +243,9 @@ def figures_neighborhood_score(neighborhoods, parameters):
     for n in mother_names:
         d = uneighborhood.get_daughter_names(n)
         edgeValues[n] = {}
-        for n1 in references[mother_name]:
+        for n1 in references[n]:
             edgeValues[n][n1] = {}
-            for n2 in references[mother_name]:
+            for n2 in references[n]:
                 if n2 <= n1:
                     continue
                 if d[0] in neighborhoods and (n1 in neighborhoods[d[0]] and n2 in neighborhoods[d[0]]):
@@ -290,16 +294,15 @@ def figures_neighborhood_score(neighborhoods, parameters):
         max_value = 100.0 * max_values[mother_name]
 
         # identifier for mother cell
-        cellidentifier = mother_name[0:2]+mother_name[3:7]
-        if mother_name[7] == '_':
-            cellidentifier += 'U'
-        elif mother_name[7] == '*':
-            cellidentifier += 'S'
+        cellname = mother_name.split('.')[0] + "_" + mother_name.split('.')[1][0:4]
+        if mother_name.split('.')[1][4] == '_':
+            cellname += 'U'
+        elif mother_name.split('.')[1][4] == '*':
+            cellname += 'S'
         else:
-            cellidentifier += 'S'
-        fileidentifier = 'S{:03d}_'.format(int(max_value)) + cellidentifier
-        cellidentifier += '_S{:03d}'.format(int(max_value))
-
+            cellname += 'S'
+        fileidentifier = 'S{:03d}_'.format(int(max_value)) + cellname
+        cellidentifier = cellname + '_S{:03d}'.format(int(max_value))
         cellidentifierlist.append(cellidentifier)
 
         #
@@ -397,6 +400,220 @@ def figures_neighborhood_score(neighborhoods, parameters):
     f.write("\n")
     f.write("if True:\n")
     f.write("    draw_all(savefig=True)\n")
+    f.write("\n")
+
+    f.close()
+
+
+def figures_histogram_scores(neighborhoods, parameters):
+
+    filename = 'figures_histogram_scores'
+    file_suffix = None
+    if parameters.figurefile_suffix is not None and isinstance(parameters.figurefile_suffix, str) and \
+            len(parameters.figurefile_suffix) > 0:
+        file_suffix = '_' + parameters.figurefile_suffix
+    filename += file_suffix + '.py'
+
+    cell_score_by_stage = {}
+    sister_score_by_stage = {}
+
+    for cell in neighborhoods:
+        stage = int(cell.split('.')[0][1:])
+        sample = len(neighborhoods[cell])
+        sister = uneighborhood.get_sister_name(cell)
+        for ref in neighborhoods[cell]:
+            #
+            # cell score
+            #
+            for r in neighborhoods[cell]:
+                score = uneighborhood.get_score(neighborhoods[cell][ref], neighborhoods[cell][r],
+                                                parameters.neighborhood_comparison)
+                cell_score_by_stage[stage] = cell_score_by_stage.get(stage, []) + [score]
+            if sister not in neighborhoods:
+                continue
+            if sister < cell:
+                continue
+            for r in neighborhoods[sister]:
+                score = uneighborhood.get_score(neighborhoods[cell][ref], neighborhoods[sister][r],
+                                                parameters.neighborhood_comparison)
+                sister_score_by_stage[stage] = sister_score_by_stage.get(stage, []) + [score]
+
+    cell_scores = []
+    sister_scores = []
+    for s in cell_score_by_stage:
+        cell_scores += cell_score_by_stage[s]
+    for s in sister_score_by_stage:
+        sister_scores += sister_score_by_stage[s]
+
+    f = open(filename, "w")
+
+    f.write("import numpy as np\n")
+    f.write("import matplotlib.pyplot as plt\n")
+    f.write("\n")
+    f.write("savefig = True\n")
+    f.write("\n")
+    f.write("cell_score_by_stage = " + str(cell_score_by_stage))
+    f.write("\n")
+    f.write("sister_score_by_stage = " + str(sister_score_by_stage))
+    f.write("\n")
+    f.write("cell_scores = []\n")
+    f.write("sister_scores = []\n")
+    f.write("for s in cell_score_by_stage:\n")
+    f.write("    cell_scores += cell_score_by_stage[s]\n")
+    f.write("for s in sister_score_by_stage:\n")
+    f.write("    sister_scores += sister_score_by_stage[s]\n")
+    f.write("\n")
+
+    f.write("fig, ax = plt.subplots(figsize=(7.5, 7.5))\n")
+    f.write("labels = ['same cell', 'sister cell']\n")
+    f.write("ax.hist([cell_scores, sister_scores], 100, histtype='bar', label=labels)\n")
+    f.write("ax.legend(prop={'size': 10})\n")
+    f.write("ax.set_title('all scores', fontsize=12)\n")
+    f.write("ax.tick_params(labelsize=10)\n")
+    f.write("if savefig:\n")
+    f.write("    plt.savefig('histogram_scores_all")
+    if file_suffix is not None:
+        f.write(file_suffix)
+    f.write("'" + " + '.png')\n")
+    f.write("else:\n")
+    f.write("    plt.show()\n")
+    f.write("\n")
+
+    f.write("for s in cell_score_by_stage:\n")
+    f.write("    fig, ax = plt.subplots(figsize=(7.5, 7.5))\n")
+    f.write("    labels = ['same cell', 'sister cell']\n")
+    f.write("    ax.hist([cell_score_by_stage[s], sister_score_by_stage[s]], 100, histtype='bar', label=labels)\n")
+    f.write("    ax.legend(prop={'size': 10})\n")
+    f.write("    title = \"scores for stage #{:02d}\".format(s)\n")
+    f.write("    ax.set_title(title, fontsize=15)\n")
+    f.write("    ax.tick_params(labelsize=15)\n")
+    f.write("    if savefig:\n")
+    f.write("        plt.savefig('histogram_scores_by_stage_S{:02d}")
+    if file_suffix is not None:
+        f.write(file_suffix)
+    f.write("'.format(s)" + " + '.png')\n")
+    f.write("    else:\n")
+    f.write("        plt.show()\n")
+    f.write("\n")
+
+    f.close()
+
+
+def figures_neighborhood_pca(neighborhoods, parameters, min_samples=4):
+
+    cells = sorted(neighborhoods, key=lambda key: len(neighborhoods[key]), reverse=True)
+
+    filename = 'figures_neighborhood_pca'
+    file_suffix = None
+    if parameters.figurefile_suffix is not None and isinstance(parameters.figurefile_suffix, str) and \
+            len(parameters.figurefile_suffix) > 0:
+        file_suffix = '_' + parameters.figurefile_suffix
+    filename += file_suffix + '.py'
+
+    f = open(filename, "w")
+
+    f.write("import matplotlib.pyplot as plt\n")
+    f.write("import matplotlib.colors as clr\n")
+    f.write("from sklearn.decomposition import PCA\n")
+
+    cellidentifierlist = []
+    for cell in cells:
+        if len(neighborhoods[cell]) <= min_samples:
+            continue
+        cellname = cell.split('.')[0] + "_" + cell.split('.')[1][0:4]
+        if cell.split('.')[1][4] == '_':
+            cellname += 'U'
+        elif cell.split('.')[1][4] == '*':
+            cellname += 'S'
+        else:
+            cellname += 'S'
+        fileidentifier = 'NA{:03d}_'.format(int(len(neighborhoods[cell]))) + cellname
+        cellidentifier = cellname + '_NA{:03d}'.format(int(len(neighborhoods[cell])))
+        cellidentifierlist.append(cellidentifier)
+
+        atlases = list(neighborhoods[cell].keys())
+        neighbors = neighborhoods[cell][atlases[0]]
+        arr = []
+        for a in atlases:
+            vec = []
+            norm = 0.0
+            for n in neighbors:
+                vec += [neighborhoods[cell][a][n]]
+                norm += neighborhoods[cell][a][n]
+            vec = [i/norm for i in vec]
+            arr += [vec]
+
+        f.write("\n")
+        f.write("\n")
+        f.write("def draw_" + cellidentifier + "(savefig=False, cmap=plt.cm.gist_rainbow):\n")
+
+        f.write("\n")
+        f.write("    L_" + cellname + " = " + str(list(neighborhoods[cell].keys())) + "\n")
+        f.write("    N_" + cellname + " = " + str(arr) + "\n")
+
+        f.write("\n")
+        f.write("    pca = PCA(n_components=3)\n")
+        f.write("    pca.fit(N_" + cellname + ")\n")
+        f.write("    explained_variance_2D = pca.explained_variance_ratio_[0] + pca.explained_variance_ratio_[1]\n")
+        f.write("    explained_variance_3D = sum(pca.explained_variance_ratio_)\n")
+        f.write("    components = pca.fit_transform(N_" + cellname + ")\n")
+        f.write("    sortedcomp = sorted(list(zip(L_" + cellname + ", components)), key=lambda x: x[1][0])\n")
+        f.write("    fig = plt.figure(figsize=(15, 6.5))\n")
+        f.write("    ax = fig.add_subplot(1, 2, 1)\n")
+        f.write("    ax.set_xlabel('Principal Component 1', fontsize=15)\n")
+        f.write("    ax.set_ylabel('Principal Component 2', fontsize=15)\n")
+        f.write("    title = '" + str(cell) + "' + ', explained variance = {:.2f}'.format(explained_variance_2D)\n")
+        f.write("    ax.set_title(title, fontsize=20)\n")
+        f.write("    for i in range(len(N_" + cellname + ")):\n")
+        f.write("        ax.scatter(x=[sortedcomp[i][1][0]], y=[sortedcomp[i][1][1]], c=[i], vmin=0, \\\n")
+        f.write("            vmax=len(L_" + cellname + "), label=sortedcomp[i][0], cmap=cmap)\n")
+        f.write("    ax.grid()\n")
+        f.write("    ax.legend()\n")
+        f.write("    ymin, ymax = ax.get_ylim()\n")
+        f.write("\n")
+
+        f.write("    ax1 = fig.add_subplot(1, 2, 2, projection='3d')\n")
+        f.write("    ax1.set_xlabel('Principal Component 2', fontsize=15)\n")
+        f.write("    ax1.set_ylabel('Principal Component 1', fontsize=15)\n")
+        f.write("    ax1.set_zlabel('Principal Component 3', fontsize=15)\n")
+        f.write("    ax1.set_xlim(ymax, ymin)\n")
+        f.write("    title = '" + str(cell) + "' + ', explained variance = {:.2f}'.format(explained_variance_3D)\n")
+        f.write("    ax1.set_title(title, fontsize=20)\n")
+        f.write("    for i in range(len(N_" + cellname + ")):\n")
+        f.write("        ax1.scatter([sortedcomp[i][1][1]], [sortedcomp[i][1][0]], [sortedcomp[i][1][2]], c=[i], \\\n")
+        f.write("            vmin=0, vmax=len(L_" + cellname + "), label=sortedcomp[i][0], cmap=cmap)\n")
+        f.write("    norm = clr.Normalize(vmin=0, vmax=len(L_" + cellname + "))\n")
+        f.write("    zmin, zmax = ax1.get_zlim()\n")
+        f.write("    for i in range(len(N_" + cellname + ")):\n")
+        f.write("        color = cmap(norm(i))\n")
+        f.write("        ax1.plot([sortedcomp[i][1][1], sortedcomp[i][1][1]], \\\n")
+        f.write("            [sortedcomp[i][1][0], sortedcomp[i][1][0]], [zmin, sortedcomp[i][1][2]], color=color)\n")
+        f.write("\n")
+
+        f.write("    if savefig:\n")
+        f.write("        plt.savefig('" + str(cellidentifier))
+        if file_suffix is not None:
+            f.write(file_suffix)
+        f.write("'" + " + '.png')\n")
+        f.write("    else:\n")
+        f.write("        plt.show()\n")
+
+    f.write("\n")
+    f.write("\n")
+    f.write("def draw_all(savefig=False, cmap=plt.cm.gist_rainbow):\n")
+    for cellidentifier in cellidentifierlist:
+        f.write("    draw_" + cellidentifier + "(savefig=savefig, cmap=cmap)\n")
+        f.write("    plt.close()\n")
+
+    f.write("\n")
+    f.write("\n")
+    f.write("cmap = plt.cm.gist_rainbow\n")
+    for cellidentifier in cellidentifierlist:
+        f.write("if False:\n")
+        f.write("    draw_" + cellidentifier + "(savefig=False, cmap=cmap)\n")
+    f.write("\n")
+    f.write("if True:\n")
+    f.write("    draw_all(savefig=True, cmap=cmap)\n")
     f.write("\n")
 
     f.close()

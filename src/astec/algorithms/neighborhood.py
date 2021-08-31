@@ -54,6 +54,10 @@ def neighborhood_process(experiment, parameters):
     if True:
         # neighborhoodf.figures_neighborhood_consistency(neighborhoods, parameters)
         neighborhoodf.figures_neighborhood_score(neighborhoods, parameters)
+        neighborhoodf.figures_histogram_scores(neighborhoods, parameters)
+
+    if parameters.use_common_neighborhood:
+        neighborhoodf.figures_neighborhood_pca(neighborhoods, parameters)
 
     if parameters.neighborhood_improvement:
        neighborhood.global_score_improvement(neighborhoods, parameters)

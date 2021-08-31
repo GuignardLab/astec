@@ -316,59 +316,140 @@ def _print_common_neighborhoods(neighborhood0, neighborhood1, title=None):
     monitoring.to_log_and_console(msg)
 
 
-#
-# build a common representation of two neighborhood
-#
-def _build_common_contact_surfaces(tmp0, tmp1, vect0, vect1):
-    if tmp1 == {}:
-        return tmp0, tmp1, vect0, vect1
-    names1 = list(tmp1.keys())
-    for n1 in names1:
-        # the name could have been deleted at case 2
-        if n1 not in tmp1:
+def _is_ancestor_in_stages(neigh, neighbors_by_stage):
+    """
+
+    Parameters
+    ----------
+    neigh: the cell name to be consider
+    neighbors_by_stage: cell names to be compared to
+
+    Returns
+    -------
+
+    """
+
+    if neigh == 'background' or neigh == 'other-half':
+        return False
+
+    stage = int(neigh.split('.')[0][1:])
+    stages = list(neighbors_by_stage.keys())
+    stages = sorted(stages, key=lambda x: int(x), reverse=True)
+
+    for s in stages:
+        if int(s) >= int(stage) or int(s) == 0:
             continue
-        # case 1: the same name in both neighborhood
-        if n1 in tmp0:
-            vect0[n1] = tmp0[n1]
-            vect1[n1] = tmp1[n1]
-            del tmp0[n1]
-            del tmp1[n1]
-            continue
-        # subcase 1: it's the background (or any generic name) and it is not in tmp0
-        if n1 == 'background' or n1 == 'other-half':
-            vect0[n1] = 0.0
-            vect1[n1] = tmp1[n1]
-            del tmp1[n1]
-            continue
-        # case 2: daughter name in tmp1, and mother name in tmp0
-        # add daughter surfaces
-        pname = get_mother_name(n1)
-        if pname in tmp0:
-            vect0[pname] = tmp0[pname]
-            vect1[pname] = 0.0
-            for n in get_daughter_names(pname):
-                if n in tmp1:
-                    vect1[pname] += tmp1[n]
-                    del tmp1[n]
-            del tmp0[pname]
-            continue
-        # case 3: mother name in tmp1, and daughter name(s) in tmp0
-        dname = get_daughter_names(n1)
-        if dname[0] in tmp0 or dname[1] in tmp0:
-            vect0[n1] = 0.0
-            vect1[n1] = tmp1[n1]
-            for n in dname:
-                if n in tmp0:
-                    vect0[n1] += tmp0[n]
-                    del tmp0[n]
-            del tmp1[n1]
-            continue
-        # case 4: no association in tmp0
-        vect0[n1] = 0.0
-        vect1[n1] = tmp1[n1]
-        del tmp1[n1]
-        continue
-    return tmp0, tmp1, vect0, vect1
+        diff = int(stage) - int(s)
+        mother = neigh
+        for i in range(diff):
+            mother = get_mother_name(mother)
+        if mother in neighbors_by_stage[s]:
+            return True
+    return False
+
+
+def _build_common_contact_surfaces(neighborhoods, debug=False):
+    # identical to build_common_neighborhoods()
+    # neighborhoods is a list of dictionaries
+    # indexed by ['neighboring cell']
+    # TODO: rewrite this fonction with dictionaries, and factorize with build_common_neighborhoods()
+    proc = "_build_common_contact_surfaces"
+
+    common_neighborhoods = copy.deepcopy(neighborhoods)
+
+    if debug:
+        print("")
+        _print_neighborhood(common_neighborhoods[0], "common_neighborhoods[0]")
+        _print_neighborhood(common_neighborhoods[1], "common_neighborhoods[1]")
+        print("")
+    #
+    # get the neighbors for each atlas
+    #
+    neighbors_by_stage = {}
+    for k in range(len(common_neighborhoods)):
+        for n in common_neighborhoods[k]:
+            if n == 'background' or n == 'other-half':
+                neighbors_by_stage[0] = neighbors_by_stage.get(0, []) + [n]
+                continue
+            stage = int(n.split('.')[0][1:])
+            neighbors_by_stage[stage] = neighbors_by_stage.get(stage, []) + [n]
+    # suppress duplicate
+    for s in neighbors_by_stage:
+        neighbors_by_stage[s] = list(sorted(set(neighbors_by_stage[s])))
+
+    #
+    # get the stages in decreasing order
+    #
+    stages = list(neighbors_by_stage.keys())
+    stages = sorted(stages, key=lambda x: int(x), reverse=True)
+    neighbor_already_processed = []
+
+    for s in stages:
+        if debug:
+            print("stage " + str(s))
+        for neigh in neighbors_by_stage[s]:
+            if debug:
+                print("   neighbor " + str(neigh))
+            if neigh in neighbor_already_processed:
+                if debug:
+                    print("   --- already processed ")
+                continue
+            #
+            # should the neighbor be replaced by its mother?
+            #
+            if _is_ancestor_in_stages(neigh, neighbors_by_stage):
+                #
+                # replace the neighbor by its mother
+                # 1. add mother to previous stage neighbors (if required)
+                # 2. add daughter contact surfaces
+                #
+                mother = get_mother_name(neigh)
+                if debug:
+                    print("      replace by mother " + str(mother))
+                previous_stage = int(s)-1
+                if previous_stage not in neighbors_by_stage:
+                    neighbors_by_stage[previous_stage] = [mother]
+                elif mother not in neighbors_by_stage[previous_stage]:
+                    neighbors_by_stage[previous_stage] += [mother]
+
+                d = get_daughter_names(mother)
+
+                for k in range(len(common_neighborhoods)):
+                    if mother not in common_neighborhoods[k]:
+                        common_neighborhoods[k][mother] = 0.0
+                    else:
+                        pass
+                    for i in range(2):
+                        if d[i] in common_neighborhoods[k]:
+                            common_neighborhoods[k][mother] += common_neighborhoods[k][d[i]]
+                            del common_neighborhoods[k][d[i]]
+
+                neighbor_already_processed += d
+
+            else:
+                #
+                # keep the neighbor
+                #
+                if debug:
+                    print("      keep neighbor " + str(neigh))
+
+                for k in range(len(common_neighborhoods)):
+                    if neigh not in common_neighborhoods[k]:
+                        common_neighborhoods[k][neigh] = 0.0
+
+            #
+            # end of loop "for s in stages:"
+            #
+        if debug:
+            print("")
+            _print_neighborhood(common_neighborhoods[0], "common_neighborhoods[0]")
+            _print_neighborhood(common_neighborhoods[1], "common_neighborhoods[1]")
+            print("")
+    #
+    # cell is processed
+    #
+
+    return common_neighborhoods
 
 
 #
@@ -411,10 +492,7 @@ def _l2_normalized_modulus(vect0, vect1):
     return math.sqrt(nm)
 
 
-#
-#
-#
-def get_score(neigh0, neigh1, neighborhood_comparison='scalar_product', title=None):
+def get_score(neigh0, neigh1, neighborhood_comparison='scalar_product', title=None, debug=False):
     """
     Compute the similarity score of two neighborhoods, as the normalized scalar
     product of the vectors of contact surfaces.
@@ -425,18 +503,17 @@ def get_score(neigh0, neigh1, neighborhood_comparison='scalar_product', title=No
     neigh1: dictionary depicting a cell neighborhood
     neighborhood_comparison:
     title: if not None, print out the neighborhoods as well as the score. For debug purpose.
+    debug
 
     Returns
     -------
     the similarity score.
 
     """
-    tmp0 = copy.deepcopy(neigh0)
-    tmp1 = copy.deepcopy(neigh1)
-    # 1. parse names of tmp1
-    tmp0, tmp1, vect0, vect1 = _build_common_contact_surfaces(tmp0, tmp1, {}, {})
-    # 2. parse remaining names of tmp0
-    tmp1, tmp0, vect1, vect0 = _build_common_contact_surfaces(tmp1, tmp0, vect1, vect0)
+
+    tmp = [copy.deepcopy(neigh0), copy.deepcopy(neigh1)]
+    vect = _build_common_contact_surfaces(tmp, debug=debug)
+
     #
     # scalar product in [0, 1] (0: full disagreement, 1: perfect agreement)
     # _l1_normalized_modulus in [0, 2] (0: perfect agreement, 2:full disagreement)
@@ -445,17 +522,18 @@ def get_score(neigh0, neigh1, neighborhood_comparison='scalar_product', title=No
     # score = _scalar_product(vect0, vect1)
     # score = 1.0 - _l1_normalized_modulus(vect0, vect1) / 2.0
     if neighborhood_comparison.lower() == 'l1_distance':
-        score = _l1_normalized_modulus(vect0, vect1) / 2.0
+        score = _l1_normalized_modulus(vect[0], vect[1]) / 2.0
     elif neighborhood_comparison.lower() == 'l2_distance':
-        score = _l2_normalized_modulus(vect0, vect1) / 1.4142136
+        score = _l2_normalized_modulus(vect[0], vect[1]) / 1.4142136
     elif neighborhood_comparison.lower() == 'scalar_product':
-        score = 1.0 - _scalar_product(vect0, vect1)
+        score = 1.0 - _scalar_product(vect[0], vect[1])
     else:
-        score = 1.0 - _scalar_product(vect0, vect1)
+        score = 1.0 - _scalar_product(vect[0], vect[1])
     if title is not None:
-        _print_common_neighborhoods(vect0, vect1, title=title)
+        _print_common_neighborhoods(vect[0], vect[1], title=title)
         monitoring.to_log_and_console("\t score = " + str(score) + "\n")
     # compute score as a scalar product
+
     return score
 
 
@@ -678,6 +756,7 @@ def get_neighborhood_consistency(neighborhoods, parameters):
 
     # cell_names is the list of daughter cell names of the neighborhood list
     for cell_name in cell_names:
+
         #
         # get cell name and sister name
         #
@@ -1362,7 +1441,7 @@ def _compare_cell(a, b):
 
 def _print_neighborhood(neighborhood, desc=None):
     """
-    Designed for debug purposes
+    Designed for debug purposes. Print one neighborhood (ie surface contact vector)
     Parameters
     ----------
     neighborhood
@@ -1390,39 +1469,6 @@ def _print_neighborhood(neighborhood, desc=None):
 
     txt += "}"
     print(txt)
-
-
-def _is_ancestor_in_stages(neigh, neighbors_by_stage):
-    """
-
-    Parameters
-    ----------
-    neigh: the cell name to be consider
-    neighbors_by_stage: cell names to be compared to
-    stages: all stages in decreasing order
-
-    Returns
-    -------
-
-    """
-
-    if neigh == 'background' or neigh == 'other-half':
-        return False
-
-    stage = int(neigh.split('.')[0][1:])
-    stages = list(neighbors_by_stage.keys())
-    stages = sorted(stages, key=lambda x: int(x), reverse=True)
-
-    for s in stages:
-        if int(s) >= int(stage) or int(s) == 0:
-            continue
-        diff = int(stage) - int(s)
-        mother = neigh
-        for i in range(diff):
-            mother = get_mother_name(mother)
-        if mother in neighbors_by_stage[s]:
-            return True
-    return False
 
 
 def build_common_neighborhoods(neighborhoods):
@@ -1458,9 +1504,12 @@ def build_common_neighborhoods(neighborhoods):
         #
         stages = list(neighbors_by_stage.keys())
         stages = sorted(stages, key=lambda x: int(x), reverse=True)
+        neighbor_already_processed = []
 
         for s in stages:
             for neigh in neighbors_by_stage[s]:
+                if neigh in neighbor_already_processed:
+                    continue
                 #
                 # should the neighbor be replaced by its mother?
                 #
@@ -1472,29 +1521,35 @@ def build_common_neighborhoods(neighborhoods):
                     #
                     mother = get_mother_name(neigh)
                     previous_stage = int(s)-1
-                    if mother not in neighbors_by_stage[previous_stage]:
+                    if previous_stage not in neighbors_by_stage:
+                        neighbors_by_stage[previous_stage] = [mother]
+                    elif mother not in neighbors_by_stage[previous_stage]:
                         neighbors_by_stage[previous_stage] += [mother]
 
                     d = get_daughter_names(mother)
 
-                    for r in neighborhoods[cell]:
-                        if mother in common_neighborhoods[cell][r]:
-                            pass
-                        else:
+                    for r in common_neighborhoods[cell]:
+                        if mother not in common_neighborhoods[cell][r]:
                             common_neighborhoods[cell][r][mother] = 0.0
-                            for i in range(2):
-                                if d[i] in common_neighborhoods[cell][r]:
-                                    common_neighborhoods[cell][r][mother] += common_neighborhoods[cell][r][d[i]]
-                                    del common_neighborhoods[cell][r][d[i]]
+                        for i in range(2):
+                            if d[i] in common_neighborhoods[cell][r]:
+                                common_neighborhoods[cell][r][mother] += common_neighborhoods[cell][r][d[i]]
+                                del common_neighborhoods[cell][r][d[i]]
+
+                    neighbor_already_processed += d
+
                 else:
                     #
                     # keep the neighbor
                     #
                     for r in common_neighborhoods[cell]:
-                        if neigh in common_neighborhoods[cell][r]:
-                            pass
-                        else:
+                        if neigh not in common_neighborhoods[cell][r]:
                             common_neighborhoods[cell][r][neigh] = 0.0
+
+            #
+            # end of loop "for s in stages:"
+            #
+
         #
         # cell is processed
         #
