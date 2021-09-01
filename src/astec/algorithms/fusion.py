@@ -2255,7 +2255,7 @@ def _hierarchical_fusion_process(input_image_list, the_image_list, fused_image, 
                            reg_stack_trsf, path_init_trsf=init_trsfs, parameters=parameters.stack_registration[0])
             monitoring.to_log_and_console("           registration 2/2", 2)
             _blockmatching(stack_fused_images[0], stack_fused_images[1], reg_stack_image,
-                           reg_stack_trsf, path_init_trsf=init_trsfs, parameters=parameters.stack_registration[1])
+                           reg_stack_trsf, path_init_trsf=reg_stack_trsf, parameters=parameters.stack_registration[1])
         elif parameters.stack_registration[0].compute_registration is True and \
                 parameters.stack_registration[1].compute_registration is False:
             _blockmatching(stack_fused_images[0], stack_fused_images[1], reg_stack_image,
