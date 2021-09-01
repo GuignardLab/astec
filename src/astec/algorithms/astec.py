@@ -1824,7 +1824,7 @@ def _volume_decrease_correction(astec_name, previous_segmentation, segmentation_
                             monitoring.to_log_and_console('                  seeds from h=' + str(h_min) + ' image')
                             monitoring.to_log_and_console('                  parameter_seeds[mother_c]='
                                                           + str(parameter_seeds[mother_c]))
-                            monitoring.to_log_and_console('                  s='+ str(s))
+                            monitoring.to_log_and_console('                  s=' + str(s))
                         #
                         # remove previous seed
                         # add new seeds, note that they might be several seeds per label '1' or '2'
@@ -3076,6 +3076,14 @@ def astec_control(experiment, parameters):
     if not isinstance(parameters, AstecParameters):
         monitoring.to_log_and_console(str(proc) + ": unexpected type for 'parameters' variable: "
                                       + str(type(parameters)))
+        sys.exit(1)
+
+    if experiment.first_time_point is None:
+        monitoring.to_log_and_console(str(proc) + ": first time point was not set: ")
+        sys.exit(1)
+
+    if experiment.last_time_point is None:
+        monitoring.to_log_and_console(str(proc) + ": last time point was not set: ")
         sys.exit(1)
 
     #
