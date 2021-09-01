@@ -23,7 +23,7 @@ class ReconstructionParameters(ace.AceParameters):
     #
     ############################################################
 
-    def __init__(self, prefix=None):
+    def __init__(self, prefix=None, suffix=None):
 
         if "doc" not in self.__dict__:
             self.doc = {}
@@ -163,6 +163,71 @@ class ReconstructionParameters(ace.AceParameters):
         self.doc['keep_reconstruction'] = doc
         self.keep_reconstruction = True
 
+        #
+        # the processing flow is as follows
+        #
+        # input image -> pre-normalized image -> normalized image -> intensity image }
+        #                                     -> enhanced image                      } -> reconstructed image
+        #                                     -> outer contour enhancement image     }
+        #
+        self._default_suffix = suffix
+        self._prenormalized_suffix = None
+        self._normalized_suffix = None
+        self._intensity_suffix = None
+        self._enhanced_suffix = None
+        self._outercontour_suffix = None
+        self._result_suffix = None
+
+    def _set_default_suffix(self, suffix):
+        self._default_suffix = suffix
+
+    def _get_default_suffix(self):
+        return self._default_suffix
+
+    def _set_prenormalized_suffix(self, suffix):
+        self._prenormalized_suffix = suffix
+
+    def _get_prenormalized_suffix(self):
+        return self._prenormalized_suffix
+
+    def _set_normalized_suffix(self, suffix):
+        self._normalized_suffix = suffix
+
+    def _get_normalized_suffix(self):
+        return self._normalized_suffix
+
+    def _set_intensity_suffix(self, suffix):
+        self._intensity_suffix = suffix
+
+    def _get_intensity_suffix(self):
+        return self._intensity_suffix
+
+    def _set_enhanced_suffix(self, suffix):
+        self._enhanced_suffix = suffix
+
+    def _get_enhanced_suffix(self):
+        return self._enhanced_suffix
+
+    def _set_outercontour_suffix(self, suffix):
+        self._outercontour_suffix = suffix
+
+    def _get_outercontour_suffix(self):
+        return self._outercontour_suffix
+
+    def _set_result_suffix(self, suffix):
+        self._result_suffix = suffix
+
+    def _get_result_suffix(self):
+        return self._result_suffix
+
+    default_suffix = property(_get_default_suffix, _set_default_suffix)
+    prenormalized_suffix = property(_get_prenormalized_suffix, _set_prenormalized_suffix)
+    normalized_suffix = property(_get_normalized_suffix, _set_normalized_suffix)
+    intensity_suffix = property(_get_intensity_suffix, _set_intensity_suffix)
+    enhanced_suffix = property(_get_enhanced_suffix, _set_enhanced_suffix)
+    outercontour_suffix = property(_get_outercontour_suffix, _set_outercontour_suffix)
+    result_suffix = property(_get_result_suffix, _set_result_suffix)
+
     ############################################################
     #
     # print / write
@@ -213,6 +278,13 @@ class ReconstructionParameters(ace.AceParameters):
             p.print_parameters()
 
         self.varprint('keep_reconstruction', self.keep_reconstruction, self.doc['keep_reconstruction'])
+
+        self.varprint('_default_suffix', str(self._default_suffix))
+        self.varprint('_prenormalized_suffix', str(self._prenormalized_suffix))
+        self.varprint('_normalized_suffix', str(self._normalized_suffix))
+        self.varprint('_intensity_suffix', str(self._intensity_suffix))
+        self.varprint('_enhanced_suffix', str(self._enhanced_suffix))
+        self.varprint('_outercontour_suffix', str(self._outercontour_suffix))
         print("")
 
     def write_parameters_in_file(self, logfile):
@@ -263,6 +335,13 @@ class ReconstructionParameters(ace.AceParameters):
 
         self.varwrite(logfile, 'keep_reconstruction', self.keep_reconstruction, self.doc['keep_reconstruction'])
 
+        self.varwrite(logfile, '_default_suffix', str(self._default_suffix))
+        self.varwrite(logfile, '_prenormalized_suffix', str(self._prenormalized_suffix))
+        self.varwrite(logfile, '_normalized_suffix', str(self._normalized_suffix))
+        self.varwrite(logfile, '_intensity_suffix', str(self._intensity_suffix))
+        self.varwrite(logfile, '_enhanced_suffix', str(self._enhanced_suffix))
+        self.varwrite(logfile, '_outercontour_suffix', str(self._outercontour_suffix))
+
         logfile.write("\n")
         return
 
@@ -286,11 +365,11 @@ class ReconstructionParameters(ace.AceParameters):
         ace.AceParameters.update_from_parameters(self, parameters)
 
         self.intensity_prenormalization = self.read_parameter(parameters, 'intensity_prenormalization',
-                                                               self.intensity_prenormalization)
+                                                              self.intensity_prenormalization)
         self.prenormalization_min_percentile = self.read_parameter(parameters, 'prenormalization_min_percentile',
-                                                               self.prenormalization_min_percentile)
+                                                                   self.prenormalization_min_percentile)
         self.prenormalization_max_percentile = self.read_parameter(parameters, 'prenormalization_max_percentile',
-                                                               self.prenormalization_max_percentile)
+                                                                   self.prenormalization_max_percentile)
         #
         # reconstruction methods
         #
@@ -346,72 +425,128 @@ class ReconstructionParameters(ace.AceParameters):
     #
     ############################################################
 
+    def is_prenormalization_equal(self, p):
+        if self.intensity_prenormalization != p.intensity_prenormalization:
+            return False
+        if self.intensity_prenormalization == p.intensity_prenormalization:
+            if self.intensity_prenormalization.lower() == 'identity':
+                return True
+            if self.prenormalization_min_percentile == p.prenormalization_min_percentile \
+                and self.prenormalization_max_percentile == p.prenormalization_max_percentile:
+                return True
+            return False
+        return False
+
+    def is_normalization_equal(self, p):
+        if self.intensity_transformation != p.intensity_transformation:
+            return False
+        if self.intensity_transformation == p.intensity_transformation:
+            if self.intensity_transformation.lower() == 'identity':
+                return True
+            if self.intensity_transformation.lower() == 'normalization_to_u8' \
+                    or self.intensity_transformation.lower() == 'normalization_to_u16':
+                if self.prenormalization_min_percentile == p.prenormalization_min_percentile \
+                    and self.prenormalization_max_percentile == p.prenormalization_max_percentile:
+                    return True
+                return False
+            if self.intensity_transformation.lower() == 'cell_normalization_to_u8':
+                if self.cell_normalization_min_method == p.cell_normalization_min_method \
+                        and self.cell_normalization_max_method == p.cell_normalization_max_method \
+                        and self.cell_normalization_sigma == p.cell_normalization_sigma \
+                        and self.prenormalization_min_percentile == p.prenormalization_min_percentile \
+                        and self.prenormalization_max_percentile == p.prenormalization_max_percentile:
+                    return True
+                return False
+        return False
+
+    def is_intensity_smoothing_equal(self, p):
+        if self.intensity_sigma == p.intensity_sigma:
+            return True
+        return False
+
+    def is_intensity_enhancement_equal(self, p):
+        if self.intensity_enhancement == p.intensity_enhancement:
+            if self.intensity_enhancement is None or self.intensity_enhancement.lower() == 'none':
+                return True
+            return ace.AceParameters.is_equal(self, p)
+        return False
+
+    def is_outer_contour_enhancement_equal(self, p):
+        if self.outer_contour_enhancement == p.outer_contour_enhancement:
+            return True
+        return False
+
     def is_equal(self, p, debug=False):
         proc = "is_equal"
-        if self.intensity_prenormalization != p.intensity_prenormalization:
+        if not self.is_prenormalization_equal(p):
             if debug:
-                print(proc + ": not equal at 'intensity_prenormalization'")
+                print(proc + ": not equal at 'prenormalization'")
             return False
-        if self.prenormalization_min_percentile != p.prenormalization_min_percentile:
+        if not self.is_normalization_equal(p):
             if debug:
-                print(proc + ": not equal at 'prenormalization_min_percentile'")
+                print(proc + ": not equal at 'normalization'")
             return False
-        if self.prenormalization_max_percentile != p.prenormalization_max_percentile:
+        if not self.is_intensity_smoothing_equal(p):
             if debug:
-                print(proc + ": not equal at 'prenormalization_max_percentile'")
+                print(proc + ": not equal at 'intensity smoothing'")
             return False
-        if self.intensity_transformation != p.intensity_transformation:
+        if not self.is_intensity_enhancement_equal(p):
             if debug:
-                print(proc + ": not equal at 'intensity_transformation'")
+                print(proc + ": not equal at 'intensity enhancement'")
             return False
-        if self.intensity_transformation != p.intensity_transformation:
+        if not self.is_outer_contour_enhancement_equal(p):
             if debug:
-                print(proc + ": not equal at 'intensity_transformation'")
+                print(proc + ": not equal at 'outer contour enhancement'")
             return False
-        if self.intensity_enhancement != p.intensity_enhancement:
-            if debug:
-                print(proc + ": not equal at 'intensity_enhancement'")
-            return False
-        if self.outer_contour_enhancement != p.outer_contour_enhancement:
-            if debug:
-                print(proc + ": not equal at 'outer_contour_enhancement'")
-            return False
-        if self.reconstruction_images_combination != p.reconstruction_images_combination:
-            if debug:
-                print(proc + ": not equal at 'reconstruction_images_combination'")
-            return False
-        if self.cell_normalization_min_method != p.cell_normalization_min_method:
-            if debug:
-                print(proc + ": not equal at 'cell_normalization_min_method'")
-            return False
-        if self.cell_normalization_max_method != p.cell_normalization_max_method:
-            if debug:
-                print(proc + ": not equal at 'cell_normalization_max_method'")
-            return False
-        if self.normalization_min_percentile != p.normalization_min_percentile:
-            if debug:
-                print(proc + ": not equal at 'normalization_min_percentile'")
-            return False
-        if self.normalization_max_percentile != p.normalization_max_percentile:
-            if debug:
-                print(proc + ": not equal at 'normalization_max_percentile'")
-            return False
-        if self.cell_normalization_sigma != p.cell_normalization_sigma:
-            if debug:
-                print(proc + ": not equal at 'cell_normalization_sigma'")
-            return False
-        if self.intensity_sigma != p.intensity_sigma:
-            if debug:
-                print(proc + ": not equal at 'intensity_sigma'")
-                print("self.intensity_sigma = " + str(self.intensity_sigma) + " - p.intensity_sigma = " + str(p.intensity_sigma))
-            return False
-
-        if ace.AceParameters.is_equal(self, p) is False:
-            if debug:
-                print(proc + ": not equal at 'AceParameters'")
-            return False
-
+        #
+        # registration parameters are not tested
+        #
         return True
+
+    ############################################################
+    #
+    #
+    #
+    ############################################################
+    def set_suffixes(self, reference=None):
+
+        if reference is None:
+            if self.prenormalized_suffix is None:
+                self.prenormalized_suffix = self.default_suffix
+            if self.normalized_suffix is None:
+                self.normalized_suffix = self.default_suffix
+            if self.intensity_suffix is None:
+                self.intensity_suffix = self.default_suffix
+            if self.enhanced_suffix is None:
+                self.enhanced_suffix = self.default_suffix
+            if self.outercontour_suffix is None:
+                self.outercontour_suffix = self.default_suffix
+            if self.result_suffix is None:
+                self.result_suffix = self.default_suffix
+            return
+
+        if self.is_prenormalization_equal(reference):
+            self.prenormalized_suffix = reference.prenormalized_suffix
+        else:
+            self.set_suffixes()
+            return
+
+        if self.is_normalization_equal(reference):
+            self.normalized_suffix = reference.normalized_suffix
+            if self.is_intensity_smoothing_equal(reference):
+                self.intensity_suffix = reference.intensity_suffix
+
+        if self.is_intensity_enhancement_equal(reference):
+            self.enhanced_suffix = reference.enhanced_suffix
+
+        if self.is_outer_contour_enhancement_equal(reference):
+            self.outercontour_suffix = reference.outercontour_suffix
+
+        if self.is_equal(reference):
+            self.result_suffix = reference.result_suffix
+
+        self.set_suffixes()
+        return
 
 
 #
@@ -579,14 +714,12 @@ def get_previous_deformed_segmentation(current_time, experiment, parameters, pre
 ########################################################################################
 
 
-def build_reconstructed_image(current_time, experiment, parameters, suffix=None, suffix_glace=None, previous_time=None):
+def build_reconstructed_image(current_time, experiment, parameters, previous_time=None):
     """
 
     :param current_time:
     :param experiment:
     :param parameters:
-    :param suffix:
-    :param suffix_glace:
     :param previous_time:
     :return:
     """
@@ -625,11 +758,6 @@ def build_reconstructed_image(current_time, experiment, parameters, suffix=None,
                                       + str(type(parameters)))
         sys.exit(1)
 
-    if suffix is None:
-        local_suffix = "_reconstructed"
-    else:
-        local_suffix = suffix
-
     #
     # get fused image
     #
@@ -643,16 +771,39 @@ def build_reconstructed_image(current_time, experiment, parameters, suffix=None,
         return None
     input_image = os.path.join(input_dir, input_image)
 
+    reconstructed_image = common.add_suffix(input_image, parameters.result_suffix,
+                                            new_dirname=experiment.working_dir.get_rec_directory(0),
+                                            new_extension=experiment.default_image_suffix)
+    if os.path.isfile(reconstructed_image) and monitoring.forceResultsToBeBuilt is False:
+        monitoring.to_log_and_console("    .. reconstructed image is '" +
+                                      str(reconstructed_image).split(os.path.sep)[-1] + "'", 2)
+        return reconstructed_image
+
     #
-    # intensity pre-transformation
+    # the processing flow is as follows
+    #
+    # input image -> pre-normalized image -> normalized image -> intensity image }
+    #                                     -> enhanced image                      } -> reconstructed image
+    #                                     -> outer contour enhancement image     }
+    #
+
+    #
+    # intensity pre-normalization
+    # if not 'identity', result image is prefixed with "_prenormalized"
+    # further processing will be done on this "pre-normalized" image
     #
     if parameters.intensity_prenormalization.lower() == 'identity':
         pass
     else:
-        prenormalized_image = common.add_suffix(input_image, local_suffix + "_prenormalized",
+        local_suffix = parameters.prenormalized_suffix + "_prenormalized"
+        prenormalized_image = common.add_suffix(input_image, local_suffix,
                                                 new_dirname=experiment.working_dir.get_tmp_directory(0),
                                                 new_extension=experiment.default_image_suffix)
-        if parameters.intensity_prenormalization.lower() == 'normalization_to_u8' \
+        if os.path.isfile(prenormalized_image) and monitoring.forceResultsToBeBuilt is False:
+            monitoring.to_log_and_console("    .. prenormalization image is '" +
+                                          str(prenormalized_image).split(os.path.sep)[-1] + "'", 2)
+            input_image = prenormalized_image
+        elif parameters.intensity_prenormalization.lower() == 'normalization_to_u8' \
                 or parameters.intensity_prenormalization.lower() == 'global_normalization_to_u8':
             monitoring.to_log_and_console("    .. intensity global prenormalization of '"
                                           + str(input_image).split(os.path.sep)[-1] + "'", 2)
@@ -666,191 +817,122 @@ def build_reconstructed_image(current_time, experiment, parameters, suffix=None,
             monitoring.to_log_and_console("    .. intensity global prenormalization of '"
                                           + str(input_image).split(os.path.sep)[-1] + "'", 2)
             cpp_wrapping.global_intensity_normalization(input_image, prenormalized_image,
-                                                    min_percentile=parameters.prenormalization_min_percentile,
-                                                    max_percentile=parameters.prenormalization_max_percentile,
-                                                    other_options="-o 2", monitoring=monitoring)
+                                                        min_percentile=parameters.prenormalization_min_percentile,
+                                                        max_percentile=parameters.prenormalization_max_percentile,
+                                                        other_options="-o 2", monitoring=monitoring)
             input_image = prenormalized_image
         else:
             monitoring.to_log_and_console("    unknown intensity prenormalization method: '"
                                           + str(parameters.intensity_prenormalization) + "'", 2)
 
     #
-    # set image names
+    # set image bytes
     #
-    # there can be intensity enhancement (ie filtering based membrane enhancement)
-    #
-    # if no intensity (i.e. membrane) enhancement
-    #    if no intensity
-    #
-    #
-
-    intensity_image = None
-    enhanced_image = None
-    contour_image = None
-    reconstructed_image = common.add_suffix(input_image, local_suffix,
-                                            new_dirname=experiment.working_dir.get_rec_directory(0),
-                                            new_extension=experiment.default_image_suffix)
-
     intensity_image_bytes = 0
     enhanced_image_bytes = 0
     contour_image_bytes = 0
 
     #
-    # there is a histogram-based intensity transformation
-    # intensity_image has to be set
+    # histogram-based intensity transformation
     #
-    if not (parameters.intensity_transformation is None or parameters.intensity_transformation.lower() == 'none'):
+
+    if parameters.intensity_transformation is None or parameters.intensity_transformation.lower() == 'none':
         normalized_image = None
-        normalized_name = common.add_suffix(input_image, local_suffix + "_normalized",
+    elif parameters.intensity_transformation.lower() == 'identity':
+        normalized_image = input_image
+    else:
+        normalized_image = common.add_suffix(input_image, parameters.normalized_suffix + "_normalized",
                                             new_dirname=experiment.working_dir.get_tmp_directory(0),
                                             new_extension=experiment.default_image_suffix)
-        intensity_name = common.add_suffix(input_image, local_suffix + "_intensity",
-                                           new_dirname=experiment.working_dir.get_tmp_directory(0),
-                                           new_extension=experiment.default_image_suffix)
-        #
-        # no normalization
-        #
-        if parameters.intensity_transformation.lower() == 'identity':
+        if os.path.isfile(normalized_image) and monitoring.forceResultsToBeBuilt is False:
+            monitoring.to_log_and_console("    .. normalization image is '" +
+                                          str(normalized_image).split(os.path.sep)[-1] + "'", 2)
             #
-            # the 'normalized_image' is the 'input_image'
-            #
-            normalized_image = input_image
-            #
-            # in case of smoothing, we have to compute the 'intensity_image',
-            # so set its name
-            # if no smoothing, the 'intensity_image' is the 'normalized_image'
-            # hence the 'input_image'
-            #
-            if parameters.intensity_sigma > 0.0:
-                experiment.working_dir.make_rec_directory()
-                intensity_image = intensity_name
-            else:
-                intensity_image = normalized_image
-            #
-            # is there an other operation, hence a fusion afterwards?
-            #
-            if (parameters.intensity_enhancement is None or parameters.intensity_enhancement.lower() == 'none') \
-                    and parameters.outer_contour_enhancement is False:
-                #
-                # there is only the histogram-based intensity transformation
-                #
-                if intensity_image is not input_image:
-                    experiment.working_dir.make_rec_directory()
-                    intensity_image = reconstructed_image
-            intensity_image_bytes = 2
-        #
-        # normalization on 1 byte
-        #
-        elif parameters.intensity_transformation.lower() == 'normalization_to_u8' \
-                or parameters.intensity_transformation.lower() == 'global_normalization_to_u8' \
-                or parameters.intensity_transformation.lower() == 'cell_normalization_to_u8':
-            #
-            # set the 'intensity_image' name
-            #
-            if (parameters.intensity_enhancement is None or parameters.intensity_enhancement.lower() == 'none') \
-                    and parameters.outer_contour_enhancement is False:
-                #
-                # there is only the histogram-based intensity transformation
-                #
-                experiment.working_dir.make_rec_directory()
-                intensity_image = reconstructed_image
-            else:
-                #
-                # there is an other operation
-                #
-                intensity_image = intensity_name
-            #
-            # is there a smoothing afterwards
-            #
-            if parameters.intensity_sigma > 0.0:
-                normalized_image = normalized_name
-            else:
-                normalized_image = intensity_image
-            intensity_image_bytes = 1
-            #
-            # compute 'intensity_image'
+            # set byte counts from parameters
             #
             if parameters.intensity_transformation.lower() == 'normalization_to_u8' \
-                    or parameters.intensity_transformation.lower() == 'global_normalization_to_u8':
-                if (not os.path.isfile(normalized_image) and not os.path.isfile(reconstructed_image)) \
-                        or monitoring.forceResultsToBeBuilt is True:
-                    monitoring.to_log_and_console("    .. intensity global normalization of '"
-                                                  + str(input_image).split(os.path.sep)[-1] + "'", 2)
-                    cpp_wrapping.global_intensity_normalization(input_image, normalized_image,
+                    or parameters.intensity_transformation.lower() == 'global_normalization_to_u8' \
+                    or parameters.intensity_transformation.lower() == 'cell_normalization_to_u8':
+                intensity_image_bytes = 1
+            else:
+                intensity_image_bytes = 2
+        #
+        # global normalization on 1 byte
+        #
+        elif parameters.intensity_transformation.lower() == 'normalization_to_u8' \
+                or parameters.intensity_transformation.lower() == 'global_normalization_to_u8':
+            intensity_image_bytes = 1
+            monitoring.to_log_and_console("    .. intensity global normalization of '"
+                                          + str(input_image).split(os.path.sep)[-1] + "'", 2)
+            cpp_wrapping.global_intensity_normalization(input_image, normalized_image,
+                                                        min_percentile=parameters.normalization_min_percentile,
+                                                        max_percentile=parameters.normalization_max_percentile,
+                                                        other_options=None, monitoring=monitoring)
+        #
+        # cell normalization on 1 byte
+        #
+        elif parameters.intensity_transformation.lower() == 'cell_normalization_to_u8':
+            intensity_image_bytes = 1
+            monitoring.to_log_and_console("    .. intensity cell-based normalization of '"
+                                          + str(input_image).split(os.path.sep)[-1] + "'", 2)
+            if previous_time is None:
+                monitoring.to_log_and_console("       previous time point was not given", 2)
+                monitoring.to_log_and_console("    .. " + proc + ": switch to 'global normalization' ", 1)
+                cpp_wrapping.global_intensity_normalization(input_image, normalized_image,
                                                             min_percentile=parameters.normalization_min_percentile,
                                                             max_percentile=parameters.normalization_max_percentile,
                                                             other_options=None, monitoring=monitoring)
-            elif parameters.intensity_transformation.lower() == 'cell_normalization_to_u8':
-                if (not os.path.isfile(normalized_image) and not os.path.isfile(reconstructed_image)) \
-                        or monitoring.forceResultsToBeBuilt is True:
-                    monitoring.to_log_and_console("    .. intensity cell-based normalization of '"
-                                                  + str(input_image).split(os.path.sep)[-1] + "'", 2)
-                    if previous_time is None:
-                        monitoring.to_log_and_console("       previous time point was not given", 2)
-                        monitoring.to_log_and_console("    .. " + proc + ": switch to 'global normalization' ", 1)
-                        cpp_wrapping.global_intensity_normalization(input_image, normalized_image,
-                                                                min_percentile=parameters.normalization_min_percentile,
-                                                                max_percentile=parameters.normalization_max_percentile,
-                                                                other_options=None, monitoring=monitoring)
-                    else:
-                        previous_deformed_segmentation = get_previous_deformed_segmentation(current_time, experiment,
-                                                                                            parameters, previous_time)
-                        cpp_wrapping.global_intensity_normalization(input_image, previous_deformed_segmentation,
-                                                              normalized_image,
-                                                              min_percentile=parameters.normalization_min_percentile,
-                                                              max_percentile=parameters.normalization_max_percentile,
-                                                              cell_normalization_min_method=parameters.cell_normalization_min_method,
-                                                              cell_normalization_max_method=parameters.cell_normalization_max_method,
-                                                              sigma=parameters.cell_normalization_sigma,
-                                                              other_options=None, monitoring=monitoring)
+            else:
+                previous_deformed_segmentation = get_previous_deformed_segmentation(current_time, experiment,
+                                                                                    parameters, previous_time)
+                cpp_wrapping.global_intensity_normalization(input_image, previous_deformed_segmentation,
+                                                            normalized_image,
+                                                            min_percentile=parameters.normalization_min_percentile,
+                                                            max_percentile=parameters.normalization_max_percentile,
+                                                            cell_normalization_min_method=parameters.cell_normalization_min_method,
+                                                            cell_normalization_max_method=parameters.cell_normalization_max_method,
+                                                            sigma=parameters.cell_normalization_sigma,
+                                                            other_options=None, monitoring=monitoring)
         #
-        # normalization on 2 bytes
+        # global normalization on 2 bytes
         #
         elif parameters.intensity_transformation.lower() == 'normalization_to_u16' \
                 or parameters.intensity_transformation.lower() == 'global_normalization_to_u16':
-            #
-            # set the 'intensity_image' name
-            #
-            if (parameters.intensity_enhancement is None or parameters.intensity_enhancement.lower() == 'none') \
-                    and parameters.outer_contour_enhancement is False:
-                #
-                # there is only the histogram-based intensity transformation
-                #
-                experiment.working_dir.make_rec_directory()
-                intensity_image = reconstructed_image
-            else:
-                #
-                # there is an other operation
-                #
-                intensity_image = intensity_name
-            #
-            # is there a smoothing afterwards
-            #
-            if parameters.intensity_sigma > 0.0:
-                normalized_image = normalized_name
-            else:
-                normalized_image = intensity_image
             intensity_image_bytes = 2
-            #
-            # compute 'intensity_image'
-            #
-            if parameters.intensity_transformation.lower() == 'normalization_to_u16' \
-                    or parameters.intensity_transformation.lower() == 'global_normalization_to_u16':
-                if (not os.path.isfile(normalized_image) and not os.path.isfile(reconstructed_image)) \
-                        or monitoring.forceResultsToBeBuilt is True:
-                    monitoring.to_log_and_console("    .. intensity global normalization of '"
-                                                  + str(input_image).split(os.path.sep)[-1] + "'", 2)
-                    cpp_wrapping.global_intensity_normalization(input_image, normalized_image,
-                                                            min_percentile=parameters.normalization_min_percentile,
-                                                            max_percentile=parameters.normalization_max_percentile,
-                                                            other_options="-o 2", monitoring=monitoring)
+            monitoring.to_log_and_console("    .. intensity global normalization of '"
+                                          + str(input_image).split(os.path.sep)[-1] + "'", 2)
+            cpp_wrapping.global_intensity_normalization(input_image, normalized_image,
+                                                        min_percentile=parameters.normalization_min_percentile,
+                                                        max_percentile=parameters.normalization_max_percentile,
+                                                        other_options="-o 2", monitoring=monitoring)
         else:
             monitoring.to_log_and_console("    unknown intensity transformation method: '"
                                           + str(parameters.intensity_transformation) + "'", 2)
-        #
-        # gaussian smoothing
-        #
-        if parameters.intensity_sigma > 0:
+            normalized_image = input_image
+
+    #
+    # Gaussian smoothing of intensity transformed image
+    #
+    if normalized_image is None:
+        intensity_image = None
+    elif parameters.intensity_sigma > 0.0:
+        intensity_image = common.add_suffix(input_image, parameters.intensity_suffix + "_intensity",
+                                           new_dirname=experiment.working_dir.get_tmp_directory(0),
+                                           new_extension=experiment.default_image_suffix)
+        if os.path.isfile(intensity_image) and monitoring.forceResultsToBeBuilt is False:
+            monitoring.to_log_and_console("    .. smoothed intensity transformed image is '" +
+                                          str(intensity_image).split(os.path.sep)[-1]
+                                          + "'", 2)
+            #
+            # set byte counts from parameters
+            #
+            if parameters.intensity_transformation.lower() == 'normalization_to_u8' \
+                    or parameters.intensity_transformation.lower() == 'global_normalization_to_u8' \
+                    or parameters.intensity_transformation.lower() == 'cell_normalization_to_u8':
+                intensity_image_bytes = 1
+            else:
+                intensity_image_bytes = 2
+        else:
             monitoring.to_log_and_console("    .. smoothing " + str(normalized_image).split(os.path.sep)[-1]
                                           + "' with sigma = " + str(parameters.intensity_sigma), 2)
             other_options = "-o " + str(intensity_image_bytes)
@@ -859,118 +941,77 @@ def build_reconstructed_image(current_time, experiment, parameters, suffix=None,
                                           other_options=other_options, monitoring=monitoring)
             if not os.path.isfile(intensity_image):
                 monitoring.to_log_and_console("    .. " + proc + ": error when smoothing intensity transformed image")
-
-        #
-        # no fusion to be done
-        #
-        if (parameters.intensity_enhancement is None or parameters.intensity_enhancement.lower() == 'none') \
-                and parameters.outer_contour_enhancement is False:
-            return intensity_image
+                intensity_image = normalized_image
+    else:
+        intensity_image = normalized_image
 
     #
     # there is a membrane enhancement image
     # enhanced_image has to be set
     #
-    if not (parameters.intensity_enhancement == None or parameters.intensity_enhancement.lower() == 'none'):
-        if parameters.intensity_enhancement.lower() == 'gace' or parameters.intensity_enhancement.lower() == 'glace':
-            #
-            # set the 'enhanced_image' name
-            # test whether there is a g(l)ace image
-            #
-            enhanced_image = None
-            if suffix_glace is not None:
-                enhanced_name = common.add_suffix(str(input_image).split(os.path.sep)[-1], suffix_glace + "_enhanced")
-                enhanced_image = common.find_file(experiment.working_dir.get_tmp_directory(0), enhanced_name,
-                                                 file_type='image', callfrom=proc, local_monitoring=None, verbose=False)
-                if enhanced_image is not None:
-                    enhanced_image = os.path.join(experiment.working_dir.get_tmp_directory(0), enhanced_image)
-                    monitoring.to_log_and_console("       use cell enhancement image '"
-                                                  + str(enhanced_image).split(os.path.sep)[-1] + "'", 2)
-            if (parameters.intensity_transformation is None or parameters.intensity_transformation.lower() == 'none') \
-                    and parameters.outer_contour_enhancement is False:
-                #
-                # there is only the membrane enhancement
-                #
-                if enhanced_image is not None:
-                    return enhanced_image
-                experiment.working_dir.make_rec_directory()
-                enhanced_image = reconstructed_image
-            else:
-                #
-                # there is an other operation
-                #
-                if enhanced_image is None:
-                    enhanced_image = common.add_suffix(input_image, local_suffix + "_enhanced",
-                                                       new_dirname=experiment.working_dir.get_tmp_directory(0),
-                                                       new_extension=experiment.default_image_suffix)
-            enhanced_image_bytes = 1
-            #
-            # compute 'enhanced_image'
-            #
-            if parameters.intensity_enhancement.lower() == 'gace':
-                if (not os.path.isfile(enhanced_image) and (reconstructed_image is None
-                                                            or not os.path.isfile(reconstructed_image))) \
-                        or monitoring.forceResultsToBeBuilt is True:
-                    monitoring.to_log_and_console("    .. global enhancement of '"
-                                                  + str(input_image).split(os.path.sep)[-1] + "'", 2)
-                    ace.monitoring.copy(monitoring)
+    if parameters.intensity_enhancement is None or parameters.intensity_enhancement.lower() == 'none':
+        enhanced_image = None
+    else:
+        local_suffix = parameters._enhanced_suffix + "_enhanced"
+        #
+        # trick to deal with already computed images with different image extension
+        #
+        enhanced_name = common.add_suffix(str(input_image).split(os.path.sep)[-1], local_suffix)
+        enhanced_image = common.find_file(experiment.working_dir.get_tmp_directory(0), enhanced_name, file_type='image',
+                                          callfrom=proc, local_monitoring=None, verbose=False)
+        enhanced_image_bytes = 1
+        if enhanced_image is not None and monitoring.forceResultsToBeBuilt is False:
+            enhanced_image = os.path.join(experiment.working_dir.get_tmp_directory(0), enhanced_image)
+            monitoring.to_log_and_console("    .. intensity enhanced image is '" +
+                                          str(enhanced_image).split(os.path.sep)[-1] + "'", 2)
+        else:
+            enhanced_image = common.add_suffix(input_image, local_suffix,
+                                               new_dirname=experiment.working_dir.get_tmp_directory(0),
+                                               new_extension=experiment.default_image_suffix)
+            if parameters.intensity_enhancement.lower() == 'gace' or parameters.intensity_enhancement.lower() == 'ace':
+                monitoring.to_log_and_console("    .. global enhancement of '"
+                                              + str(input_image).split(os.path.sep)[-1] + "'", 2)
+                ace.monitoring.copy(monitoring)
+                ace.global_membrane_enhancement(input_image, enhanced_image, experiment,
+                                                temporary_path=experiment.working_dir.get_tmp_directory(0),
+                                                parameters=parameters)
+            elif parameters.intensity_enhancement.lower() == 'glace':
+                monitoring.to_log_and_console("    .. cell enhancement of '"
+                                              + str(input_image).split(os.path.sep)[-1] + "'", 2)
+                ace.monitoring.copy(monitoring)
+                previous_deformed_segmentation = get_previous_deformed_segmentation(current_time, experiment,
+                                                                                    parameters,
+                                                                                    previous_time)
+                if previous_deformed_segmentation is None:
+                    monitoring.to_log_and_console("    .. " + proc + ": switch to 'gace' ", 1)
                     ace.global_membrane_enhancement(input_image, enhanced_image, experiment,
                                                     temporary_path=experiment.working_dir.get_tmp_directory(0),
                                                     parameters=parameters)
-            elif parameters.intensity_enhancement.lower() == 'glace':
-                if (not os.path.isfile(enhanced_image) and (reconstructed_image is None
-                                                            or not os.path.isfile(reconstructed_image))) \
-                        or monitoring.forceResultsToBeBuilt is True:
-                    monitoring.to_log_and_console("    .. cell enhancement of '"
-                                                  + str(input_image).split(os.path.sep)[-1] + "'", 2)
-                    ace.monitoring.copy(monitoring)
-                    previous_deformed_segmentation = get_previous_deformed_segmentation(current_time, experiment,
-                                                                                        parameters,
-                                                                                        previous_time)
-                    if previous_deformed_segmentation is None:
-                        monitoring.to_log_and_console("    .. " + proc + ": switch to 'ace' ", 1)
-                        ace.global_membrane_enhancement(input_image, enhanced_image, experiment,
-                                                        temporary_path=experiment.working_dir.get_tmp_directory(0),
-                                                        parameters=parameters)
-                    else:
-                        ace.cell_membrane_enhancement(input_image, previous_deformed_segmentation, enhanced_image,
-                                                      experiment,
-                                                      temporary_path=experiment.working_dir.get_tmp_directory(0),
-                                                      parameters=parameters)
-        else:
-            monitoring.to_log_and_console("    unknown enhancement method: '"
-                                          + str(parameters.intensity_enhancement) + "'", 2)
-        #
-        # no fusion to be done
-        #
-        if (parameters.intensity_transformation is None or parameters.intensity_transformation.lower() == 'none') \
-                and parameters.outer_contour_enhancement is False:
-            return enhanced_image
+                else:
+                    ace.cell_membrane_enhancement(input_image, previous_deformed_segmentation, enhanced_image,
+                                                  experiment,
+                                                  temporary_path=experiment.working_dir.get_tmp_directory(0),
+                                                  parameters=parameters)
+            else:
+                enhanced_image = None
+                monitoring.to_log_and_console("    unknown enhancement method: '"
+                                              + str(parameters.intensity_enhancement) + "'", 2)
 
     #
-    # there is an outer contour image
-    # set contour_image
+    # outer contour image
     #
-    if parameters.outer_contour_enhancement is True:
-        if (parameters.intensity_transformation is None or parameters.intensity_transformation.lower() == 'none') \
-                and (parameters.intensity_enhancement is None or parameters.intensity_enhancement.lower() == 'none'):
-            experiment.working_dir.make_rec_directory()
-            contour_image = reconstructed_image
-            monitoring.to_log_and_console("    weird, only the outer contour is used for reconstruction", 2)
-        else:
-            #
-            # there is an other operation
-            #
-            contour_image = common.add_suffix(input_image, local_suffix + "_outercontour",
-                                              new_dirname=experiment.working_dir.get_tmp_directory(0),
-                                              new_extension=experiment.default_image_suffix)
+    if parameters.outer_contour_enhancement is False:
+        contour_image = None
+    else:
+        local_suffix = parameters.outercontour_suffix + "_outercontour"
+        contour_image = common.add_suffix(input_image, local_suffix,
+                                          new_dirname=experiment.working_dir.get_tmp_directory(0),
+                                          new_extension=experiment.default_image_suffix)
         contour_image_bytes = 1
-        #
-        # compute 'contour_image'
-        #
-        if (not os.path.isfile(contour_image) and (reconstructed_image is None
-                                                   or not os.path.isfile(reconstructed_image))) \
-                or monitoring.forceResultsToBeBuilt is True:
+        if os.path.isfile(contour_image) and monitoring.forceResultsToBeBuilt is False:
+            monitoring.to_log_and_console("    .. outer contour image is '" + str(contour_image).split(os.path.sep)[-1]
+                                          + "'", 2)
+        else:
             astec_name = experiment.astec_dir.get_image_name(current_time)
             deformed_segmentation = common.add_suffix(astec_name, '_deformed_segmentation_from_previous',
                                                       new_dirname=experiment.astec_dir.get_tmp_directory(),
@@ -982,12 +1023,17 @@ def build_reconstructed_image(current_time, experiment, parameters, suffix=None,
                 cpp_wrapping.apply_transformation(previous_segmentation, deformed_segmentation, deformation,
                                                   interpolation_mode='nearest', monitoring=monitoring)
             cpp_wrapping.outer_contour(deformed_segmentation, contour_image, monitoring=monitoring)
-        #
-        # no fusion to be done
-        #
-        if (parameters.intensity_transformation is None or parameters.intensity_transformation.lower() == 'none') \
-                and (parameters.intensity_enhancement is None or parameters.intensity_enhancement.lower() == 'none'):
-            return contour_image
+
+    #
+    # Fusion of intensity_image, enhanced_image, contour_image
+    #
+    if intensity_image is not None and enhanced_image is None and contour_image is None:
+        return intensity_image
+    elif intensity_image is None and enhanced_image is not None and contour_image is None:
+        return enhanced_image
+    elif intensity_image is None and enhanced_image is None and contour_image is not None:
+        monitoring.to_log_and_console("    weird, only the outer contour is used for reconstruction", 2)
+        return contour_image
 
     #
     # here there are at least two images to be fused

@@ -2509,7 +2509,7 @@ def _fusion_process(input_image_list, fused_image, experiment, parameters):
         print("- input_image_list = " + str(input_image_list))
         print("- fused_image = " + str(fused_image))
         for c in range(n_channels):
-            experiment.rawdata_dir.channel[c].print_parameters('channel #' + str(c))
+            experiment.rawdata_dir.channel[c].print_parameters()
         print("")
 
     #

@@ -183,6 +183,8 @@ def main():
     parameters.first_time_point = experiment.first_time_point
     parameters.last_time_point = experiment.first_time_point
     parameters.update_from_parameter_file(parameter_file)
+    parameters.membrane_reconstruction.set_suffixes()
+    parameters.seed_reconstruction.set_suffixes(parameters.membrane_reconstruction)
 
     parameters.write_parameters(monitoring.log_filename)
 

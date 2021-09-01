@@ -536,8 +536,7 @@ class RawdataChannel(PrefixedParameter):
         doc += "(DIR_dirCAM_STACKx) or its default value.\n"
         doc += "\n"
         self.doc['rawdata_overview'] = doc
-
-        doc = "\t directory where are located the subdirectories containing the"
+        doc = "\t directory where are located the subdirectories containing the\n"
         doc += "\t acquisition images."
         self.doc['_main_directory'] = doc
         self._parent_directory = None
@@ -592,21 +591,23 @@ class RawdataChannel(PrefixedParameter):
         #
         #
         doc = "\t Possible values are 'uniform', 'ramp', 'corner', or 'guignard'\n"
-        doc += "\t The weighted linear combination of the 4 co-registered stacks can be tuned\n"
-        doc += "\t by the 'fusion_weighting' variable\n"
-        doc += "\t - 'uniform': uniform (or constant) weighting, it comes to the average of\n"
-        doc += "\t    the resampled co-registered stacks\n"
-        doc += "\t - 'ramp': the weights are linearly increasing or decreasing along the Z axis\n"
-        doc += "\t - 'corner': the weights are constant in a corner portion of the stack, defined \n"
-        doc += "\t   by two diagonals in the XZ-section\n"
-        doc += "\t - 'guignard': original historical weighting function, described in Leo Guignard's\n"
-        doc += "\t    Phd thesis, that puts more weight to sections close to the camera and take\n"
-        doc += "\t    also account the traversed material\n"
-        doc += "\t The variable 'fusion_weighting' allows to set the fusion weighting for all the\n"
-        doc += "\t channels to be processed. Using the variables 'fusion_weighting_channel_X'\n"
-        doc += "\t allows to set different weighting schemes for each channel. \n"
-        doc += "\t Setting the variable 'xzsection_extraction' to True allows to see the weights\n"
-        doc += "\t used for the extracted XZ sections.\n"
+        doc += "\t The weighted linear combination of the 4 co-registered stacks\n"
+        doc += "\t can be tuned by the 'fusion_weighting' variable\n"
+        doc += "\t - 'uniform': uniform (or constant) weighting, it comes to the \n"
+        doc += "\t    average of the resampled co-registered stacks\n"
+        doc += "\t - 'ramp': the weights are linearly increasing or decreasing\n"
+        doc += "\t   along the Z axis\n"
+        doc += "\t - 'corner': the weights are constant in a corner portion of the\n"
+        doc += "\t   stack, defined  by two diagonals in the XZ-section\n"
+        doc += "\t - 'guignard': original historical weighting function, described\n"
+        doc += "\t   in Leo Guignard's Phd thesis, that puts more weight to sections\n"
+        doc += "\t   close to the camera and take also account the traversed material\n"
+        doc += "\t The variable 'fusion_weighting' allows to set the fusion weighting\n"
+        doc += "\t for all the channels to be processed. Using the variables\n"
+        doc += "\t 'fusion_weighting_channel_X' allows to set different weighting \n"
+        doc += "\t schemes for each channel. \n"
+        doc += "\t Setting the variable 'xzsection_extraction' to True allows to see\n"
+        doc += "\t  the weights used for the extracted XZ sections.\n"
         self.doc['fusion_weighting'] = doc
         self.fusion_weighting = 'guignard-weighting'
 

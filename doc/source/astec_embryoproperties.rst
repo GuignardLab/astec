@@ -1,0 +1,194 @@
+``astec_embryoproperties``
+==========================
+
+``astec_embryoproperties`` can be used either to extract cell properties as well as cell lineage from a co-registered image sequence or to handle a property file (pkl or xml).
+
+
+
+``astec_embryoproperties`` additional options
+---------------------------------------------
+
+The following options are available:
+
+``-i files ...``
+   input files (pkl or xml) to be read
+
+``-o files ...``
+   output files (pkl or xml) to be read
+
+``-c files ...``
+   files (pkl or xml) to be compared to those given by ``-i``
+   
+``-feature features ...``
+   features to be extracted from the input files, that are to be
+   written in the output files. Features have to be chosen in
+   'lineage',  'h_min', 'volume', 'surface', 'sigma', 
+   'label_in_time', 'barycenter', 'fate', 'fate2',
+   'fate3', 'fate4', 'all-cells', 'principal-value',
+   'name', 'contact', 'history', 'principal-vector',
+   'name-score', 'cell-compactness'
+   
+``-property features ...``
+   same as ``-feature``
+   
+``--diagnosis``
+   performs some test on the read properties
+   
+``--diagnosis-minimal-volume DIAGNOSIS_MINIMAL_VOLUME``
+   displays all cells with volume smaller than ``DIAGNOSIS_MINIMAL_VOLUME``
+
+``--diagnosis-items DIAGNOSIS_ITEMS``
+   minimal number of items to be displayed
+
+``--print-content``
+   print the keys of the input file(s) (read as python dictionary)
+
+``--print-keys``
+   same as ``--print-content``
+
+``--print-types``
+   print types of read features (for debug purpose)
+
+   
+
+Extracting properties from a co-registered image sequence
+---------------------------------------------------------
+
+When a parameter file is passed after the ``-p`` option, ``astec_embryoproperties`` will compute image sequence properties.
+Computing cell related informations as well as the lineage tree
+requires that the (post-corrected) segmentation images have already
+been co-registered (with ``astec_intraregistration`` see section
+:ref:`cli-intraregistration`).  
+``astec_embryoproperties`` will parse the
+``INTRAREG/INTRAREG_<EXP_INTRAREG>/`` directory, and will compute the
+properties from the images in the ``POST/POST_<EXP_POST>/``
+sub-directory, if existing, else of from the ``SEG/SEG_<EXP_SEG>/``
+sub-directory. 
+
+
+
+Embry properties Output data
+----------------------------
+
+The results are stored in the ``POST/POST_<EXP_POST>/`` or
+``SEG/SEG_<EXP_SEG>/`` sub-directory under the
+``INTRAREG/INTRAREG_<EXP_INTRAREG>`` where
+``<EXP_INTRAREG>`` is the value of the variable
+``EXP_INTRAREG`` (its default value is ``'RELEASE'``).  
+The resulting properties will be stored in the same directory than the images they are issued. It will be stored as a pickle python file, and also as a XML file. Both files contain exactly the same information.
+
+According that the ``POST/POST_<EXP_POST>/`` sub-directory exists (that post-corrected segmentation images have been co-registered), 3 files will be created, named after ``<EN>``
+
+
+.. code-block:: none
+
+   /path/to/experiment/
+   ├── ...
+   ├── INTRAREG/
+   │  └── INTRAREG_<EXP_INTRAREG>/
+   │     ├── ...
+   │     ├── POST/
+   │     │   └── POST_<EXP_POST>/
+   │     │       ├── <EN>_intrareg_post_lineage.pkl
+   │     │       ├── <EN>_intrareg_post_lineage.txt
+   │     │       └── <EN>_intrareg_post_lineage.xml
+   │     ...
+   ...
+
+The computed information are
+
+``all_cells``
+   All the cell identifiers. Each cell (in a segmentation image) has a
+   given label (ranging from 2 and above, 1 being used for the
+   background) in each image. To uniquely identify a cell in the
+   sequence, it has been given an unique identifier computed by $i *
+   1000 + c$, $i$ and $c$ denoting respectively the image index
+   (ranging in [``<begin>``, ``<end>``]) and the cell label.
+   
+``cell_barycenter``
+   Cell center of mass (in voxel coordinates)
+   
+``cell_contact_surface``
+   For each cell, give for each neighboring cell the contact
+   surface. The sum of these contact surfaces is the cell surface.
+   
+``cell_principal_vectors``
+   The cell principal vectors are issued from the diagonalization of
+   the cell covariance matrix (in voxel unit).
+   
+``cell_principal_values``
+   The cell principal value are issued from the diagonalization of the
+   cell covariance matrix (in voxel unit).
+   
+``cell_volume``
+   Cell volume (in voxel unit)
+
+``cell_compactness``
+   The cell compactness is defined by :math:`\mathcal{C}
+   =\frac{\sqrt[3]{\mathcal{V}}}{\sqrt[2]{\mathcal{S}}}` where
+   :math:`\mathcal{V}` is the volume of the cell and
+   :math:`\mathcal{S}` is its surface. 
+
+``cell_surface``
+   Cell surface (in pixel unit). For this computation, is mandatory
+   that the co-registered images are isotropic (the same voxel size
+   along the 3 dimensions X, Y, and Z). 
+
+``cell_lineage``
+
+The text file ``<EN>_intrareg_post_lineage.txt`` contains diagnosis information about the sequence. It lists
+
+* the cell with the smallest sizes as well as the ones with the
+  largest sizes 
+* the cell with a weird lineage: cells without a mother cell, or cells
+  without daughter cells or having more than 2 daughter cells 
+* cells having a small intersection with its mother cell with respect
+  to either the mother cell volume or the cell volume.  
+
+
+
+
+Handling properties files
+-------------------------
+
+``astec_embryoproperties`` can also help managing property files.
+
+* Converting from ``xml`` to ``pkl`` and  the other way around.
+  
+  .. code-block:: bash
+
+     $ astec_embryoproperties -i file.pkl -o file.xml
+
+  convert the pickle file ``file.pkl`` into the ``xml`` file  ``file.xml``
+
+* Converting the lineage information from either an ``xml``
+  or an ``pkl`` file to a ``tlp`` [#]_ file for lineage visualization
+  
+  .. code-block:: bash
+
+     $ astec_embryoproperties -i file.pkl -o file.tlp
+
+  convert the pickle file ``file.pkl`` into the ``tlp`` file  ``file.tlp``
+
+* Merging files.
+
+  .. code-block:: bash
+
+     $ astec_embryoproperties -i file1.pkl file2.xml ... filen.pkl -o merge.xml merge.pkl
+
+  will merge the files  ``file1.pkl``,  ``file2.xml`` , ...,
+  ``filen.pkl`` (note that they can be either xml or pkl) and write
+  the result both in ``xml`` and ``pkl`` formats.
+  
+* Extracting properties.
+
+  .. code-block:: bash
+		  
+     $ astec_embryoproperties -i file.pkl -feature volume surface -o file.xml
+
+  will extract the cell volume and surface information from the
+  pickle file ``file.pkl`` and write them into the xml file
+  ``file.xml``. 
+
+
+.. [#] Tulip is a Data Visualization Software, see `tulip.labri.fr <http://tulip.labri.fr/>`_

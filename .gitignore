@@ -74,8 +74,8 @@ build/
 build*/
 binaries/
 external/*/doc
-Doc/
 lib/
+*.egg-info/
 
 # CMakeLists temporary files #
 ##############################

@@ -11,4 +11,7 @@ dependencies:
   - h5py
   - nibabel
   - tifffile
+  - matplotlib
+  - networkx
+  - ipython
   - astec
