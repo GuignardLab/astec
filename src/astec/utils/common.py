@@ -2957,6 +2957,7 @@ def get_file_suffix(experiment, data_path, file_format, flag_time=None):
     suffixes = {}
     nimages = 0
     nfiles = 0
+    image_suffixes = {}
 
     if flag_time is not None:
         flag = flag_time
@@ -2966,12 +2967,12 @@ def get_file_suffix(experiment, data_path, file_format, flag_time=None):
     #
     # get and count suffixes for images
     #
-    for current_time in range(first_time_point + experiment.delay_time_point + experiment.delta_time_point,
+    for current_time in range(first_time_point + experiment.delay_time_point,
                               last_time_point + experiment.delay_time_point + 1, experiment.delta_time_point):
 
         time_point = experiment.get_time_index(current_time)
         file_prefix = file_format.replace(flag, time_point)
-
+        image_suffixes[current_time] = []
         for f in os.listdir(data_path):
             if len(f) <= len(file_prefix):
                 pass
@@ -2979,9 +2980,12 @@ def get_file_suffix(experiment, data_path, file_format, flag_time=None):
                 suffix = f[len(file_prefix) + 1:len(f)]
                 suffixes[suffix] = suffixes.get(suffix, 0) + 1
                 nfiles += 1
-
+                image_suffixes[current_time] += [suffix]
         nimages += 1
 
+    #
+    # there is one suffix for all images
+    #
     for s, n in suffixes.items():
         if n == nimages:
             return s
@@ -2992,6 +2996,24 @@ def get_file_suffix(experiment, data_path, file_format, flag_time=None):
         monitoring.to_log_and_console("\t found "+str(nfiles)+" images instead of "+str(nimages))
         monitoring.to_log_and_console("\t Exiting.", 0)
         exit(1)
+
+    for s in suffixes:
+        if s + ".gz" not in suffixes:
+            continue
+        if suffixes[s] + suffixes[s + ".gz"] < nimages:
+            continue
+        #
+        # check whether s and s+".gz" cover all images
+        #
+        found_suffix = True
+        for i in image_suffixes:
+            if s not in image_suffixes[i] and s + ".gz" not in image_suffixes[i]:
+                found_suffix = False
+        if found_suffix:
+            monitoring.to_log_and_console(proc + ": warning, mixed suffixes '" + str(s) + "' and '" + str(s) + ".gz'"
+                                          + " were found in '" + str(data_path) + "'", 2)
+            return s
+
 
     monitoring.to_log_and_console(proc + ": no common suffix for '" + str(file_format)
                                   + "' was found in '" + str(data_path) + "'", 2)
