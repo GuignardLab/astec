@@ -59,5 +59,5 @@ def neighborhood_process(experiment, parameters):
     if parameters.use_common_neighborhood:
         neighborhoodf.figures_neighborhood_pca(neighborhoods, parameters)
 
-    if parameters.neighborhood_improvement:
+    if parameters.naming_improvement:
        neighborhood.global_score_improvement(neighborhoods, parameters)

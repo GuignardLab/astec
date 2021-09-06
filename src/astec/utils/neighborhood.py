@@ -72,12 +72,12 @@ class NeighborhoodParameters(common.PrefixedParameter):
         #
         #
         #
-        self.neighborhood_diagnosis = False
+        self.naming_diagnosis = False
 
         #
         #
         #
-        self.neighborhood_improvement = False
+        self.naming_improvement = False
 
         #
         #
@@ -107,8 +107,8 @@ class NeighborhoodParameters(common.PrefixedParameter):
         self.varprint('use_common_neighborhood', self.use_common_neighborhood)
         self.varprint('neighborhood_comparison', self.neighborhood_comparison)
 
-        self.varprint('neighborhood_diagnosis', self.neighborhood_diagnosis)
-        self.varprint('neighborhood_improvement', self.neighborhood_improvement)
+        self.varprint('naming_diagnosis', self.naming_diagnosis)
+        self.varprint('naming_improvement', self.naming_improvement)
         self.varprint('figurefile_suffix', self.figurefile_suffix)
 
     def write_parameters_in_file(self, logfile):
@@ -128,8 +128,8 @@ class NeighborhoodParameters(common.PrefixedParameter):
         self.varwrite(logfile, 'use_common_neighborhood', self.use_common_neighborhood)
         self.varwrite(logfile, 'neighborhood_comparison', self.neighborhood_comparison)
 
-        self.varwrite(logfile, 'neighborhood_diagnosis', self.neighborhood_diagnosis)
-        self.varwrite(logfile, 'neighborhood_improvement', self.neighborhood_improvement)
+        self.varwrite(logfile, 'naming_diagnosis', self.naming_diagnosis)
+        self.varwrite(logfile, 'naming_improvement', self.naming_improvement)
         self.varwrite(logfile, 'figurefile_suffix', self.figurefile_suffix)
 
     def write_parameters(self, log_file_name):
@@ -158,10 +158,10 @@ class NeighborhoodParameters(common.PrefixedParameter):
         self.neighborhood_comparison = self.read_parameter(parameters, 'neighborhood_comparison',
                                                            self.neighborhood_comparison)
 
-        self.neighborhood_diagnosis = self.read_parameter(parameters, 'neighborhood_diagnosis',
-                                                          self.neighborhood_diagnosis)
-        self.neighborhood_improvement = self.read_parameter(parameters, 'neighborhood_improvement',
-                                                            self.neighborhood_improvement)
+        self.naming_diagnosis = self.read_parameter(parameters, 'naming_diagnosis',
+                                                          self.naming_diagnosis)
+        self.naming_improvement = self.read_parameter(parameters, 'naming_improvement',
+                                                            self.naming_improvement)
 
         self.figurefile_suffix = self.read_parameter(parameters, 'figurefile_suffix', self.figurefile_suffix)
 
@@ -545,7 +545,7 @@ def get_score(neigh0, neigh1, neighborhood_comparison='scalar_product', title=No
 #
 ########################################################################################
 
-def _neighborhood_diagnosis(prop, time_digits_for_cell_id=4, verbose=1):
+def naming_diagnosis(prop, time_digits_for_cell_id=4, verbose=1):
     """
     Diagnosis on names extracted from embryo properties
     Parameters
@@ -558,7 +558,7 @@ def _neighborhood_diagnosis(prop, time_digits_for_cell_id=4, verbose=1):
     -------
 
     """
-    proc = "_neighborhood_diagnosis"
+    proc = "naming_diagnosis"
     if 'cell_lineage' not in prop:
         monitoring.to_log_and_console(str(proc) + ": 'cell_lineage' was not in dictionary")
         return None
@@ -1584,8 +1584,8 @@ def build_neighborhoods(atlasfiles, parameters, time_digits_for_cell_id=4):
     neighborhoods = {}
     if isinstance(atlasfiles, str):
         prop = properties.read_dictionary(atlasfiles, inputpropertiesdict={})
-        if parameters.neighborhood_diagnosis:
-            _neighborhood_diagnosis(prop, time_digits_for_cell_id=time_digits_for_cell_id)
+        if parameters.naming_diagnosis:
+            naming_diagnosis(prop, time_digits_for_cell_id=time_digits_for_cell_id)
         name = atlasfiles.split(os.path.sep)[-1]
         if name.endswith(".xml") or name.endswith(".pkl"):
             name = name[:-4]
@@ -1595,8 +1595,8 @@ def build_neighborhoods(atlasfiles, parameters, time_digits_for_cell_id=4):
     elif isinstance(atlasfiles, list):
         for f in atlasfiles:
             prop = properties.read_dictionary(f, inputpropertiesdict={})
-            if parameters.neighborhood_diagnosis:
-                _neighborhood_diagnosis(prop, time_digits_for_cell_id=time_digits_for_cell_id)
+            if parameters.naming_diagnosis:
+                naming_diagnosis(prop, time_digits_for_cell_id=time_digits_for_cell_id)
             name = f.split(os.path.sep)[-1]
             if name.endswith(".xml") or name.endswith(".pkl"):
                 name = name[:-4]
@@ -1613,7 +1613,7 @@ def build_neighborhoods(atlasfiles, parameters, time_digits_for_cell_id=4):
     if parameters.use_common_neighborhood:
         neighborhoods = build_common_neighborhoods(neighborhoods)
 
-    if parameters.neighborhood_diagnosis:
+    if parameters.naming_diagnosis:
         neighborhood_consistency_diagnosis(neighborhoods, parameters)
 
     return neighborhoods

@@ -50,6 +50,7 @@ class NamingParameters(uneighborhood.NeighborhoodParameters):
         # for test:
         # names will be deleted, and tried to be rebuilt
         self.testFile = None
+        self.test_diagnosis = False
 
     ############################################################
     #
@@ -69,6 +70,7 @@ class NamingParameters(uneighborhood.NeighborhoodParameters):
         self.varprint('inputFile', self.inputFile)
         self.varprint('outputFile', self.outputFile)
         self.varprint('testFile', self.testFile)
+        self.varprint('test_diagnosis', self.test_diagnosis)
 
     def write_parameters_in_file(self, logfile):
         logfile.write("\n")
@@ -82,6 +84,7 @@ class NamingParameters(uneighborhood.NeighborhoodParameters):
         self.varwrite(logfile, 'inputFile', self.inputFile)
         self.varwrite(logfile, 'outputFile', self.outputFile)
         self.varwrite(logfile, 'testFile', self.testFile)
+        self.varwrite(logfile, 'test_diagnosis', self.test_diagnosis)
 
     def write_parameters(self, log_file_name):
         with open(log_file_name, 'a') as logfile:
@@ -99,6 +102,7 @@ class NamingParameters(uneighborhood.NeighborhoodParameters):
         self.inputFile = self.read_parameter(parameters, 'inputFile', self.inputFile)
         self.outputFile = self.read_parameter(parameters, 'outputFile', self.outputFile)
         self.testFile = self.read_parameter(parameters, 'testFile', self.testFile)
+        self.test_diagnosis = self.read_parameter(parameters, 'test_diagnosis', self.test_diagnosis)
 
     def update_from_parameter_file(self, parameter_file):
         if parameter_file is None:
@@ -1036,6 +1040,11 @@ def naming_process(experiment, parameters):
 
     if parameters.testFile is not None:
         reference_prop = properties.read_dictionary(parameters.testFile, inputpropertiesdict={})
+        if parameters.test_diagnosis:
+            monitoring.to_log_and_console("============================================================")
+            monitoring.to_log_and_console("===== diagnosis on '" + str(parameters.testFile) + "'")
+            uneighborhood.naming_diagnosis(reference_prop)
+            monitoring.to_log_and_console("============================================================")
         prop = _build_test_set(reference_prop, time_digits_for_cell_id=time_digits_for_cell_id, ncells=64)
         if prop is None:
             monitoring.to_log_and_console(str(proc) + ": error when building test set")
