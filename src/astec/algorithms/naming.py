@@ -756,8 +756,13 @@ def _analyse_scores(scores, debug=False):
 #
 ########################################################################################
 
-def _propagate_naming(prop, neighborhoods, parameters, time_digits_for_cell_id=4):
+def _propagate_naming(prop, atlases, parameters, time_digits_for_cell_id=4):
     proc = "_propagate_naming"
+
+    if not isinstance(atlases, uneighborhood.Atlases):
+        monitoring.to_log_and_console(str(proc) + ": unexpected type for 'atlases' variable: "
+                                      + str(type(atlases)))
+        sys.exit(1)
 
     if 'cell_lineage' not in prop:
         monitoring.to_log_and_console(str(proc) + ": 'cell_lineage' was not in dictionary")
@@ -866,6 +871,8 @@ def _propagate_naming(prop, neighborhoods, parameters, time_digits_for_cell_id=4
     ancestor_name = {}
     cell_not_named = []
 
+    neighborhoods = atlases.get_neighborhoods()
+
     for t in timepoints:
         division_to_be_named = {}
         for c in missing_name[t]:
@@ -957,39 +964,38 @@ def _propagate_naming(prop, neighborhoods, parameters, time_digits_for_cell_id=4
         #
         # here we have a dictionary of divisions to be named (key = mother id, value = array of sister ids)
         #
-        if True:
-            for mother, daughters in division_to_be_named.items():
-                debug = False
-                #
-                # scores is a dictionary of dictionary
-                # scores[cell id][name][ref name] is an array of scalar product
-                # cell id = d in daughters
-                # name = name in daughter_names(mother)
-                # the length of the array is the occurrence of [n in daughter_names(mother)] in the
-                # neighborhood dictionary
-                #
-                scores = _build_scores(mother, daughters, ancestor_name, prop, neighborhoods, parameters,
-                                       time_digits_for_cell_id=time_digits_for_cell_id)
-                if debug:
-                    print("scores = " + str(scores))
-                if scores is None:
-                    for c in daughters:
-                        if c not in cell_not_named:
-                            cell_not_named.append(c)
-                    # msg = "\t error when building scores for daughters " + str(daughters) + " of cell " + str(mother)
-                    # monitoring.to_log_and_console(msg)
-                    msg = " Can not name cells " + str(daughters) + " and their offsprings."
-                    monitoring.to_log_and_console(str(proc) + ": " + msg)
-                    continue
+        for mother, daughters in division_to_be_named.items():
+            debug = False
+            #
+            # scores is a dictionary of dictionary
+            # scores[cell id][name][ref name] is an array of scalar product
+            # cell id = d in daughters
+            # name = name in daughter_names(mother)
+            # the length of the array is the occurrence of [n in daughter_names(mother)] in the
+            # neighborhood dictionary
+            #
+            scores = _build_scores(mother, daughters, ancestor_name, prop, neighborhoods, parameters,
+                                   time_digits_for_cell_id=time_digits_for_cell_id)
+            if debug:
+                print("scores = " + str(scores))
+            if scores is None:
+                for c in daughters:
+                    if c not in cell_not_named:
+                        cell_not_named.append(c)
+                # msg = "\t error when building scores for daughters " + str(daughters) + " of cell " + str(mother)
+                # monitoring.to_log_and_console(msg)
+                msg = " Can not name cells " + str(daughters) + " and their offsprings."
+                monitoring.to_log_and_console(str(proc) + ": " + msg)
+                continue
 
-                name, name_certainty = _analyse_scores(scores, debug=debug)
+            name, name_certainty = _analyse_scores(scores, debug=debug)
 
-                for c in name:
-                    if name[c] is not None:
-                        prop['cell_name'][c] = name[c]
-                    prop['selection_name_choice_certainty'][c] = name_certainty[c]
-                    if c in ancestor_name:
-                        del ancestor_name[c]
+            for c in name:
+                if name[c] is not None:
+                    prop['cell_name'][c] = name[c]
+                prop['selection_name_choice_certainty'][c] = name_certainty[c]
+                if c in ancestor_name:
+                    del ancestor_name[c]
 
     return prop
 
@@ -1024,10 +1030,10 @@ def naming_process(experiment, parameters):
     #
     # should we clean reference here?
     #
-    neighborhoods = uneighborhood.build_neighborhoods(parameters.atlasFiles, parameters,
-                                                      time_digits_for_cell_id=time_digits_for_cell_id)
+    atlases = uneighborhood.Atlases()
+    atlases.build_neighborhoods(parameters.atlasFiles, parameters, time_digits_for_cell_id=time_digits_for_cell_id)
 
-    if neighborhoods == {}:
+    if atlases.get_neighborhoods() is None or atlases.get_neighborhoods() == {}:
         monitoring.to_log_and_console(str(proc) + ": empty neighborhood atlas?! ... Exiting ")
         sys.exit(1)
 
@@ -1043,7 +1049,7 @@ def naming_process(experiment, parameters):
         if parameters.test_diagnosis:
             monitoring.to_log_and_console("============================================================")
             monitoring.to_log_and_console("===== diagnosis on '" + str(parameters.testFile) + "'")
-            uneighborhood.naming_diagnosis(reference_prop)
+            uneighborhood.diagnosis_properties_naming(reference_prop)
             monitoring.to_log_and_console("============================================================")
         prop = _build_test_set(reference_prop, time_digits_for_cell_id=time_digits_for_cell_id, ncells=64)
         if prop is None:
@@ -1069,7 +1075,7 @@ def naming_process(experiment, parameters):
     #
     # naming propagation
     #
-    prop = _propagate_naming(prop, neighborhoods, parameters, time_digits_for_cell_id=time_digits_for_cell_id)
+    prop = _propagate_naming(prop, atlases, parameters, time_digits_for_cell_id=time_digits_for_cell_id)
     prop = properties.set_fate_from_names(prop, time_digits_for_cell_id=time_digits_for_cell_id)
     prop = properties.set_color_from_fate(prop)
     #

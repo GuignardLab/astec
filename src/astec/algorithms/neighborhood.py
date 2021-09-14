@@ -1,8 +1,8 @@
 import sys
 
 import astec.utils.common as common
-import astec.utils.neighborhood as neighborhood
-import astec.utils.neighborhood_figure as neighborhoodf
+import astec.utils.neighborhood as uneighborhood
+import astec.utils.neighborhood_figure as uneighborhoodf
 
 #
 #
@@ -21,11 +21,6 @@ _instrumented_ = False
 #
 ########################################################################################
 
-########################################################################################
-#
-#
-#
-########################################################################################
 
 def neighborhood_process(experiment, parameters):
     proc = "neighborhood_process"
@@ -38,7 +33,7 @@ def neighborhood_process(experiment, parameters):
                                       + str(type(experiment)))
         sys.exit(1)
 
-    if not isinstance(parameters, neighborhood.NeighborhoodParameters):
+    if not isinstance(parameters, uneighborhood.NeighborhoodParameters):
         monitoring.to_log_and_console(str(proc) + ": unexpected type for 'parameters' variable: "
                                       + str(type(parameters)))
         sys.exit(1)
@@ -48,16 +43,39 @@ def neighborhood_process(experiment, parameters):
     #
     # should we clean reference here?
     #
-    neighborhoods = neighborhood.build_neighborhoods(parameters.atlasFiles , parameters,
-                                                     time_digits_for_cell_id=time_digits_for_cell_id)
+    atlases = uneighborhood.Atlases()
+    atlases.build_neighborhoods(parameters.atlasFiles, parameters, time_digits_for_cell_id=time_digits_for_cell_id)
 
-    if True:
-        # neighborhoodf.figures_neighborhood_consistency(neighborhoods, parameters)
-        neighborhoodf.figures_neighborhood_score(neighborhoods, parameters)
-        neighborhoodf.figures_histogram_scores(neighborhoods, parameters)
+    if parameters.generate_figures:
 
-    if parameters.use_common_neighborhood:
-        neighborhoodf.figures_neighborhood_pca(neighborhoods, parameters)
+        #
+        # draw a graph of reference/atlas embryos per division where edge are valued by the sum of scores
+        # (do the right pairing between reference/atlas embryos)
+        #
+        # uneighborhoodf.figures_division_score(atlases.get_neighborhoods(), parameters)
+
+        #
+        # draw score histogram of both right pairing and wrong pairing
+        # this is then done at the cell level, not at the division level
+        #
+        uneighborhoodf.figures_histogram_scores(atlases.get_neighborhoods(), parameters)
+
+        #
+        # draw 2D histogram of right/wrong pairing scores of both daugthers
+        # this is then done at the division level
+        #
+        uneighborhoodf.figures_histogram2D_scores(atlases, parameters)
+
+        #
+        # draw a graph per division where edges rae valued with probability
+        #
+        uneighborhoodf.figures_division_probability(atlases, parameters)
+
+        if False and parameters.use_common_neighborhood:
+            #
+            # do a pca analysis of L1-normalized surface contact vectors per cell/neighborhood
+            #
+            uneighborhoodf.figures_cell_neighborhood_pca(atlases.get_neighborhoods(), parameters)
 
     if parameters.naming_improvement:
-       neighborhood.global_score_improvement(neighborhoods, parameters)
+        uneighborhood.global_score_improvement(atlases.get_neighborhoods(), parameters)

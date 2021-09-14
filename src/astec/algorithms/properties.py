@@ -1991,7 +1991,7 @@ def diagnosis(d, features, diagnosis_parameters, time_digits_for_cell_id=4):
                 pass
                 # monitoring.to_log_and_console("    diagnosis of '" + str(k) + "' not implemented yet", 1)
             elif k == keydictionary['name']['output_key']:
-                _diagnosis_name(d[k], d[keydictionary['lineage']['output_key']], k,
+                _diagnosis_name(d[k], d.get(keydictionary['lineage']['output_key'], {}), k,
                                 time_digits_for_cell_id=time_digits_for_cell_id)
                 # monitoring.to_log_and_console("    diagnosis of '" + str(k) + "' not implemented yet", 1)
             elif k == keydictionary['contact']['output_key']:
@@ -2047,7 +2047,7 @@ def diagnosis(d, features, diagnosis_parameters, time_digits_for_cell_id=4):
                         pass
                         # monitoring.to_log_and_console("    diagnosis of '" + str(k) + "' not implemented yet", 1)
                     elif outk == keydictionary['name']['output_key']:
-                        _diagnosis_name(d[outk], d[keydictionary['lineage']['output_key']], outk,
+                        _diagnosis_name(d[outk], d.get(keydictionary['lineage']['output_key'], {}), outk,
                                         time_digits_for_cell_id=time_digits_for_cell_id)
                         # monitoring.to_log_and_console("    diagnosis of '" + str(k) + "' not implemented yet", 1)
                     elif outk == keydictionary['contact']['output_key']:

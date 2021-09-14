@@ -82,11 +82,11 @@ def _set_options(my_parser):
                            action='store_const', dest='debug', const=0,
                            help='no debug information')
 
-    help = "print the list of parameters (with explanations) in the console and exit. "
-    help += "If a parameter file is given, it is taken into account"
+    doc = "print the list of parameters (with explanations) in the console and exit. "
+    doc += "If a parameter file is given, it is taken into account"
     my_parser.add_argument('-pp', '--print-param',
                            action='store_const', dest='printParameters',
-                           default=False, const=True, help=help)
+                           default=False, const=True, help=doc)
 
     return
 
