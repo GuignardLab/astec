@@ -12,7 +12,8 @@ from argparse import ArgumentParser
 #
 
 import astec.utils.common as common
-import astec.algorithms.properties as properties
+import astec.utils.diagnosis as diagnosis
+import astec.utils.properties as properties
 from astec.wrapping.cpp_wrapping import path_to_vt
 
 #
@@ -61,11 +62,6 @@ def _set_options(my_parser):
                                 ", 'all-cells', 'principal-value', 'apicobasal-length', 'name', 'contact', 'history'" +
                                 ", 'principal-vector', 'name-score', 'cell-compactness'")
 
-    my_parser.add_argument('--check', '--check-volume-lineage',
-                           action='store_const', dest='check_volume_lineage',
-                           default=False, const=True,
-                           help='perform some tests')
-
     my_parser.add_argument('--diagnosis',
                            action='store_const', dest='print_diagnosis',
                            default=False, const=True,
@@ -73,6 +69,7 @@ def _set_options(my_parser):
 
     my_parser.add_argument('--diagnosis-minimal-volume',
                            action='store', dest='diagnosis_minimal_volume',
+                           default=None,
                            help='displays all cells with smaller volume')
 
     my_parser.add_argument('-extract-selection', '--extract-selection',
@@ -87,6 +84,7 @@ def _set_options(my_parser):
 
     my_parser.add_argument('--diagnosis-items',
                            action='store', dest='diagnosis_items',
+                           default=None,
                            help='minimal number of items to be displayed')
 
     my_parser.add_argument('--print-content', '--print-keys',
@@ -162,8 +160,8 @@ def main():
     monitoring.update_from_args(args)
     experiment.update_from_args(args)
 
-    diagnosis = properties.DiagnosisParameters()
-    diagnosis.update_from_args(args)
+    diagnosis_parameters = diagnosis.DiagnosisParameters()
+    diagnosis_parameters.update_from_args(args)
 
     #
     # is there a parameter file?
@@ -220,6 +218,7 @@ def main():
         # so the log filename is known
         #
         properties.monitoring.copy(monitoring)
+        diagnosis.monitoring.copy(monitoring)
 
         #
         # manage parameters
@@ -230,9 +229,10 @@ def main():
 
         parameters = properties.CellPropertiesParameters()
         parameters.update_from_parameter_file(parameter_file)
+        diagnosis_parameters.update_from_parameter_file(parameter_file)
 
         parameters.write_parameters(monitoring.log_filename)
-        diagnosis.write_parameters(monitoring.log_filename)
+        diagnosis_parameters.write_parameters(monitoring.log_filename)
 
         #
         # compute sequence properties in xml format
@@ -289,6 +289,7 @@ def main():
     else:
 
         properties.monitoring.copy(monitoring)
+        diagnosis.monitoring.copy(monitoring)
 
         #
         # read input file(s)
@@ -317,14 +318,7 @@ def main():
         #
 
         if args.print_diagnosis is True:
-            properties.diagnosis(inputdict, args.outputFeatures, diagnosis)
-
-
-        # is a check to be done?
-        #
-
-        if args.check_volume_lineage is True:
-            properties.check_volume_lineage(inputdict)
+            diagnosis.diagnosis(inputdict, args.outputFeatures, diagnosis_parameters)
 
         #
         # is there some comparison to be done?
@@ -417,12 +411,6 @@ def main():
         if args.extract_selection:
             time_digits_for_cell_id = experiment.get_time_digits_for_cell_id()
             properties.write_morphonet_selection(inputdict, time_digits_for_cell_id=time_digits_for_cell_id)
-
-        endtime = time.localtime()
-
-        # monitoring.to_log_and_console("")
-        # monitoring.to_log_and_console("Total execution time = "+str(time.mktime(endtime)-time.mktime(start_time))+"sec")
-        # monitoring.to_log_and_console("")
 
 #
 #

@@ -11,9 +11,10 @@ import sys
 #
 
 import astec.utils.common as common
-import astec.algorithms.neighborhood as aneighborhood
-import astec.utils.neighborhood as uneighborhood
-import astec.algorithms.properties as properties
+import astec.algorithms.contact_atlas as acontacta
+import astec.utils.contact_atlas as ucontacta
+import astec.utils.properties as properties
+import astec.utils.diagnosis as diagnosis
 from astec.wrapping.cpp_wrapping import path_to_vt
 
 #
@@ -106,7 +107,7 @@ def main():
     # reading command line arguments
     # and update from command line arguments
     #
-    parser = ArgumentParser(description='Naming')
+    parser = ArgumentParser(description='Atlas')
     _set_options(parser)
     args = parser.parse_args()
 
@@ -114,7 +115,7 @@ def main():
     experiment.update_from_args(args)
 
     if args.printParameters:
-        parameters = uneighborhood.NeighborhoodParameters()
+        parameters = ucontacta.AtlasParameters()
         if args.parameterFile is not None and os.path.isfile(args.parameterFile):
             experiment.update_from_parameter_file(args.parameterFile)
             parameters.update_from_parameter_file(args.parameterFile)
@@ -170,9 +171,10 @@ def main():
     # copy monitoring information into other "files"
     # so the log filename is known
     #
-    aneighborhood.monitoring.copy(monitoring)
-    uneighborhood.monitoring.copy(monitoring)
+    acontacta.monitoring.copy(monitoring)
+    ucontacta.monitoring.copy(monitoring)
     properties.monitoring.copy(monitoring)
+    diagnosis.monitoring.copy(monitoring)
 
     #
     # manage parameters
@@ -181,7 +183,7 @@ def main():
     # 3. write parameters into the logfile
     #
 
-    parameters = uneighborhood.NeighborhoodParameters()
+    parameters = ucontacta.AtlasParameters()
     parameters.update_from_parameter_file(parameter_file)
     parameters.write_parameters(monitoring.log_filename)
 
@@ -189,7 +191,7 @@ def main():
     # processing
     #
 
-    aneighborhood.neighborhood_process(experiment, parameters)
+    acontacta.contact_atlas_process(experiment, parameters)
 
     #
     # end of execution

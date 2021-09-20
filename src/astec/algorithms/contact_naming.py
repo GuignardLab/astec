@@ -6,9 +6,11 @@ import numpy as np
 import random
 
 import astec.utils.common as common
-import astec.utils.neighborhood as uneighborhood
-import astec.algorithms.properties as properties
-
+import astec.utils.contact as ucontact
+import astec.utils.contact_atlas as ucontacta
+import astec.utils.properties as properties
+import astec.utils.ascidian_name as uname
+import astec.utils.diagnosis as diagnosis
 
 #
 #
@@ -28,7 +30,7 @@ _instrumented_ = False
 ########################################################################################
 
 
-class NamingParameters(uneighborhood.NeighborhoodParameters):
+class NamingParameters(ucontacta.AtlasParameters):
 
     ############################################################
     #
@@ -38,10 +40,10 @@ class NamingParameters(uneighborhood.NeighborhoodParameters):
 
     def __init__(self):
 
-        uneighborhood.NeighborhoodParameters.__init__(self)
-
         if "doc" not in self.__dict__:
             self.doc = {}
+
+        ucontacta.AtlasParameters.__init__(self)
 
         self.inputFile = []
         self.outputFile = None
@@ -65,12 +67,13 @@ class NamingParameters(uneighborhood.NeighborhoodParameters):
         print('#')
         print("")
 
-        uneighborhood.NeighborhoodParameters.print_parameters(self)
+        ucontacta.AtlasParameters.print_parameters(self)
 
         self.varprint('inputFile', self.inputFile)
         self.varprint('outputFile', self.outputFile)
         self.varprint('testFile', self.testFile)
         self.varprint('test_diagnosis', self.test_diagnosis)
+        print("")
 
     def write_parameters_in_file(self, logfile):
         logfile.write("\n")
@@ -79,12 +82,14 @@ class NamingParameters(uneighborhood.NeighborhoodParameters):
         logfile.write("# \n")
         logfile.write("\n")
 
-        uneighborhood.NeighborhoodParameters.write_parameters_in_file(self, logfile)
+        ucontacta.AtlasParameters.write_parameters_in_file(self, logfile)
 
         self.varwrite(logfile, 'inputFile', self.inputFile)
         self.varwrite(logfile, 'outputFile', self.outputFile)
         self.varwrite(logfile, 'testFile', self.testFile)
         self.varwrite(logfile, 'test_diagnosis', self.test_diagnosis)
+
+        logfile.write("\n")
 
     def write_parameters(self, log_file_name):
         with open(log_file_name, 'a') as logfile:
@@ -98,7 +103,7 @@ class NamingParameters(uneighborhood.NeighborhoodParameters):
     ############################################################
 
     def update_from_parameters(self, parameters):
-        uneighborhood.NeighborhoodParameters.update_from_parameters(self, parameters)
+        ucontacta.AtlasParameters.update_from_parameters(self, parameters)
         self.inputFile = self.read_parameter(parameters, 'inputFile', self.inputFile)
         self.outputFile = self.read_parameter(parameters, 'outputFile', self.outputFile)
         self.testFile = self.read_parameter(parameters, 'testFile', self.testFile)
@@ -194,17 +199,17 @@ def _test_naming(prop, reference_prop, discrepancies):
         if k not in reference_prop['cell_name']:
             monitoring.to_log_and_console("\t weird, key " + str(k) + " is not in reference properties")
         elif prop['cell_name'][k] != reference_prop['cell_name'][k]:
-            if reference_prop['cell_name'][k] == uneighborhood.get_sister_name(prop['cell_name'][k]):
+            if reference_prop['cell_name'][k] == uname.get_sister_name(prop['cell_name'][k]):
                 if prop['cell_name'][k] not in sisters_errors:
                     sisters_errors[prop['cell_name'][k]] = 1
                     msg = "cell_name[" + str(k) + "]=" + str(prop['cell_name'][k]) + " is named as its sister "
                     msg += str(reference_prop['cell_name'][k])
-                    if uneighborhood.get_mother_name(prop['cell_name'][k]) in discrepancies:
+                    if uname.get_mother_name(prop['cell_name'][k]) in discrepancies:
                         msg += ", division is incoherent among references"
                     monitoring.to_log_and_console("\t " + msg)
                 else:
                     sisters_errors[prop['cell_name'][k]] += 1
-                indexed_name = uneighborhood.get_mother_name(prop['cell_name'][k])
+                indexed_name = uname.get_mother_name(prop['cell_name'][k])
                 division_errors[indexed_name] = division_errors.get(indexed_name, 0) + 1
             else:
                 if prop['cell_name'][k] not in other_errors:
@@ -212,7 +217,7 @@ def _test_naming(prop, reference_prop, discrepancies):
                     msg = "cell_name[" + str(k) + "]=" + str(prop['cell_name'][k]) + " is not equal to reference name "
                     msg += str(reference_prop['cell_name'][k])
                     msg += " for cell " + str(k)
-                    if uneighborhood.get_mother_name(prop['cell_name'][k]) in discrepancies:
+                    if uname.get_mother_name(prop['cell_name'][k]) in discrepancies:
                         msg += ", division is incoherent among references"
                     monitoring.to_log_and_console("\t " + msg)
                 else:
@@ -227,12 +232,12 @@ def _test_naming(prop, reference_prop, discrepancies):
     # first_error_mothers = []
     # names = division_errors.keys()
     # for n in names:
-    #     if uneighborhood.get_mother_name(n) in names or uneighborhood.get_mother_name(n) in first_error_mothers:
+    #     if uname.get_mother_name(n) in names or uname.get_mother_name(n) in first_error_mothers:
     #         second_errors[n] = division_errors[n]
     #     else:
     #         first_errors[n] = division_errors[n]
-    #         if uneighborhood.get_mother_name(n) not in first_error_mothers:
-    #             first_error_mothers.append(uneighborhood.get_mother_name(n))
+    #         if uname.get_mother_name(n) not in first_error_mothers:
+    #             first_error_mothers.append(uname.get_mother_name(n))
 
     name_missing = {}
     reference_name = {}
@@ -286,7 +291,7 @@ def _build_scores(mother, daughters, ancestor_name, prop, neighborhoods, paramet
     #
     # are daughter names indexed?
     #
-    daughter_names = uneighborhood.get_daughter_names(prop['cell_name'][mother])
+    daughter_names = uname.get_daughter_names(prop['cell_name'][mother])
     for name in daughter_names:
         #
         # no reference for this name
@@ -354,8 +359,8 @@ def _build_scores(mother, daughters, ancestor_name, prop, neighborhoods, paramet
             if sister is not None:
                 contact[sister_name] = prop['cell_contact_surface'][d][sister]
             for reference_name in neighborhoods[name]:
-                score[d][name][reference_name] = uneighborhood.get_score(contact, neighborhoods[name][reference_name],
-                                                                         parameters.neighborhood_comparison)
+                score[d][name][reference_name] = ucontact.contact_distance(contact, neighborhoods[name][reference_name],
+                                                                           similarity=parameters.contact_similarity)
             if sister is not None:
                 del contact[sister_name]
     return score
@@ -759,7 +764,7 @@ def _analyse_scores(scores, debug=False):
 def _propagate_naming(prop, atlases, parameters, time_digits_for_cell_id=4):
     proc = "_propagate_naming"
 
-    if not isinstance(atlases, uneighborhood.Atlases):
+    if not isinstance(atlases, ucontacta.Atlases):
         monitoring.to_log_and_console(str(proc) + ": unexpected type for 'atlases' variable: "
                                       + str(type(atlases)))
         sys.exit(1)
@@ -828,7 +833,7 @@ def _propagate_naming(prop, atlases, parameters, time_digits_for_cell_id=4):
                 prop['cell_name'][mother] = prop['cell_name'][c]
                 prop['selection_name_choice_certainty'][mother] = 100
         elif len(lineage[mother]) == 2:
-            ancestor_name = uneighborhood.get_mother_name(prop['cell_name'][c])
+            ancestor_name = uname.get_mother_name(prop['cell_name'][c])
             if mother in prop['cell_name']:
                 if prop['cell_name'][mother] != ancestor_name:
                     prop['selection_name_choice_certainty'][mother] = 0
@@ -929,7 +934,7 @@ def _propagate_naming(prop, atlases, parameters, time_digits_for_cell_id=4):
             elif len(lineage[mother]) == 2:
                 daughters = copy.deepcopy(lineage[mother])
                 daughters.remove(c)
-                daughter_names = uneighborhood.get_daughter_names(prop['cell_name'][mother])
+                daughter_names = uname.get_daughter_names(prop['cell_name'][mother])
                 #
                 # daughter cell is already named
                 #
@@ -1025,12 +1030,12 @@ def naming_process(experiment, parameters):
 
     time_digits_for_cell_id = experiment.get_time_digits_for_cell_id()
 
-    uneighborhood.monitoring.copy(monitoring)
+    ucontacta.monitoring.copy(monitoring)
 
     #
     # should we clean reference here?
     #
-    atlases = uneighborhood.Atlases()
+    atlases = ucontacta.Atlases()
     atlases.build_neighborhoods(parameters.atlasFiles, parameters, time_digits_for_cell_id=time_digits_for_cell_id)
 
     if atlases.get_neighborhoods() is None or atlases.get_neighborhoods() == {}:
@@ -1047,9 +1052,11 @@ def naming_process(experiment, parameters):
     if parameters.testFile is not None:
         reference_prop = properties.read_dictionary(parameters.testFile, inputpropertiesdict={})
         if parameters.test_diagnosis:
+            diagnosis.monitoring.copy(monitoring)
             monitoring.to_log_and_console("============================================================")
             monitoring.to_log_and_console("===== diagnosis on '" + str(parameters.testFile) + "'")
-            uneighborhood.diagnosis_properties_naming(reference_prop)
+            diagnosis.diagnosis_properties_naming(reference_prop, parameters=parameters,
+                                                  time_digits_for_cell_id=time_digits_for_cell_id)
             monitoring.to_log_and_console("============================================================")
         prop = _build_test_set(reference_prop, time_digits_for_cell_id=time_digits_for_cell_id, ncells=64)
         if prop is None:

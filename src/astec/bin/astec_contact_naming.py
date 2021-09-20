@@ -11,8 +11,10 @@ import sys
 #
 
 import astec.utils.common as common
-import astec.algorithms.naming as naming
-import astec.algorithms.properties as properties
+import astec.algorithms.contact_naming as acontactn
+import astec.utils.contact_atlas as ucontacta
+import astec.utils.properties as properties
+import astec.utils.diagnosis as diagnosis
 from astec.wrapping.cpp_wrapping import path_to_vt
 
 #
@@ -125,7 +127,7 @@ def main():
     experiment.update_from_args(args)
 
     if args.printParameters:
-        parameters = naming.NamingParameters()
+        parameters = acontactn.NamingParameters()
         if args.parameterFile is not None and os.path.isfile(args.parameterFile):
             experiment.update_from_parameter_file(args.parameterFile)
             parameters.update_from_parameter_file(args.parameterFile)
@@ -195,8 +197,10 @@ def main():
     # copy monitoring information into other "files"
     # so the log filename is known
     #
-    naming.monitoring.copy(monitoring)
+    acontactn.monitoring.copy(monitoring)
     properties.monitoring.copy(monitoring)
+    diagnosis.monitoring.copy(monitoring)
+    ucontacta.monitoring.copy(monitoring)
 
     #
     # manage parameters
@@ -205,7 +209,7 @@ def main():
     # 3. write parameters into the logfile
     #
 
-    parameters = naming.NamingParameters()
+    parameters = acontactn.NamingParameters()
     parameters.update_from_parameter_file(parameter_file)
     parameters.write_parameters(monitoring.log_filename)
 
@@ -213,7 +217,7 @@ def main():
     # processing
     #
 
-    naming.naming_process(experiment, parameters)
+    acontactn.naming_process(experiment, parameters)
 
     #
     # end of execution

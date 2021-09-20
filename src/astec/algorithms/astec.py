@@ -12,7 +12,8 @@ import astec.utils.common as common
 import astec.utils.ace as ace
 import astec.algorithms.mars as mars
 import astec.utils.reconstruction as reconstruction
-import astec.algorithms.properties as properties
+import astec.utils.properties as properties
+import astec.utils.diagnosis as diagnosis
 from astec.utils import morphsnakes
 from astec.components.spatial_image import SpatialImage
 from astec.io.image import imread, imsave
@@ -3218,6 +3219,8 @@ def astec_control(experiment, parameters):
 
     if parameters.lineage_diagnosis:
         monitoring.to_log_and_console("    .. test lineage", 1)
-        properties.check_volume_lineage(lineage_tree_information, time_digits_for_cell_id=time_digits_for_cell_id)
+        diagnosis_parameters = diagnosis.DiagnosisParameters()
+        diagnosis.diagnosis(lineage_tree_information, ['lineage', 'volume'], diagnosis_parameters,
+                            time_digits_for_cell_id=time_digits_for_cell_id)
 
     return

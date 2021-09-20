@@ -1,5 +1,7 @@
 
-import astec.utils.neighborhood as uneighborhood
+import astec.utils.ascidian_name as uname
+import astec.utils.contact_atlas as ucontacta
+import astec.utils.contact as ucontact
 
 
 def figures_division_score(neighborhoods, parameters):
@@ -30,7 +32,7 @@ def figures_division_score(neighborhoods, parameters):
     cell_names = sorted(list(neighborhoods.keys()))
     references = {}
     for cell_name in cell_names:
-        mother_name = uneighborhood.get_mother_name(cell_name)
+        mother_name = uname.get_mother_name(cell_name)
         references[mother_name] = references.get(mother_name, set()).union(set(neighborhoods[cell_name].keys()))
 
     #
@@ -41,7 +43,7 @@ def figures_division_score(neighborhoods, parameters):
     edgeValues = {}
     values = {}
     for n in mother_names:
-        d = uneighborhood.get_daughter_names(n)
+        d = uname.get_daughter_names(n)
         edgeValues[n] = {}
         for n1 in references[n]:
             edgeValues[n][n1] = {}
@@ -49,13 +51,13 @@ def figures_division_score(neighborhoods, parameters):
                 if n2 <= n1:
                     continue
                 if d[0] in neighborhoods and (n1 in neighborhoods[d[0]] and n2 in neighborhoods[d[0]]):
-                    s0 = uneighborhood.get_score(neighborhoods[d[0]][n1], neighborhoods[d[0]][n2],
-                                                 parameters.neighborhood_comparison)
+                    s0 = ucontact.contact_distance(neighborhoods[d[0]][n1], neighborhoods[d[0]][n2],
+                                                   similarity=parameters.contact_similarity)
                 else:
                     s0 = None
                 if d[1] in neighborhoods and (n1 in neighborhoods[d[1]] and n2 in neighborhoods[d[1]]):
-                    s1 = uneighborhood.get_score(neighborhoods[d[1]][n1], neighborhoods[d[1]][n2],
-                                                 parameters.neighborhood_comparison)
+                    s1 = ucontact.contact_distance(neighborhoods[d[1]][n1], neighborhoods[d[1]][n2],
+                                                   similarity=parameters.contact_similarity)
                 else:
                     s1 = None
                 #
@@ -210,7 +212,7 @@ def figures_division_probability(atlases, parameters):
     Build a file to draw figures of 'probability' between reference embryos for mother cells
     Parameters
     ----------
-    neighborhoods: nested dictionary of neighborhood, where the keys are ['cell name']['reference name']
+    atlases: nested dictionary of neighborhood, where the keys are ['cell name']['reference name']
         where 'reference name' is the name of the reference lineage, and neighborhood a dictionary of contact surfaces
         indexed by cell names (only for the first time point after the division)
     parameters
@@ -234,7 +236,7 @@ def figures_division_probability(atlases, parameters):
     cell_names = sorted(list(neighborhoods.keys()))
     references = {}
     for cell_name in cell_names:
-        mother_name = uneighborhood.get_mother_name(cell_name)
+        mother_name = uname.get_mother_name(cell_name)
         references[mother_name] = references.get(mother_name, set()).union(set(neighborhoods[cell_name].keys()))
 
     #
@@ -245,7 +247,7 @@ def figures_division_probability(atlases, parameters):
     edgeValues = {}
     values = {}
     for n in mother_names:
-        d = uneighborhood.get_daughter_names(n)
+        d = uname.get_daughter_names(n)
         #
         # check whether each reference has the two daughters
         #
@@ -263,10 +265,10 @@ def figures_division_probability(atlases, parameters):
             for n2 in references[n]:
                 if n2 <= n1:
                     continue
-                s0 = uneighborhood.get_score(neighborhoods[d[0]][n1], neighborhoods[d[0]][n2],
-                                             parameters.neighborhood_comparison)
-                s1 = uneighborhood.get_score(neighborhoods[d[1]][n1], neighborhoods[d[1]][n2],
-                                             parameters.neighborhood_comparison)
+                s0 = ucontact.contact_distance(neighborhoods[d[0]][n1], neighborhoods[d[0]][n2],
+                                               similarity=parameters.contact_similarity)
+                s1 = ucontact.contact_distance(neighborhoods[d[1]][n1], neighborhoods[d[1]][n2],
+                                               similarity=parameters.contact_similarity)
                 #
                 # probability is in [0, 100]
                 # edgeValues will be in [0, 1]
@@ -539,22 +541,22 @@ def figures_histogram_scores(neighborhoods, parameters):
 
     for cell in neighborhoods:
         stage = int(cell.split('.')[0][1:])
-        sister = uneighborhood.get_sister_name(cell)
+        sister = uname.get_sister_name(cell)
         for ref in neighborhoods[cell]:
             #
             # cell score
             #
             for r in neighborhoods[cell]:
-                score = uneighborhood.get_score(neighborhoods[cell][ref], neighborhoods[cell][r],
-                                                parameters.neighborhood_comparison)
+                score = ucontact.contact_distance(neighborhoods[cell][ref], neighborhoods[cell][r],
+                                                  similarity=parameters.contact_similarity)
                 cell_score_by_stage[stage] = cell_score_by_stage.get(stage, []) + [score]
             if sister not in neighborhoods:
                 continue
             if sister < cell:
                 continue
             for r in neighborhoods[sister]:
-                score = uneighborhood.get_score(neighborhoods[cell][ref], neighborhoods[sister][r],
-                                                parameters.neighborhood_comparison)
+                score = ucontact.contact_distance(neighborhoods[cell][ref], neighborhoods[sister][r],
+                                                  similarity=parameters.contact_similarity)
                 sister_score_by_stage[stage] = sister_score_by_stage.get(stage, []) + [score]
 
     cell_scores = []
@@ -636,7 +638,7 @@ def figures_histogram2D_scores(atlases, parameters):
     wrong_sscores = []
 
     for cell in neighborhoods:
-        sister = uneighborhood.get_sister_name(cell)
+        sister = uname.get_sister_name(cell)
         for ref in neighborhoods[cell]:
             if sister not in neighborhoods:
                 continue
@@ -650,14 +652,15 @@ def figures_histogram2D_scores(atlases, parameters):
                     continue
                 if r not in neighborhoods[sister]:
                     continue
-                right_cscores.append(uneighborhood.get_score(neighborhoods[cell][ref], neighborhoods[cell][r],
-                                                             parameters.neighborhood_comparison))
-                right_sscores.append(uneighborhood.get_score(neighborhoods[sister][ref], neighborhoods[sister][r],
-                                                             parameters.neighborhood_comparison))
-                wrong_cscores.append(uneighborhood.get_score(neighborhoods[cell][ref], neighborhoods[sister][r],
-                                                             parameters.neighborhood_comparison))
-                wrong_sscores.append(uneighborhood.get_score(neighborhoods[sister][ref], neighborhoods[cell][r],
-                                                             parameters.neighborhood_comparison))
+
+                right_cscores.append(ucontact.contact_distance(neighborhoods[cell][ref], neighborhoods[cell][r],
+                                                               similarity=parameters.contact_similarity))
+                right_sscores.append(ucontact.contact_distance(neighborhoods[sister][ref], neighborhoods[cell][r],
+                                                               similarity=parameters.contact_similarity))
+                wrong_cscores.append(ucontact.contact_distance(neighborhoods[cell][ref], neighborhoods[cell][r],
+                                                               similarity=parameters.contact_similarity))
+                wrong_sscores.append(ucontact.contact_distance(neighborhoods[sister][ref], neighborhoods[cell][r],
+                                                               similarity=parameters.contact_similarity))
 
     step = 0.01
 

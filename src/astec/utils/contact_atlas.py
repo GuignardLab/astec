@@ -10,8 +10,10 @@ import scipy.stats as stats
 import numpy as np
 
 import astec.utils.common as common
-import astec.algorithms.properties as properties
-
+import astec.utils.properties as properties
+import astec.utils.ascidian_name as uname
+import astec.utils.contact as ucontact
+import astec.utils.diagnosis as udiagnosis
 
 #
 # the atlas here is defined as the collection of (daughter) cell neighborhoods
@@ -21,7 +23,7 @@ import astec.algorithms.properties as properties
 monitoring = common.Monitoring()
 
 
-class NeighborhoodParameters(common.PrefixedParameter):
+class AtlasParameters(udiagnosis.DiagnosisParameters):
 
     ############################################################
     #
@@ -31,10 +33,10 @@ class NeighborhoodParameters(common.PrefixedParameter):
 
     def __init__(self):
 
-        common.PrefixedParameter.__init__(self)
-
         if "doc" not in self.__dict__:
             self.doc = {}
+
+        udiagnosis.DiagnosisParameters.__init__(self)
 
         self.outputAtlasFile = None
         self.atlasFiles = []
@@ -61,21 +63,12 @@ class NeighborhoodParameters(common.PrefixedParameter):
         doc += "\t If 'True' build and keep an unique common neighborhood (set of\n"
         doc += "\t neighbors) for all atlases."
         self.doc['use_common_neighborhood'] = doc
-        self.use_common_neighborhood = False
+        self.use_common_neighborhood = True
 
         doc = "\t Delay from the division to extract the neighborhooods.\n"
         doc += "\t 0 means right after the division.\n"
         self.doc['delay_from_division'] = doc
         self.delay_from_division = 0
-        #
-        doc = "\t Defines the neighborhood comparison. Neighborhoods are normalized before"
-        doc += "comparison. Possible values are:\n"
-        doc += "\t - 'inner_product': normalization by the inner product.\n"
-        doc += "\t - 'l1_distance': normalization by the l1-norm. \n"
-        doc += "\t - 'l2_distance': normalization by the l1-norm.\n"
-        doc += "\t Default is 'l2_distance'"
-        self.doc['neighborhood_comparison'] = doc
-        self.neighborhood_comparison = 'l2_distance'
 
         #
         #
@@ -89,12 +82,6 @@ class NeighborhoodParameters(common.PrefixedParameter):
         #
         self.naming_improvement = False
 
-        #
-        #
-        #
-        self.generate_figures = False
-        self.figurefile_suffix = None
-
     ############################################################
     #
     # print / write
@@ -104,11 +91,13 @@ class NeighborhoodParameters(common.PrefixedParameter):
     def print_parameters(self):
         print("")
         print('#')
-        print('# CellNeighborhoodParameters')
+        print('# CellAtlasParameters')
         print('#')
         print("")
 
         common.PrefixedParameter.print_parameters(self)
+
+        udiagnosis.DiagnosisParameters.print_parameters()
 
         self.varprint('outputAtlasFile', self.outputAtlasFile)
         self.varprint('atlasFiles', self.atlasFiles)
@@ -117,22 +106,22 @@ class NeighborhoodParameters(common.PrefixedParameter):
         self.varprint('differentiate_other_half', self.differentiate_other_half)
         self.varprint('use_common_neighborhood', self.use_common_neighborhood)
         self.varprint('delay_from_division', self.delay_from_division)
-        self.varprint('neighborhood_comparison', self.neighborhood_comparison)
 
         self.varprint('diagnosis_properties', self.diagnosis_properties)
         self.varprint('naming_improvement', self.naming_improvement)
 
-        self.varprint('generate_figures', self.generate_figures)
-        self.varprint('figurefile_suffix', self.figurefile_suffix)
+        print("")
 
     def write_parameters_in_file(self, logfile):
         logfile.write("\n")
         logfile.write("# \n")
-        logfile.write("# CellNeighborhoodParameters\n")
+        logfile.write("# CellAtlasParameters\n")
         logfile.write("# \n")
         logfile.write("\n")
 
         common.PrefixedParameter.write_parameters_in_file(self, logfile)
+
+        udiagnosis.DiagnosisParameters.write_parameters_in_file(self, logfile)
 
         self.varwrite(logfile, 'outputAtlasFile', self.outputAtlasFile)
         self.varwrite(logfile, 'atlasFiles', self.atlasFiles)
@@ -140,14 +129,12 @@ class NeighborhoodParameters(common.PrefixedParameter):
         self.varwrite(logfile, 'add_symmetric_neighborhood', self.add_symmetric_neighborhood)
         self.varwrite(logfile, 'differentiate_other_half', self.differentiate_other_half)
         self.varwrite(logfile, 'use_common_neighborhood', self.use_common_neighborhood)
-        self.varwrite(logfile, 'delay_from_division', self.delay_from_division)
-        self.varwrite(logfile, 'neighborhood_comparison', self.neighborhood_comparison)
 
         self.varwrite(logfile, 'diagnosis_properties', self.diagnosis_properties)
         self.varwrite(logfile, 'naming_improvement', self.naming_improvement)
 
-        self.varwrite(logfile, 'generate_figures', self.generate_figures)
-        self.varwrite(logfile, 'figurefile_suffix', self.figurefile_suffix)
+        logfile.write("\n")
+        return
 
     def write_parameters(self, log_file_name):
         with open(log_file_name, 'a') as logfile:
@@ -161,6 +148,9 @@ class NeighborhoodParameters(common.PrefixedParameter):
     ############################################################
 
     def update_from_parameters(self, parameters):
+
+        udiagnosis.DiagnosisParameters.update_from_parameters(self, parameters)
+
         self.outputAtlasFile = self.read_parameter(parameters, 'outputAtlasFile', self.outputAtlasFile)
         self.atlasFiles = self.read_parameter(parameters, 'atlasFiles', self.atlasFiles)
         self.atlasFiles = self.read_parameter(parameters, 'referenceFiles', self.atlasFiles)
@@ -172,17 +162,11 @@ class NeighborhoodParameters(common.PrefixedParameter):
 
         self.use_common_neighborhood = self.read_parameter(parameters, 'use_common_neighborhood',
                                                            self.use_common_neighborhood)
-        self.delay_from_division = self.read_parameter(parameters, 'delay_from_division', self.delay_from_division)
-        self.neighborhood_comparison = self.read_parameter(parameters, 'neighborhood_comparison',
-                                                           self.neighborhood_comparison)
 
         self.diagnosis_properties = self.read_parameter(parameters, 'diagnosis_properties', self.diagnosis_properties)
         self.diagnosis_properties = self.read_parameter(parameters, 'naming_diagnosis', self.diagnosis_properties)
         self.diagnosis_properties = self.read_parameter(parameters, 'diagnosis_naming', self.diagnosis_properties)
         self.naming_improvement = self.read_parameter(parameters, 'naming_improvement', self.naming_improvement)
-
-        self.generate_figures = self.read_parameter(parameters, 'generate_figures', self.generate_figures)
-        self.figurefile_suffix = self.read_parameter(parameters, 'figurefile_suffix', self.figurefile_suffix)
 
     def update_from_parameter_file(self, parameter_file):
         if parameter_file is None:
@@ -201,89 +185,6 @@ class NeighborhoodParameters(common.PrefixedParameter):
 #
 ########################################################################################
 
-def get_daughter_names(name):
-    #
-    # build daughter names from parent name
-    #
-    # anterior or posterior character 'a' or 'b'
-    # stage (round of division)
-    # '.'
-    # p value (cell index)
-    # left or right character '_' or '*'
-    #
-
-    # fake returns
-    if name == 'background':
-        return ['background', 'background']
-    if name == 'other-half':
-        return ['other-half', 'other-half']
-
-    abvalue = name.split('.')[0][0]
-    stage = name.split('.')[0][1:]
-    p = name.split('.')[1][0:4]
-    lrvalue = name.split('.')[1][4]
-    #
-    # build daughter names
-    #
-    daughters = [abvalue + str(int(stage) + 1) + "." + '{:0{width}d}'.format(2 * int(p) - 1, width=4) + lrvalue,
-                 abvalue + str(int(stage) + 1) + "." + '{:0{width}d}'.format(2 * int(p), width=4) + lrvalue]
-    # print("name = " + str(name) + " -> daughter names = " + str(daughters))
-    return daughters
-
-
-def get_mother_name(name):
-    #
-    # build daughter names from parent name
-    #
-    # anterior or posterior character 'a' or 'b'
-    # stage (round of division)
-    # '.'
-    # p value (cell index)
-    # left or right character '_' or '*'
-    #
-
-    # fake returns
-    if name == 'background':
-        return 'background'
-    if name == 'other-half':
-        return 'other-half'
-
-    abvalue = name.split('.')[0][0]
-    stage = name.split('.')[0][1:]
-    p = name.split('.')[1][0:4]
-    lrvalue = name.split('.')[1][4]
-    #
-    # build parent names
-    #
-    if int(stage) == 0:
-        return None
-    parent = abvalue + str(int(stage)-1) + "."
-    if int(p) % 2 == 1:
-        parent += '{:0{width}d}'.format((int(p)+1) // 2, width=4)
-    else:
-        parent += '{:0{width}d}'.format(int(p) // 2, width=4)
-    parent += lrvalue
-    # print("name = " + str(name) + " -> parent name = " + str(parent))
-    return parent
-
-
-def get_sister_name(name):
-    sister_names = get_daughter_names(get_mother_name(name))
-    sister_names.remove(name)
-    return sister_names[0]
-
-
-def get_symmetric_name(name):
-    symname = name[:-1]
-    if name[-1] == '*':
-        symname += '_'
-    elif name[-1] == '_':
-        symname += '*'
-    else:
-        return None
-    return symname
-
-
 def get_symmetric_neighborhood(neighborhood):
     """
     Changes the names of the cells in the neighborhood to get the symmetric neighborhood
@@ -297,283 +198,9 @@ def get_symmetric_neighborhood(neighborhood):
         elif n == 'other-half':
             sn = 'other-half'
         else:
-            sn = get_symmetric_name(n)
+            sn = uname.get_symmetric_name(n)
         symneighborhood[sn] = neighborhood[n]
     return symneighborhood
-
-
-#######################################################################################
-#
-# compute scores as a scalar product
-#
-########################################################################################
-
-def _print_common_neighborhoods(neighborhood0, neighborhood1, title=None):
-    #
-    # used by get_score(), to display neighborhoods after being put in a common frame
-    #
-    msg = ""
-    if title is not None and isinstance(title, str):
-        msg += title + " = "
-    msg += "{"
-    key_list = sorted(list(set(neighborhood0.keys()).union(set(neighborhood1.keys()))))
-    for k in key_list:
-        msg += str(k) + ": "
-        if k in neighborhood0.keys():
-            msg += str(neighborhood0[k])
-        else:
-            msg += "NULL"
-        msg += " <-> "
-        if k in neighborhood1.keys():
-            msg += str(neighborhood1[k])
-        else:
-            msg += "NULL"
-        if k != key_list[-1]:
-            msg += ",\n\t "
-        else:
-            msg += "}"
-    monitoring.to_log_and_console(msg)
-
-
-def _is_ancestor_in_stages(neigh, neighbors_by_stage):
-    """
-
-    Parameters
-    ----------
-    neigh: the cell name to be consider
-    neighbors_by_stage: cell names to be compared to
-
-    Returns
-    -------
-
-    """
-
-    if neigh == 'background' or neigh == 'other-half':
-        return False
-
-    stage = int(neigh.split('.')[0][1:])
-    stages = list(neighbors_by_stage.keys())
-    stages = sorted(stages, key=lambda x: int(x), reverse=True)
-
-    for s in stages:
-        if int(s) >= int(stage) or int(s) == 0:
-            continue
-        diff = int(stage) - int(s)
-        mother = neigh
-        for i in range(diff):
-            mother = get_mother_name(mother)
-        if mother in neighbors_by_stage[s]:
-            return True
-    return False
-
-
-def _build_common_contact_surfaces(neighborhoods, debug=False):
-    # identical to build_common_neighborhoods()
-    # neighborhoods is a list of dictionaries
-    # indexed by ['neighboring cell']
-    # TODO: rewrite this fonction with dictionaries, and factorize with build_common_neighborhoods()
-
-    common_neighborhoods = copy.deepcopy(neighborhoods)
-
-    if debug:
-        print("")
-        _print_neighborhood(common_neighborhoods[0], "common_neighborhoods[0]")
-        _print_neighborhood(common_neighborhoods[1], "common_neighborhoods[1]")
-        print("")
-    #
-    # get the neighbors for each atlas
-    #
-    neighbors_by_stage = {}
-    for k in range(len(common_neighborhoods)):
-        for n in common_neighborhoods[k]:
-            if n == 'background' or n == 'other-half':
-                neighbors_by_stage[0] = neighbors_by_stage.get(0, []) + [n]
-                continue
-            stage = int(n.split('.')[0][1:])
-            neighbors_by_stage[stage] = neighbors_by_stage.get(stage, []) + [n]
-    # suppress duplicate
-    for s in neighbors_by_stage:
-        neighbors_by_stage[s] = list(sorted(set(neighbors_by_stage[s])))
-
-    #
-    # get the stages in decreasing order
-    #
-    stages = list(neighbors_by_stage.keys())
-    stages = sorted(stages, key=lambda x: int(x), reverse=True)
-    neighbor_already_processed = []
-
-    for s in stages:
-        if debug:
-            print("stage " + str(s))
-        for neigh in neighbors_by_stage[s]:
-            if debug:
-                print("   neighbor " + str(neigh))
-            if neigh in neighbor_already_processed:
-                if debug:
-                    print("   --- already processed ")
-                continue
-            #
-            # should the neighbor be replaced by its mother?
-            #
-            if _is_ancestor_in_stages(neigh, neighbors_by_stage):
-                #
-                # replace the neighbor by its mother
-                # 1. add mother to previous stage neighbors (if required)
-                # 2. add daughter contact surfaces
-                #
-                mother = get_mother_name(neigh)
-                if debug:
-                    print("      replace by mother " + str(mother))
-                previous_stage = int(s)-1
-                if previous_stage not in neighbors_by_stage:
-                    neighbors_by_stage[previous_stage] = [mother]
-                elif mother not in neighbors_by_stage[previous_stage]:
-                    neighbors_by_stage[previous_stage] += [mother]
-
-                d = get_daughter_names(mother)
-
-                for k in range(len(common_neighborhoods)):
-                    if mother not in common_neighborhoods[k]:
-                        common_neighborhoods[k][mother] = 0.0
-                    else:
-                        pass
-                    for i in range(2):
-                        if d[i] in common_neighborhoods[k]:
-                            common_neighborhoods[k][mother] += common_neighborhoods[k][d[i]]
-                            del common_neighborhoods[k][d[i]]
-
-                neighbor_already_processed += d
-
-            else:
-                #
-                # keep the neighbor
-                #
-                if debug:
-                    print("      keep neighbor " + str(neigh))
-
-                for k in range(len(common_neighborhoods)):
-                    if neigh not in common_neighborhoods[k]:
-                        common_neighborhoods[k][neigh] = 0.0
-
-            #
-            # end of loop "for s in stages:"
-            #
-        if debug:
-            print("")
-            _print_neighborhood(common_neighborhoods[0], "common_neighborhoods[0]")
-            _print_neighborhood(common_neighborhoods[1], "common_neighborhoods[1]")
-            print("")
-    #
-    # cell is processed
-    #
-
-    return common_neighborhoods
-
-
-#
-#
-#
-def _scalar_product(vect0, vect1):
-    n0 = 0.0
-    n1 = 0.0
-    ps = 0.0
-    for k in vect0:
-        ps += vect0[k] * vect1[k]
-    for k in vect1:
-        n1 += vect1[k] * vect1[k]
-    for k in set(vect0.keys()) & set(vect1.keys()):
-        ps += vect0[k] * vect1[k]
-    return ps / (math.sqrt(n0 * n1))
-
-
-def _l1_normalized_modulus(vect0, vect1):
-    n0 = 0.0
-    n1 = 0.0
-    nm = 0.0
-    for k in vect0:
-        n0 += vect0[k]
-    for k in vect1:
-        n1 += vect1[k]
-    for k in set(vect0.keys()) & set(vect1.keys()):
-        nm += abs(vect0[k]/n0 - vect1[k]/n1)
-    for k in set(vect0.keys()) - set(vect1.keys()):
-        nm += abs(vect0[k] / n0)
-    for k in set(vect1.keys()) - set(vect0.keys()):
-        nm += abs(vect1[k] / n0)
-    return nm
-
-
-def _l2_normalized_modulus(vect0, vect1):
-    n0 = 0.0
-    n1 = 0.0
-    nm = 0.0
-    for k in vect0:
-        n0 += vect0[k]
-    for k in vect1:
-        n1 += vect1[k]
-    for k in set(vect0.keys()) & set(vect1.keys()):
-        nm += (vect0[k]/n0 - vect1[k]/n1) * (vect0[k]/n0 - vect1[k]/n1)
-    for k in set(vect0.keys()) - set(vect1.keys()):
-        nm += vect0[k]/n0 * vect0[k]/n0
-    for k in set(vect1.keys()) - set(vect0.keys()):
-        nm += vect1[k]/n1 * vect1[k]/n1
-    return math.sqrt(nm)
-
-
-def _get_score(neigh0, neigh1, neighborhood_comparison='l2_distance'):
-    proc = "_get_score"
-    #
-    # scalar product in [0, 1] (0: full disagreement, 1: perfect agreement)
-    # _l1_normalized_modulus in [0, 2] (0: perfect agreement, 2:full disagreement)
-    # _l2_normalized_modulus in [0, sqrt(2)] (0: perfect agreement, sqrt(2):full disagreement)
-    #
-    # score = _scalar_product(vect0, vect1)
-    # score = 1.0 - _l1_normalized_modulus(vect0, vect1) / 2.0
-    if neighborhood_comparison.lower() == 'l1_distance' or neighborhood_comparison.lower() == 'l1-distance' \
-            or neighborhood_comparison.lower() == 'l1_norm' or neighborhood_comparison.lower() == 'l1-norm':
-        score = _l1_normalized_modulus(neigh0, neigh1) / 2.0
-    elif neighborhood_comparison.lower() == 'l2_distance' or neighborhood_comparison.lower() == 'l2-distance' \
-            or neighborhood_comparison.lower() == 'l2_norm' or neighborhood_comparison.lower() == 'l2-norm':
-        score = _l2_normalized_modulus(neigh0, neigh1) / 1.4142136
-    elif neighborhood_comparison.lower() == 'scalar_product' or neighborhood_comparison.lower() == 'scalar-product' \
-            or neighborhood_comparison.lower() == 'inner_product' or neighborhood_comparison.lower() == 'inner-product':
-        score = 1.0 - _scalar_product(neigh0, neigh1)
-    else:
-        monitoring.to_log_and_console(proc + ": unhandled score computation '" + str(neighborhood_comparison) + "'\n")
-        sys.exit(1)
-    return score
-
-
-def get_score(neigh0, neigh1, neighborhood_comparison='l2_distance', title=None, debug=False):
-    """
-    Compute the similarity score of two neighborhoods, as the normalized scalar
-    product of the vectors of contact surfaces.
-    Parameters
-    ----------
-    neigh0: dictionary depicting a cell neighborhood. Each key is a neighbor, and the
-            associated dictionary value give the contact surface
-    neigh1: dictionary depicting a cell neighborhood
-    neighborhood_comparison:
-    title: if not None, print out the neighborhoods as well as the score. For debug purpose.
-    debug
-
-    Returns
-    -------
-    the similarity score.
-
-    """
-
-    tmp = [copy.deepcopy(neigh0), copy.deepcopy(neigh1)]
-    vect = _build_common_contact_surfaces(tmp, debug=debug)
-
-    score = _get_score(vect[0], vect[1], neighborhood_comparison)
-
-    if title is not None:
-        _print_common_neighborhoods(vect[0], vect[1], title=title)
-        monitoring.to_log_and_console("\t score = " + str(score) + "\n")
-    # compute score as a scalar product
-
-    return score
 
 
 #######################################################################################
@@ -598,7 +225,7 @@ def _get_probability_consistency(atlases, parameters):
     #
     references = {}
     for cell_name in cell_names:
-        mother_name = get_mother_name(cell_name)
+        mother_name = uname.get_mother_name(cell_name)
         references[mother_name] = references.get(mother_name, set()).union(set(neighborhoods[cell_name].keys()))
 
     #
@@ -614,7 +241,7 @@ def _get_probability_consistency(atlases, parameters):
         #
         # get cell name and sister name
         #
-        sister_name = get_sister_name(cell_name)
+        sister_name = uname.get_sister_name(cell_name)
         if sister_name not in neighborhoods:
             msg = "weird, cell " + str(cell_name) + " is in the reference neighborhoods, while its sister "
             msg += str(sister_name) + " is not "
@@ -631,7 +258,7 @@ def _get_probability_consistency(atlases, parameters):
             # cell_names.remove(sister_name)
             continue
 
-        mother_name = get_mother_name(cell_name)
+        mother_name = uname.get_mother_name(cell_name)
         #
         # get two reference embryos
         #
@@ -658,14 +285,19 @@ def _get_probability_consistency(atlases, parameters):
                     has_written_something = True
                     warnings.append(ref2)
                     continue
-                same_choice_1 = get_score(neighborhoods[cell_name][ref1], neighborhoods[cell_name][ref2],
-                                          parameters.neighborhood_comparison)
-                same_choice_2 = get_score(neighborhoods[sister_name][ref1], neighborhoods[sister_name][ref2],
-                                          parameters.neighborhood_comparison)
-                sister_choice_1 = get_score(neighborhoods[cell_name][ref1], neighborhoods[sister_name][ref2],
-                                            parameters.neighborhood_comparison)
-                sister_choice_2 = get_score(neighborhoods[sister_name][ref1], neighborhoods[cell_name][ref2],
-                                            parameters.neighborhood_comparison)
+
+                same_choice_1 = ucontact.contact_distance(neighborhoods[cell_name][ref1],
+                                                          neighborhoods[cell_name][ref2],
+                                                          similarity=parameters.contact_similarity)
+                same_choice_2 = ucontact.contact_distance(neighborhoods[sister_name][ref1],
+                                                          neighborhoods[sister_name][ref2],
+                                                          similarity=parameters.contact_similarity)
+                sister_choice_1 = ucontact.contact_distance(neighborhoods[cell_name][ref1],
+                                                            neighborhoods[sister_name][ref2],
+                                                            similarity=parameters.contact_similarity)
+                sister_choice_2 = ucontact.contact_distance(neighborhoods[sister_name][ref1],
+                                                            neighborhoods[cell_name][ref2],
+                                                            similarity=parameters.contact_similarity)
 
                 prob_same_choice = atlases.get_probability(same_choice_1, same_choice_2)
                 prob_sister_choice = atlases.get_probability(sister_choice_1, sister_choice_2)
@@ -729,7 +361,7 @@ def diagnosis_atlases_probability(atlases, parameters):
                                       + str(type(atlases)))
         sys.exit(1)
 
-    if not isinstance(parameters, NeighborhoodParameters):
+    if not isinstance(parameters, AtlasParameters):
         monitoring.to_log_and_console(str(proc) + ": unexpected type for 'parameters' variable: "
                                       + str(type(parameters)))
         sys.exit(1)
@@ -745,12 +377,12 @@ def diagnosis_atlases_probability(atlases, parameters):
         #
         # check whether 'mother' has both daughters in neighborhoods
         #
-        mother = get_mother_name(cell)
+        mother = uname.get_mother_name(cell)
         if mother in processed_mothers:
             continue
         processed_mothers.append(mother)
 
-        sister = get_sister_name(cell)
+        sister = uname.get_sister_name(cell)
         if sister not in neighborhoods:
             continue
 
@@ -772,10 +404,10 @@ def diagnosis_atlases_probability(atlases, parameters):
                     continue
                 if r not in neighborhoods[sister]:
                     continue
-                cscore = get_score(neighborhoods[cell][ref], neighborhoods[cell][r],
-                                   parameters.neighborhood_comparison)
-                sscore = get_score(neighborhoods[sister][ref], neighborhoods[sister][r],
-                                   parameters.neighborhood_comparison)
+                cscore = ucontact.contact_distance(neighborhoods[cell][ref], neighborhoods[cell][r],
+                                                   similarity=parameters.contact_similarity)
+                sscore = ucontact.contact_distance(neighborhoods[sister][ref], neighborhoods[sister][r],
+                                                   similarity=parameters.contact_similarity)
                 prob = atlases.get_probability(cscore, sscore)
                 probas += [(prob, r)]
 
@@ -806,376 +438,6 @@ def diagnosis_atlases_probability(atlases, parameters):
 
 ########################################################################################
 #
-# diagnosis on naming
-# is redundant with the diagnosis made in properties.py
-# (except that contact surfaces are assessed too)
-#
-########################################################################################
-
-def diagnosis_properties_naming(prop, time_digits_for_cell_id=4, verbose=1):
-    """
-    Diagnosis on names extracted from embryo properties
-    Parameters
-    ----------
-    prop
-    time_digits_for_cell_id
-    verbose
-
-    Returns
-    -------
-
-    """
-    proc = "diagnosis_properties_naming"
-    if 'cell_lineage' not in prop:
-        monitoring.to_log_and_console(str(proc) + ": 'cell_lineage' was not in dictionary")
-        return None
-
-    if 'cell_contact_surface' not in prop:
-        monitoring.to_log_and_console(str(proc) + ": 'cell_contact_surface' was not in dictionary")
-        return None
-
-    if 'cell_name' not in prop:
-        monitoring.to_log_and_console(str(proc) + ": 'cell_name' was not in dictionary")
-        return None
-
-    lineage = prop['cell_lineage']
-    name = prop['cell_name']
-    contact = prop['cell_contact_surface']
-
-    reverse_lineage = {v: k for k, values in lineage.items() for v in values}
-
-    div = 10 ** time_digits_for_cell_id
-
-    cells = list(set(lineage.keys()).union(set([v for values in list(lineage.values()) for v in values])))
-    cells = sorted(cells)
-
-    cells_per_time = {}
-    names_per_time = {}
-    missing_name = {}
-    missing_contact = {}
-    error_name = {}
-    for c in cells:
-        t = int(c) // div
-        n = int(c) % div
-        #
-        # get cells and cell names at each time point
-        #
-        cells_per_time[t] = cells_per_time.get(t, []) + [n]
-        if c in name:
-            names_per_time[t] = names_per_time.get(t, []) + [name[c]]
-
-        #
-        # check names
-        #
-        if c not in name:
-            missing_name[t] = missing_name.get(t, []) + [n]
-        elif c in reverse_lineage:
-            mother = reverse_lineage[c]
-            if mother not in name:
-                if verbose >= 1:
-                    msg = ": weird, cell " + str(c) + " has a name = " + str(name[c])
-                    msg += ", but its mother cell " + str(mother) + " has no name"
-                    monitoring.to_log_and_console(str(proc) + msg)
-                error_name[t] = error_name.get(t, []) + [n]
-            else:
-                if len(lineage[mother]) == 1:
-                    if name[mother] != name[c]:
-                        if verbose >= 1:
-                            msg = ": weird, cell " + str(c) + " has a name = " + str(name[c])
-                            msg += " different than its mother cell " + str(mother) + " name = " + str(name[mother])
-                            monitoring.to_log_and_console(str(proc) + msg)
-                        error_name[t] = error_name.get(t, []) + [n]
-                elif len(lineage[mother]) == 2:
-                    daughter_names = get_daughter_names(name[mother])
-                    if name[c] not in daughter_names:
-                        if verbose >= 1:
-                            msg = ": weird, name of cell " + str(c) + " is " + str(name[c])
-                            msg += " but should be in " + str(daughter_names)
-                            msg += " since its mother cell " + str(mother) + " is named " + str(name[mother])
-                            monitoring.to_log_and_console(str(proc) + msg)
-                        error_name[t] = error_name.get(t, []) + [n]
-                    else:
-                        siblings = copy.deepcopy(lineage[mother])
-                        siblings.remove(c)
-                        daughter_names.remove(name[c])
-                        if siblings[0] not in name:
-                            if verbose >= 1:
-                                msg = ": weird, cell " + str(c) + " has no name "
-                                msg += ", it should be " + str(daughter_names[0])
-                                msg += " since its mother cell " + str(mother) + " is named " + str(name[mother])
-                                msg += " and its sibling " + str(c) + " is named " + str(name[c])
-                                monitoring.to_log_and_console(str(proc) + msg)
-                            error_name[t] = error_name.get(t, []) + [n]
-                        elif name[siblings[0]] == name[c]:
-                            if verbose >= 1:
-                                msg = ": weird, name of cell " + str(c) + ", " + str(name[c])
-                                msg += ", is the same than its sibling " + str(siblings[0])
-                                msg += ", their mother cell " + str(mother) + " is named " + str(name[mother])
-                                monitoring.to_log_and_console(str(proc) + msg)
-                            error_name[t] = error_name.get(t, []) + [n]
-                        elif name[siblings[0]] != daughter_names[0]:
-                            if verbose >= 1:
-                                msg = ": weird, name of cell " + str(siblings[0]) + " is " + str(name[siblings[0]])
-                                msg += " but should be " + str(daughter_names[0])
-                                msg += " since its mother cell " + str(mother) + " is named " + str(name[mother])
-                                msg += " and its sibling " + str(c) + " is named " + str(name[c])
-                                monitoring.to_log_and_console(str(proc) + msg)
-                            error_name[t] = error_name.get(t, []) + [n]
-                else:
-                    if verbose >= 1:
-                        monitoring.to_log_and_console(str(proc) + ": weird, cell " + str(mother) + " has " +
-                                                      str(len(lineage[mother])) + " daughter cells")
-
-        #
-        # check contact surfaces
-        #
-        if c not in contact:
-            missing_contact[t] = missing_contact.get(t, []) + [n]
-
-    #
-    # interval without errors
-    #
-    first_time = min(cells_per_time.keys())
-    last_time = max(cells_per_time.keys())
-    if missing_name != {}:
-        last_time = min(last_time, min(missing_name.keys())-1)
-    if missing_contact != {}:
-        last_time = min(last_time, min(missing_contact.keys())-1)
-    if error_name != {}:
-        last_time = min(last_time, min(error_name.keys())-1)
-
-    #
-    # report
-    #
-    if verbose >= 1:
-        monitoring.to_log_and_console(str(proc) + ": details")
-        monitoring.to_log_and_console("\t - first time in lineage = " + str(min(cells_per_time.keys())))
-        monitoring.to_log_and_console("\t   last time in lineage = " + str(max(cells_per_time.keys())))
-        monitoring.to_log_and_console("\t - interval without errors = [" + str(first_time) + ", " + str(last_time) +
-                                      "]")
-        monitoring.to_log_and_console("\t - cells in lineage = " + str(len(cells)))
-        monitoring.to_log_and_console("\t   #cells at first time = " +
-                                      str(len(cells_per_time[min(cells_per_time.keys())])))
-        monitoring.to_log_and_console("\t   #cells at last time = " +
-                                      str(len(cells_per_time[max(cells_per_time.keys())])))
-        # compte le nombre de noms
-        monitoring.to_log_and_console("\t - names in lineage = " +
-                                      str(len(list(collections.Counter(list(name.keys())).keys()))))
-
-        for t in names_per_time:
-            repeats = {k: names_per_time[t].count(k) for k in set(names_per_time[t]) if names_per_time[t].count(k) > 1}
-            if repeats != {}:
-                monitoring.to_log_and_console("\t - there are " + str(len(repeats)) + " repeated names at time " +
-                                              str(t))
-                for n, p in repeats.items():
-                    monitoring.to_log_and_console("\t   " + str(n) + " is repeated " + str(p) + " times ")
-
-        if error_name != {}:
-            monitoring.to_log_and_console("\t - first time with cells with name inconsistency = " +
-                                          str(min(error_name.keys())))
-            if verbose >= 2:
-                for t in sorted(error_name.keys()):
-                    monitoring.to_log_and_console(
-                        "\t   cells with name inconsistency at time " + str(t) + " = " + str(error_name[t]))
-
-        if missing_name != {}:
-            monitoring.to_log_and_console("\t - first time with cells without name = " + str(min(missing_name.keys())))
-            if verbose >= 2:
-                for t in sorted(missing_name.keys()):
-                    monitoring.to_log_and_console("\t   cells without name at time " + str(t) + " = " +
-                                                  str(missing_name[t]))
-
-        if missing_contact != {}:
-            monitoring.to_log_and_console("\t - first time with cells without contact surfaces = "
-                                          + str(min(missing_contact.keys())))
-            if verbose >= 2:
-                for t in sorted(missing_contact.keys()):
-                    monitoring.to_log_and_console("\t   cells without contact surfaces at time " + str(t) + " = " +
-                                                  str(missing_contact[t]))
-        monitoring.to_log_and_console("")
-
-    return [first_time, last_time]
-
-
-def diagnosis_properties_contact(prop, time_digits_for_cell_id=4, verbose=1, generate_figures=False,
-                                 figurefile_suffix=""):
-    proc = "diagnosis_properties_contact"
-    if 'cell_lineage' not in prop:
-        monitoring.to_log_and_console(str(proc) + ": 'cell_lineage' was not in dictionary")
-        return None
-
-    if 'cell_contact_surface' not in prop:
-        monitoring.to_log_and_console(str(proc) + ": 'cell_contact_surface' was not in dictionary")
-        return None
-
-    if 'cell_name' not in prop:
-        monitoring.to_log_and_console(str(proc) + ": 'cell_name' was not in dictionary")
-        return None
-
-    lineage = prop['cell_lineage']
-    name = prop['cell_name']
-    contact = prop['cell_contact_surface']
-
-    #
-    # get the first time point
-    #
-    cells = list(set(lineage.keys()).union(set([v for values in list(lineage.values()) for v in values])))
-    cells = sorted(cells)
-    div = 10 ** time_digits_for_cell_id
-    cells_per_time = {}
-    for c in cells:
-        t = int(c) // div
-        #
-        # get cells and cell names at each time point
-        #
-        cells_per_time[t] = cells_per_time.get(t, []) + [c]
-    last_time = max(cells_per_time.keys())
-
-    #
-    # study single branches beginning right after a division, but not at the last time
-    #
-    first_cells = [lineage[c][0] for c in lineage if len(lineage[c]) == 2 and int(c) // div < last_time-1]
-    first_cells += [lineage[c][1] for c in lineage if len(lineage[c]) == 2 and int(c) // div < last_time-1]
-
-    reverse_lineage = {v: k for k, values in lineage.items() for v in values}
-
-    score_along_time = {}
-
-    for cell in first_cells:
-        first_time = int(cell) // div
-        pcell = cell
-        pneigh = copy.deepcopy(contact[cell])
-        while True:
-            ncell = lineage[pcell][0]
-            t = int(ncell) // div
-            nneigh = {}
-            #
-            # build a neighborhood with the same label than at the first time of the branch
-            #
-            if ncell not in contact:
-                break
-            for c in contact[ncell]:
-                contrib = contact[ncell][c]
-                if int(c) % div == 1 or int(c) % div == 0:
-                    nneigh[1] = nneigh.get(1, 0.0) + contrib
-                else:
-                    for i in range(t-first_time):
-                        c = reverse_lineage[c]
-                    nneigh[c] = nneigh.get(c, 0.0) + contrib
-            #
-            #
-            #
-            score = _get_score(pneigh, nneigh)
-            score_along_time[cell] = score_along_time.get(cell, []) + [score]
-            #
-            #
-            #
-            pcell = ncell
-            pneigh = copy.deepcopy(nneigh)
-            if pcell not in lineage or len(lineage[pcell]) > 1:
-                break
-
-    if generate_figures:
-        filename = 'figures_contact_score_evolution'
-        file_suffix = ""
-        if figurefile_suffix is not None and isinstance(figurefile_suffix, str) and len(figurefile_suffix) > 0:
-            file_suffix = '_' + figurefile_suffix
-        filename += file_suffix + '.py'
-
-        f = open(filename, "w")
-
-        f.write("import numpy as np\n")
-        f.write("import matplotlib.pyplot as plt\n")
-        f.write("import scipy.stats as stats\n")
-
-        f.write("\n")
-        f.write("savefig = True\n")
-
-        f.write("\n")
-        f.write("score_along_time = " + str(score_along_time) + "\n")
-        f.write("lengths = [len(score_along_time[c]) for c in score_along_time]\n")
-
-        f.write("\n")
-        f.write("score_per_time = {}\n")
-        f.write("for c in score_along_time:\n")
-        f.write("    for i in range(len(score_along_time[c])):\n")
-        f.write("        score_per_time[i] = score_per_time.get(i, []) + [score_along_time[c][i]]\n")
-        f.write("scores_per_time = []\n")
-        f.write("for i in range(max(lengths)):\n")
-        f.write("    scores_per_time.append(score_per_time[i])\n")
-        
-        f.write("\n")
-        f.write("fig, (ax1, ax2, ax3) = plt.subplots(ncols=3, sharey=True, figsize=(16, 6.5))\n")
-
-        f.write("for c in score_along_time:\n")
-        f.write("    ax1.plot(range(len(score_along_time[c])), score_along_time[c], 'k', markersize=1)\n")
-        f.write("ax1.set_ylim(0, 0.7)\n")
-        f.write("ax1.set_xlabel('time from division', fontsize=15)\n")
-        f.write("ax1.set_ylabel('Score', fontsize=15)\n")
-        f.write("title = 'Score/distance from t to t+1'\n")
-        if figurefile_suffix is not None and isinstance(figurefile_suffix, str) and len(figurefile_suffix) > 0:
-            f.write("title += ': ' + '" + str(figurefile_suffix) + "'\n")
-        f.write("ax1.set_title(title, fontsize=15)\n")
-
-        f.write("\n")
-        f.write("ax2.boxplot(scores_per_time)\n")
-        f.write("ax2.set_title(\"Box plot representation\", fontsize=15)\n")
-        f.write("\n")
-        f.write("for c in score_along_time:\n")
-        f.write("    ax3.plot(range(len(score_along_time[c])), score_along_time[c], 'k', markersize=1)\n")
-        f.write("ax3.set_xlabel('time from division', fontsize=15)\n")
-        f.write("ax3.set_xlim(0, 5)\n")
-        f.write("title = 'Score/distance from t to t+1'\n")
-        f.write("ax3.set_title(title, fontsize=15)\n")
-        f.write("\n")
-        f.write("if savefig:\n")
-        f.write("    plt.savefig('contact_score_evolution")
-        if file_suffix is not None:
-            f.write(file_suffix)
-        f.write("'" + " + '.png')\n")
-        f.write("else:\n")
-        f.write("    plt.show()\n")
-        f.close()
-
-    #
-    # report
-    #
-    threshold = 0.1
-    if verbose >= 1:
-        monitoring.to_log_and_console(str(proc) + ": details")
-
-        for cell in score_along_time:
-            first_time = int(cell) // div
-            if len(score_along_time[cell]) <= 1:
-                if first_time == last_time - 1:
-                    continue
-                txt = "\t -"
-                if cell in name:
-                    txt += " " + name[cell]
-                txt += " (" + str(cell) + "): "
-                txt += " branch length of " + str(len(score_along_time[cell]))
-                monitoring.to_log_and_console(txt)
-                continue
-            if max(score_along_time[cell][1:]) < threshold:
-                continue
-            first_time = int(cell) // div
-            txt = "\t -"
-            if cell in name:
-                txt += " " + name[cell]
-            txt += " (" + str(cell) + "): "
-            monitoring.to_log_and_console(txt)
-            for i in range(1, len(score_along_time[cell])):
-                if score_along_time[cell][i] < threshold:
-                    continue
-                txt = "\t\t score of " + str(score_along_time[cell][i]) + " between "
-                txt += str(first_time+i) + " and " + str(first_time+i+1)
-                monitoring.to_log_and_console(txt)
-
-        monitoring.to_log_and_console("")
-
-
-########################################################################################
-#
 #
 #
 ########################################################################################
@@ -1194,7 +456,7 @@ def get_neighborhood_consistency(neighborhoods, parameters):
     #
     references = {}
     for cell_name in cell_names:
-        mother_name = get_mother_name(cell_name)
+        mother_name = uname.get_mother_name(cell_name)
         references[mother_name] = references.get(mother_name, set()).union(set(neighborhoods[cell_name].keys()))
 
     #
@@ -1210,7 +472,7 @@ def get_neighborhood_consistency(neighborhoods, parameters):
         #
         # get cell name and sister name
         #
-        sister_name = get_sister_name(cell_name)
+        sister_name = uname.get_sister_name(cell_name)
         if sister_name not in neighborhoods:
             msg = "weird, cell " + str(cell_name) + " is in the reference neighborhoods, while its sister "
             msg += str(sister_name) + " is not "
@@ -1227,7 +489,7 @@ def get_neighborhood_consistency(neighborhoods, parameters):
             # cell_names.remove(sister_name)
             continue
 
-        mother_name = get_mother_name(cell_name)
+        mother_name = uname.get_mother_name(cell_name)
         #
         # get two reference embryos
         #
@@ -1246,10 +508,12 @@ def get_neighborhood_consistency(neighborhoods, parameters):
                     has_written_something = True
                     warnings.append(ref2)
                     continue
-                same_choice = get_score(neighborhoods[cell_name][ref1], neighborhoods[cell_name][ref2],
-                                        parameters.neighborhood_comparison)
-                sister_choice = get_score(neighborhoods[cell_name][ref1], neighborhoods[sister_name][ref2],
-                                          parameters.neighborhood_comparison)
+
+                same_choice = ucontact.contact_distance(neighborhoods[cell_name][ref1], neighborhoods[cell_name][ref2],
+                                                        similarity=parameters.contact_similarity)
+                sister_choice = ucontact.contact_distance(neighborhoods[cell_name][ref1],
+                                                          neighborhoods[sister_name][ref2],
+                                                          similarity=parameters.contact_similarity)
 
                 if mother_name not in tested_couples:
                     tested_couples[mother_name] = 1
@@ -1287,7 +551,7 @@ def _write_neighborhood_consistency(txt, mother_names, references, tested_couple
 
     for mother_name in sorted_mothers:
         msg = " - " + str(mother_name) + " cell division into "
-        msg += str(get_daughter_names(mother_name)) + " has " + str(len(discrepancy[mother_name]))
+        msg += str(uname.get_daughter_names(mother_name)) + " has " + str(len(discrepancy[mother_name]))
         if len(discrepancy[mother_name]) > 1:
             msg += " discrepancies"
         else:
@@ -1346,7 +610,7 @@ def _check_leftright_consistency(neighborhoods, parameters):
     #
     references = {}
     for cell_name in cell_names:
-        mother_name = get_mother_name(cell_name)
+        mother_name = uname.get_mother_name(cell_name)
         references[mother_name] = references.get(mother_name, set()).union(set(neighborhoods[cell_name].keys()))
 
     #
@@ -1360,12 +624,12 @@ def _check_leftright_consistency(neighborhoods, parameters):
     for mother in mother_names:
         if mother in processed_mothers:
             continue
-        symmother = get_symmetric_name(mother)
+        symmother = uname.get_symmetric_name(mother)
         processed_mothers.append(mother)
 
         if symmother not in references:
             continue
-        daughters = get_daughter_names(mother)
+        daughters = uname.get_daughter_names(mother)
 
         for reference in references[mother]:
             if reference not in references[symmother]:
@@ -1381,8 +645,8 @@ def _check_leftright_consistency(neighborhoods, parameters):
                     continue
                 if reference not in neighborhoods[daughter]:
                     continue
-                symdaughter = get_symmetric_name(daughter)
-                symsister = get_sister_name(symdaughter)
+                symdaughter = uname.get_symmetric_name(daughter)
+                symsister = uname.get_sister_name(symdaughter)
                 if symdaughter not in neighborhoods or symsister not in neighborhoods:
                     continue
                 if reference not in neighborhoods[symdaughter] or reference not in neighborhoods[symsister]:
@@ -1393,10 +657,10 @@ def _check_leftright_consistency(neighborhoods, parameters):
                 symsameneigh = get_symmetric_neighborhood(neighborhoods[symdaughter][reference])
                 symsisterneigh = get_symmetric_neighborhood(neighborhoods[symsister][reference])
 
-                same_choice = get_score(neighborhoods[daughter][reference], symsameneigh,
-                                        parameters.neighborhood_comparison)
-                sister_choice = get_score(neighborhoods[daughter][reference], symsisterneigh,
-                                          parameters.neighborhood_comparison)
+                same_choice = ucontact.contact_distance(neighborhoods[daughter][reference], symsameneigh,
+                                                        similarity=parameters.contact_similarity)
+                sister_choice = ucontact.contact_distance(neighborhoods[daughter][reference], symsisterneigh,
+                                                          similarity=parameters.contact_similarity)
 
                 if same_choice < sister_choice:
                     continue
@@ -1431,7 +695,7 @@ def _check_leftright_consistency(neighborhoods, parameters):
         for mother in discrepancy[reference]:
             if mother in processed_mothers:
                 continue
-            symmother = get_symmetric_name(mother)
+            symmother = uname.get_symmetric_name(mother)
             processed_mothers += [mother, symmother]
 
             d = len(discrepancy[reference][mother])
@@ -1456,7 +720,7 @@ def _check_leftright_consistency(neighborhoods, parameters):
             for mother in mother_by_discrepancy[d]:
                 if mother in processed_mothers:
                     continue
-                symmother = get_symmetric_name(mother)
+                symmother = uname.get_symmetric_name(mother)
                 processed_mothers += [mother, symmother]
                 msg = "(" + str(mother) + ", " + str(symmother) + ") divisions: " + str(d)
                 if d == 1:
@@ -1505,8 +769,10 @@ def _si_global_score(neighbors, references, parameters, debug=False):
         for r2 in references:
             if r2 <= r1:
                 continue
-            score00 = get_score(neighbors[0][r1], neighbors[0][r2], parameters.neighborhood_comparison)
-            score11 = get_score(neighbors[1][r1], neighbors[1][r2], parameters.neighborhood_comparison)
+            score00 = ucontact.contact_distance(neighbors[0][r1], neighbors[0][r2],
+                                                similarity=parameters.contact_similarity)
+            score11 = ucontact.contact_distance(neighbors[1][r1], neighbors[1][r2],
+                                                similarity=parameters.contact_similarity)
             if debug:
                 print("   - score[" + str(r1) + ", " + str(r2) + "] = " + str(score00))
                 print("   - score[" + str(r1) + ", " + str(r2) + "] = " + str(score11))
@@ -1567,7 +833,7 @@ def _si_test_one_division(neighborhoods, mother, parameters):
     -------
 
     """
-    daughters = get_daughter_names(mother)
+    daughters = uname.get_daughter_names(mother)
     neighbors = {0: copy.deepcopy(neighborhoods[daughters[0]]), 1: copy.deepcopy(neighborhoods[daughters[1]])}
 
     references = set.intersection(set(neighbors[0].keys()), set(neighbors[1].keys()))
@@ -1638,10 +904,10 @@ def global_score_improvement(neighborhoods, parameters):
     processed_mothers = {}
     sorted_cells = sorted(neighborhoods.keys())
     for d in sorted_cells:
-        mother = get_mother_name(d)
+        mother = uname.get_mother_name(d)
         if mother in processed_mothers:
             continue
-        sister = get_sister_name(d)
+        sister = uname.get_sister_name(d)
         if sister not in neighborhoods:
             msg = "weird, cell " + str(d) + " is in the reference neighborhoods, while its sister "
             msg += str(sister) + " is not "
@@ -1697,7 +963,7 @@ def _add_neighborhoods(previous_neighborhoods, prop, parameters, atlas_name, tim
     """
     proc = "_add_neighborhoods"
 
-    if not isinstance(parameters, NeighborhoodParameters):
+    if not isinstance(parameters, AtlasParameters):
         monitoring.to_log_and_console(str(proc) + ": unexpected type for 'parameters' variable: "
                                       + str(type(parameters)))
         sys.exit(1)
@@ -1828,7 +1094,7 @@ def _add_neighborhoods(previous_neighborhoods, prop, parameters, atlas_name, tim
             # add symmetric neighborhood if asked
             #
             if parameters.add_symmetric_neighborhood:
-                sname = get_symmetric_name(prop['cell_name'][d])
+                sname = uname.get_symmetric_name(prop['cell_name'][d])
                 sreference = 'sym-' + atlas_name
                 sneighbor = get_symmetric_neighborhood(neighbor)
                 if sname not in previous_neighborhoods:
@@ -1860,165 +1126,18 @@ def _add_neighborhoods(previous_neighborhoods, prop, parameters, atlas_name, tim
 #
 ########################################################################################
 
-
-def _compare_cell(a, b):
-    #
-    # sort
-    # - stages in decreasing values
-    # - [a, b] in increasing value
-    # - p in in increasing value
-    # - [*, _] in increasing value
-    #
-    if a == 'background':
-        return -1
-    if b == 'background':
-        return 1
-    if a == 'other-half':
-        return -1
-    if b == 'other-half':
-        return 1
-    astage = int(a.split('.')[0][1:])
-    bstage = int(b.split('.')[0][1:])
-    if astage < bstage:
-        return 1
-    elif astage > bstage:
-        return -1
-    aabvalue = a.split('.')[0][0]
-    babvalue = b.split('.')[0][0]
-    if aabvalue < babvalue:
-        return -1
-    elif aabvalue > babvalue:
-        return 1
-    ap = int(a.split('.')[1][0:4])
-    bp = int(b.split('.')[1][0:4])
-    if ap < bp:
-        return -1
-    elif ap > bp:
-        return 1
-    alrvalue = a.split('.')[1][4]
-    blrvalue = b.split('.')[1][4]
-    if alrvalue < blrvalue:
-        return -1
-    elif alrvalue > blrvalue:
-        return 1
-    return 0
-
-
-def _print_neighborhood(neighborhood, desc=None):
-    """
-    Designed for debug purposes. Print one neighborhood (ie surface contact vector)
-    Parameters
-    ----------
-    neighborhood
-    desc
-
-    Returns
-    -------
-
-    """
-    if desc is not None:
-        txt = " " + str(desc) + " = "
-    else:
-        txt = " N = "
-    neighs = list(neighborhood.keys())
-    neighs = sorted(neighs, key=functools.cmp_to_key(_compare_cell))
-    txt += "{"
-    i = 0
-    for n in neighs:
-        txt += "'" + str(n) + "': " + str(neighborhood[n])
-        if n != neighs[-1]:
-            txt += ", "
-        i += 1
-        if i % 4 == 0 and n != neighs[-1]:
-            txt += "\n\t"
-
-    txt += "}"
-    print(txt)
-
-
-def build_common_neighborhoods(neighborhoods):
+def _build_common_neighborhoods(neighborhoods):
 
     # neighborhoods is a dictionary of dictionaries
     # ['cell name']['reference name']['neighboring cell']
     # first key is a cell name (daughter cell)
     # second key is the reference from which the neighborhood has been extracted
     # a neighborhood itself is a dictionary indexed by the neighboring cell names
-    proc = "build_common_neighborhoods"
 
-    common_neighborhoods = copy.deepcopy(neighborhoods)
+    common_neighborhoods = {}
 
     for cell in neighborhoods:
-
-        #
-        # get the neighbors for each atlas
-        #
-        neighbors_by_stage = {}
-        for r in neighborhoods[cell]:
-            for n in neighborhoods[cell][r]:
-                if n == 'background' or n == 'other-half':
-                    neighbors_by_stage[0] = neighbors_by_stage.get(0, []) + [n]
-                    continue
-                stage = int(n.split('.')[0][1:])
-                neighbors_by_stage[stage] = neighbors_by_stage.get(stage, []) + [n]
-        # suppress duplicate
-        for s in neighbors_by_stage:
-            neighbors_by_stage[s] = list(sorted(set(neighbors_by_stage[s])))
-
-        #
-        # get the stages in decreasing order
-        #
-        stages = list(neighbors_by_stage.keys())
-        stages = sorted(stages, key=lambda x: int(x), reverse=True)
-        neighbor_already_processed = []
-
-        for s in stages:
-            for neigh in neighbors_by_stage[s]:
-                if neigh in neighbor_already_processed:
-                    continue
-                #
-                # should the neighbor be replaced by its mother?
-                #
-                if _is_ancestor_in_stages(neigh, neighbors_by_stage):
-                    #
-                    # replace the neighbor by its mother
-                    # 1. add mother to previous stage neighbors (if required)
-                    # 2. add daughter contact surfaces
-                    #
-                    mother = get_mother_name(neigh)
-                    previous_stage = int(s)-1
-                    if previous_stage not in neighbors_by_stage:
-                        neighbors_by_stage[previous_stage] = [mother]
-                    elif mother not in neighbors_by_stage[previous_stage]:
-                        neighbors_by_stage[previous_stage] += [mother]
-
-                    d = get_daughter_names(mother)
-
-                    for r in common_neighborhoods[cell]:
-                        if mother not in common_neighborhoods[cell][r]:
-                            common_neighborhoods[cell][r][mother] = 0.0
-                        for i in range(2):
-                            if d[i] in common_neighborhoods[cell][r]:
-                                common_neighborhoods[cell][r][mother] += common_neighborhoods[cell][r][d[i]]
-                                del common_neighborhoods[cell][r][d[i]]
-
-                    neighbor_already_processed += d
-
-                else:
-                    #
-                    # keep the neighbor
-                    #
-                    for r in common_neighborhoods[cell]:
-                        if neigh not in common_neighborhoods[cell][r]:
-                            common_neighborhoods[cell][r][neigh] = 0.0
-
-            #
-            # end of loop "for s in stages:"
-            #
-
-        #
-        # cell is processed
-        #
-
+        common_neighborhoods[cell] = ucontact.build_same_contact_surfaces(neighborhoods[cell])
     return common_neighborhoods
 
 
@@ -2070,7 +1189,7 @@ class Atlases(object):
         """
         proc = "build_neighborhoods"
 
-        if not isinstance(parameters, NeighborhoodParameters):
+        if not isinstance(parameters, AtlasParameters):
             monitoring.to_log_and_console(str(proc) + ": unexpected type for 'parameters' variable: "
                                           + str(type(parameters)))
             sys.exit(1)
@@ -2081,9 +1200,8 @@ class Atlases(object):
             if name.endswith(".xml") or name.endswith(".pkl"):
                 name = name[:-4]
             if parameters.diagnosis_properties:
-                diagnosis_properties_naming(prop, time_digits_for_cell_id=time_digits_for_cell_id)
-                diagnosis_properties_contact(prop, time_digits_for_cell_id=time_digits_for_cell_id,
-                                             generate_figures=parameters.generate_figures, figurefile_suffix=name)
+                udiagnosis.diagnosis(prop, ['name', 'contact'], parameters,
+                                     time_digits_for_cell_id=time_digits_for_cell_id)
             self._neighborhoods = _add_neighborhoods(self._neighborhoods, prop, parameters, atlas_name=name,
                                                      time_digits_for_cell_id=time_digits_for_cell_id)
             del prop
@@ -2094,9 +1212,8 @@ class Atlases(object):
                 if name.endswith(".xml") or name.endswith(".pkl"):
                     name = name[:-4]
                 if parameters.diagnosis_properties:
-                    diagnosis_properties_naming(prop, time_digits_for_cell_id=time_digits_for_cell_id)
-                    diagnosis_properties_contact(prop, time_digits_for_cell_id=time_digits_for_cell_id,
-                                                 generate_figures=parameters.generate_figures, figurefile_suffix=name)
+                    udiagnosis.diagnosis(prop, ['name', 'contact'], parameters,
+                                         time_digits_for_cell_id=time_digits_for_cell_id)
                 self._neighborhoods = _add_neighborhoods(self._neighborhoods, prop, parameters, atlas_name=name,
                                                          time_digits_for_cell_id=time_digits_for_cell_id)
                 del prop
@@ -2108,7 +1225,7 @@ class Atlases(object):
         # [0, 4]: 0 means a total consistency while 4 designs a total inconsistency.
 
         if parameters.use_common_neighborhood:
-            self._neighborhoods = build_common_neighborhoods(self._neighborhoods)
+            self._neighborhoods = _build_common_neighborhoods(self._neighborhoods)
 
         self.build_probabilities(parameters)
 
@@ -2124,7 +1241,7 @@ class Atlases(object):
     def build_probabilities(self, parameters):
         proc = "build_probabilities"
 
-        if not isinstance(parameters, NeighborhoodParameters):
+        if not isinstance(parameters, AtlasParameters):
             monitoring.to_log_and_console(str(proc) + ": unexpected type for 'parameters' variable: "
                                           + str(type(parameters)))
             sys.exit(1)
@@ -2138,7 +1255,7 @@ class Atlases(object):
         sscores = []
 
         for cell in neighborhoods:
-            sister = get_sister_name(cell)
+            sister = uname.get_sister_name(cell)
             for ref in neighborhoods[cell]:
                 if sister not in neighborhoods:
                     continue
@@ -2152,11 +1269,10 @@ class Atlases(object):
                         continue
                     if r not in neighborhoods[sister]:
                         continue
-                    cscores.append(get_score(neighborhoods[cell][ref], neighborhoods[cell][r],
-                                             parameters.neighborhood_comparison))
-                    sscores.append(get_score(neighborhoods[sister][ref], neighborhoods[sister][r],
-                                             parameters.neighborhood_comparison))
-
+                    cscores.append(ucontact.contact_distance(neighborhoods[cell][ref], neighborhoods[cell][r],
+                                                             similarity=parameters.contact_similarity))
+                    sscores.append(ucontact.contact_distance(neighborhoods[sister][ref], neighborhoods[sister][r],
+                                                             similarity=parameters.contact_similarity))
         values = np.array([cscores, sscores])
         kernel = stats.gaussian_kde(values)
 
@@ -2165,7 +1281,7 @@ class Atlases(object):
         positions = np.vstack([x.ravel(), y.ravel()])
         z = np.reshape(kernel(positions).T, x.shape)
         scale = 100.0 / z.sum()
-        self._probability = np.reshape([[(z[z <= z[j][i]].sum()) * scale for i in range(z.shape[1])] \
+        self._probability = np.reshape([[(z[z <= z[j][i]].sum()) * scale for i in range(z.shape[1])]
                                         for j in range(z.shape[0])], z.shape)
 
     def get_probability(self, a, b):
