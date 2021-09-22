@@ -59,9 +59,9 @@ def str_variable(name, value):
                         s += ", "
             else:
                 s += "unhandled type"
-            s += "]"
         else:
-            s += str(value)
+            s += 'empty list'
+        s += "]"
     elif type(value) == tuple:
         s += str(value)
     else:

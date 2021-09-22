@@ -11,9 +11,10 @@ import sys
 #
 
 import astec.utils.common as common
-import astec.algorithms.neighborhood as aneighborhood
-import astec.utils.neighborhood as uneighborhood
-import astec.algorithms.properties as properties
+import astec.algorithms.contact_naming as acontactn
+import astec.utils.contact_atlas as ucontacta
+import astec.utils.properties as properties
+import astec.utils.diagnosis as diagnosis
 from astec.wrapping.cpp_wrapping import path_to_vt
 
 #
@@ -45,6 +46,18 @@ def _set_options(my_parser):
                            help='path to the embryo data')
 
     #
+    # other options
+    #
+
+    my_parser.add_argument('-i', '--input',
+                           action='store', nargs='*', dest='inputFile', const=None,
+                           help='input pkl or xml lineage file. Set fates and write result in ouput file.')
+
+    my_parser.add_argument('-o', '--output',
+                           action='store', nargs='*', dest='outputFile', const=None,
+                           help='output pkl or xml lineage file')
+
+    #
     # control parameters
     #
 
@@ -71,11 +84,11 @@ def _set_options(my_parser):
                            action='store_const', dest='debug', const=0,
                            help='no debug information')
 
-    help = "print the list of parameters (with explanations) in the console and exit. "
-    help += "If a parameter file is given, it is taken into account"
+    doc = "print the list of parameters (with explanations) in the console and exit. "
+    doc += "If a parameter file is given, it is taken into account"
     my_parser.add_argument('-pp', '--print-param',
                            action='store_const', dest='printParameters',
-                           default=False, const=True, help=help)
+                           default=False, const=True, help=doc)
 
     return
 
@@ -114,12 +127,26 @@ def main():
     experiment.update_from_args(args)
 
     if args.printParameters:
-        parameters = uneighborhood.NeighborhoodParameters()
+        parameters = acontactn.NamingParameters()
         if args.parameterFile is not None and os.path.isfile(args.parameterFile):
             experiment.update_from_parameter_file(args.parameterFile)
             parameters.update_from_parameter_file(args.parameterFile)
         experiment.print_parameters(directories=[])
         parameters.print_parameters()
+        sys.exit(0)
+
+    #
+    # read input file(s) from args, write output file from args
+    #
+
+    time_digits_for_cell_id = experiment.get_time_digits_for_cell_id()
+
+    if args.parameterFile is None:
+        prop = properties.read_dictionary(args.inputFile, inputpropertiesdict={})
+        prop = properties.set_fate_from_names(prop, time_digits_for_cell_id=time_digits_for_cell_id)
+        prop = properties.set_color_from_fate(prop)
+        if args.outputFile is not None:
+            properties.write_dictionary(args.outputFile, prop)
         sys.exit(0)
 
     #
@@ -170,9 +197,10 @@ def main():
     # copy monitoring information into other "files"
     # so the log filename is known
     #
-    aneighborhood.monitoring.copy(monitoring)
-    uneighborhood.monitoring.copy(monitoring)
+    acontactn.monitoring.copy(monitoring)
     properties.monitoring.copy(monitoring)
+    diagnosis.monitoring.copy(monitoring)
+    ucontacta.monitoring.copy(monitoring)
 
     #
     # manage parameters
@@ -181,7 +209,7 @@ def main():
     # 3. write parameters into the logfile
     #
 
-    parameters = uneighborhood.NeighborhoodParameters()
+    parameters = acontactn.NamingParameters()
     parameters.update_from_parameter_file(parameter_file)
     parameters.write_parameters(monitoring.log_filename)
 
@@ -189,7 +217,7 @@ def main():
     # processing
     #
 
-    aneighborhood.neighborhood_process(experiment, parameters)
+    acontactn.naming_process(experiment, parameters)
 
     #
     # end of execution

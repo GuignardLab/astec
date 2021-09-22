@@ -6,9 +6,11 @@ import numpy as np
 import random
 
 import astec.utils.common as common
-import astec.utils.neighborhood as uneighborhood
-import astec.algorithms.properties as properties
-
+import astec.utils.contact as ucontact
+import astec.utils.contact_atlas as ucontacta
+import astec.utils.properties as properties
+import astec.utils.ascidian_name as uname
+import astec.utils.diagnosis as diagnosis
 
 #
 #
@@ -28,7 +30,7 @@ _instrumented_ = False
 ########################################################################################
 
 
-class NamingParameters(uneighborhood.NeighborhoodParameters):
+class NamingParameters(ucontacta.AtlasParameters):
 
     ############################################################
     #
@@ -36,20 +38,32 @@ class NamingParameters(uneighborhood.NeighborhoodParameters):
     #
     ############################################################
 
-    def __init__(self):
-
-        uneighborhood.NeighborhoodParameters.__init__(self)
+    def __init__(self, prefix ='naming_'):
 
         if "doc" not in self.__dict__:
             self.doc = {}
+
+        ucontacta.AtlasParameters.__init__(self, prefix=[prefix, "atlas_"])
 
         self.inputFile = []
         self.outputFile = None
 
         #
+        #
+        #
+        doc = "\t Method to name the daugthers after a division"
+        doc += " - 'distance_sum' "
+        doc += " - 'distance_min' "
+        doc += " - 'probability_sum' "
+        doc += " - 'probability_max' "
+        self.doc['selection_method'] = doc
+        self.selection_method = 'distance_sum'
+
+        #
         # for test:
         # names will be deleted, and tried to be rebuilt
         self.testFile = None
+        self.test_diagnosis = False
 
     ############################################################
     #
@@ -64,11 +78,16 @@ class NamingParameters(uneighborhood.NeighborhoodParameters):
         print('#')
         print("")
 
-        uneighborhood.NeighborhoodParameters.print_parameters(self)
+        ucontacta.AtlasParameters.print_parameters(self)
 
-        self.varprint('inputFile', self.inputFile)
-        self.varprint('outputFile', self.outputFile)
-        self.varprint('testFile', self.testFile)
+        self.varprint('inputFile', self.inputFile, self.doc.get('inputFile', None))
+        self.varprint('outputFile', self.outputFile, self.doc.get('outputFile', None))
+
+        self.varprint('selection_method', self.selection_method, self.doc.get('selection_method', None))
+
+        self.varprint('testFile', self.testFile, self.doc.get('testFile', None))
+        self.varprint('test_diagnosis', self.test_diagnosis, self.doc.get('test_diagnosis', None))
+        print("")
 
     def write_parameters_in_file(self, logfile):
         logfile.write("\n")
@@ -77,11 +96,17 @@ class NamingParameters(uneighborhood.NeighborhoodParameters):
         logfile.write("# \n")
         logfile.write("\n")
 
-        uneighborhood.NeighborhoodParameters.write_parameters_in_file(self, logfile)
+        ucontacta.AtlasParameters.write_parameters_in_file(self, logfile)
 
-        self.varwrite(logfile, 'inputFile', self.inputFile)
-        self.varwrite(logfile, 'outputFile', self.outputFile)
-        self.varwrite(logfile, 'testFile', self.testFile)
+        self.varwrite(logfile, 'inputFile', self.inputFile, self.doc.get('inputFile', None))
+        self.varwrite(logfile, 'outputFile', self.outputFile, self.doc.get('outputFile', None))
+
+        self.varwrite(logfile, 'selection_method', self.selection_method, self.doc.get('selection_method', None))
+
+        self.varwrite(logfile, 'testFile', self.testFile, self.doc.get('testFile', None))
+        self.varwrite(logfile, 'test_diagnosis', self.test_diagnosis, self.doc.get('test_diagnosis', None))
+
+        logfile.write("\n")
 
     def write_parameters(self, log_file_name):
         with open(log_file_name, 'a') as logfile:
@@ -95,10 +120,14 @@ class NamingParameters(uneighborhood.NeighborhoodParameters):
     ############################################################
 
     def update_from_parameters(self, parameters):
-        uneighborhood.NeighborhoodParameters.update_from_parameters(self, parameters)
+        ucontacta.AtlasParameters.update_from_parameters(self, parameters)
         self.inputFile = self.read_parameter(parameters, 'inputFile', self.inputFile)
         self.outputFile = self.read_parameter(parameters, 'outputFile', self.outputFile)
+
+        self.selection_method = self.read_parameter(parameters, 'selection_method', self.selection_method)
+
         self.testFile = self.read_parameter(parameters, 'testFile', self.testFile)
+        self.test_diagnosis = self.read_parameter(parameters, 'test_diagnosis', self.test_diagnosis)
 
     def update_from_parameter_file(self, parameter_file):
         if parameter_file is None:
@@ -190,17 +219,17 @@ def _test_naming(prop, reference_prop, discrepancies):
         if k not in reference_prop['cell_name']:
             monitoring.to_log_and_console("\t weird, key " + str(k) + " is not in reference properties")
         elif prop['cell_name'][k] != reference_prop['cell_name'][k]:
-            if reference_prop['cell_name'][k] == uneighborhood.get_sister_name(prop['cell_name'][k]):
+            if reference_prop['cell_name'][k] == uname.get_sister_name(prop['cell_name'][k]):
                 if prop['cell_name'][k] not in sisters_errors:
                     sisters_errors[prop['cell_name'][k]] = 1
                     msg = "cell_name[" + str(k) + "]=" + str(prop['cell_name'][k]) + " is named as its sister "
                     msg += str(reference_prop['cell_name'][k])
-                    if uneighborhood.get_mother_name(prop['cell_name'][k]) in discrepancies:
+                    if uname.get_mother_name(prop['cell_name'][k]) in discrepancies:
                         msg += ", division is incoherent among references"
                     monitoring.to_log_and_console("\t " + msg)
                 else:
                     sisters_errors[prop['cell_name'][k]] += 1
-                indexed_name = uneighborhood.get_mother_name(prop['cell_name'][k])
+                indexed_name = uname.get_mother_name(prop['cell_name'][k])
                 division_errors[indexed_name] = division_errors.get(indexed_name, 0) + 1
             else:
                 if prop['cell_name'][k] not in other_errors:
@@ -208,7 +237,7 @@ def _test_naming(prop, reference_prop, discrepancies):
                     msg = "cell_name[" + str(k) + "]=" + str(prop['cell_name'][k]) + " is not equal to reference name "
                     msg += str(reference_prop['cell_name'][k])
                     msg += " for cell " + str(k)
-                    if uneighborhood.get_mother_name(prop['cell_name'][k]) in discrepancies:
+                    if uname.get_mother_name(prop['cell_name'][k]) in discrepancies:
                         msg += ", division is incoherent among references"
                     monitoring.to_log_and_console("\t " + msg)
                 else:
@@ -223,12 +252,12 @@ def _test_naming(prop, reference_prop, discrepancies):
     # first_error_mothers = []
     # names = division_errors.keys()
     # for n in names:
-    #     if uneighborhood.get_mother_name(n) in names or uneighborhood.get_mother_name(n) in first_error_mothers:
+    #     if uname.get_mother_name(n) in names or uname.get_mother_name(n) in first_error_mothers:
     #         second_errors[n] = division_errors[n]
     #     else:
     #         first_errors[n] = division_errors[n]
-    #         if uneighborhood.get_mother_name(n) not in first_error_mothers:
-    #             first_error_mothers.append(uneighborhood.get_mother_name(n))
+    #         if uname.get_mother_name(n) not in first_error_mothers:
+    #             first_error_mothers.append(uname.get_mother_name(n))
 
     name_missing = {}
     reference_name = {}
@@ -276,13 +305,33 @@ def _test_naming(prop, reference_prop, discrepancies):
 #
 ########################################################################################
 
-def _build_scores(mother, daughters, ancestor_name, prop, neighborhoods, parameters, time_digits_for_cell_id=4):
-    proc = "_build_scores"
+def _compute_distances(mother, daughters, ancestor_name, prop, neighborhoods, parameters, time_digits_for_cell_id=4):
+    """
+
+    Parameters
+    ----------
+    mother: cell id of the mother cell
+    daughters: cell ids of the daughter cells
+    ancestor_name: dictionary indexed by cell ids, giving the name of the last named ancestor
+    prop: property dictionary of the embryo to be named
+    neighborhoods: dictionary of neighborhoods (contact surface vectors), 
+        where the keys are ['cell name']['reference name']
+    parameters:
+    time_digits_for_cell_id
+
+    Returns
+    -------
+    a dictionary of distances (in [0,1]) indexed by [d][name][reference_name] where
+        - d is a cell id of a cell to be indexed
+        - name is one of the two possible names
+        - reference_name is the name of a reference atlas/embryo
+    """
+    proc = "_compute_distances"
 
     #
     # are daughter names indexed?
     #
-    daughter_names = uneighborhood.get_daughter_names(prop['cell_name'][mother])
+    daughter_names = uname.get_daughter_names(prop['cell_name'][mother])
     for name in daughter_names:
         #
         # no reference for this name
@@ -302,6 +351,7 @@ def _build_scores(mother, daughters, ancestor_name, prop, neighborhoods, paramet
     #
     # daughters is an array of 2 cell ids
     #
+    half_id = prop['cell_name'][mother][-1]
     for d in daughters:
         score[d] = {}
 
@@ -320,7 +370,13 @@ def _build_scores(mother, daughters, ancestor_name, prop, neighborhoods, paramet
             if int(c) % div == 1 or int(c) % div == 0:
                 contact['background'] = contact.get('background', 0) + prop['cell_contact_surface'][d][c]
             elif c in prop['cell_name']:
-                contact[prop['cell_name'][c]] = prop['cell_contact_surface'][d][c]
+                if parameters.differentiate_other_half:
+                    contact[prop['cell_name'][c]] = prop['cell_contact_surface'][d][c]
+                else:
+                    if prop['cell_name'][c][-1] == half_id:
+                        contact[prop['cell_name'][c]] = prop['cell_contact_surface'][d][c]
+                    else:
+                        contact['other-half'] = contact.get('other-half', 0) + prop['cell_contact_surface'][d][c]
             elif c in daughters:
                 if c != d:
                     sister = c
@@ -350,89 +406,15 @@ def _build_scores(mother, daughters, ancestor_name, prop, neighborhoods, paramet
             if sister is not None:
                 contact[sister_name] = prop['cell_contact_surface'][d][sister]
             for reference_name in neighborhoods[name]:
-                score[d][name][reference_name] = uneighborhood.get_score(contact, neighborhoods[name][reference_name],
-                                                                         parameters.neighborhood_comparison)
+                score[d][name][reference_name] = ucontact.contact_distance(contact, neighborhoods[name][reference_name],
+                                                                           similarity=parameters.contact_similarity)
             if sister is not None:
                 del contact[sister_name]
     return score
 
 
-def _old_analyse_scores(scores):
-    proc = "_analyse_scores"
-    #
-    # scores is a dictionary of dictionary
-    # scores[d in daughters][n in daughter_names(mother)] is an dictionary of scalar product
-    # the length of the array is the occurrence of [n in daughter_names(mother)] in the
-    # neighborhood dictionary
-    #
-    name = {}
-    name_certainty = {}
-
-    # cell ids
-    # cell name candidates
-    # reference names
-    ids = list(scores.keys())
-    candidates = list(scores[ids[0]].keys())
-    references = set(scores[ids[0]][candidates[0]].keys()).intersection(set(scores[ids[0]][candidates[1]].keys()),
-                                                                        set(scores[ids[1]][candidates[0]].keys()),
-                                                                        set(scores[ids[1]][candidates[1]].keys()))
-    if references != set(scores[ids[0]][candidates[0]].keys()) or \
-            references != set(scores[ids[0]][candidates[1]].keys()) or \
-            references != set(scores[ids[1]][candidates[0]].keys()) or \
-            references != set(scores[ids[1]][candidates[1]].keys()):
-        msg = "weird, the set of references is different for each score"
-        monitoring.to_log_and_console(str(proc) + ": " + msg)
-
-    new_scores = {}
-    agreement00 = 0
-    agreement01 = 0
-    disagreement = 0
-    for r in references:
-        new_scores[r] = [scores[ids[0]][candidates[0]][r], scores[ids[0]][candidates[1]][r],
-                         scores[ids[1]][candidates[0]][r], scores[ids[1]][candidates[1]][r]]
-        # 00 > 01 and 11 > 10
-        if new_scores[r][0] > new_scores[r][1] and new_scores[r][3] > new_scores[r][2]:
-            agreement00 += 1
-        # 01 > 00 and 10 > 11
-        elif new_scores[r][1] > new_scores[r][0] and new_scores[r][2] > new_scores[r][3]:
-            agreement01 += 1
-        else:
-            disagreement += 1
-
-    if agreement00 > agreement01 and agreement00 > disagreement:
-        name[ids[0]] = candidates[0]
-        name[ids[1]] = candidates[1]
-        name_certainty[ids[0]] = agreement00 / (agreement00 + agreement01 + disagreement)
-        name_certainty[ids[1]] = name_certainty[ids[0]]
-    elif agreement01 > agreement00 and agreement01 > disagreement:
-        name[ids[0]] = candidates[1]
-        name[ids[1]] = candidates[0]
-        name_certainty[ids[0]] = agreement01 / (agreement00 + agreement01 + disagreement)
-        name_certainty[ids[1]] = name_certainty[ids[0]]
-    else:
-        msg = "there is a disagreement for cells " + str(candidates)
-        monitoring.to_log_and_console(str(proc) + ": " + msg)
-        score00 = 0
-        score01 = 0
-        for r in references:
-            score00 += (new_scores[r][0] + new_scores[r][3]) / 2.0
-            score01 += (new_scores[r][1] + new_scores[r][2]) / 2.0
-        if score00 > score01:
-            name[ids[0]] = candidates[0]
-            name[ids[1]] = candidates[1]
-            name_certainty[ids[0]] = 0.0
-            name_certainty[ids[1]] = 0.0
-        else:
-            name[ids[0]] = candidates[1]
-            name[ids[1]] = candidates[0]
-            name_certainty[ids[0]] = 0.0
-            name_certainty[ids[1]] = 0.0
-
-    return name, name_certainty
-
-
-def _old_analyse_scores_2021_05_18(scores, debug=False):
-    proc = "_analyse_scores"
+def _give_name_distance_sum(scores, debug=False):
+    proc = "_give_name_distance_sum"
     #
     # scores is a dictionary of dictionary of dictionary
     # scores[cell id][name][reference] is the scalar product obtained when
@@ -458,252 +440,6 @@ def _old_analyse_scores_2021_05_18(scores, debug=False):
             references != set(scores[ids[1]][candidates[1]].keys()):
         msg = "weird, the set of references is different for each score for cells " + str(candidates)
         monitoring.to_log_and_console(str(proc) + ": " + msg)
-
-    new_scores = {}
-
-    agreement00 = 0
-    agreement01 = 0
-    disagreement00 = 0
-    disagreement01 = 0
-    disagreement = 0
-    sum_agreement00 = 0.0
-    sum_agreement01 = 0.0
-    sum_disagreement00 = 0.0
-    sum_disagreement01 = 0.0
-
-    for r in references:
-        new_scores[r] = [scores[ids[0]][candidates[0]][r], scores[ids[0]][candidates[1]][r],
-                         scores[ids[1]][candidates[0]][r], scores[ids[1]][candidates[1]][r]]
-        # 00 > 01 and 11 > 10
-        if new_scores[r][0] > new_scores[r][1] and new_scores[r][3] > new_scores[r][2]:
-            sum_agreement00 += (new_scores[r][0] + new_scores[r][3]) - (new_scores[r][1] + new_scores[r][2])
-            agreement00 += 1
-            if debug:
-                print(str(r) + ": total agreement for 00-11")
-        # 01 > 00 and 10 > 11
-        elif new_scores[r][0] < new_scores[r][1] and new_scores[r][3] < new_scores[r][2]:
-            sum_agreement01 += (new_scores[r][1] + new_scores[r][2]) - (new_scores[r][0] + new_scores[r][3])
-            agreement01 += 1
-            if debug:
-                print(str(r) + ": total agreement for 01-10")
-        elif new_scores[r][0] + new_scores[r][3] > new_scores[r][1] + new_scores[r][2]:
-            sum_disagreement00 += (new_scores[r][0] + new_scores[r][3]) - (new_scores[r][1] + new_scores[r][2])
-            disagreement00 += 1
-            if debug:
-                print(str(r) + ": mild agreement for 00-11")
-        elif new_scores[r][0] + new_scores[r][3] < new_scores[r][1] + new_scores[r][2]:
-            sum_disagreement01 += (new_scores[r][1] + new_scores[r][2]) - (new_scores[r][0] + new_scores[r][3])
-            disagreement01 += 1
-            if debug:
-                print(str(r) + ": mild agreement for 01-10")
-        else:
-            disagreement += 1
-            if debug:
-                print(str(r) + ": no agreement")
-
-    somme = agreement00 + agreement01 + disagreement00 + disagreement01 + disagreement
-    score00 = int(100.0 * (agreement00 + 0.5 * disagreement00) / somme)
-    score01 = int(100.0 * (agreement01 + 0.5 * disagreement01) / somme)
-
-    if score00 > score01:
-        name[ids[0]] = candidates[0]
-        name[ids[1]] = candidates[1]
-        name_certainty[ids[0]] = score00
-        name_certainty[ids[1]] = score00
-        if debug:
-            print("\t concludes to 00-11")
-    elif score00 < score01:
-        name[ids[0]] = candidates[1]
-        name[ids[1]] = candidates[0]
-        name_certainty[ids[0]] = score01
-        name_certainty[ids[1]] = score01
-        if debug:
-            print("\t concludes to 01-10")
-    else:
-        msg = "there is no clear agreement for cells " + str(candidates)
-        monitoring.to_log_and_console(str(proc) + ": " + msg)
-        if sum_agreement00 + 0.5 * sum_disagreement00 > sum_agreement01 + 0.5 * sum_disagreement01:
-            name[ids[0]] = candidates[0]
-            name[ids[1]] = candidates[1]
-            name_certainty[ids[0]] = score00
-            name_certainty[ids[1]] = score00
-        elif sum_agreement00 + 0.5 * sum_disagreement00 < sum_agreement01 + 0.5 * sum_disagreement01:
-            name[ids[0]] = candidates[1]
-            name[ids[1]] = candidates[0]
-            name_certainty[ids[0]] = score01
-            name_certainty[ids[1]] = score01
-        else:
-            msg = "there is no agreement at all for cells " + str(candidates)
-            monitoring.to_log_and_console(str(proc) + ": " + msg)
-            name[ids[0]] = None
-            name[ids[1]] = None
-            name_certainty[ids[0]] = 0
-            name_certainty[ids[1]] = 0
-
-    return name, name_certainty
-
-
-def _analyse_scores_2021_05_25(scores, debug=False):
-    proc = "_analyse_scores"
-    #
-    # scores is a dictionary of dictionary of dictionary
-    # scores[cell id][name][reference] is the scalar product obtained when
-    # associating the cell 'cell id' with 'name' for 'reference' neighborhood
-    #
-    name = {}
-    name_certainty = {}
-
-    # cell ids
-    # cell name candidates
-    # reference names
-    ids = list(scores.keys())
-    candidates = list(scores[ids[0]].keys())
-    #
-    # selection des references qui ont les 2 voisinages
-    #
-    references = set(scores[ids[0]][candidates[0]].keys()).intersection(set(scores[ids[0]][candidates[1]].keys()),
-                                                                        set(scores[ids[1]][candidates[0]].keys()),
-                                                                        set(scores[ids[1]][candidates[1]].keys()))
-    if references != set(scores[ids[0]][candidates[0]].keys()) or \
-            references != set(scores[ids[0]][candidates[1]].keys()) or \
-            references != set(scores[ids[1]][candidates[0]].keys()) or \
-            references != set(scores[ids[1]][candidates[1]].keys()):
-        msg = "weird, the set of references is different for each score for cells " + str(candidates)
-        monitoring.to_log_and_console(str(proc) + ": " + msg)
-
-    new_scores = {}
-
-    agreement00 = 0
-    agreement01 = 0
-    sum_agreement00 = 0.0
-    sum_agreement01 = 0.0
-
-    if debug:
-        print("scores = " + str(scores))
-
-    for r in references:
-        if debug:
-            print("- reference " + str(r))
-        new_scores[r] = [scores[ids[0]][candidates[0]][r], scores[ids[0]][candidates[1]][r],
-                         scores[ids[1]][candidates[0]][r], scores[ids[1]][candidates[1]][r]]
-        if debug:
-            print("- reference " + str(r) + " --- scores = " + str(new_scores[r]))
-        # 00 > 01
-        if new_scores[r][0] > new_scores[r][1]:
-            agreement00 += 1
-            sum_agreement00 += new_scores[r][0] - new_scores[r][1]
-            if debug:
-                print("   00 > 01")
-        elif new_scores[r][0] < new_scores[r][1]:
-            agreement01 += 1
-            sum_agreement01 += new_scores[r][1] - new_scores[r][0]
-            if debug:
-                print("   00 < 01")
-
-        # 00 > 10
-        if new_scores[r][0] > new_scores[r][2]:
-            agreement00 += 1
-            sum_agreement00 += new_scores[r][0] - new_scores[r][2]
-            if debug:
-                print("   00 > 10")
-        elif new_scores[r][0] < new_scores[r][2]:
-            agreement01 += 1
-            sum_agreement01 += new_scores[r][2] - new_scores[r][0]
-            if debug:
-                print("   00 < 10")
-
-        # 11 > 01
-        if new_scores[r][3] > new_scores[r][1]:
-            agreement00 += 1
-            sum_agreement00 += new_scores[r][3] - new_scores[r][1]
-            if debug:
-                print("   11 > 01")
-        elif new_scores[r][3] < new_scores[r][1]:
-            agreement01 += 1
-            sum_agreement01 += new_scores[r][1] - new_scores[r][3]
-            if debug:
-                print("   11 < 01")
-
-        # 11 > 10
-        if new_scores[r][3] > new_scores[r][2]:
-            agreement00 += 1
-            sum_agreement00 += new_scores[r][3] - new_scores[r][2]
-            if debug:
-                print("   11 > 10")
-        elif new_scores[r][3] < new_scores[r][2]:
-            agreement01 += 1
-            sum_agreement01 += new_scores[r][2] - new_scores[r][3]
-            if debug:
-                print("   11 < 10")
-
-    if debug:
-        print("agreement00 = " + str(agreement00))
-        print("agreement01 = " + str(agreement01))
-        print("sum_agreement00 = " + str(sum_agreement00))
-        print("sum_agreement01 = " + str(sum_agreement01))
-    if agreement00 > agreement01:
-        name[ids[0]] = candidates[0]
-        name[ids[1]] = candidates[1]
-        name_certainty[ids[0]] = int(100.0 * agreement00 / (agreement00 + agreement01))
-        name_certainty[ids[1]] = int(100.0 * agreement00 / (agreement00 + agreement01))
-    elif agreement01 > agreement00:
-        name[ids[0]] = candidates[1]
-        name[ids[1]] = candidates[0]
-        name_certainty[ids[0]] = int(100.0 * agreement01 / (agreement00 + agreement01))
-        name_certainty[ids[1]] = int(100.0 * agreement01 / (agreement00 + agreement01))
-    else:
-        msg = "there is no clear agreement for cells " + str(candidates)
-        monitoring.to_log_and_console(str(proc) + ": " + msg)
-        if sum_agreement00 > sum_agreement01:
-            name[ids[0]] = candidates[0]
-            name[ids[1]] = candidates[1]
-            name_certainty[ids[0]] = int(100.0 * sum_agreement00 / (sum_agreement00 + sum_agreement01))
-            name_certainty[ids[1]] = int(100.0 * sum_agreement00 / (sum_agreement00 + sum_agreement01))
-        elif sum_agreement01 > sum_agreement00:
-            name[ids[0]] = candidates[1]
-            name[ids[1]] = candidates[0]
-            name_certainty[ids[0]] = int(100.0 * sum_agreement01 / (sum_agreement00 + sum_agreement01))
-            name_certainty[ids[1]] = int(100.0 * sum_agreement01 / (sum_agreement00 + sum_agreement01))
-        else:
-            msg = "there is no agreement at all for cells " + str(candidates)
-            monitoring.to_log_and_console(str(proc) + ": " + msg)
-            name[ids[0]] = None
-            name[ids[1]] = None
-            name_certainty[ids[0]] = 0
-            name_certainty[ids[1]] = 0
-
-    return name, name_certainty
-
-
-def _analyse_scores(scores, debug=False):
-    proc = "_analyse_scores"
-    #
-    # scores is a dictionary of dictionary of dictionary
-    # scores[cell id][name][reference] is the scalar product obtained when
-    # associating the cell 'cell id' with 'name' for 'reference' neighborhood
-    #
-    name = {}
-    name_certainty = {}
-
-    # cell ids
-    # cell name candidates
-    # reference names
-    ids = list(scores.keys())
-    candidates = list(scores[ids[0]].keys())
-    #
-    # selection des references qui ont les 2 voisinages
-    #
-    references = set(scores[ids[0]][candidates[0]].keys()).intersection(set(scores[ids[0]][candidates[1]].keys()),
-                                                                        set(scores[ids[1]][candidates[0]].keys()),
-                                                                        set(scores[ids[1]][candidates[1]].keys()))
-    if references != set(scores[ids[0]][candidates[0]].keys()) or \
-            references != set(scores[ids[0]][candidates[1]].keys()) or \
-            references != set(scores[ids[1]][candidates[0]].keys()) or \
-            references != set(scores[ids[1]][candidates[1]].keys()):
-        msg = "weird, the set of references is different for each score for cells " + str(candidates)
-        monitoring.to_log_and_console(str(proc) + ": " + msg)
-
-    new_scores = {}
 
     sum_agreement00 = 0.0
     sum_agreement01 = 0.0
@@ -712,14 +448,8 @@ def _analyse_scores(scores, debug=False):
         print("scores = " + str(scores))
 
     for r in references:
-        if debug:
-            print("- reference " + str(r))
-        new_scores[r] = [scores[ids[0]][candidates[0]][r], scores[ids[0]][candidates[1]][r],
-                         scores[ids[1]][candidates[0]][r], scores[ids[1]][candidates[1]][r]]
-        if debug:
-            print("- reference " + str(r) + " --- scores = " + str(new_scores[r]))
-        sum_agreement00 += new_scores[r][0] + new_scores[r][3]
-        sum_agreement01 += new_scores[r][1] + new_scores[r][2]
+        sum_agreement00 += scores[ids[0]][candidates[0]][r] + scores[ids[1]][candidates[1]][r]
+        sum_agreement01 += scores[ids[0]][candidates[1]][r] + scores[ids[1]][candidates[0]][r]
 
     if debug:
         print("sum_agreement00 = " + str(sum_agreement00))
@@ -728,13 +458,13 @@ def _analyse_scores(scores, debug=False):
     if sum_agreement00 < sum_agreement01:
         name[ids[0]] = candidates[0]
         name[ids[1]] = candidates[1]
-        name_certainty[ids[0]] = int(100.0 * sum_agreement00 / (sum_agreement00 + sum_agreement01))
-        name_certainty[ids[1]] = int(100.0 * sum_agreement00 / (sum_agreement00 + sum_agreement01))
+        name_certainty[ids[0]] = int(100.0 * (sum_agreement01 - sum_agreement00) / len(references))
+        name_certainty[ids[1]] = int(100.0 * (sum_agreement01 - sum_agreement00) / len(references))
     elif sum_agreement01 < sum_agreement00:
         name[ids[0]] = candidates[1]
         name[ids[1]] = candidates[0]
-        name_certainty[ids[0]] = int(100.0 * sum_agreement01 / (sum_agreement00 + sum_agreement01))
-        name_certainty[ids[1]] = int(100.0 * sum_agreement01 / (sum_agreement00 + sum_agreement01))
+        name_certainty[ids[0]] = int(100.0 * (sum_agreement00 - sum_agreement01) / len(references))
+        name_certainty[ids[1]] = int(100.0 * (sum_agreement00 - sum_agreement01) / len(references))
     else:
         msg = "there is no agreement at all for cells " + str(candidates)
         monitoring.to_log_and_console(str(proc) + ": " + msg)
@@ -746,14 +476,231 @@ def _analyse_scores(scores, debug=False):
     return name, name_certainty
 
 
+def _give_name_distance_min(scores, debug=False):
+    proc = "_give_name_distance_min"
+    #
+    # scores is a dictionary of dictionary of dictionary
+    # scores[cell id][name][reference] is the scalar product obtained when
+    # associating the cell 'cell id' with 'name' for 'reference' neighborhood
+    #
+    name = {}
+    name_certainty = {}
+
+    # cell ids
+    # cell name candidates
+    # reference names
+    ids = list(scores.keys())
+    candidates = list(scores[ids[0]].keys())
+    #
+    # selection des references qui ont les 2 voisinages
+    #
+    references = set(scores[ids[0]][candidates[0]].keys()).intersection(set(scores[ids[0]][candidates[1]].keys()),
+                                                                        set(scores[ids[1]][candidates[0]].keys()),
+                                                                        set(scores[ids[1]][candidates[1]].keys()))
+    if references != set(scores[ids[0]][candidates[0]].keys()) or \
+            references != set(scores[ids[0]][candidates[1]].keys()) or \
+            references != set(scores[ids[1]][candidates[0]].keys()) or \
+            references != set(scores[ids[1]][candidates[1]].keys()):
+        msg = "weird, the set of references is different for each score for cells " + str(candidates)
+        monitoring.to_log_and_console(str(proc) + ": " + msg)
+
+    agreement00 = []
+    agreement01 = []
+
+    if debug:
+        print("scores = " + str(scores))
+
+    for r in references:
+        agreement00 += [scores[ids[0]][candidates[0]][r] + scores[ids[1]][candidates[1]][r]]
+        agreement01 += [scores[ids[0]][candidates[1]][r] + scores[ids[1]][candidates[0]][r]]
+
+    if debug:
+        print("agreement00 = " + str(agreement00))
+        print("agreement01 = " + str(agreement01))
+
+    if min(agreement00) < min(agreement01):
+        name[ids[0]] = candidates[0]
+        name[ids[1]] = candidates[1]
+        name_certainty[ids[0]] = int(100.0 * (min(agreement01) - min(agreement00)))
+        name_certainty[ids[1]] = int(100.0 * (min(agreement01) - min(agreement00)))
+    elif min(agreement01) < min(agreement00):
+        name[ids[0]] = candidates[1]
+        name[ids[1]] = candidates[0]
+        name_certainty[ids[0]] = int(100.0 * (min(agreement00) - min(agreement01)))
+        name_certainty[ids[1]] = int(100.0 * (min(agreement00) - min(agreement01)))
+    else:
+        msg = "there is no agreement at all for cells " + str(candidates)
+        monitoring.to_log_and_console(str(proc) + ": " + msg)
+        name[ids[0]] = None
+        name[ids[1]] = None
+        name_certainty[ids[0]] = 0
+        name_certainty[ids[1]] = 0
+
+    return name, name_certainty
+
+
+def _give_name_probability_sum(scores, atlases, debug=False):
+    proc = "_give_name_probability_sum"
+    #
+    # scores is a dictionary of dictionary of dictionary
+    # scores[cell id][name][reference] is the scalar product obtained when
+    # associating the cell 'cell id' with 'name' for 'reference' neighborhood
+    #
+    name = {}
+    name_certainty = {}
+
+    # cell ids
+    # cell name candidates
+    # reference names
+    ids = list(scores.keys())
+    candidates = list(scores[ids[0]].keys())
+    #
+    # selection des references qui ont les 2 voisinages
+    #
+    references = set(scores[ids[0]][candidates[0]].keys()).intersection(set(scores[ids[0]][candidates[1]].keys()),
+                                                                        set(scores[ids[1]][candidates[0]].keys()),
+                                                                        set(scores[ids[1]][candidates[1]].keys()))
+    if references != set(scores[ids[0]][candidates[0]].keys()) or \
+            references != set(scores[ids[0]][candidates[1]].keys()) or \
+            references != set(scores[ids[1]][candidates[0]].keys()) or \
+            references != set(scores[ids[1]][candidates[1]].keys()):
+        msg = "weird, the set of references is different for each score for cells " + str(candidates)
+        monitoring.to_log_and_console(str(proc) + ": " + msg)
+
+    sum_probability00 = 0.0
+    sum_probability01 = 0.0
+
+    if debug:
+        print("scores = " + str(scores))
+
+    for r in references:
+        sum_probability00 += atlases.get_probability(scores[ids[0]][candidates[0]][r], scores[ids[1]][candidates[1]][r])
+        sum_probability01 += atlases.get_probability(scores[ids[0]][candidates[1]][r], scores[ids[1]][candidates[0]][r])
+
+    if debug:
+        print("sum_probability00 = " + str(sum_probability00))
+        print("sum_probability01 = " + str(sum_probability01))
+
+    if sum_probability00 > sum_probability01:
+        name[ids[0]] = candidates[0]
+        name[ids[1]] = candidates[1]
+        name_certainty[ids[0]] = int(sum_probability00/ len(references))
+        name_certainty[ids[1]] = int(sum_probability00/ len(references))
+    elif sum_probability01 > sum_probability00:
+        name[ids[0]] = candidates[1]
+        name[ids[1]] = candidates[0]
+        name_certainty[ids[0]] = int(sum_probability01/ len(references))
+        name_certainty[ids[1]] = int(sum_probability01/ len(references))
+    else:
+        msg = "there is no agreement at all for cells " + str(candidates)
+        monitoring.to_log_and_console(str(proc) + ": " + msg)
+        name[ids[0]] = None
+        name[ids[1]] = None
+        name_certainty[ids[0]] = 0
+        name_certainty[ids[1]] = 0
+
+    return name, name_certainty
+
+
+def _give_name_probability_max(scores, atlases, debug=False):
+    proc = "_give_name_probability_max"
+    #
+    # scores is a dictionary of dictionary of dictionary
+    # scores[cell id][name][reference] is the scalar product obtained when
+    # associating the cell 'cell id' with 'name' for 'reference' neighborhood
+    #
+    name = {}
+    name_certainty = {}
+
+    # cell ids
+    # cell name candidates
+    # reference names
+    ids = list(scores.keys())
+    candidates = list(scores[ids[0]].keys())
+    #
+    # selection des references qui ont les 2 voisinages
+    #
+    references = set(scores[ids[0]][candidates[0]].keys()).intersection(set(scores[ids[0]][candidates[1]].keys()),
+                                                                        set(scores[ids[1]][candidates[0]].keys()),
+                                                                        set(scores[ids[1]][candidates[1]].keys()))
+    if references != set(scores[ids[0]][candidates[0]].keys()) or \
+            references != set(scores[ids[0]][candidates[1]].keys()) or \
+            references != set(scores[ids[1]][candidates[0]].keys()) or \
+            references != set(scores[ids[1]][candidates[1]].keys()):
+        msg = "weird, the set of references is different for each score for cells " + str(candidates)
+        monitoring.to_log_and_console(str(proc) + ": " + msg)
+
+    probability00 = []
+    probability01 = []
+
+    if debug:
+        print("scores = " + str(scores))
+
+    for r in references:
+        probability00 += [atlases.get_probability(scores[ids[0]][candidates[0]][r], scores[ids[1]][candidates[1]][r])]
+        probability01 += [atlases.get_probability(scores[ids[0]][candidates[1]][r], scores[ids[1]][candidates[0]][r])]
+
+    if debug:
+        print("probability00 = " + str(probability00) + " - max = " + str(max(probability00)))
+        print("probability01 = " + str(probability01) + " - max = " + str(max(probability01)))
+
+    if max(probability00) > max(probability01):
+        name[ids[0]] = candidates[0]
+        name[ids[1]] = candidates[1]
+        name_certainty[ids[0]] = int(max(probability00))
+        name_certainty[ids[1]] = int(max(probability00))
+    elif max(probability01) > max(probability00):
+        name[ids[0]] = candidates[1]
+        name[ids[1]] = candidates[0]
+        name_certainty[ids[0]] = int(max(probability01))
+        name_certainty[ids[1]] = int(max(probability01))
+    else:
+        msg = "there is no agreement at all for cells " + str(candidates)
+        monitoring.to_log_and_console(str(proc) + ": " + msg)
+        name[ids[0]] = None
+        name[ids[1]] = None
+        name_certainty[ids[0]] = 0
+        name_certainty[ids[1]] = 0
+
+    return name, name_certainty
+
+
+def _give_name(distance, atlases, parameters, debug=False):
+    proc = "_give_name"
+
+    if parameters.selection_method.lower() == 'distance_sum' or parameters.selection_method.lower() == 'distance-sum':
+        return _give_name_distance_sum(distance, debug)
+
+    elif parameters.selection_method.lower() == 'distance_min' or parameters.selection_method.lower() == 'distance-min':
+        return _give_name_distance_min(distance, debug)
+
+    elif parameters.selection_method.lower() == 'probability_sum' or \
+            parameters.selection_method.lower() == 'probability-sum':
+        return _give_name_probability_sum(distance, atlases, debug)
+
+    elif parameters.selection_method.lower() == 'probability_max' or \
+            parameters.selection_method.lower() == 'probability-max':
+        return _give_name_probability_max(distance, atlases, debug)
+
+
+    monitoring.to_log_and_console(str(proc) + ": selection method '" + str(parameters.selection_method) +
+                                  "' not handled yet")
+    sys.exit(1)
+
+
 ########################################################################################
 #
 # naming procedure
 #
 ########################################################################################
 
-def _propagate_naming(prop, neighborhoods, parameters, time_digits_for_cell_id=4):
+def _propagate_naming(prop, atlases, parameters, time_digits_for_cell_id=4):
     proc = "_propagate_naming"
+
+    if not isinstance(atlases, ucontacta.Atlases):
+        monitoring.to_log_and_console(str(proc) + ": unexpected type for 'atlases' variable: "
+                                      + str(type(atlases)))
+        sys.exit(1)
 
     if 'cell_lineage' not in prop:
         monitoring.to_log_and_console(str(proc) + ": 'cell_lineage' was not in dictionary")
@@ -767,6 +714,9 @@ def _propagate_naming(prop, neighborhoods, parameters, time_digits_for_cell_id=4
         monitoring.to_log_and_console(str(proc) + ": 'cell_name' was not in dictionary")
         return None
 
+
+    if parameters.delay_from_division > 0:
+        monitoring.to_log_and_console(str(proc) + ": WARNING, delay_from_division > 0 is not handled yet")
     #
     #
     #
@@ -819,7 +769,7 @@ def _propagate_naming(prop, neighborhoods, parameters, time_digits_for_cell_id=4
                 prop['cell_name'][mother] = prop['cell_name'][c]
                 prop['selection_name_choice_certainty'][mother] = 100
         elif len(lineage[mother]) == 2:
-            ancestor_name = uneighborhood.get_mother_name(prop['cell_name'][c])
+            ancestor_name = uname.get_mother_name(prop['cell_name'][c])
             if mother in prop['cell_name']:
                 if prop['cell_name'][mother] != ancestor_name:
                     prop['selection_name_choice_certainty'][mother] = 0
@@ -861,6 +811,8 @@ def _propagate_naming(prop, neighborhoods, parameters, time_digits_for_cell_id=4
     timepoints = sorted(missing_name.keys())
     ancestor_name = {}
     cell_not_named = []
+
+    neighborhoods = atlases.get_neighborhoods()
 
     for t in timepoints:
         division_to_be_named = {}
@@ -918,7 +870,7 @@ def _propagate_naming(prop, neighborhoods, parameters, time_digits_for_cell_id=4
             elif len(lineage[mother]) == 2:
                 daughters = copy.deepcopy(lineage[mother])
                 daughters.remove(c)
-                daughter_names = uneighborhood.get_daughter_names(prop['cell_name'][mother])
+                daughter_names = uname.get_daughter_names(prop['cell_name'][mother])
                 #
                 # daughter cell is already named
                 #
@@ -926,7 +878,8 @@ def _propagate_naming(prop, neighborhoods, parameters, time_digits_for_cell_id=4
                     if prop['cell_name'][daughters[0]] in daughter_names:
                         daughter_names.remove(prop['cell_name'][daughters[0]])
                         prop['cell_name'][c] = daughter_names[0]
-                        prop['selection_name_choice_certainty'][c] = prop['selection_name_choice_certainty'][daughters[0]]
+                        prop['selection_name_choice_certainty'][c] = \
+                            prop['selection_name_choice_certainty'][daughters[0]]
                     else:
                         msg = ": weird, cell " + str(daughters[0]) + " is named " + str(prop['cell_name'][daughters[0]])
                         msg += ", but should be named in " + str(daughter_names) + " since its mother cell "
@@ -953,39 +906,39 @@ def _propagate_naming(prop, neighborhoods, parameters, time_digits_for_cell_id=4
         #
         # here we have a dictionary of divisions to be named (key = mother id, value = array of sister ids)
         #
-        if True:
-            for mother, daughters in division_to_be_named.items():
-                debug = False
-                #
-                # scores is a dictionary of dictionary
-                # scores[cell id][name][ref name] is an array of scalar product
-                # cell id = d in daughters
-                # name = name in daughter_names(mother)
-                # the length of the array is the occurrence of [n in daughter_names(mother)] in the
-                # neighborhood dictionary
-                #
-                scores = _build_scores(mother, daughters, ancestor_name, prop, neighborhoods, parameters,
-                                       time_digits_for_cell_id=time_digits_for_cell_id)
-                if debug:
-                    print("scores = " + str(scores))
-                if scores is None:
-                    for c in daughters:
-                        if c not in cell_not_named:
-                            cell_not_named.append(c)
-                    # msg = "\t error when building scores for daughters " + str(daughters) + " of cell " + str(mother)
-                    # monitoring.to_log_and_console(msg)
-                    msg = " Can not name cells " + str(daughters) + " and their offsprings."
-                    monitoring.to_log_and_console(str(proc) + ": " + msg)
-                    continue
+        for mother, daughters in division_to_be_named.items():
+            debug = False
+            #
+            # distance is a dictionary of dictionary
+            # distance[cell id][name][ref name]
+            # cell id = d in daughters
+            # name = name in daughter_names(mother)
+            # ref name in embryos
+            # the length of the array is the occurrence of [n in daughter_names(mother)] in the
+            # neighborhood dictionary
+            #
+            distance = _compute_distances(mother, daughters, ancestor_name, prop, neighborhoods, parameters,
+                                          time_digits_for_cell_id=time_digits_for_cell_id)
+            if debug:
+                print("distance = " + str(distance))
+            if distance is None:
+                for c in daughters:
+                    if c not in cell_not_named:
+                        cell_not_named.append(c)
+                # msg = "\t error when building scores for daughters " + str(daughters) + " of cell " + str(mother)
+                # monitoring.to_log_and_console(msg)
+                msg = " Can not name cells " + str(daughters) + " and their offsprings."
+                monitoring.to_log_and_console(str(proc) + ": " + msg)
+                continue
 
-                name, name_certainty = _analyse_scores(scores, debug=debug)
+            name, name_certainty = _give_name(distance, atlases, parameters, debug=debug)
 
-                for c in name:
-                    if name[c] is not None:
-                        prop['cell_name'][c] = name[c]
-                    prop['selection_name_choice_certainty'][c] = name_certainty[c]
-                    if c in ancestor_name:
-                        del ancestor_name[c]
+            for c in name:
+                if name[c] is not None:
+                    prop['cell_name'][c] = name[c]
+                prop['selection_name_choice_certainty'][c] = name_certainty[c]
+                if c in ancestor_name:
+                    del ancestor_name[c]
 
     return prop
 
@@ -1015,15 +968,15 @@ def naming_process(experiment, parameters):
 
     time_digits_for_cell_id = experiment.get_time_digits_for_cell_id()
 
-    uneighborhood.monitoring.copy(monitoring)
+    ucontacta.monitoring.copy(monitoring)
 
     #
     # should we clean reference here?
     #
-    neighborhoods = uneighborhood.build_neighborhoods(parameters.atlasFiles, parameters,
-                                                      time_digits_for_cell_id=time_digits_for_cell_id)
+    atlases = ucontacta.Atlases()
+    atlases.build_neighborhoods(parameters.atlasFiles, parameters, time_digits_for_cell_id=time_digits_for_cell_id)
 
-    if neighborhoods == {}:
+    if atlases.get_neighborhoods() is None or atlases.get_neighborhoods() == {}:
         monitoring.to_log_and_console(str(proc) + ": empty neighborhood atlas?! ... Exiting ")
         sys.exit(1)
 
@@ -1036,6 +989,13 @@ def naming_process(experiment, parameters):
 
     if parameters.testFile is not None:
         reference_prop = properties.read_dictionary(parameters.testFile, inputpropertiesdict={})
+        if parameters.test_diagnosis:
+            diagnosis.monitoring.copy(monitoring)
+            monitoring.to_log_and_console("============================================================")
+            monitoring.to_log_and_console("===== diagnosis on '" + str(parameters.testFile) + "'")
+            diagnosis.diagnosis(reference_prop, features=['name'], parameters=parameters,
+                                time_digits_for_cell_id=time_digits_for_cell_id)
+            monitoring.to_log_and_console("============================================================")
         prop = _build_test_set(reference_prop, time_digits_for_cell_id=time_digits_for_cell_id, ncells=64)
         if prop is None:
             monitoring.to_log_and_console(str(proc) + ": error when building test set")
@@ -1060,7 +1020,7 @@ def naming_process(experiment, parameters):
     #
     # naming propagation
     #
-    prop = _propagate_naming(prop, neighborhoods, parameters, time_digits_for_cell_id=time_digits_for_cell_id)
+    prop = _propagate_naming(prop, atlases, parameters, time_digits_for_cell_id=time_digits_for_cell_id)
     prop = properties.set_fate_from_names(prop, time_digits_for_cell_id=time_digits_for_cell_id)
     prop = properties.set_color_from_fate(prop)
     #
