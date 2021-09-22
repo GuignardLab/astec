@@ -1,16 +1,18 @@
-import os
-import sys
 import copy
 import operator
+import os
 import shutil
-import numpy as np
+import sys
 
+import numpy as np
+from scipy import ndimage as nd
 from scipy.stats.stats import pearsonr
 
-import astec.utils.common as common
-import astec.algorithms.properties as properties
 from astec.components.spatial_image import SpatialImage
 from astec.io.image import imread, imsave
+import astec.utils.common as common
+import astec.utils.diagnosis as diagnosis
+import astec.utils.properties as properties
 from astec.wrapping import cpp_wrapping
 
 #
@@ -1139,11 +1141,88 @@ def contact_surface_computation(experiment, parameters):
     return output_name + ".xml"
 
 
-def _check_volume_image(volume_from_lineage, experiment):
+########################################################################################
+#
+# diagnosis
+#
+########################################################################################
+
+def _print_list(prop, tab, time_digits_for_cell_id=4, verbose=2):
+
+    keyname = None
+    keynameset = set(prop.keys()).intersection(properties.keydictionary['name']['input_keys'])
+    if len(keynameset) > 0:
+        keyname = list(keynameset)[0]
+
+    for c in tab:
+        t = c // 10**time_digits_for_cell_id
+        cell_id = c % 10**time_digits_for_cell_id
+        msg = "    - cell #" + str(cell_id) + " of time " + str(t)
+        if keyname is not None:
+            if c in prop[keyname]:
+                msg += " (" + str(prop[keyname][c]) + ")"
+        monitoring.to_log_and_console(msg, verbose)
+
+
+def _check_volume_one_image(prop, image_name, current_time, time_digits_for_cell_id=4):
+    """
+    Compare cells found in the volume dictionary with cells found in one image
+    :param prop:
+    :param image_name:
+    :param current_time:
+    :param time_digits_for_cell_id:
+    :return:
+    """
+
+    #
+    # read volumes from image
+    #
+    readim = imread(image_name)
+    labels_from_image = np.unique(readim)
+    volume = nd.sum(np.ones_like(readim), readim, index=np.int16(labels_from_image))
+    del readim
+
+    volume_from_lineage = properties.get_dictionary_entry(prop, 'volume')
+
+    labels_from_image = [current_time * 10 ** time_digits_for_cell_id + int(label) for label in labels_from_image]
+    volume_from_image = dict(list(zip(labels_from_image, volume)))
+
+    labels_from_lineage = [label for label in list(volume_from_lineage.keys())
+                           if label/10 ** time_digits_for_cell_id == current_time]
+
+    labels_in_lineage_not_in_image = list(set(labels_from_lineage).difference(set(labels_from_image)))
+    labels_in_image_not_in_lineage = list(set(labels_from_image).difference(set(labels_from_lineage)))
+    labels_in_both = list(set(labels_from_image).intersection(set(labels_from_lineage)))
+
+    volume_error = [label for label in labels_in_both if volume_from_image[label] != volume_from_lineage[label]]
+
+    if len(labels_in_lineage_not_in_image) > 0:
+        labels_in_lineage_not_in_image.sort()
+        monitoring.to_log_and_console("  - " + str(len(labels_in_lineage_not_in_image))
+                                      + " cells present in volume dictionary not in image: ", 1)
+        _print_list(prop, labels_in_lineage_not_in_image, time_digits_for_cell_id=time_digits_for_cell_id)
+
+    if len(labels_in_image_not_in_lineage) > 0:
+        labels_in_image_not_in_lineage.sort()
+        monitoring.to_log_and_console("  - " + str(len(labels_in_image_not_in_lineage))
+                                      + " cells present in image not in volume dictionary: ", 1)
+        _print_list(prop, labels_in_image_not_in_lineage, time_digits_for_cell_id=time_digits_for_cell_id)
+
+    if len(volume_error) > 0:
+        volume_error.sort()
+        monitoring.to_log_and_console("  - " + str(len(volume_error))
+                                      + " cells with different volume in image and volume dictionary: ", 1)
+        _print_list(prop, volume_error, time_digits_for_cell_id=time_digits_for_cell_id)
+    return
+
+
+def _check_volume_image(prop, experiment):
     proc = "_check_volume_image"
+
     time_digits_for_cell_id = experiment.get_time_digits_for_cell_id()
     first_time = experiment.first_time_point + experiment.delay_time_point
     last_time = experiment.last_time_point + experiment.delay_time_point
+
     monitoring.to_log_and_console("  === volume/image cross-checking === ", 1)
     for current_time in range(first_time, last_time + 1, experiment.delta_time_point):
 
@@ -1161,9 +1240,7 @@ def _check_volume_image(volume_from_lineage, experiment):
             monitoring.to_log_and_console('    post-segmentation image not found', 1)
             continue
         post_image = os.path.join(post_dir, post_image)
-
-        properties.check_volume_image(volume_from_lineage, post_image, current_time,
-                                      time_digits_for_cell_id=time_digits_for_cell_id)
+        _check_volume_one_image(prop, post_image, current_time, time_digits_for_cell_id=time_digits_for_cell_id)
     return
 
 
@@ -1207,7 +1284,9 @@ def postcorrection_process(experiment, parameters):
     #
     if parameters.lineage_diagnosis:
         monitoring.to_log_and_console("   ... test lineage (before cell merging)", 1)
-        properties.check_volume_lineage(lineage_tree_information, time_digits_for_cell_id=time_digits_for_cell_id)
+        diagnosis_parameters = diagnosis.DiagnosisParameters()
+        diagnosis.diagnosis(lineage_tree_information, ['lineage', 'volume'], diagnosis_parameters,
+                            time_digits_for_cell_id=time_digits_for_cell_id)
 
     #
     # get lineage and volume dictionaries
@@ -1252,7 +1331,7 @@ def postcorrection_process(experiment, parameters):
     # save lineage tree
     #
     new_lineage_tree_information = {properties.keydictionary['lineage']['output_key']: lineage,
-                        properties.keydictionary['volume']['output_key']: volume}
+                                    properties.keydictionary['volume']['output_key']: volume}
     segmentation_dir = experiment.post_dir.get_directory()
     lineage_tree_path = os.path.join(segmentation_dir, experiment.post_dir.get_file_name("_lineage") + "."
                                      + experiment.result_lineage_suffix)
@@ -1263,7 +1342,9 @@ def postcorrection_process(experiment, parameters):
     #
     if parameters.lineage_diagnosis:
         monitoring.to_log_and_console("   ... test lineage (after cell merging)", 1)
-        properties.check_volume_lineage(new_lineage_tree_information, time_digits_for_cell_id=time_digits_for_cell_id)
+        diagnosis_parameters = diagnosis.DiagnosisParameters()
+        diagnosis.diagnosis(new_lineage_tree_information, ['lineage', 'volume'], diagnosis_parameters,
+                            time_digits_for_cell_id=time_digits_for_cell_id)
 
     #
     # apply cell fusion
@@ -1316,7 +1397,6 @@ def postcorrection_process(experiment, parameters):
     #
     if parameters.lineage_diagnosis and False:
         monitoring.to_log_and_console("   ... test lineage (after cell merging in image)", 1)
-        dict_volume = properties.get_dictionary_entry(new_lineage_tree_information, 'volume')
-        _check_volume_image(dict_volume, experiment)
+        _check_volume_image(new_lineage_tree_information, experiment)
 
     return
