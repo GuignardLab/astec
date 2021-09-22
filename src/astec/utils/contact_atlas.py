@@ -1,9 +1,6 @@
 import os
 import sys
 import copy
-import collections
-import math
-import functools
 import operator
 
 import scipy.stats as stats
@@ -31,12 +28,12 @@ class AtlasParameters(udiagnosis.DiagnosisParameters):
     #
     ############################################################
 
-    def __init__(self):
+    def __init__(self, prefix='atlas_'):
 
         if "doc" not in self.__dict__:
             self.doc = {}
 
-        udiagnosis.DiagnosisParameters.__init__(self)
+        udiagnosis.DiagnosisParameters.__init__(self, prefix=[prefix, "diagnosis_"])
 
         self.outputAtlasFile = None
         self.atlasFiles = []
@@ -97,7 +94,7 @@ class AtlasParameters(udiagnosis.DiagnosisParameters):
 
         common.PrefixedParameter.print_parameters(self)
 
-        udiagnosis.DiagnosisParameters.print_parameters()
+        udiagnosis.DiagnosisParameters.print_parameters(self)
 
         self.varprint('outputAtlasFile', self.outputAtlasFile)
         self.varprint('atlasFiles', self.atlasFiles)

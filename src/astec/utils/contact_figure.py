@@ -655,9 +655,9 @@ def figures_histogram2D_scores(atlases, parameters):
 
                 right_cscores.append(ucontact.contact_distance(neighborhoods[cell][ref], neighborhoods[cell][r],
                                                                similarity=parameters.contact_similarity))
-                right_sscores.append(ucontact.contact_distance(neighborhoods[sister][ref], neighborhoods[cell][r],
+                right_sscores.append(ucontact.contact_distance(neighborhoods[sister][ref], neighborhoods[sister][r],
                                                                similarity=parameters.contact_similarity))
-                wrong_cscores.append(ucontact.contact_distance(neighborhoods[cell][ref], neighborhoods[cell][r],
+                wrong_cscores.append(ucontact.contact_distance(neighborhoods[cell][ref], neighborhoods[sister][r],
                                                                similarity=parameters.contact_similarity))
                 wrong_sscores.append(ucontact.contact_distance(neighborhoods[sister][ref], neighborhoods[cell][r],
                                                                similarity=parameters.contact_similarity))
