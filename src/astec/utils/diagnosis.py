@@ -562,6 +562,14 @@ def _diagnosis_volume(prop, description, diagnosis_parameters, time_digits_for_c
     volume_variation = {}
     volume_max_derivative = {}
     for cell in volume_along_time:
+        if len(volume_along_time[cell]) <= 1:
+            msg = "    * weird, " + _decode_cell_id(cell)
+            if keyname is not None:
+                if cell in prop[keyname]:
+                    msg += " (" + str(prop[keyname][cell]) + ")"
+            msg += " has a branch (life) length of " + str(len(volume_along_time[cell]))
+            monitoring.to_log_and_console(msg, 1)
+            continue
         volume_variation[cell] = 100.0 * (max(volume_along_time[cell]) - min(volume_along_time[cell])) / \
                                  statistics.median(volume_along_time[cell])
         if max(volume_derivative[cell]) > 0:
@@ -578,9 +586,8 @@ def _diagnosis_volume(prop, description, diagnosis_parameters, time_digits_for_c
         n = int(diagnosis_parameters.items)
         v = diagnosis_parameters.maximal_volume_variation
 
-    for i in range(len(volume_along_time.keys())):
+    for i in range(len(volume_variation.keys())):
         if (n > 0 and i < n) or (0 < v <= volume[i][1]):
-
             msg = _decode_cell_id(volume[i][0])
             if keyname is not None:
                 if volume[i][0] in prop[keyname]:
@@ -598,7 +605,7 @@ def _diagnosis_volume(prop, description, diagnosis_parameters, time_digits_for_c
         n = int(diagnosis_parameters.items)
         v = diagnosis_parameters.maximal_volume_derivative
 
-    for i in range(len(volume_along_time.keys())):
+    for i in range(len(volume_max_derivative.keys())):
         if (n > 0 and i < n) or (0 < v <= volume[i][1]):
             t = volume[i][0] // div
             msg = _decode_cell_id(volume[i][0])
@@ -822,8 +829,14 @@ def _diagnosis_contact(prop, description, diagnosis_parameters, time_digits_for_
     reverse_lineage = {v: k for k, values in lineage.items() for v in values}
 
     score_along_time = {}
+    cells_not_in_reversed_lineage = []
+    cells_with_problem = []
 
     for cell in first_cells:
+        if cell not in contact:
+            msg = "    * weird, cell " + str(cell) + " is not in the 'contact surface' dictionary"
+            monitoring.to_log_and_console(msg)
+            continue
         first_time = int(cell) // div
         pcell = cell
         pneigh = copy.deepcopy(contact[cell])
@@ -842,6 +855,18 @@ def _diagnosis_contact(prop, description, diagnosis_parameters, time_digits_for_
                     nneigh[1] = nneigh.get(1, 0.0) + contrib
                 else:
                     for i in range(t - first_time):
+                        if c not in reverse_lineage:
+                            if c not in cells_not_in_reversed_lineage:
+                                msg = "    * weird, cell " + str(c) + " is not in the reversed lineage"
+                                monitoring.to_log_and_console(msg)
+                                cells_not_in_reversed_lineage += [c]
+                            if cell not in cells_with_problem:
+                                msg = "    - diagnosis on "
+                                msg += _decode_cell_id(cell, time_digits_for_cell_id=time_digits_for_cell_id)
+                                msg += " should be handled with care"
+                                monitoring.to_log_and_console(msg)
+                                cells_with_problem += [cell]
+                            break
                         c = reverse_lineage[c]
                     nneigh[c] = nneigh.get(c, 0.0) + contrib
             #
@@ -934,6 +959,8 @@ def _diagnosis_contact(prop, description, diagnosis_parameters, time_digits_for_
         if cell in name:
             msg += " (" + name[cell] + ") "
         msg += " branch length of " + str(len(score_along_time[cell]))
+        if cell in cells_with_problem:
+            msg += " (warning: some cells were not in the reversed lineage)"
         if len(score_along_time[cell]) <= 1:
             if first_time == last_time - 1:
                 continue
@@ -945,7 +972,7 @@ def _diagnosis_contact(prop, description, diagnosis_parameters, time_digits_for_
         for i in range(1, len(score_along_time[cell])):
             if score_along_time[cell][i] < diagnosis_parameters.maximal_contact_similarity:
                 continue
-            msg = "    - score of " + str(score_along_time[cell][i]) + " between "
+            msg = "    - distance of " + str(score_along_time[cell][i]) + " between "
             msg += str(first_time + i) + " and " + str(first_time + i + 1)
             monitoring.to_log_and_console(msg)
 
