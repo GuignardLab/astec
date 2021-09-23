@@ -51,11 +51,11 @@ class NamingParameters(ucontacta.AtlasParameters):
         #
         #
         #
-        doc = "\t Method to name the daugthers after a division"
-        doc += " - 'distance_sum' "
-        doc += " - 'distance_min' "
-        doc += " - 'probability_sum' "
-        doc += " - 'probability_max' "
+        doc = "\t Method to name the daugthers after a division \n"
+        doc += "\t - 'distance_sum' \n"
+        doc += "\t - 'distance_min' \n"
+        doc += "\t - 'probability_sum' \n"
+        doc += "\t - 'probability_max' "
         self.doc['selection_method'] = doc
         self.selection_method = 'distance_sum'
 

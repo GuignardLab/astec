@@ -48,7 +48,12 @@ class DiagnosisParameters(ucontact.ContactSurfaceParameters):
         # nombre d'items a imprimer
         #
         self.items = 10
-
+        
+        #
+        # diagnostic pour le lignage
+        #
+        self.minimal_length = 10
+        
         #
         # parametres pour le diagnostic sur les surfaces de contact
         #
@@ -67,17 +72,20 @@ class DiagnosisParameters(ucontact.ContactSurfaceParameters):
 
         ucontact.ContactSurfaceParameters.print_parameters(self)
 
-        self.varprint('minimal_volume', self.minimal_volume, self.doc['minimal_volume'])
-        self.varprint('maximal_volume_variation', self.maximal_volume_variation, self.doc['maximal_volume_variation'])
+        self.varprint('minimal_volume', self.minimal_volume, self.get('minimal_volume', None))
+        self.varprint('maximal_volume_variation', self.maximal_volume_variation,
+                      self.get('maximal_volume_variation', None))
         self.varprint('maximal_volume_derivative', self.maximal_volume_derivative,
-                      self.doc['maximal_volume_derivative'])
+                      self.get('maximal_volume_derivative', None))
 
-        self.varprint('items', self.items, self.doc['items'])
+        self.varprint('items', self.items, self.get('items', None))
+
+        self.varprint('minimal_length', self.minimal_length, self.get('minimal_length', None))
 
         self.varprint('maximal_contact_similarity', self.maximal_contact_similarity,
-                      self.doc['maximal_contact_similarity'])
-        self.varprint('generate_figure', self.generate_figure, self.doc['generate_figure'])
-        self.varprint('figurefile_suffix', self.figurefile_suffix, self.doc['figurefile_suffix'])
+                      self.get('maximal_contact_similarity', None))
+        self.varprint('generate_figure', self.generate_figure, self.get('generate_figure', None))
+        self.varprint('figurefile_suffix', self.figurefile_suffix, self.get('figurefile_suffix', None))
 
         print("")
 
@@ -99,6 +107,8 @@ class DiagnosisParameters(ucontact.ContactSurfaceParameters):
                       self.doc.get('maximal_volume_derivative', None))
 
         self.varwrite(logfile, 'items', self.items, self.doc.get('items', None))
+
+        self.varwrite(logfile, 'minimal_length', self.minimal_length, self.doc.get('minimal_length', None))
 
         self.varwrite(logfile, 'maximal_contact_similarity', self.maximal_contact_similarity,
                       self.doc.get('maximal_contact_similarity', None))
@@ -124,6 +134,8 @@ class DiagnosisParameters(ucontact.ContactSurfaceParameters):
                                                              self.maximal_volume_derivative)
 
         self.items = self.read_parameter(parameters, 'items', self.items)
+
+        self.minimal_length = self.read_parameter(parameters, 'minimal_length', self.minimal_length)
 
         self.maximal_contact_similarity = self.read_parameter(parameters, 'maximal_contact_similarity',
                                                               self.maximal_contact_similarity)
@@ -322,6 +334,11 @@ def _diagnosis_lineage(prop, description, diagnosis_parameters, time_digits_for_
     if len(keyset) > 0:
         keylineage = list(keyset)[0]
 
+    keyname = None
+    keyset = set(prop.keys()).intersection(properties.keydictionary['name']['input_keys'])
+    if len(keyset) > 0:
+        keyname = list(keyset)[0]
+
     direct_lineage = prop[keylineage]
 
     monitoring.to_log_and_console("  === " + str(description) + " diagnosis === ", 1)
@@ -373,28 +390,25 @@ def _diagnosis_lineage(prop, description, diagnosis_parameters, time_digits_for_
                 reverse_lineage[v].append(k)
 
     #
-    # histogram of lengths for terminal branches
+    # branch lengths
     #
-    branch_length_histogram = {}
-    branch_lengths = []
-    for leaf in leaves:
-        le = leaf
-        branch = [le]
-        while True:
-            if len(reverse_lineage.get(le, '')) == 1:
-                le = reverse_lineage[le][0]
-                if len(direct_lineage.get(le, '')) == 1:
-                    branch.append(le)
-                else:
-                    break
-            else:
-                break
-        length = len(branch)
-        branch_lengths.append(length)
-        if length in branch_length_histogram:
-            branch_length_histogram[length] += 1
-        else:
-            branch_length_histogram[length] = 1
+    length = {}
+    daughters = [direct_lineage[c][0] for c in direct_lineage if len(direct_lineage[c]) == 2]
+    daughters += [direct_lineage[c][1] for c in direct_lineage if len(direct_lineage[c]) == 2]
+    daughters += [direct_lineage[c][2] for c in direct_lineage if len(direct_lineage[c]) == 3]
+    for d in daughters:
+        length[d] = 0
+        c = d
+        while c in direct_lineage and len(direct_lineage[c]) == 1:
+            length[d] += 1
+            c = direct_lineage[c][0]
+        if int(c) // div == last_time:
+            del length[d]
+
+    short_length = [[c, length[c]] for c in length if length[c] <= diagnosis_parameters.minimal_length]
+    if len(short_length) > 0:
+        short_length = sorted(short_length, key=itemgetter(1))
+
     #
     # get cells with more than 1 mother
     #
@@ -455,13 +469,23 @@ def _diagnosis_lineage(prop, description, diagnosis_parameters, time_digits_for_
                                       + " divisions yielding more than 2 branches", 1)
         _print_list(prop, multiple_daughters, time_digits_for_cell_id=time_digits_for_cell_id, verbose=cell_verbose)
 
-    monitoring.to_log("  - terminal branch lengths: ")
-    monitoring.to_log("    " + str(branch_lengths))
-    # lengths = branch_length_histogram.keys()
-    # lengths.sort()
-    # for le in lengths:
-    #    monitoring.to_log_and_console("    length = " + str(le) + " : " + str(branch_length_histogram[le])
-    #                                  + " branches ", 1)
+    if len(short_length) > 0:
+        monitoring.to_log_and_console("  - " + str(len(short_length)) + " non-terminal branch length < " +
+                                      str(diagnosis_parameters.minimal_length), 1)
+        if len(short_length) <= diagnosis_parameters.items:
+            nitems = len(short_length)
+        else:
+            nitems = int(diagnosis_parameters.items)
+        for i in range(nitems):
+            msg = "    - " + str(short_length[i][0])
+            if keyname is not None:
+                if short_length[i][0] in prop[keyname]:
+                    msg += " (" + str(prop[keyname][short_length[i][0]]) + ")"
+            msg += " has a branch/life length of " + str(short_length[i][1])
+            monitoring.to_log_and_console(msg, 1)
+        if nitems < len(short_length):
+            msg = "    ... "
+            monitoring.to_log_and_console(msg, 1)
 
     monitoring.to_log_and_console("")
     return
