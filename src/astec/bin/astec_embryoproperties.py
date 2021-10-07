@@ -318,7 +318,7 @@ def main():
         #
 
         if args.print_diagnosis is True:
-            diagnosis.diagnosis(inputdict, args.outputFeatures, diagnosis_parameters)
+            inputdict = diagnosis.diagnosis(inputdict, args.outputFeatures, diagnosis_parameters)
 
         #
         # is there some comparison to be done?

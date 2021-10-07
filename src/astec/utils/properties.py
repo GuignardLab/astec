@@ -3,7 +3,6 @@ import os
 import sys
 
 import pickle as pkl
-import copy
 import xml.etree.ElementTree as ElementTree
 import numpy as np
 import math
@@ -419,7 +418,7 @@ def _set_xml_element_text(element, value):
             # element.text = str(value)
             element.text = repr(value)
 
-        elif isinstance(value[0], str) :
+        elif isinstance(value[0], str):
             text = "["
             for i in range(len(value)):
                 text += "'" + value[i] + "'"
@@ -901,6 +900,7 @@ def write_dictionary(inputfilename, inputpropertiesdict):
                                       + os.path.basename(inputfilename) + "'", 1)
     return
 
+
 ########################################################################################
 #
 #
@@ -908,7 +908,7 @@ def write_dictionary(inputfilename, inputpropertiesdict):
 ########################################################################################
 
 def write_morphonet_selection(d, time_digits_for_cell_id=4):
-    div = 10 ** time_digits_for_cell_id
+    div = int(10 ** time_digits_for_cell_id)
     for key in d:
         if not isinstance(key, str):
             # print("skip key '" + str(key) + "', not a string")
@@ -929,10 +929,10 @@ def write_morphonet_selection(d, time_digits_for_cell_id=4):
         # print("write key '" + str(key) + "'")
 
         f = open(key + '.txt', "w")
-        f.write("# " + name + "\n")
+        f.write("# " + str(name) + "\n")
         f.write("type:selection\n")
         for c in d[key]:
-            f.write("{:d}".format(int(c) / div) + ", {:d}".format(int(c) % div) + ":" + str(d[key][c]) + "\n")
+            f.write("{:d}".format(int(c) // div) + ", {:d}".format(int(c) % div) + " ,0:" + str(d[key][c]) + "\n")
         f.close()
 
 
@@ -1593,7 +1593,8 @@ def set_fate_from_names(d, fate=4, time_digits_for_cell_id=4):
     # forward propagation
     #
     reverse_lineage = {v: k for k, values in d['cell_lineage'].items() for v in values}
-    cells = list(set(d['cell_lineage'].keys()).union(set([v for values in list(d['cell_lineage'].values()) for v in values])))
+    cells = list(set(d['cell_lineage'].keys()).union(set([v for values in list(d['cell_lineage'].values()) for v in
+                                                          values])))
     cells = sorted(cells)
     div = 10 ** time_digits_for_cell_id
 
@@ -1643,28 +1644,28 @@ def set_fate_from_names(d, fate=4, time_digits_for_cell_id=4):
                 d[keyfate][mother] = d[keyfate][c]
         elif len(d['cell_lineage'][mother]) == 2:
             if mother in d[keyfate]:
-                if isinstance(d[keyfate][mother], str) and  isinstance(d[keyfate][c], str):
+                if isinstance(d[keyfate][mother], str) and isinstance(d[keyfate][c], str):
                     if d[keyfate][mother] != d[keyfate][c]:
                         f = d[keyfate][mother]
                         del d[keyfate][mother]
                         d[keyfate][mother] = [f, d[keyfate][c]]
                     continue
-                elif isinstance(d[keyfate][mother], list) and  isinstance(d[keyfate][c], str):
+                elif isinstance(d[keyfate][mother], list) and isinstance(d[keyfate][c], str):
                     if d[keyfate][c] not in d[keyfate][mother]:
                         d[keyfate][mother].append(d[keyfate][c])
                     continue
-                elif isinstance(d[keyfate][mother], str) and  isinstance(d[keyfate][c], list):
+                elif isinstance(d[keyfate][mother], str) and isinstance(d[keyfate][c], list):
                     if d[keyfate][mother] not in d[keyfate][c] or len(d[keyfate][c]) > 1:
                         f = d[keyfate][mother]
                         del d[keyfate][mother]
                         d[keyfate][mother] = [f] + d[keyfate][c]
                     continue
-                elif isinstance(d[keyfate][mother], list) and  isinstance(d[keyfate][c], list):
+                elif isinstance(d[keyfate][mother], list) and isinstance(d[keyfate][c], list):
                     d[keyfate][mother] = list(set(d[keyfate][mother]).union(set(d[keyfate][c])))
                     continue
                 else:
                     if not isinstance(d[keyfate][mother], str) and isinstance(d[keyfate][mother], list):
-                        msg = ":type '"+ str(type(d[keyfate][mother])) + "' of d['" + str(keyfate)
+                        msg = ":type '" + str(type(d[keyfate][mother])) + "' of d['" + str(keyfate)
                         msg += "'][" + str(mother) + "]" + "not handled yet"
                         monitoring.to_log_and_console(str(proc) + msg)
                     if not isinstance(d[keyfate][c], str) and isinstance(d[keyfate][c], list):
@@ -1683,57 +1684,25 @@ def set_fate_from_names(d, fate=4, time_digits_for_cell_id=4):
 def _set_color_from_fate(d, colormap_version=2020):
     proc = "_set_color_from_fate"
 
-    color_fate_2020 = {}
-    color_fate_2020["1st Lineage, Notochord"] = 2
-    color_fate_2020["Posterior Ventral Neural Plate"] = 19
-    color_fate_2020["Anterior Ventral Neural Plate"] = 9
-    color_fate_2020["Anterior Head Endoderm"] = 8
-    color_fate_2020["Anterior Endoderm"] = 8
-    color_fate_2020["Posterior Head Endoderm"] = 17
-    color_fate_2020["Posterior Endoderm"] = 17
-    color_fate_2020["Trunk Lateral Cell"] = 20
-    color_fate_2020["Mesenchyme"] = 14
-    color_fate_2020["1st Lineage, Tail Muscle"] = 3
-    color_fate_2020["Trunk Ventral Cell"] = 21
-    color_fate_2020["Germ Line"] = 10
-    color_fate_2020["Lateral Tail Epidermis"] = 12
-    color_fate_2020["Head Epidermis"] = 11
-    color_fate_2020["Trunk Epidermis"] = 11
-    color_fate_2020["Anterior Dorsal Neural Plate"] = 7
-    color_fate_2020["Posterior Lateral Neural Plate"] = 18
-    color_fate_2020["2nd Lineage, Notochord"] = 5
-    color_fate_2020["Medio-Lateral Tail Epidermis"] = 13
-    color_fate_2020["Midline Tail Epidermis"] = 15
-    color_fate_2020["Posterior Dorsal Neural Plate"] = 16
-    color_fate_2020["1st Endodermal Lineage"] = 1
-    color_fate_2020["2nd Lineage, Tail Muscle"] = 6
-    color_fate_2020["2nd Endodermal Lineage"] = 4
+    color_fate_2020 = {"1st Lineage, Notochord": 2, "Posterior Ventral Neural Plate": 19,
+                       "Anterior Ventral Neural Plate": 9, "Anterior Head Endoderm": 8, "Anterior Endoderm": 8,
+                       "Posterior Head Endoderm": 17, "Posterior Endoderm": 17, "Trunk Lateral Cell": 20,
+                       "Mesenchyme": 14, "1st Lineage, Tail Muscle": 3, "Trunk Ventral Cell": 21, "Germ Line": 10,
+                       "Lateral Tail Epidermis": 12, "Head Epidermis": 11, "Trunk Epidermis": 11,
+                       "Anterior Dorsal Neural Plate": 7, "Posterior Lateral Neural Plate": 18,
+                       "2nd Lineage, Notochord": 5, "Medio-Lateral Tail Epidermis": 13, "Midline Tail Epidermis": 15,
+                       "Posterior Dorsal Neural Plate": 16, "1st Endodermal Lineage": 1, "2nd Lineage, Tail Muscle": 6,
+                       "2nd Endodermal Lineage": 4}
 
-    color_fate_2009 = {}
-    color_fate_2009["1st Lineage, Notochord"] = 78
-    color_fate_2009["Posterior Ventral Neural Plate"] = 58
-    color_fate_2009["Anterior Ventral Neural Plate"] = 123
-    color_fate_2009["Anterior Head Endoderm"] = 1
-    color_fate_2009["Anterior Endoderm"] = 1
-    color_fate_2009["Posterior Head Endoderm"] = 27
-    color_fate_2009["Posterior Endoderm"] = 27
-    color_fate_2009["Trunk Lateral Cell"] = 62
-    color_fate_2009["Mesenchyme"] = 63
-    color_fate_2009["1st Lineage, Tail Muscle"] = 135
-    color_fate_2009["Trunk Ventral Cell"] = 72
-    color_fate_2009["Germ Line"] = 99
-    color_fate_2009["Lateral Tail Epidermis"] = 61
-    color_fate_2009["Head Epidermis"] = 76
-    color_fate_2020["Trunk Epidermis"] = 76
-    color_fate_2009["Anterior Dorsal Neural Plate"] = 81
-    color_fate_2009["Posterior Lateral Neural Plate"] = 75
-    color_fate_2009["2nd Lineage, Notochord"] = 199
-    color_fate_2009["Medio-Lateral Tail Epidermis"] = 41
-    color_fate_2009["Midline Tail Epidermis"] = 86
-    color_fate_2009["Posterior Dorsal Neural Plate"] = 241
-    color_fate_2009["1st Endodermal Lineage"] = 40
-    color_fate_2009["2nd Lineage, Tail Muscle"] = 110
-    color_fate_2009["2nd Endodermal Lineage"] = 44
+    color_fate_2009 = {"1st Lineage, Notochord": 78, "Posterior Ventral Neural Plate": 58,
+                       "Anterior Ventral Neural Plate": 123, "Anterior Head Endoderm": 1, "Anterior Endoderm": 1,
+                       "Posterior Head Endoderm": 27, "Posterior Endoderm": 27, "Trunk Lateral Cell": 62,
+                       "Mesenchyme": 63, "1st Lineage, Tail Muscle": 135, "Trunk Ventral Cell": 72, "Germ Line": 99,
+                       "Lateral Tail Epidermis": 61, "Head Epidermis": 76, "Trunk Epidermis": 76,
+                       "Anterior Dorsal Neural Plate": 81, "Posterior Lateral Neural Plate": 75,
+                       "2nd Lineage, Notochord": 199, "Medio-Lateral Tail Epidermis": 41, "Midline Tail Epidermis": 86,
+                       "Posterior Dorsal Neural Plate": 241, "1st Endodermal Lineage": 40,
+                       "2nd Lineage, Tail Muscle": 110, "2nd Endodermal Lineage": 44}
 
     colormap = {}
     keycolormap = None

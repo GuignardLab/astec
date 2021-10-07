@@ -78,4 +78,5 @@ def contact_atlas_process(experiment, parameters):
             ucontactf.figures_cell_neighborhood_pca(atlases.get_neighborhoods(), parameters)
 
     if parameters.naming_improvement:
-        ucontacta.global_score_improvement(atlases.get_neighborhoods(), parameters)
+        # ucontacta.global_score_improvement(atlases.get_neighborhoods(), parameters)
+        ucontacta.global_probability_improvement(atlases, parameters)

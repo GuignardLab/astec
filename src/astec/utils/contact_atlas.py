@@ -75,9 +75,10 @@ class AtlasParameters(udiagnosis.DiagnosisParameters):
         self.diagnosis_properties = False
 
         #
-        #
+        # investigate whether daughters have to be switched for a division
         #
         self.naming_improvement = False
+        self.cluster_fusion_probability = 75.0
 
     ############################################################
     #
@@ -105,7 +106,9 @@ class AtlasParameters(udiagnosis.DiagnosisParameters):
         self.varprint('delay_from_division', self.delay_from_division)
 
         self.varprint('diagnosis_properties', self.diagnosis_properties)
+
         self.varprint('naming_improvement', self.naming_improvement)
+        self.varprint('cluster_fusion_probability', self.cluster_fusion_probability)
 
         print("")
 
@@ -126,9 +129,12 @@ class AtlasParameters(udiagnosis.DiagnosisParameters):
         self.varwrite(logfile, 'add_symmetric_neighborhood', self.add_symmetric_neighborhood)
         self.varwrite(logfile, 'differentiate_other_half', self.differentiate_other_half)
         self.varwrite(logfile, 'use_common_neighborhood', self.use_common_neighborhood)
+        self.varwrite(logfile, 'delay_from_division', self.delay_from_division)
 
         self.varwrite(logfile, 'diagnosis_properties', self.diagnosis_properties)
+
         self.varwrite(logfile, 'naming_improvement', self.naming_improvement)
+        self.varwrite(logfile, 'cluster_fusion_probability', self.cluster_fusion_probability)
 
         logfile.write("\n")
         return
@@ -156,14 +162,17 @@ class AtlasParameters(udiagnosis.DiagnosisParameters):
                                                               self.add_symmetric_neighborhood)
         self.differentiate_other_half = self.read_parameter(parameters, 'differentiate_other_half',
                                                             self.differentiate_other_half)
-
         self.use_common_neighborhood = self.read_parameter(parameters, 'use_common_neighborhood',
                                                            self.use_common_neighborhood)
+        self.delay_from_division = self.read_parameter(parameters, 'delay_from_division', self.delay_from_division)
 
         self.diagnosis_properties = self.read_parameter(parameters, 'diagnosis_properties', self.diagnosis_properties)
         self.diagnosis_properties = self.read_parameter(parameters, 'naming_diagnosis', self.diagnosis_properties)
         self.diagnosis_properties = self.read_parameter(parameters, 'diagnosis_naming', self.diagnosis_properties)
+
         self.naming_improvement = self.read_parameter(parameters, 'naming_improvement', self.naming_improvement)
+        self.cluster_fusion_probability = self.read_parameter(parameters, 'cluster_fusion_probability',
+                                                              self.cluster_fusion_probability)
 
     def update_from_parameter_file(self, parameter_file):
         if parameter_file is None:
@@ -943,6 +952,440 @@ def global_score_improvement(neighborhoods, parameters):
 #
 ########################################################################################
 
+def _pi_ref_in_cluster(clusters, ref):
+    proc = "_pi_ref_in_cluster"
+    ret = None
+    for c in clusters:
+        if ref in clusters[c]:
+            if ret is not None:
+                msg = proc + ": weird, " + str(ref) + " is in cluster " + str(clusters[c])
+                msg += "\t but was already in " + str(ret)
+            ret = (c, "non-switched")
+    if ref[0:9] == 'switched-':
+        sref = ref[9:]
+    else:
+        sref = 'switched-' + ref
+    for c in clusters:
+        if sref in clusters[c]:
+            if ret is not None:
+                msg = proc + ": weird, switched" + str(sref) + " is in cluster " + str(clusters[c])
+                msg += "\t but was already in " + str(ret)
+            ret = (c, "switched")
+    return ret
+
+
+def _pi_delete_refs(tmp, ref0, ref1):
+
+    if ref0[0:9] == 'switched-':
+        r0 = ref0[9:]
+    else:
+        r0 = ref0
+    if ref1[0:9] == 'switched-':
+        r1 = ref1[9:]
+    else:
+        r1 = ref1
+
+    if (r0, r1) in tmp:
+        del tmp[(r0, r1)]
+    if (r1, r0) in tmp:
+        del tmp[(r1, r0)]
+
+    if ('switched-' + r0, r1) in tmp:
+        del tmp[('switched-' + r0, r1)]
+    if (r1, 'switched-' + r0) in tmp:
+        del tmp[(r1, 'switched-' + r0)]
+
+    if (r0, 'switched-' + r1) in tmp:
+        del tmp[(r0, 'switched-' + r1)]
+    if ('switched-' + r1, r0) in tmp:
+        del tmp[('switched-' + r1, r0)]
+
+    if ('switched-' + r0, 'switched-' + r1) in tmp:
+        del tmp[('switched-' + r0, 'switched-' + r1)]
+    if ('switched-' + r1, 'switched-' + r0) in tmp:
+        del tmp[('switched-' + r1, 'switched-' + r0)]
+
+    return tmp
+
+
+def _pi_test_one_division(atlases, mother, parameters, debug=False):
+    proc = "_pi_test_one_division"
+
+    if debug:
+        monitoring.to_log_and_console("      " + proc + ": clustering of divisions of " + str(mother))
+
+    daughters = uname.get_daughter_names(mother)
+    neighborhoods = atlases.get_neighborhoods()
+
+    #
+    #
+    #
+    references = set.intersection(set(neighborhoods[daughters[0]].keys()), set(neighborhoods[daughters[1]].keys()))
+    stages = []
+    for r in references:
+        for d in daughters:
+            for n in neighborhoods[d][r]:
+                if n == 'background' or n == 'other-half':
+                    continue
+                stages += [str(n).split('.')[0][1:]]
+    if debug:
+        msg = "      - maximal stage in neighbors is " + str(max(stages))
+        monitoring.to_log_and_console("    " + msg)
+
+    #
+    # construction of the dictionary of neighborhood config[(switched-)ref][0,1]
+    #
+    config = {}
+    for r in references:
+        config[r] = {}
+        config[r][0] = copy.deepcopy(neighborhoods[daughters[0]][r])
+        config[r][1] = copy.deepcopy(neighborhoods[daughters[1]][r])
+        sr = 'switched-' + str(r)
+        config[sr] = {}
+        config[sr][0] = copy.deepcopy(neighborhoods[daughters[1]][r])
+        config[sr][1] = copy.deepcopy(neighborhoods[daughters[0]][r])
+        if daughters[1] in config[sr][0]:
+            if debug:
+                msg = "  weird, " + str(daughters[1]) + " was found in its neighborhood for reference " + str(r)
+                monitoring.to_log_and_console("      " + msg)
+        if daughters[0] in config[sr][0]:
+            config[sr][0][daughters[1]] = config[sr][0][daughters[0]]
+            del config[sr][0][daughters[0]]
+        if daughters[0] in config[sr][1]:
+            if debug:
+                msg = "  weird, " + str(daughters[0]) + " was found in its neighborhood for reference " + str(r)
+                monitoring.to_log_and_console("      " + msg)
+        if daughters[1] in config[sr][1]:
+            config[sr][1][daughters[0]] = config[sr][1][daughters[1]]
+            del config[sr][1][daughters[1]]
+
+    #
+    # computation of probabilities
+    #
+    prob = {}
+    for r in config:
+        for s in config:
+            if r >= s:
+                continue
+            if r == 'switched-' + str(s) or s == 'switched-' + str(r):
+                continue
+            a = ucontact.contact_distance(config[r][0], config[s][0], similarity=parameters.contact_similarity)
+            b = ucontact.contact_distance(config[r][1], config[s][1], similarity=parameters.contact_similarity)
+            #
+            # probabilities are supposed to be symmetrical but are not ...
+            #
+            prob[(r, s)] = (atlases.get_probability(a, b) + atlases.get_probability(b, a)) / 2.0
+            prob[(s, r)] = prob[(r, s)]
+
+    #
+    #
+    #
+    tmp = copy.deepcopy(prob)
+    clusters = {}
+    ncluster = 0
+    i = 0
+    while len(tmp) > 0:
+        i += 1
+        #
+        # sortedprob is an array of [tuple, value] where the 2-tuple is a couple of reference
+        #
+        sortedprob = [[c, tmp[c]] for c in tmp]
+        sortedprob = sorted(sortedprob, key=operator.itemgetter(1), reverse=True)
+        if debug:
+            msg = "  #" + str(i) + " max prob = " + str(sortedprob[0][1]) + " for " + str(sortedprob[0][0])
+            monitoring.to_log_and_console("      " + msg)
+
+        #
+        # sortedprob[0]       = first value after sort, ie the largest value
+        # sortedprob[0][0]    = the corresponding tuple, ie the couple of references yielding the largest value
+        # sortedprob[0][0][0] = the first reference
+        # sortedprob[0][0][1] = the second reference
+        #
+        c0 = _pi_ref_in_cluster(clusters, sortedprob[0][0][0])
+        c1 = _pi_ref_in_cluster(clusters, sortedprob[0][0][1])
+
+        clusters_have_changed = False
+
+        if c0 is None:
+            # new cluster
+            if c1 is None:
+                clusters_have_changed = True
+                if debug:
+                    monitoring.to_log_and_console("      " + "  - new cluster " + str(ncluster))
+                if sortedprob[0][0][0][0:9] == 'switched-' and sortedprob[0][0][1][0:9] == 'switched-':
+                    clusters[str(ncluster)] = [sortedprob[0][0][0][9:], sortedprob[0][0][1][9:]]
+                else:
+                    clusters[str(ncluster)] = [sortedprob[0][0][0], sortedprob[0][0][1]]
+                ncluster += 1
+            # add sortedprob[0][0][0] to c1 cluster
+            else:
+                clusters_have_changed = True
+                if debug:
+                    monitoring.to_log_and_console("      " + "  - add to cluster " + str(c1[0]))
+                if c1[1] == "non-switched":
+                    clusters[c1[0]] += [sortedprob[0][0][0]]
+                else:
+                    if sortedprob[0][0][0][0:9] == 'switched-':
+                        clusters[c1[0]] += [sortedprob[0][0][0][9:]]
+                    else:
+                        clusters[c1[0]] += ['switched-' + sortedprob[0][0][0]]
+                for r in clusters[c1[0]]:
+                    if r == sortedprob[0][0][0]:
+                        continue
+                    _pi_delete_refs(tmp, sortedprob[0][0][0], r)
+        else:
+            # add sortedprob[0][0][1] to c0 cluster
+            if c1 is None:
+                clusters_have_changed = True
+                if debug:
+                    monitoring.to_log_and_console("      " + "  - add to cluster " + str(c0[0]))
+                if c0[1] == "non-switched":
+                    clusters[c0[0]] += [sortedprob[0][0][1]]
+                else:
+                    if sortedprob[0][0][1][0:9] == 'switched-':
+                        clusters[c0[0]] += [sortedprob[0][0][1][9:]]
+                    else:
+                        clusters[c0[0]] += ['switched-' + sortedprob[0][0][1]]
+                for r in clusters[c0[0]]:
+                    if r == sortedprob[0][0][1]:
+                        continue
+                    _pi_delete_refs(tmp, sortedprob[0][0][1], r)
+            # bridge between 2 clusters
+            else:
+                if debug:
+                    msg = "  - could fuse clusters " + str(c0[0]) + " and " + str(c1[0])
+                    if c0[1] == c1[1]:
+                        msg += " without switch"
+                    else:
+                        msg += ", one of them being switched"
+                    monitoring.to_log_and_console("      " + msg)
+
+        #
+        # remove couples of probabilities
+        #
+        tmp = _pi_delete_refs(tmp, sortedprob[0][0][0], sortedprob[0][0][1])
+
+        if debug and clusters_have_changed:
+            monitoring.to_log_and_console("      " + "  - clusters = " + str(clusters))
+
+    return clusters, prob, references
+
+
+def _pi_intra_cluster_statistics(cluster, prob):
+    p = []
+    for r in cluster:
+        for s in cluster:
+            if r >= s:
+                continue
+            p += [prob[(r, s)]]
+    return p
+
+
+def _pi_inter_cluster_statistics(cluster, dluster, prob):
+    proc = "_pi_inter_cluster_statistics"
+    p = {"non-switched": [], "switched": []}
+    for r in cluster:
+        for s in dluster:
+            p["non-switched"] += [prob[(r, s)]]
+            if r[0:9] == 'switched-':
+                sr = r[9:]
+            else:
+                sr = 'switched-' + r
+            if s[0:9] == 'switched-':
+                ss = s[9:]
+            else:
+                ss = 'switched-' + s
+            p["switched"] += [prob[(sr, s)]]
+            p["switched"] += [prob[(r, ss)]]
+    return p
+
+
+def _pi_cluster_fusion(clusters, stats, prob, parameters):
+    if len(clusters) == 1:
+        return clusters, stats
+
+    tmpprob = {}
+    representative = {}
+    #
+    # clusters keys are 0, 1, 2, ...
+    #
+    for c in clusters:
+        representative[c] = str(c)
+        for d in clusters:
+            if c >= d:
+                continue
+            tmpprob[(c, d, "non-switched")] = max(stats[c][d]["non-switched"])
+            tmpprob[(c, d, "switched")] = max(stats[c][d]["switched"])
+
+    #
+    #
+    #
+    tmp = copy.deepcopy(tmpprob)
+    i = 0
+    while len(tmp) > 0:
+
+        sortedprob = [[c, tmp[c]] for c in tmp]
+        sortedprob = sorted(sortedprob, key=operator.itemgetter(1), reverse=True)
+        #
+        # sortedprob[0][0] = (c, d, ["switched", "non-switched"] with d > c
+        # c, d are 0, 1, 2, ...
+        # representative keys are clusters keys, ie 0, 1, 2, ...
+        # representative values are 0, 1, 2, ... potentially prefixed with 'switched-'
+        #
+
+        if sortedprob[0][1] < parameters.cluster_fusion_probability:
+            break
+
+        r = representative[sortedprob[0][0][0]]
+        if r[0:9] == 'switched-':
+            sr = r[9:]
+        else:
+            sr = 'switched-' + str(r)
+        #
+        # build equivalences
+        #
+        for c in clusters:
+            #
+            # look for representative = sortedprob[0][0][1] or 'switched-'sortedprob[0][0][1]
+            #
+            if representative[c] == str(sortedprob[0][0][1]):
+                if sortedprob[0][0][2] == "switched":
+                    representative[c] = sr
+                else:
+                    representative[c] = r
+            elif representative[c] == 'switched-' + str(sortedprob[0][0][1]):
+                if sortedprob[0][0][2] == "switched":
+                    representative[c] = r
+                else:
+                    representative[c] = sr
+
+        del tmp[sortedprob[0][0]]
+        i += 1
+
+    newclusters = {}
+    ncluster = 0
+    for c in representative:
+        if representative[c] == c:
+            newclusters[c] = clusters[c]
+            ncluster += 1
+        else:
+            if representative[c][0:9] == 'switched-':
+                r = representative[c][9:]
+                for ref in clusters[c]:
+                    if ref[0:9] == 'switched-':
+                        newclusters[r] += [ref[9:]]
+                    else:
+                        newclusters[r] += ['switched-' + ref]
+            else:
+                newclusters[representative[c]] += clusters[c]
+
+    newstats = {}
+    for c in newclusters:
+        newstats[c] = {}
+        newstats[c][c] = _pi_intra_cluster_statistics(newclusters[c], prob)
+        for d in newclusters:
+            if c >= d:
+                continue
+            newstats[c][d] = _pi_inter_cluster_statistics(newclusters[c], newclusters[d], prob)
+
+    return newclusters, newstats
+
+
+def _pi_print_cluster_stats(clusters, stats, cluster_name="cluster", verbose=3):
+    for c in clusters:
+        msg = "    - " + str(cluster_name) + " #" + str(c) + " = " + str(clusters[c])
+        monitoring.to_log_and_console(msg, verbose)
+        if monitoring.verbose >= verbose:
+            msg = "      intra-" + str(cluster_name) + " probabilities:"
+            msg += " min = {:2.2f}".format(min(stats[c][c]))
+            msg += " mean = {:2.2f}".format(np.mean(stats[c][c]))
+            msg += " max = {:2.2f}".format(max(stats[c][c]))
+            monitoring.to_log_and_console(msg, verbose)
+    for c in clusters:
+        for d in clusters:
+            if c >= d:
+                continue
+            msg = "      - " + str(cluster_name) + " #" + str(c) + " <=> " + str(cluster_name) + " #" + str(d)
+            monitoring.to_log_and_console(msg, verbose)
+            msg = "        inter-" + str(cluster_name) + " probabilities (without switch):"
+            msg += " min = {:2.2f}".format(min(stats[c][d]["non-switched"]))
+            msg += " mean = {:2.2f}".format(np.mean(stats[c][d]["non-switched"]))
+            msg += " max = {:2.2f}".format(max(stats[c][d]["non-switched"]))
+            monitoring.to_log_and_console(msg, verbose)
+            msg = "                                    (with switch):  "
+            msg += " min = {:2.2f}".format(min(stats[c][d]["switched"]))
+            msg += " mean = {:2.2f}".format(np.mean(stats[c][d]["switched"]))
+            msg += " max = {:2.2f}".format(max(stats[c][d]["switched"]))
+            monitoring.to_log_and_console(msg, verbose)
+
+
+def global_probability_improvement(atlases, parameters):
+    proc = "global_probability_improvement"
+
+    # neighborhoods is a dictionary of dictionaries
+    # ['cell name']['reference name']
+    # first key is a cell name (daughter cell)
+    # second key is the reference from which the neighborhood has been extracted
+
+    #
+    # mother cell name dictionary indexed by stage
+    # stage 6: 32 cells
+    # stage 7: 64 cells
+    #
+    mothers = {}
+    neighborhoods = atlases.get_neighborhoods()
+    for c in neighborhoods:
+        mother = uname.get_mother_name(c)
+        stage = mother.split('.')[0][1:]
+        if stage not in mothers:
+            mothers[stage] = []
+        if mother not in mothers[stage]:
+            mothers[stage] += [mother]
+
+    for s in mothers:
+        mothers[s] = sorted(mothers[s])
+
+    stages = list(mothers.keys())
+    stages.sort()
+
+    monitoring.to_log_and_console("====== global probability improvement =====")
+    for s in stages:
+        # if int(s) != 7:
+        #    continue
+        monitoring.to_log_and_console("")
+        msg = "- stage " + str(s)
+        monitoring.to_log_and_console(msg)
+        for m in mothers[s]:
+            # if m != 'a7.0002_':
+            #     continue
+
+            clusters, prob, references = _pi_test_one_division(atlases, m, parameters, debug=False)
+            stats = {}
+            for c in clusters:
+                stats[c] = {}
+                stats[c][c] = _pi_intra_cluster_statistics(clusters[c], prob)
+                for d in clusters:
+                    if c >= d:
+                        continue
+                    stats[c][d] = _pi_inter_cluster_statistics(clusters[c], clusters[d], prob)
+
+            msg = "  - division of " + str(m)
+            monitoring.to_log_and_console(msg)
+
+            _pi_print_cluster_stats(clusters, stats, cluster_name="cluster", verbose=4)
+
+            newclusters, newstats = _pi_cluster_fusion(clusters, stats, prob, parameters)
+            _pi_print_cluster_stats(newclusters, newstats, cluster_name="fused-cluster", verbose=3)
+
+    monitoring.to_log_and_console("===========================================")
+
+
+########################################################################################
+#
+#
+#
+########################################################################################
+
 def _add_neighborhoods(previous_neighborhoods, prop, parameters, atlas_name, time_digits_for_cell_id=4):
     """
 
@@ -1222,9 +1665,13 @@ class Atlases(object):
         # [0, 4]: 0 means a total consistency while 4 designs a total inconsistency.
 
         if parameters.use_common_neighborhood:
+            monitoring.to_log_and_console("... build common neighborhoods", 1)
             self._neighborhoods = _build_common_neighborhoods(self._neighborhoods)
+            monitoring.to_log_and_console("    done", 1)
 
+        monitoring.to_log_and_console("... build probabilities", 1)
         self.build_probabilities(parameters)
+        monitoring.to_log_and_console("    done", 1)
 
         if parameters.diagnosis_properties:
             monitoring.to_log_and_console("============================================================")

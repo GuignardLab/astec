@@ -339,10 +339,14 @@ def _diagnosis_lineage(prop, description, diagnosis_parameters, time_digits_for_
     if len(keyset) > 0:
         keyname = list(keyset)[0]
 
-    direct_lineage = prop[keylineage]
+    keydiagnosis = 'selection_diagnosis_lineage'
+    if keydiagnosis in prop:
+        del prop[keydiagnosis]
+    prop[keydiagnosis] = {}
 
     monitoring.to_log_and_console("  === " + str(description) + " diagnosis === ", 1)
 
+    direct_lineage = prop[keylineage]
     first_time, last_time = _get_time_interval_from_lineage(direct_lineage,
                                                             time_digits_for_cell_id=time_digits_for_cell_id)
     monitoring.to_log_and_console("  - estimated time interval = [" + str(first_time) + ", " + str(last_time) + "]", 1)
@@ -436,6 +440,8 @@ def _diagnosis_lineage(prop, description, diagnosis_parameters, time_digits_for_
         monitoring.to_log_and_console("  - " + str(len(late_orphans))
                                       + " lineage branches starting after the first time point", 1)
         _print_list(prop, late_orphans, time_digits_for_cell_id=time_digits_for_cell_id, verbose=cell_verbose)
+        for c in late_orphans:
+            prop[keydiagnosis][c] = 10
 
     if len(multiple_mothers) > 0:
         multiple_mothers.sort()
@@ -444,6 +450,8 @@ def _diagnosis_lineage(prop, description, diagnosis_parameters, time_digits_for_
             cell_verbose = 1
         monitoring.to_log_and_console("  - " + str(len(multiple_mothers)) + " cells with multiple mother cells", 1)
         _print_list(prop, multiple_mothers, time_digits_for_cell_id=time_digits_for_cell_id, verbose=cell_verbose)
+        for c in multiple_mothers:
+            prop[keydiagnosis][c] = 20
 
     if len(leaves) > 0:
         monitoring.to_log_and_console("  - " + str(len(leaves))
@@ -456,6 +464,8 @@ def _diagnosis_lineage(prop, description, diagnosis_parameters, time_digits_for_
         monitoring.to_log_and_console("  - " + str(len(early_leaves))
                                       + " lineage terminal branches ending before the last time point", 1)
         _print_list(prop, early_leaves, time_digits_for_cell_id=time_digits_for_cell_id, verbose=cell_verbose)
+        for c in early_leaves:
+            prop[keydiagnosis][c] = 30
 
     if len(divisions) > 0:
         divisions.sort()
@@ -468,6 +478,8 @@ def _diagnosis_lineage(prop, description, diagnosis_parameters, time_digits_for_
         monitoring.to_log_and_console("  - " + str(len(multiple_daughters))
                                       + " divisions yielding more than 2 branches", 1)
         _print_list(prop, multiple_daughters, time_digits_for_cell_id=time_digits_for_cell_id, verbose=cell_verbose)
+        for c in multiple_daughters:
+            prop[keydiagnosis][c] = 30
 
     if len(short_length) > 0:
         monitoring.to_log_and_console("  - " + str(len(short_length)) + " non-terminal branch length < " +
@@ -486,9 +498,11 @@ def _diagnosis_lineage(prop, description, diagnosis_parameters, time_digits_for_
         if nitems < len(short_length):
             msg = "    ... "
             monitoring.to_log_and_console(msg, 1)
+        for c in short_length:
+            prop[keydiagnosis][c[0]] = 40
 
     monitoring.to_log_and_console("")
-    return
+    return prop
 
 
 # def _diagnosis_h_min(d):
@@ -523,6 +537,11 @@ def _diagnosis_volume(prop, description, diagnosis_parameters, time_digits_for_c
     if len(keyset) > 0:
         keyvolume = list(keyset)[0]
 
+    keydiagnosis = 'selection_diagnosis_volume'
+    if keydiagnosis in prop:
+        del prop[keydiagnosis]
+    prop[keydiagnosis] = {}
+
     monitoring.to_log_and_console("  === " + str(description) + " diagnosis === ", 1)
 
     all_cell_with_volume = set(prop[keyvolume].keys())
@@ -535,6 +554,7 @@ def _diagnosis_volume(prop, description, diagnosis_parameters, time_digits_for_c
     monitoring.to_log_and_console("    found " + str(len(background_with_volume)) + " background cells with volume", 1)
     monitoring.to_log_and_console("    found " + str(len(cell_with_volume)) + " cells with volume", 1)
 
+    monitoring.to_log_and_console("")
     monitoring.to_log_and_console("  - smallest volumes", 1)
 
     d = DiagnosisParameters()
@@ -604,6 +624,7 @@ def _diagnosis_volume(prop, description, diagnosis_parameters, time_digits_for_c
     volume = [[c, volume_variation[c]] for c in volume_variation]
     volume = sorted(volume, key=itemgetter(1), reverse=True)
 
+    monitoring.to_log_and_console("")
     monitoring.to_log_and_console("  - largest volume variation [100.0 * (max-min)/median]", 1)
 
     if isinstance(diagnosis_parameters, DiagnosisParameters):
@@ -623,6 +644,7 @@ def _diagnosis_volume(prop, description, diagnosis_parameters, time_digits_for_c
     volume = [[c, volume_max_derivative[c]] for c in volume_max_derivative]
     volume = sorted(volume, key=itemgetter(1), reverse=True)
 
+    monitoring.to_log_and_console("")
     monitoring.to_log_and_console("  - largest volume derivative [100.0 * (v[t+1]-v[t])/v[t]]", 1)
 
     if isinstance(diagnosis_parameters, DiagnosisParameters):
@@ -639,17 +661,28 @@ def _diagnosis_volume(prop, description, diagnosis_parameters, time_digits_for_c
             msg += " has volume maximal derivative = {:.2f}".format(volume[i][1])
             msg += " [branch length = " + str(len(volume_along_time[volume[i][0]])) + "]"
             monitoring.to_log_and_console("    " + msg, 1)
-            c = volume[i][0]
-            for j in range(len(volume_derivative[c])):
-                if (0 < v <= abs(volume_derivative[c][j])) or abs(volume_derivative[c][j]) > volume[i][1] - 0.1:
+            cell = volume[i][0]
+            c = cell
+            for j in range(len(volume_derivative[cell])):
+                if (0 < v <= abs(volume_derivative[cell][j])) or abs(volume_derivative[cell][j]) > volume[i][1] - 0.1:
                     msg = "    - from time " + str(t+j) + " to " + str(t+j+1)
-                    msg += ", volume evolves from " + str(volume_along_time[c][j]) + " to "
-                    msg += str(volume_along_time[c][j+1])
-                    msg += " (derivative = {:.2f}".format(volume_derivative[c][j]) + ")"
+                    msg += ", volume evolves from " + str(volume_along_time[cell][j]) + " to "
+                    msg += str(volume_along_time[cell][j+1])
+                    msg += " (derivative = {:.2f}".format(volume_derivative[cell][j]) + ")"
                     monitoring.to_log_and_console(msg, 1)
+                    if c not in prop[keydiagnosis]:
+                        prop[keydiagnosis][c] = int(abs(volume_derivative[cell][j]))
+                    else:
+                        prop[keydiagnosis][c] = max(prop[keydiagnosis][c], int(abs(volume_derivative[cell][j])))
+                    prop[keydiagnosis][lineage[c][0]] = int(abs(volume_derivative[cell][j]))
+                    c = lineage[c][0]
+
+    for c in prop[keydiagnosis]:
+        if prop[keydiagnosis][c] > 255:
+            prop[keydiagnosis][c] = 255
 
     monitoring.to_log_and_console("")
-    return
+    return prop
 
 
 # def _diagnosis_sigma(d):
@@ -688,6 +721,12 @@ def _diagnosis_name(prop, description, time_digits_for_cell_id=4):
     if len(keyset) > 0:
         keylineage = list(keyset)[0]
 
+    keydiagnosis = 'selection_diagnosis_name'
+    if keydiagnosis in prop:
+        del prop[keydiagnosis]
+    prop[keydiagnosis] = {}
+
+
     monitoring.to_log_and_console("  === " + str(description) + " diagnosis === ", 1)
 
     name = prop[keyname]
@@ -719,12 +758,14 @@ def _diagnosis_name(prop, description, time_digits_for_cell_id=4):
             if c in reverse_lineage:
                 mother = reverse_lineage[c]
                 if len(lineage[mother]) == 1 and mother in name:
+                    prop[keydiagnosis][c] = 10
                     msg = "    cell " + str(c) + " has no name"
                     msg += ", but its mother cell " + str(mother) + " has a name " + str(name[mother])
                     monitoring.to_log_and_console(msg)
         elif c in reverse_lineage:
             mother = reverse_lineage[c]
             if mother not in name:
+                prop[keydiagnosis][c] = 20
                 msg = "    cell " + str(c) + " has a name '" + str(name[c]) + "'"
                 msg += ", but its mother cell " + str(mother) + " has no name"
                 monitoring.to_log_and_console(msg)
@@ -732,6 +773,7 @@ def _diagnosis_name(prop, description, time_digits_for_cell_id=4):
             else:
                 if len(lineage[mother]) == 1:
                     if name[mother] != name[c]:
+                        prop[keydiagnosis][c] = 30
                         msg = "    cell " + str(c) + " has a name = " + str(name[c])
                         msg += " different than its mother cell " + str(mother) + " name = " + str(name[mother])
                         monitoring.to_log_and_console(msg)
@@ -742,6 +784,7 @@ def _diagnosis_name(prop, description, time_digits_for_cell_id=4):
                     # check whether name[c] is in daughters' names
                     #
                     if name[c] not in daughter_names:
+                        prop[keydiagnosis][c] = 40
                         msg = "    cell " + str(c) + " is named " + str(name[c])
                         msg += " but should be in " + str(daughter_names)
                         msg += " since its mother cell " + str(mother) + " is named " + str(name[mother])
@@ -755,6 +798,7 @@ def _diagnosis_name(prop, description, time_digits_for_cell_id=4):
                         siblings.remove(c)
                         daughter_names.remove(name[c])
                         if siblings[0] not in name:
+                            prop[keydiagnosis][c] = 50
                             msg = "    cell " + str(siblings[0]) + " has no name "
                             msg += ", it should be " + str(daughter_names[0])
                             msg += " since its mother cell " + str(mother) + " is named " + str(name[mother])
@@ -762,12 +806,14 @@ def _diagnosis_name(prop, description, time_digits_for_cell_id=4):
                             monitoring.to_log_and_console(msg)
                             error_name[t] = error_name.get(t, []) + [siblings[0]]
                         elif name[siblings[0]] == name[c]:
+                            prop[keydiagnosis][c] = 60
                             msg = "    cell " + str(siblings[0]) + " as named " + str(name[c])
                             msg += " as its sibling " + str(c)
                             msg += ", their mother cell " + str(mother) + " is named " + str(name[mother])
                             monitoring.to_log_and_console(msg)
                             error_name[t] = error_name.get(t, []) + [c]
                         elif name[siblings[0]] != daughter_names[0]:
+                            prop[keydiagnosis][c] = 70
                             msg = "    cell " + str(siblings[0]) + " is named " + str(name[siblings[0]])
                             msg += " but should be " + str(daughter_names[0])
                             msg += " since its mother cell " + str(mother) + " is named " + str(name[mother])
@@ -775,6 +821,7 @@ def _diagnosis_name(prop, description, time_digits_for_cell_id=4):
                             monitoring.to_log_and_console(msg)
                             error_name[t] = error_name.get(t, []) + [siblings[0]]
                 else:
+                    prop[keydiagnosis][mother] = 80
                     msg = "    cell " + str(mother) + " has " + str(len(lineage[mother])) + " daughter cells"
                     msg += ": " + str(lineage[mother])
                     monitoring.to_log_and_console(msg)
@@ -785,6 +832,9 @@ def _diagnosis_name(prop, description, time_digits_for_cell_id=4):
             msg = "  - there are " + str(len(repeats)) + " repeated names at time " + str(t)
             monitoring.to_log_and_console(msg)
             for n, p in repeats.items():
+                cells = [c for c in name if name[c] == n]
+                for c in cells:
+                    prop[keydiagnosis][c] = 90
                 msg = "    - " + str(n) + " is repeated " + str(p) + " times "
                 monitoring.to_log_and_console(msg)
 
@@ -799,7 +849,7 @@ def _diagnosis_name(prop, description, time_digits_for_cell_id=4):
                                   str(len(list(collections.Counter(list(name.keys())).keys()))))
     monitoring.to_log_and_console("")
 
-    return
+    return prop
 
 
 # def _diagnosis_contact(d):
@@ -822,6 +872,11 @@ def _diagnosis_contact(prop, description, diagnosis_parameters, time_digits_for_
     keyset = set(prop.keys()).intersection(properties.keydictionary['lineage']['input_keys'])
     if len(keyset) > 0:
         keylineage = list(keyset)[0]
+
+    keydiagnosis = 'selection_diagnosis_contact_surface'
+    if keydiagnosis in prop:
+        del prop[keydiagnosis]
+    prop[keydiagnosis] = {}
 
     monitoring.to_log_and_console("  === " + str(description) + " diagnosis === ", 1)
 
@@ -985,22 +1040,42 @@ def _diagnosis_contact(prop, description, diagnosis_parameters, time_digits_for_
         msg += " branch length of " + str(len(score_along_time[cell]))
         if cell in cells_with_problem:
             msg += " (warning: some cells were not in the reversed lineage)"
+        #
+        # branch of length 1
+        #
         if len(score_along_time[cell]) <= 1:
             if first_time == last_time - 1:
                 continue
             monitoring.to_log_and_console(msg)
             continue
+        #
+        # branch with all distances (between successive contact surface vectors) below the threshold
+        #
         if max(score_along_time[cell][1:]) < diagnosis_parameters.maximal_contact_similarity:
             continue
+        #
+        # here, the branch has at least a couple of successive successive contact surface vectors has
+        # a distance above the threshold
+        #
         monitoring.to_log_and_console(msg)
         for i in range(1, len(score_along_time[cell])):
             if score_along_time[cell][i] < diagnosis_parameters.maximal_contact_similarity:
                 continue
+            c = cell
+            for j in range(i):
+                c = lineage[c][0]
+            if c not in prop[keydiagnosis]:
+                prop[keydiagnosis][c] = int(255 * score_along_time[cell][i])
+            else:
+                prop[keydiagnosis][c] = max(prop[keydiagnosis][c], int(255 * score_along_time[cell][i]))
+            prop[keydiagnosis][lineage[c][0]] = int(255 * score_along_time[cell][i])
             msg = "    - distance of " + str(score_along_time[cell][i]) + " between "
-            msg += str(first_time + i) + " and " + str(first_time + i + 1)
+            msg += "times " + str(first_time + i) + " and " + str(first_time + i + 1)
+            msg += " (cells " + str(c) + " and " + str(lineage[c][0]) + ")"
             monitoring.to_log_and_console(msg)
 
     monitoring.to_log_and_console("")
+    return prop
 
 # def _diagnosis_history(d):
 #     return
@@ -1021,23 +1096,24 @@ def _diagnosis_one_feature(prop, feature, diagnosis_parameters, time_digits_for_
             key = k
     if key is None:
         monitoring.to_log_and_console(proc + ": property '" + str(feature) + "' not found in 'keydictionary'", 1)
-        return
+        return prop
 
     #
     #
     #
-    for k in prop:
+    propkeys = list(prop.keys())
+    for k in propkeys:
         if k not in properties.keydictionary[key]['input_keys']:
             continue
 
         if k in properties.keydictionary['lineage']['input_keys']:
-            _diagnosis_lineage(prop, k, diagnosis_parameters=diagnosis_parameters,
-                               time_digits_for_cell_id=time_digits_for_cell_id)
+            prop = _diagnosis_lineage(prop, k, diagnosis_parameters=diagnosis_parameters,
+                                      time_digits_for_cell_id=time_digits_for_cell_id)
         elif k in properties.keydictionary['h_min']['input_keys']:
             pass
         elif k in properties.keydictionary['volume']['input_keys']:
-            _diagnosis_volume(prop, k, diagnosis_parameters=diagnosis_parameters,
-                              time_digits_for_cell_id=time_digits_for_cell_id)
+            prop = _diagnosis_volume(prop, k, diagnosis_parameters=diagnosis_parameters,
+                                     time_digits_for_cell_id=time_digits_for_cell_id)
         elif k in properties.keydictionary['surface']['input_keys']:
             pass
         elif k in properties.keydictionary['compactness']['input_keys']:
@@ -1055,16 +1131,17 @@ def _diagnosis_one_feature(prop, feature, diagnosis_parameters, time_digits_for_
         elif k in properties.keydictionary['principal-value']['input_keys']:
             pass
         elif k in properties.keydictionary['name']['input_keys']:
-            _diagnosis_name(prop, k, time_digits_for_cell_id=time_digits_for_cell_id)
+            prop = _diagnosis_name(prop, k, time_digits_for_cell_id=time_digits_for_cell_id)
         elif k in properties.keydictionary['contact']['input_keys']:
-            _diagnosis_contact(prop, k, diagnosis_parameters=diagnosis_parameters,
-                               time_digits_for_cell_id=time_digits_for_cell_id)
+            prop = _diagnosis_contact(prop, k, diagnosis_parameters=diagnosis_parameters,
+                                      time_digits_for_cell_id=time_digits_for_cell_id)
         elif k in properties.keydictionary['history']['input_keys']:
             pass
         elif k in properties.keydictionary['principal-vector']['input_keys']:
             pass
         else:
             monitoring.to_log_and_console("    unknown key '" + str(k) + "' for diagnosis", 1)
+    return prop
 
 
 def diagnosis(prop, features=None, parameters=None, time_digits_for_cell_id=4):
@@ -1164,22 +1241,25 @@ def diagnosis(prop, features=None, parameters=None, time_digits_for_cell_id=4):
     #
     # diagnosis on all features of the property dictionary, or only on requested features
     #
+    propkeys = list(prop.keys())
     if features is None or (isinstance(features, list) and len(features) == 0) or \
             (isinstance(features, str) and len(features) == 0):
-        for k in prop:
-            _diagnosis_one_feature(prop, k, diagnosis_parameters, time_digits_for_cell_id=time_digits_for_cell_id)
+        for k in propkeys:
+            prop = _diagnosis_one_feature(prop, k, diagnosis_parameters,
+                                          time_digits_for_cell_id=time_digits_for_cell_id)
     else:
         if isinstance(features, str):
-            _diagnosis_one_feature(prop, features, diagnosis_parameters,
+            prop = _diagnosis_one_feature(prop, features, diagnosis_parameters,
                                    time_digits_for_cell_id=time_digits_for_cell_id)
         elif isinstance(features, list):
             for f in features:
-                _diagnosis_one_feature(prop, f, diagnosis_parameters, time_digits_for_cell_id=time_digits_for_cell_id)
+                prop = _diagnosis_one_feature(prop, f, diagnosis_parameters,
+                                              time_digits_for_cell_id=time_digits_for_cell_id)
 
     monitoring.to_log_and_console("  === end of diagnosis === ", 1)
     monitoring.to_log_and_console("")
 
-    return
+    return prop
 
 
 

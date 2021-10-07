@@ -24,7 +24,9 @@ def figures_division_score(neighborhoods, parameters):
     if parameters.figurefile_suffix is not None and isinstance(parameters.figurefile_suffix, str) and \
             len(parameters.figurefile_suffix) > 0:
         file_suffix = '_' + parameters.figurefile_suffix
-    filename += file_suffix + '.py'
+    if file_suffix is not None:
+        filename += file_suffix
+    filename += '.py'
 
     #
     # get the references per mother_name
@@ -227,7 +229,9 @@ def figures_division_probability(atlases, parameters):
     if parameters.figurefile_suffix is not None and isinstance(parameters.figurefile_suffix, str) and \
             len(parameters.figurefile_suffix) > 0:
         file_suffix = '_' + parameters.figurefile_suffix
-    filename += file_suffix + '.py'
+    if file_suffix is not None:
+        filename += file_suffix
+    filename += '.py'
 
     #
     # get the references per mother_name
@@ -417,7 +421,9 @@ def figures_cell_neighborhood_pca(neighborhoods, parameters, min_samples=4):
     if parameters.figurefile_suffix is not None and isinstance(parameters.figurefile_suffix, str) and \
             len(parameters.figurefile_suffix) > 0:
         file_suffix = '_' + parameters.figurefile_suffix
-    filename += file_suffix + '.py'
+    if file_suffix is not None:
+        filename += file_suffix
+    filename += '.py'
 
     f = open(filename, "w")
 
@@ -534,7 +540,9 @@ def figures_histogram_scores(neighborhoods, parameters):
     if parameters.figurefile_suffix is not None and isinstance(parameters.figurefile_suffix, str) and \
             len(parameters.figurefile_suffix) > 0:
         file_suffix = '_' + parameters.figurefile_suffix
-    filename += file_suffix + '.py'
+    if file_suffix is not None:
+        filename += file_suffix
+    filename += '.py'
 
     cell_score_by_stage = {}
     sister_score_by_stage = {}
@@ -627,7 +635,9 @@ def figures_histogram2D_scores(atlases, parameters):
     if parameters.figurefile_suffix is not None and isinstance(parameters.figurefile_suffix, str) and \
             len(parameters.figurefile_suffix) > 0:
         file_suffix = '_' + parameters.figurefile_suffix
-    filename += file_suffix + '.py'
+    if file_suffix is not None:
+        filename += file_suffix
+    filename += '.py'
 
     neighborhoods = atlases.get_neighborhoods()
 
