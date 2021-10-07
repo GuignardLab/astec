@@ -28,25 +28,52 @@ monitoring = common.Monitoring()
 #
 ########################################################################################
 
-class CellPropertiesParameters(object):
+class CellPropertiesParameters(common.PrefixedParameter):
 
-    def __init__(self):
+    def __init__(self, prefix=None):
+
+        common.PrefixedParameter.__init__(self, prefix=prefix)
+
+        if "doc" not in self.__dict__:
+            self.doc = {}
+
         self.max_chunks_properties = None
-
-    def write_parameters(self, log_file_name):
-        with open(log_file_name, 'a') as logfile:
-            logfile.write("\n")
-            logfile.write('CellPropertiesParameters\n')
-            logfile.write('- max_chunks_properties = ' + str(self.max_chunks_properties) + '\n')
-            logfile.write("\n")
-        return
+        self.sigma_segmentation_smoothing = None
 
     def print_parameters(self):
         print("")
-        print('CellPropertiesParameters')
-        print('- max_chunks_properties = ' + str(self.max_chunks_properties))
+        print('#')
+        print('# CellPropertiesParameters')
+        print('#')
         print("")
+
+        common.PrefixedParameter.print_parameters(self)
+
+        self.varprint('max_chunks_properties', self.max_chunks_properties)
+        self.varprint('sigma_segmentation_smoothing', self.sigma_segmentation_smoothing)
+
+        print("")
+
+    def write_parameters_in_file(self, logfile):
+        logfile.write("\n")
+        logfile.write("# \n")
+        logfile.write("# CellPropertiesParameters\n")
+        logfile.write("# \n")
+        logfile.write("\n")
+
+        common.PrefixedParameter.write_parameters_in_file(self, logfile)
+
+        self.varwrite(logfile, 'max_chunks_properties', self.max_chunks_properties)
+        self.varwrite(logfile, 'sigma_segmentation_smoothing', self.sigma_segmentation_smoothing)
+
+        logfile.write("\n")
         return
+
+    def update_from_parameters(self, parameters):
+        self.max_chunks_properties = self.read_parameter(parameters, 'max_chunks_properties',
+                                                         self.max_chunks_properties)
+        self.sigma_segmentation_smoothing = self.read_parameter(parameters, 'sigma_segmentation_smoothing',
+                                                                self.sigma_segmentation_smoothing)
 
     def update_from_parameter_file(self, parameter_file):
         if parameter_file is None:
@@ -56,11 +83,7 @@ class CellPropertiesParameters(object):
             sys.exit(1)
 
         parameters = common.load_source(parameter_file)
-
-        if hasattr(parameters, 'properties_nb_proc'):
-            if parameters.properties_nb_proc is not None:
-                self.max_chunks_properties = parameters.properties_nb_proc
-        return
+        self.update_from_parameters(parameters)
 
 
 ########################################################################################
@@ -70,7 +93,7 @@ class CellPropertiesParameters(object):
 #
 ########################################################################################
 
-def property_computation(experiment):
+def property_computation(experiment, parameters):
     """
 
     :param experiment:
@@ -79,6 +102,15 @@ def property_computation(experiment):
 
     proc = 'property_computation'
 
+    if not isinstance(experiment, common.Experiment):
+        monitoring.to_log_and_console(str(proc) + ": unexpected type for 'experiment' variable: "
+                                      + str(type(experiment)))
+        sys.exit(1)
+
+    if not isinstance(parameters, CellPropertiesParameters):
+        monitoring.to_log_and_console(str(proc) + ": unexpected type for 'parameters' variable: "
+                                      + str(type(parameters)))
+        sys.exit(1)
     #
     # get directory name where to find co-registered images of the sequence
     # as well as the common image suffix
@@ -142,7 +174,8 @@ def property_computation(experiment):
     last_time_point = experiment.last_time_point + experiment.delay_time_point
 
     cpp_wrapping.cell_properties(template_format, output_name + ".xml", first_time_point, last_time_point,
-                                 diagnosis_file=output_name + ".txt", monitoring=monitoring)
+                                 diagnosis_file=output_name + ".txt", n_processors=parameters.max_chunks_properties,
+                                 cell_based_sigma=parameters.sigma_segmentation_smoothing, monitoring=monitoring)
 
     return output_name + ".xml"
 

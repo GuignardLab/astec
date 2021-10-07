@@ -107,7 +107,7 @@ def main():
     # reading command line arguments
     # and update from command line arguments
     #
-    parser = ArgumentParser(description='Atlas')
+    parser = ArgumentParser(description='contact-atlas')
     _set_options(parser)
     args = parser.parse_args()
 
