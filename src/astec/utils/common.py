@@ -298,19 +298,29 @@ class Monitoring(object):
     #
     ############################################################
 
-    def set_log_filename(self, experiment, cli_name=None, timestamp=None):
+    def set_log_filename(self, experiment=None, cli_name=None, timestamp=None, log_filename=None):
         """
         set the full logfile name. The log directory name is built
         :param experiment:
         :param cli_name:
         :param timestamp:
+        :param log_filename:
         :return:
         """
+        if log_filename is not None and isinstance(log_filename, str):
+            self.log_filename = log_filename
+            return
 
-        if not isinstance(experiment, Experiment):
-            print("Monitoring.set_log_filename" + ": weird type ('" + str(type(experiment)) + "') for 'experiment'.")
-            print("\t Exiting.")
-            sys.exit(1)
+        if experiment is not None:
+            if not isinstance(experiment, Experiment):
+                print("Monitoring.set_log_filename" + ": weird type ('" + str(type(experiment)) + "') for 'experiment'.")
+                print("\t Exiting.")
+                sys.exit(1)
+            log_dirname = experiment.get_log_dirname()
+            if not os.path.isdir(log_dirname):
+                os.makedirs(log_dirname)
+        else:
+            log_dirname = os.getcwd()
 
         if cli_name is None:
             local_executable = 'unknown'
@@ -319,9 +329,7 @@ class Monitoring(object):
             if local_executable[-3:] == '.py':
                 local_executable = local_executable[:-3]
         log_filename = local_executable + '-' + _timestamp_to_str(timestamp) + '.log'
-        log_dirname = experiment.get_log_dirname()
-        if not os.path.isdir(log_dirname):
-            os.makedirs(log_dirname)
+
         self.log_filename = os.path.join(log_dirname, log_filename)
         return
 

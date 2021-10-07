@@ -106,6 +106,18 @@ def _set_options(my_parser):
     # control parameters
     #
 
+    my_parser.add_argument('--save-log',
+                           action='store_const', dest='save_log',
+                           default=False, const=True,
+                           help='save log files')
+    my_parser.add_argument('--no-save-log',
+                           action='store_const', dest='save_log',
+                           const=False,
+                           help='save log files')
+    my_parser.add_argument('--log', '--logfile',
+                           action='store', dest='log_filename', const=None,
+                           help='log file name')
+
     my_parser.add_argument('-k', '--keep-temporary-files',
                            action='store_const', dest='keepTemporaryFiles',
                            default=False, const=True,
@@ -287,6 +299,11 @@ def main():
         monitoring.to_log_and_console("")
 
     else:
+
+        if args.log_filename is not None:
+            monitoring.set_log_filename(log_filename=args.log_filename)
+        elif args.save_log:
+            monitoring.set_log_filename(experiment, __file__, start_time)
 
         properties.monitoring.copy(monitoring)
         diagnosis.monitoring.copy(monitoring)

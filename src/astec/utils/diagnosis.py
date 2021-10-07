@@ -1167,6 +1167,7 @@ def diagnosis(prop, features=None, parameters=None, time_digits_for_cell_id=4):
     # monitoring.to_log_and_console("\n", 1)
     monitoring.to_log_and_console("... diagnosis", 1)
 
+    monitoring.to_log_and_console("", 1)
     monitoring.to_log_and_console("  === cell/key diagnosis === ", 1)
     div = 10 ** time_digits_for_cell_id
     # get nodes (ie cells) for each property
