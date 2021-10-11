@@ -141,6 +141,12 @@ def _set_options(my_parser):
                            action='store_const', dest='debug', const=0,
                            help='no debug information')
 
+    help = "print the list of parameters (with explanations) in the console and exit. "
+    help += "If a parameter file is given, it is taken into account"
+    my_parser.add_argument('-pp', '--print-param',
+                           action='store_const', dest='printParameters',
+                           default=False, const=True, help=help)
+
     return
 
 
@@ -165,7 +171,7 @@ def main():
     # reading command line arguments
     # and update from command line arguments
     #
-    parser = ArgumentParser(description='X-embryoproperties.py')
+    parser = ArgumentParser(description='embryoproperties')
     _set_options(parser)
     args = parser.parse_args()
 
@@ -180,6 +186,15 @@ def main():
     # if yes, compute properties from an image sequence
     #
     if args.parameterFile is not None and os.path.isfile(args.parameterFile):
+
+        if args.printParameters:
+            parameters = properties.CellPropertiesParameters()
+            if args.parameterFile is not None and os.path.isfile(args.parameterFile):
+                experiment.update_from_parameter_file(args.parameterFile)
+                parameters.update_from_parameter_file(args.parameterFile)
+            experiment.print_parameters(directories=[])
+            parameters.print_parameters()
+            sys.exit(0)
 
         #
         # reading parameter files
@@ -249,7 +264,7 @@ def main():
         #
         # compute sequence properties in xml format
         #
-        xml_output = properties.property_computation(experiment)
+        xml_output = properties.property_computation(experiment, parameters)
         if xml_output is None:
             monitoring.to_log_and_console('    error during properties computation')
             sys.exit(-1)

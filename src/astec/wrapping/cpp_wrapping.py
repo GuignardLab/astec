@@ -1642,7 +1642,7 @@ def non_linear_registration(path_ref, path_flo, path_affine, path_vector, affine
 
 
 def cell_properties(format_input, output, first, last, diagnosis_file=None, n_processors=None,
-                    other_options=None, monitoring=None):
+                    cell_based_sigma=None, other_options=None, monitoring=None):
     """
 
     :param format_input:
@@ -1662,13 +1662,19 @@ def cell_properties(format_input, output, first, last, diagnosis_file=None, n_pr
     command_line += " -first " + str(first) + " -last " + str(last)
     if diagnosis_file is not None:
         command_line += " -diagnosis " + str(diagnosis_file)
+
     if n_processors is None:
         pass
-    elif type(n_processors) == int:
+    elif isinstance(n_processors, int):
         if n_processors >= 1:
             command_line += " -max-chunks-properties " + str(n_processors)
         else:
             pass
+
+    if cell_based_sigma is None:
+        pass
+    elif isinstance(cell_based_sigma, (int, float)):
+        command_line += " -cell-based-sigma " + str(cell_based_sigma)
 
     #
     #
