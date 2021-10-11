@@ -264,7 +264,7 @@ def main():
         #
         # compute sequence properties in xml format
         #
-        xml_output = properties.property_computation(experiment)
+        xml_output = properties.property_computation(experiment, parameters)
         if xml_output is None:
             monitoring.to_log_and_console('    error during properties computation')
             sys.exit(-1)

@@ -69,6 +69,11 @@ class CellPropertiesParameters(common.PrefixedParameter):
         logfile.write("\n")
         return
 
+    def write_parameters(self, log_file_name):
+        with open(log_file_name, 'a') as logfile:
+            self.write_parameters_in_file(logfile)
+        return
+
     def update_from_parameters(self, parameters):
         self.max_chunks_properties = self.read_parameter(parameters, 'max_chunks_properties',
                                                          self.max_chunks_properties)
