@@ -1,7 +1,12 @@
 
+import copy
+import numpy as np
+import scipy as sp
+
 import astec.utils.ascidian_name as uname
 import astec.utils.contact_atlas as ucontacta
 import astec.utils.contact as ucontact
+
 
 
 def figures_division_score(neighborhoods, parameters):
@@ -412,11 +417,238 @@ def figures_division_probability(atlases, parameters):
     f.close()
 
 
+def figures_division_hierarchical_clustering(atlases, parameters):
+    """
+    Parameters
+    ----------
+    atlases: nested dictionary of neighborhood, where the keys are ['cell name']['reference name']
+        where 'reference name' is the name of the reference lineage, and neighborhood a dictionary of contact surfaces
+        indexed by cell names (only for the first time point after the division)
+    parameters
+
+    Returns
+    -------
+
+    """
+
+    filename = 'figures_division_hierarchical_clustering'
+    file_suffix = None
+    if parameters.figurefile_suffix is not None and isinstance(parameters.figurefile_suffix, str) and \
+            len(parameters.figurefile_suffix) > 0:
+        file_suffix = '_' + parameters.figurefile_suffix
+    if file_suffix is not None:
+        filename += file_suffix
+    filename += '.py'
+
+    #
+    # get the references per mother_name
+    #
+    neighborhoods = atlases.get_neighborhoods()
+    cell_names = sorted(list(neighborhoods.keys()))
+    references = {}
+    for cell_name in cell_names:
+        mother_name = uname.get_mother_name(cell_name)
+        references[mother_name] = references.get(mother_name, set()).union(set(neighborhoods[cell_name].keys()))
+
+    #
+    #
+    #
+
+    f = open(filename, "w")
+
+    f.write("import numpy as np\n")
+    f.write("import matplotlib.pyplot as plt\n")
+    f.write("import scipy.cluster.hierarchy as sch\n")
+
+    f.write("\n")
+    f.write("linkage_method = 'single'\n")
+    f.write("\n")
+
+    mother_names = sorted(references.keys())
+    cellidentifierlist = []
+
+    for n in mother_names:
+        daughters = uname.get_daughter_names(n)
+        #
+        # check whether each reference has the two daughters
+        #
+        refs = list(references[n])
+        for r in refs:
+            if r in neighborhoods[daughters[0]] and r in neighborhoods[daughters[1]]:
+                continue
+            references[n].remove(r)
+        if len(references[n]) <= 1:
+            continue
+
+        if False and n != 'a7.0002_':
+            continue
+
+        #
+        #
+        #
+        config = {}
+        swconfig = {}
+        for r in references[n]:
+            config[r] = {}
+            config[r][0] = copy.deepcopy(neighborhoods[daughters[0]][r])
+            config[r][1] = copy.deepcopy(neighborhoods[daughters[1]][r])
+            swconfig[r] = {}
+            swconfig[r][0] = copy.deepcopy(config[r][0])
+            swconfig[r][1] = copy.deepcopy(config[r][1])
+            sr = 'switched-' + str(r)
+            swconfig[sr] = {}
+            swconfig[sr][0] = copy.deepcopy(neighborhoods[daughters[1]][r])
+            swconfig[sr][1] = copy.deepcopy(neighborhoods[daughters[0]][r])
+            if daughters[1] in swconfig[sr][0]:
+                msg = "  weird, " + str(daughters[1]) + " was found in its neighborhood for reference " + str(r)
+                print("      " + msg)
+            if daughters[0] in swconfig[sr][0]:
+                swconfig[sr][0][daughters[1]] = swconfig[sr][0][daughters[0]]
+                del swconfig[sr][0][daughters[0]]
+            if daughters[0] in swconfig[sr][1]:
+                msg = "  weird, " + str(daughters[0]) + " was found in its neighborhood for reference " + str(r)
+                print("      " + msg)
+            if daughters[1] in swconfig[sr][1]:
+                swconfig[sr][1][daughters[0]] = swconfig[sr][1][daughters[1]]
+                del swconfig[sr][1][daughters[1]]
+
+        # identifier for mother cell
+        cellname = n.split('.')[0] + "_" + n.split('.')[1][0:4]
+        if n.split('.')[1][4] == '_':
+            cellname += 'U'
+        elif n.split('.')[1][4] == '*':
+            cellname += 'S'
+        else:
+            cellname += 'S'
+        cellidentifier = cellname + '_HC'
+        cellidentifierlist.append(cellidentifier)
+
+        f.write("\n")
+        f.write("\n")
+        f.write("def draw_" + cellidentifier + "(savefig=False):\n")
+
+        #
+        # computation of probabilities
+        #
+        labels = []
+        dist = np.zeros((len(config), len(config)))
+        for i, r in enumerate(config):
+            labels += [r]
+            for j, s in enumerate(config):
+                if r == s:
+                    dist[i][i] = 0.0
+                    continue
+                if r > s:
+                    continue
+                # if r == 'switched-' + str(s) or s == 'switched-' + str(r):
+                #    continue
+                a = ucontact.contact_distance(config[r][0], config[s][0], similarity=parameters.contact_similarity)
+                b = ucontact.contact_distance(config[r][1], config[s][1], similarity=parameters.contact_similarity)
+                #
+                # probabilities are supposed to be symmetrical but are not ...
+                #
+                dist[i][j] = 100.0 - (atlases.get_probability(a, b) + atlases.get_probability(b, a)) / 2.0
+                dist[j][i] = dist[i][j]
+        conddist = sp.spatial.distance.squareform(dist)
+
+        swdist = np.zeros((len(swconfig), len(swconfig)))
+        swlabels = []
+        for i, r in enumerate(swconfig):
+            swlabels += [r]
+            for j, s in enumerate(swconfig):
+                if r == s:
+                    swdist[i][i] = 0.0
+                    continue
+                if r > s:
+                    continue
+                # if r == 'switched-' + str(s) or s == 'switched-' + str(r):
+                #    continue
+                a = ucontact.contact_distance(swconfig[r][0], swconfig[s][0], similarity=parameters.contact_similarity)
+                b = ucontact.contact_distance(swconfig[r][1], swconfig[s][1], similarity=parameters.contact_similarity)
+                #
+                # probabilities are supposed to be symmetrical but are not ...
+                #
+                swdist[i][j] = 100.0 - (atlases.get_probability(a, b) + atlases.get_probability(b, a)) / 2.0
+                swdist[j][i] = swdist[i][j]
+        swconddist = sp.spatial.distance.squareform(swdist)
+
+        f.write("    " + "\n")
+        f.write("    " + "cdist = " + str(list(conddist)) + "\n")
+        f.write("    " + "labels = " + str(labels) + "\n")
+        f.write("    " + "\n")
+        f.write("    " + "cswdist = " + str(list(swconddist)) + "\n")
+        f.write("    " + "swlabels = " + str(swlabels) + "\n")
+        # method='single' (default)
+        # method='complete'
+        # method='average'
+        # method='weighted'
+        # method='centroid'
+        # method='median'
+        # method='ward'
+        f.write("\n")
+        f.write("    " + "title = '" + str(n) + " (linkage=' + linkage_method + '), ")
+        f.write("delay={:d}'\n".format(parameters.delay_from_division))
+        f.write("\n")
+        f.write("    " + "Z = sch.linkage(cdist, method=linkage_method)\n")
+        f.write("    " + "fig = plt.figure(figsize=(16, 8))\n")
+        f.write("    " + "dn = sch.dendrogram(Z, labels=labels, orientation='right')\n")
+        f.write("    " + "plt.title(title, fontsize=24)\n")
+        f.write("    " + "plt.xticks(fontsize=16)\n")
+        f.write("    " + "plt.yticks(fontsize=14)\n")
+        f.write("    " + "plt.xlim([0, 100])\n")
+
+        f.write("    if savefig:\n")
+        f.write("        plt.savefig('" + str(cellidentifier) + "_' + linkage_method +'")
+        if file_suffix is not None:
+            f.write(file_suffix)
+        f.write("'" + " + '.png')\n")
+        f.write("    else:\n")
+        f.write("        plt.show()\n")
+        f.write("    plt.close()\n")
+        f.write("\n")
+
+        f.write("    " + "Z = sch.linkage(cswdist, method=linkage_method)\n")
+        f.write("    " + "fig = plt.figure(figsize=(18, 8))\n")
+        f.write("    " + "dn = sch.dendrogram(Z, labels=swlabels, orientation='right')\n")
+        f.write("    " + "plt.title(title, fontsize=24)\n")
+        f.write("    " + "plt.xticks(fontsize=16)\n")
+        f.write("    " + "plt.yticks(fontsize=12)\n")
+        f.write("    " + "plt.xlim([0, 100])\n")
+
+        f.write("    if savefig:\n")
+        f.write("        plt.savefig('" + str(cellidentifier) + "_' + linkage_method +'")
+        if file_suffix is not None:
+            f.write(file_suffix)
+        f.write("'" + " + '_SW.png')\n")
+        f.write("    else:\n")
+        f.write("        plt.show()\n")
+        f.write("    plt.close()\n")
+        f.write("\n")
+
+    f.write("\n")
+    f.write("\n")
+    f.write("def draw_all(savefig=False):\n")
+    for cellidentifier in cellidentifierlist:
+        f.write("    draw_" + cellidentifier + "(savefig=savefig)\n")
+
+    f.write("\n")
+    f.write("\n")
+    for cellidentifier in cellidentifierlist:
+        f.write("if False:\n")
+        f.write("    draw_" + cellidentifier + "(savefig=False)\n")
+    f.write("\n")
+    f.write("if True:\n")
+    f.write("    draw_all(savefig=True)\n")
+    f.write("\n")
+
+    f.close()
+
+
 def figures_cell_neighborhood_pca(neighborhoods, parameters, min_samples=4):
 
     cells = sorted(neighborhoods, key=lambda key: len(neighborhoods[key]), reverse=True)
 
-    filename = 'figures_cell_neighborhood_pcafigures_cell_neighborhood_pca'
+    filename = 'figures_cell_neighborhood_pca'
     file_suffix = None
     if parameters.figurefile_suffix is not None and isinstance(parameters.figurefile_suffix, str) and \
             len(parameters.figurefile_suffix) > 0:

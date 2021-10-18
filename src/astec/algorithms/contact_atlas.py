@@ -58,18 +58,23 @@ def contact_atlas_process(experiment, parameters):
         # draw score histogram of both right pairing and wrong pairing
         # this is then done at the cell level, not at the division level
         #
-        ucontactf.figures_histogram_scores(atlases.get_neighborhoods(), parameters)
+        # ucontactf.figures_histogram_scores(atlases.get_neighborhoods(), parameters)
 
         #
         # draw 2D histogram of right/wrong pairing scores of both daugthers
         # this is then done at the division level
         #
-        ucontactf.figures_histogram2D_scores(atlases, parameters)
+        # ucontactf.figures_histogram2D_scores(atlases, parameters)
 
         #
         # draw a graph per division where edges rae valued with probability
         #
-        ucontactf.figures_division_probability(atlases, parameters)
+        # ucontactf.figures_division_probability(atlases, parameters)
+
+        #
+        # draw a graph per division where edges rae valued with probability
+        #
+        ucontactf.figures_division_hierarchical_clustering(atlases, parameters)
 
         if False and parameters.use_common_neighborhood:
             #
