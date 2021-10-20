@@ -4,7 +4,6 @@ import numpy as np
 import scipy as sp
 
 import astec.utils.ascidian_name as uname
-import astec.utils.contact_atlas as ucontacta
 import astec.utils.contact as ucontact
 
 

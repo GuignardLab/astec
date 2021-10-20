@@ -12,7 +12,7 @@ import sys
 
 import astec.utils.common as common
 import astec.algorithms.postcorrection as post
-import astec.algorithms.properties as properties
+import astec.utils.properties as properties
 from astec.wrapping.cpp_wrapping import path_to_vt
 
 #

@@ -832,8 +832,8 @@ def _diagnosis_name(prop, description, time_digits_for_cell_id=4):
             msg = "  - there are " + str(len(repeats)) + " repeated names at time " + str(t)
             monitoring.to_log_and_console(msg)
             for n, p in repeats.items():
-                cells = [c for c in name if name[c] == n]
-                for c in cells:
+                repeatedcells = [c for c in name if name[c] == n]
+                for c in repeatedcells:
                     prop[keydiagnosis][c] = 90
                 msg = "    - " + str(n) + " is repeated " + str(p) + " times "
                 monitoring.to_log_and_console(msg)
@@ -920,6 +920,8 @@ def _diagnosis_contact(prop, description, diagnosis_parameters, time_digits_for_
         pcell = cell
         pneigh = copy.deepcopy(contact[cell])
         while True:
+            if pcell not in lineage or len(lineage[pcell]) > 1:
+                break
             ncell = lineage[pcell][0]
             t = int(ncell) // div
             nneigh = {}
@@ -959,8 +961,6 @@ def _diagnosis_contact(prop, description, diagnosis_parameters, time_digits_for_
             #
             pcell = ncell
             pneigh = copy.deepcopy(nneigh)
-            if pcell not in lineage or len(lineage[pcell]) > 1:
-                break
 
     if diagnosis_parameters.generate_figure:
         filename = 'figures_contact_score_evolution'
