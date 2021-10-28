@@ -72,20 +72,20 @@ class DiagnosisParameters(ucontact.ContactSurfaceParameters):
 
         ucontact.ContactSurfaceParameters.print_parameters(self)
 
-        self.varprint('minimal_volume', self.minimal_volume, self.get('minimal_volume', None))
+        self.varprint('minimal_volume', self.minimal_volume, self.doc.get('minimal_volume', None))
         self.varprint('maximal_volume_variation', self.maximal_volume_variation,
-                      self.get('maximal_volume_variation', None))
+                      self.doc.get('maximal_volume_variation', None))
         self.varprint('maximal_volume_derivative', self.maximal_volume_derivative,
-                      self.get('maximal_volume_derivative', None))
+                      self.doc.get('maximal_volume_derivative', None))
 
-        self.varprint('items', self.items, self.get('items', None))
+        self.varprint('items', self.items, self.doc.get('items', None))
 
-        self.varprint('minimal_length', self.minimal_length, self.get('minimal_length', None))
+        self.varprint('minimal_length', self.minimal_length, self.doc.get('minimal_length', None))
 
         self.varprint('maximal_contact_similarity', self.maximal_contact_similarity,
-                      self.get('maximal_contact_similarity', None))
-        self.varprint('generate_figure', self.generate_figure, self.get('generate_figure', None))
-        self.varprint('figurefile_suffix', self.figurefile_suffix, self.get('figurefile_suffix', None))
+                      self.doc.get('maximal_contact_similarity', None))
+        self.varprint('generate_figure', self.generate_figure, self.doc.get('generate_figure', None))
+        self.varprint('figurefile_suffix', self.figurefile_suffix, self.doc.get('figurefile_suffix', None))
 
         print("")
 
@@ -726,7 +726,6 @@ def _diagnosis_name(prop, description, time_digits_for_cell_id=4):
         del prop[keydiagnosis]
     prop[keydiagnosis] = {}
 
-
     monitoring.to_log_and_console("  === " + str(description) + " diagnosis === ", 1)
 
     name = prop[keyname]
@@ -858,6 +857,11 @@ def _diagnosis_name(prop, description, time_digits_for_cell_id=4):
 def _diagnosis_contact(prop, description, diagnosis_parameters, time_digits_for_cell_id=4):
     proc = "_diagnosis_contact"
 
+    if not isinstance(diagnosis_parameters, DiagnosisParameters):
+        monitoring.to_log_and_console(str(proc) + ": unexpected type for 'diagnosis_parameters' variable: "
+                                      + str(type(diagnosis_parameters)))
+        sys.exit(1)
+
     keycontact = None
     keyset = set(prop.keys()).intersection(properties.keydictionary['contact']['input_keys'])
     if len(keyset) > 0:
@@ -953,8 +957,8 @@ def _diagnosis_contact(prop, description, diagnosis_parameters, time_digits_for_
             #
             #
             #
-            score = ucontact.contact_distance(pneigh, nneigh, similarity=diagnosis_parameters.contact_similarity,
-                                             change_contact_surfaces=False )
+            score = ucontact.cell_contact_distance(pneigh, nneigh, distance=diagnosis_parameters.cell_contact_distance,
+                                                   change_contact_surfaces=False)
             score_along_time[cell] = score_along_time.get(cell, []) + [score]
             #
             #
@@ -1202,7 +1206,6 @@ def diagnosis(prop, features=None, parameters=None, time_digits_for_cell_id=4):
     #
     # check whether the same set of cell ids are indexed or used in each property
     #
-    inodes = set()
     unodes = set()
     for k in nodes:
         unodes = unodes.union(set(nodes[k]))
@@ -1251,7 +1254,7 @@ def diagnosis(prop, features=None, parameters=None, time_digits_for_cell_id=4):
     else:
         if isinstance(features, str):
             prop = _diagnosis_one_feature(prop, features, diagnosis_parameters,
-                                   time_digits_for_cell_id=time_digits_for_cell_id)
+                                          time_digits_for_cell_id=time_digits_for_cell_id)
         elif isinstance(features, list):
             for f in features:
                 prop = _diagnosis_one_feature(prop, f, diagnosis_parameters,
@@ -1261,8 +1264,3 @@ def diagnosis(prop, features=None, parameters=None, time_digits_for_cell_id=4):
     monitoring.to_log_and_console("")
 
     return prop
-
-
-
-
-

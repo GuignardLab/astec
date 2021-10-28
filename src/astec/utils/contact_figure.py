@@ -1,422 +1,18 @@
 
+import sys
 import copy
 import numpy as np
 import scipy as sp
+import scipy.cluster.hierarchy as sch
 
+import astec.utils.common as common
 import astec.utils.ascidian_name as uname
-import astec.utils.contact as ucontact
+import astec.utils.contact_atlas as ucontacta
+
+monitoring = common.Monitoring()
 
 
-
-def figures_division_score(neighborhoods, parameters):
-    """
-    Build a file to draw figures of 'consistency' between reference embryos for mother cells
-    Parameters
-    ----------
-    neighborhoods: nested dictionary of neighborhood, where the keys are ['cell name']['reference name']
-        where 'reference name' is the name of the reference lineage, and neighborhood a dictionary of contact surfaces
-        indexed by cell names (only for the first time point after the division)
-    parameters
-
-    Returns
-    -------
-
-    """
-
-    filename = 'figures_division_score'
-    file_suffix = None
-    if parameters.figurefile_suffix is not None and isinstance(parameters.figurefile_suffix, str) and \
-            len(parameters.figurefile_suffix) > 0:
-        file_suffix = '_' + parameters.figurefile_suffix
-    if file_suffix is not None:
-        filename += file_suffix
-    filename += '.py'
-
-    #
-    # get the references per mother_name
-    #
-    cell_names = sorted(list(neighborhoods.keys()))
-    references = {}
-    for cell_name in cell_names:
-        mother_name = uname.get_mother_name(cell_name)
-        references[mother_name] = references.get(mother_name, set()).union(set(neighborhoods[cell_name].keys()))
-
-    #
-    # get an edge value in [0, 1]
-    # 1 means perfect equality, while 0 means total difference
-    #
-    mother_names = sorted(references.keys())
-    edgeValues = {}
-    values = {}
-    for n in mother_names:
-        d = uname.get_daughter_names(n)
-        edgeValues[n] = {}
-        for n1 in references[n]:
-            edgeValues[n][n1] = {}
-            for n2 in references[n]:
-                if n2 <= n1:
-                    continue
-                if d[0] in neighborhoods and (n1 in neighborhoods[d[0]] and n2 in neighborhoods[d[0]]):
-                    s0 = ucontact.contact_distance(neighborhoods[d[0]][n1], neighborhoods[d[0]][n2],
-                                                   similarity=parameters.contact_similarity)
-                else:
-                    s0 = None
-                if d[1] in neighborhoods and (n1 in neighborhoods[d[1]] and n2 in neighborhoods[d[1]]):
-                    s1 = ucontact.contact_distance(neighborhoods[d[1]][n1], neighborhoods[d[1]][n2],
-                                                   similarity=parameters.contact_similarity)
-                else:
-                    s1 = None
-                #
-                # get_score() is in [0, 1]:
-                # 0: perfect agreement
-                # 1: full disagreement
-                #
-                # edgeValues will be in [0, 1]
-                # 0: weak edge
-                # 1: string edge
-                #
-                if s0 is not None and s1 is not None:
-                    edgeValues[n][n1][n2] = 1.0 - 0.5 * (s0 + s1)
-                # elif s0 is not None:
-                #     edges[n][n1][n2] = s0
-                # elif s1 is not None:
-                #     edges[n][n1][n2] = s1
-            if edgeValues[n][n1] != {}:
-                values[n] = values.get(n, []) + list(edgeValues[n][n1].values())
-    #
-    # values[n] is a list of all the score values for any couple of atlases exhibiting the division of 'n'
-    # max_values[n] is the worst value for a comparison of two atlases exhibiting the division of 'n'
-    #
-    max_values = {}
-    for n in values.keys():
-        max_values[n] = 1.0 - min(values[n])
-
-    f = open(filename, "w")
-
-    f.write("import networkx as nx\n")
-    f.write("import numpy as np\n")
-    f.write("import matplotlib.pyplot as plt\n")
-
-    cellidentifierlist = []
-    for mother_name in max_values:
-        max_value = 100.0 * max_values[mother_name]
-
-        # identifier for mother cell
-        cellname = mother_name.split('.')[0] + "_" + mother_name.split('.')[1][0:4]
-        if mother_name.split('.')[1][4] == '_':
-            cellname += 'U'
-        elif mother_name.split('.')[1][4] == '*':
-            cellname += 'S'
-        else:
-            cellname += 'S'
-        fileidentifier = 'S{:03d}_'.format(int(max_value)) + cellname
-        cellidentifier = cellname + '_S{:03d}'.format(int(max_value))
-        cellidentifierlist.append(cellidentifier)
-
-        #
-        # edges[n1][n2] in [1,5] is an integer giving the weight of an edge
-        # the smallest the weight, the weakest the edge
-        #
-        edges = {}
-        for n1 in references[mother_name]:
-            if n1 not in edgeValues[mother_name]:
-                continue
-            edges[n1] = {}
-            for n2 in references[mother_name]:
-                if n2 not in edgeValues[mother_name][n1]:
-                    continue
-                if n2 <= n1:
-                    continue
-                edges[n1][n2] = int(1.0 + 4.0 * edgeValues[mother_name][n1][n2])
-
-        f.write("\n")
-        f.write("\n")
-        f.write("def draw_" + cellidentifier + "(savefig=False):\n")
-
-        nodes = list(references[mother_name])
-        nodes.sort()
-
-        f.write("\n")
-        f.write("    G_" + cellidentifier + " = nx.Graph()\n")
-        f.write("    G_" + cellidentifier + ".add_nodes_from(" + str(nodes) + ")\n")
-        f.write("\n")
-
-        #
-        # for each edge weight, get the edge weight, and use the right edge value for colorization
-        #
-        edgelist = {}
-        edgecolor = {}
-        for n1 in edges:
-            for n2 in edges[n1]:
-                if n2 <= n1:
-                    continue
-                edgelist[edges[n1][n2]] = edgelist.get(edges[n1][n2], []) + [(n1, n2)]
-                edgecolor[edges[n1][n2]] = edgecolor.get(edges[n1][n2], []) + [edgeValues[mother_name][n1][n2]]
-
-        for i in edgelist:
-            f.write("    G_" + cellidentifier + ".add_edges_from(" + str(edgelist[i]) + ", weight=" + str(i) + ")\n")
-
-        f.write("\n")
-        f.write("    node_labels = {}\n")
-        for n in nodes:
-            f.write("    node_labels['" + str(n) + "'] = '" + str(n) + "'\n")
-        f.write("\n")
-
-        f.write("    fig, ax = plt.subplots(figsize=(7.5, 7.5))\n")
-        f.write("    pos = nx.circular_layout(G_" + cellidentifier + ", scale=1.8)\n")
-        f.write("    nx.draw_networkx_nodes(G_" + cellidentifier + ", pos=pos, ax=ax, node_size=1000)\n")
-        f.write("    nx.draw_networkx_labels(G_" + cellidentifier + ", ax=ax, pos=pos, labels=node_labels," +
-                " font_weight='bold')\n")
-        f.write("    ax.set_xlim([-2.2, 2.2])\n")
-        f.write("    ax.set_ylim([-2.1, 2.1])\n")
-        for i in edgelist:
-            f.write("    nx.draw_networkx_edges(G_" + cellidentifier + ", pos=pos, ax=ax, edgelist=" + str(edgelist[i]))
-            f.write(", edge_color=" + str(edgecolor[i]))
-            f.write(", edge_vmin=0.0, edge_vmax=1.0")
-            # '_r' at the end of the colormap name means reversed colormap
-            f.write(", edge_cmap = plt.cm.brg_r")
-            f.write(", width=" + str(i))
-            f.write(")\n")
-        title = "division of " + str(mother_name)
-        title += ", max score value = " + '{:.2f}'.format(max_values[mother_name])
-
-        f.write("    ax.set_title(\"" + str(title) + "\")\n")
-        f.write("    if savefig:\n")
-        f.write("        plt.savefig('" + str(fileidentifier))
-        if file_suffix is not None:
-            f.write(file_suffix)
-        f.write("'" + " + '.png')\n")
-        f.write("        plt.savefig('" + str(cellidentifier))
-        if file_suffix is not None:
-            f.write(file_suffix)
-        f.write("'" + " + '.png')\n")
-        f.write("    else:\n")
-        f.write("        plt.show()\n")
-
-    f.write("\n")
-    f.write("\n")
-    f.write("def draw_all(savefig=False):\n")
-    for cellidentifier in cellidentifierlist:
-        f.write("    draw_" + cellidentifier + "(savefig=savefig)\n")
-        f.write("    plt.close()\n")
-
-    f.write("\n")
-    f.write("\n")
-    for cellidentifier in cellidentifierlist:
-        f.write("if False:\n")
-        f.write("    draw_" + cellidentifier + "(savefig=False)\n")
-    f.write("\n")
-    f.write("if True:\n")
-    f.write("    draw_all(savefig=True)\n")
-    f.write("\n")
-
-    f.close()
-
-
-def figures_division_probability(atlases, parameters):
-    """
-    Build a file to draw figures of 'probability' between reference embryos for mother cells
-    Parameters
-    ----------
-    atlases: nested dictionary of neighborhood, where the keys are ['cell name']['reference name']
-        where 'reference name' is the name of the reference lineage, and neighborhood a dictionary of contact surfaces
-        indexed by cell names (only for the first time point after the division)
-    parameters
-
-    Returns
-    -------
-
-    """
-
-    filename = 'figures_division_probability'
-    file_suffix = None
-    if parameters.figurefile_suffix is not None and isinstance(parameters.figurefile_suffix, str) and \
-            len(parameters.figurefile_suffix) > 0:
-        file_suffix = '_' + parameters.figurefile_suffix
-    if file_suffix is not None:
-        filename += file_suffix
-    filename += '.py'
-
-    #
-    # get the references per mother_name
-    #
-    neighborhoods = atlases.get_neighborhoods()
-    cell_names = sorted(list(neighborhoods.keys()))
-    references = {}
-    for cell_name in cell_names:
-        mother_name = uname.get_mother_name(cell_name)
-        references[mother_name] = references.get(mother_name, set()).union(set(neighborhoods[cell_name].keys()))
-
-    #
-    # get an edge value in [0, 1]
-    # 1 means perfect equality, while 0 means total difference
-    #
-    mother_names = sorted(references.keys())
-    edgeValues = {}
-    values = {}
-    for n in mother_names:
-        d = uname.get_daughter_names(n)
-        #
-        # check whether each reference has the two daughters
-        #
-        refs = list(references[n])
-        for r in refs:
-            if r in neighborhoods[d[0]] and r in neighborhoods[d[1]]:
-                continue
-            references[n].remove(r)
-        if len(references[n]) <= 1:
-            continue
-
-        edgeValues[n] = {}
-        for n1 in references[n]:
-            edgeValues[n][n1] = {}
-            for n2 in references[n]:
-                if n2 <= n1:
-                    continue
-                s0 = ucontact.contact_distance(neighborhoods[d[0]][n1], neighborhoods[d[0]][n2],
-                                               similarity=parameters.contact_similarity)
-                s1 = ucontact.contact_distance(neighborhoods[d[1]][n1], neighborhoods[d[1]][n2],
-                                               similarity=parameters.contact_similarity)
-                #
-                # probability is in [0, 100]
-                # edgeValues will be in [0, 1]
-                # 0: weak edge
-                # 1: strong edge
-                #
-                edgeValues[n][n1][n2] = atlases.get_probability(s0, s1) / 100.0
-            if edgeValues[n][n1] != {}:
-                values[n] = values.get(n, []) + list(edgeValues[n][n1].values())
-    #
-    # values[n] is a list of all the score values for any couple of atlases exhibiting the division of 'n'
-    # max_values[n] is the worst value for a comparison of two atlases exhibiting the division of 'n'
-    #
-    min_values = {}
-    for n in values.keys():
-        min_values[n] = min(values[n])
-
-    f = open(filename, "w")
-
-    f.write("import networkx as nx\n")
-    f.write("import numpy as np\n")
-    f.write("import matplotlib.pyplot as plt\n")
-
-    cellidentifierlist = []
-    for mother_name in min_values:
-        min_value = 100.0 * min_values[mother_name]
-
-        # identifier for mother cell
-        cellname = mother_name.split('.')[0] + "_" + mother_name.split('.')[1][0:4]
-        if mother_name.split('.')[1][4] == '_':
-            cellname += 'U'
-        elif mother_name.split('.')[1][4] == '*':
-            cellname += 'S'
-        else:
-            cellname += 'S'
-        fileidentifier = 'PROB{:03d}_'.format(int(min_value)) + cellname
-        cellidentifier = cellname + '_PROB{:03d}'.format(int(min_value))
-        cellidentifierlist.append(cellidentifier)
-
-        #
-        # edges[n1][n2] in [1,5] is an integer giving the weight of an edge
-        # the smallest the weight, the weakest the edge
-        #
-        edges = {}
-        for n1 in references[mother_name]:
-            if n1 not in edgeValues[mother_name]:
-                continue
-            edges[n1] = {}
-            for n2 in references[mother_name]:
-                if n2 not in edgeValues[mother_name][n1]:
-                    continue
-                if n2 <= n1:
-                    continue
-                edges[n1][n2] = int(1.0 + 4.0 * edgeValues[mother_name][n1][n2])
-
-        f.write("\n")
-        f.write("\n")
-        f.write("def draw_" + cellidentifier + "(savefig=False):\n")
-
-        nodes = list(references[mother_name])
-        nodes.sort()
-
-        f.write("\n")
-        f.write("    G_" + cellidentifier + " = nx.Graph()\n")
-        f.write("    G_" + cellidentifier + ".add_nodes_from(" + str(nodes) + ")\n")
-        f.write("\n")
-
-        #
-        # for each edge weight, get the edge weight, and use the right edge value for colorization
-        #
-        edgelist = {}
-        edgecolor = {}
-        for n1 in edges:
-            for n2 in edges[n1]:
-                if n2 <= n1:
-                    continue
-                edgelist[edges[n1][n2]] = edgelist.get(edges[n1][n2], []) + [(n1, n2)]
-                edgecolor[edges[n1][n2]] = edgecolor.get(edges[n1][n2], []) + [edgeValues[mother_name][n1][n2]]
-
-        for i in edgelist:
-            f.write("    G_" + cellidentifier + ".add_edges_from(" + str(edgelist[i]) + ", weight=" + str(i) + ")\n")
-
-        f.write("\n")
-        f.write("    node_labels = {}\n")
-        for n in nodes:
-            f.write("    node_labels['" + str(n) + "'] = '" + str(n) + "'\n")
-        f.write("\n")
-
-        f.write("    fig, ax = plt.subplots(figsize=(7.5, 7.5))\n")
-        f.write("    pos = nx.circular_layout(G_" + cellidentifier + ", scale=1.8)\n")
-        f.write("    nx.draw_networkx_nodes(G_" + cellidentifier + ", pos=pos, ax=ax, node_size=1000)\n")
-        f.write("    nx.draw_networkx_labels(G_" + cellidentifier + ", ax=ax, pos=pos, labels=node_labels," +
-                " font_weight='bold')\n")
-        f.write("    ax.set_xlim([-2.2, 2.2])\n")
-        f.write("    ax.set_ylim([-2.1, 2.1])\n")
-        for i in edgelist:
-            f.write("    nx.draw_networkx_edges(G_" + cellidentifier + ", pos=pos, ax=ax, edgelist=" + str(edgelist[i]))
-            f.write(", edge_color=" + str(edgecolor[i]))
-            f.write(", edge_vmin=0.0, edge_vmax=1.0")
-            # '_r' at the end of the colormap name means reversed colormap
-            f.write(", edge_cmap = plt.cm.brg_r")
-            f.write(", width=" + str(i))
-            f.write(")\n")
-        title = "division of " + str(mother_name)
-        title += ", min probability value = " + '{:.2f}'.format(min_values[mother_name])
-
-        f.write("    ax.set_title(\"" + str(title) + "\")\n")
-        f.write("    if savefig:\n")
-        f.write("        plt.savefig('" + str(fileidentifier))
-        if file_suffix is not None:
-            f.write(file_suffix)
-        f.write("'" + " + '.png')\n")
-        f.write("        plt.savefig('" + str(cellidentifier))
-        if file_suffix is not None:
-            f.write(file_suffix)
-        f.write("'" + " + '.png')\n")
-        f.write("    else:\n")
-        f.write("        plt.show()\n")
-
-    f.write("\n")
-    f.write("\n")
-    f.write("def draw_all(savefig=False):\n")
-    for cellidentifier in cellidentifierlist:
-        f.write("    draw_" + cellidentifier + "(savefig=savefig)\n")
-        f.write("    plt.close()\n")
-
-    f.write("\n")
-    f.write("\n")
-    for cellidentifier in cellidentifierlist:
-        f.write("if False:\n")
-        f.write("    draw_" + cellidentifier + "(savefig=False)\n")
-    f.write("\n")
-    f.write("if True:\n")
-    f.write("    draw_all(savefig=True)\n")
-    f.write("\n")
-
-    f.close()
-
-
-def figures_division_hierarchical_clustering(atlases, parameters):
+def figures_division_dendrogram(atlases, parameters, linkage_method='single'):
     """
     Parameters
     ----------
@@ -424,13 +20,14 @@ def figures_division_hierarchical_clustering(atlases, parameters):
         where 'reference name' is the name of the reference lineage, and neighborhood a dictionary of contact surfaces
         indexed by cell names (only for the first time point after the division)
     parameters
+    linkage_method: 'single', ’complete’, ’average’, ’weighted’, ’centroid’,  ’median’, ’ward’
 
     Returns
     -------
 
     """
 
-    filename = 'figures_division_hierarchical_clustering'
+    filename = 'figures_division_dendrogram'
     file_suffix = None
     if parameters.figurefile_suffix is not None and isinstance(parameters.figurefile_suffix, str) and \
             len(parameters.figurefile_suffix) > 0:
@@ -442,16 +39,17 @@ def figures_division_hierarchical_clustering(atlases, parameters):
     #
     # get the references per mother_name
     #
+    divisions = atlases.get_divisions()
+    ccs = not parameters.use_common_neighborhood
     neighborhoods = atlases.get_neighborhoods()
-    cell_names = sorted(list(neighborhoods.keys()))
-    references = {}
-    for cell_name in cell_names:
-        mother_name = uname.get_mother_name(cell_name)
-        references[mother_name] = references.get(mother_name, set()).union(set(neighborhoods[cell_name].keys()))
+    similarity = atlases.get_division_contact_similarity()
 
     #
     #
     #
+
+    merge_values = {}
+    lastmerge_values = {}
 
     f = open(filename, "w")
 
@@ -460,26 +58,18 @@ def figures_division_hierarchical_clustering(atlases, parameters):
     f.write("import scipy.cluster.hierarchy as sch\n")
 
     f.write("\n")
-    f.write("linkage_method = 'single'\n")
+    f.write("linkage_method = '" + str(linkage_method) + "'\n")
     f.write("\n")
 
-    mother_names = sorted(references.keys())
     cellidentifierlist = []
 
-    for n in mother_names:
-        daughters = uname.get_daughter_names(n)
-        #
-        # check whether each reference has the two daughters
-        #
-        refs = list(references[n])
-        for r in refs:
-            if r in neighborhoods[daughters[0]] and r in neighborhoods[daughters[1]]:
-                continue
-            references[n].remove(r)
-        if len(references[n]) <= 1:
+    for n in divisions:
+        stage = n.split('.')[0][1:]
+        if len(divisions[n]) <= 2:
             continue
+        daughters = uname.get_daughter_names(n)
 
-        if False and n != 'a7.0002_':
+        if False and (n != 'a7.0002_' and n != 'a8.0003_' and n != 'a8.0004_'):
             continue
 
         #
@@ -487,7 +77,7 @@ def figures_division_hierarchical_clustering(atlases, parameters):
         #
         config = {}
         swconfig = {}
-        for r in references[n]:
+        for r in divisions[n]:
             config[r] = {}
             config[r][0] = copy.deepcopy(neighborhoods[daughters[0]][r])
             config[r][1] = copy.deepcopy(neighborhoods[daughters[1]][r])
@@ -511,23 +101,8 @@ def figures_division_hierarchical_clustering(atlases, parameters):
                 swconfig[sr][1][daughters[0]] = swconfig[sr][1][daughters[1]]
                 del swconfig[sr][1][daughters[1]]
 
-        # identifier for mother cell
-        cellname = n.split('.')[0] + "_" + n.split('.')[1][0:4]
-        if n.split('.')[1][4] == '_':
-            cellname += 'U'
-        elif n.split('.')[1][4] == '*':
-            cellname += 'S'
-        else:
-            cellname += 'S'
-        cellidentifier = cellname + '_HC'
-        cellidentifierlist.append(cellidentifier)
-
-        f.write("\n")
-        f.write("\n")
-        f.write("def draw_" + cellidentifier + "(savefig=False):\n")
-
         #
-        # computation of probabilities
+        # distance array for couples of atlases/references
         #
         labels = []
         dist = np.zeros((len(config), len(config)))
@@ -541,14 +116,18 @@ def figures_division_hierarchical_clustering(atlases, parameters):
                     continue
                 # if r == 'switched-' + str(s) or s == 'switched-' + str(r):
                 #    continue
-                a = ucontact.contact_distance(config[r][0], config[s][0], similarity=parameters.contact_similarity)
-                b = ucontact.contact_distance(config[r][1], config[s][1], similarity=parameters.contact_similarity)
-                #
-                # probabilities are supposed to be symmetrical but are not ...
-                #
-                dist[i][j] = 100.0 - (atlases.get_probability(a, b) + atlases.get_probability(b, a)) / 2.0
+                dist[i][j] = 100.0 * ucontacta.division_contact_generic_distance(atlases, config[r][0], config[r][1],
+                                                                                 config[s][0], config[s][1],
+                                                                                 similarity=similarity,
+                                                                                 change_contact_surfaces=ccs)
                 dist[j][i] = dist[i][j]
+
         conddist = sp.spatial.distance.squareform(dist)
+        z = sch.linkage(conddist, method=linkage_method)
+
+        merge_values[stage] = merge_values.get(stage, []) + list(z[:, 2])
+        lastmerge_value = z[:, 2][-1]
+        lastmerge_values[stage] = lastmerge_values.get(stage, []) + [lastmerge_value]
 
         swdist = np.zeros((len(swconfig), len(swconfig)))
         swlabels = []
@@ -562,15 +141,34 @@ def figures_division_hierarchical_clustering(atlases, parameters):
                     continue
                 # if r == 'switched-' + str(s) or s == 'switched-' + str(r):
                 #    continue
-                a = ucontact.contact_distance(swconfig[r][0], swconfig[s][0], similarity=parameters.contact_similarity)
-                b = ucontact.contact_distance(swconfig[r][1], swconfig[s][1], similarity=parameters.contact_similarity)
-                #
-                # probabilities are supposed to be symmetrical but are not ...
-                #
-                swdist[i][j] = 100.0 - (atlases.get_probability(a, b) + atlases.get_probability(b, a)) / 2.0
+                swdist[i][j] = 100.0 * ucontacta.division_contact_generic_distance(atlases, swconfig[r][0],
+                                                                                   swconfig[r][1], swconfig[s][0],
+                                                                                   swconfig[s][1],
+                                                                                   similarity=similarity,
+                                                                                   change_contact_surfaces=ccs)
                 swdist[j][i] = swdist[i][j]
         swconddist = sp.spatial.distance.squareform(swdist)
 
+        #
+        # identifier for mother cell
+        #
+        cellname = n.split('.')[0] + "_" + n.split('.')[1][0:4]
+        if n.split('.')[1][4] == '_':
+            cellname += 'U'
+        elif n.split('.')[1][4] == '*':
+            cellname += 'S'
+        else:
+            cellname += 'S'
+        fileidentifier = 'HC{:03d}_'.format(int(lastmerge_value)) + cellname
+        cellidentifier = cellname + '_HC{:03d}'.format(int(lastmerge_value))
+        cellidentifierlist.append(cellidentifier)
+
+        f.write("\n")
+        f.write("savefig = True\n")
+
+        f.write("\n")
+        f.write("\n")
+        f.write("def draw_" + cellidentifier + "(savefig=False):\n")
         f.write("    " + "\n")
         f.write("    " + "cdist = " + str(list(conddist)) + "\n")
         f.write("    " + "labels = " + str(labels) + "\n")
@@ -597,6 +195,10 @@ def figures_division_hierarchical_clustering(atlases, parameters):
         f.write("    " + "plt.xlim([0, 100])\n")
 
         f.write("    if savefig:\n")
+        f.write("        plt.savefig('" + str(fileidentifier) + "_' + linkage_method +'")
+        if file_suffix is not None:
+            f.write(file_suffix)
+        f.write("'" + " + '.png')\n")
         f.write("        plt.savefig('" + str(cellidentifier) + "_' + linkage_method +'")
         if file_suffix is not None:
             f.write(file_suffix)
@@ -615,6 +217,10 @@ def figures_division_hierarchical_clustering(atlases, parameters):
         f.write("    " + "plt.xlim([0, 100])\n")
 
         f.write("    if savefig:\n")
+        f.write("        plt.savefig('" + str(fileidentifier) + "_' + linkage_method +'")
+        if file_suffix is not None:
+            f.write(file_suffix)
+        f.write("'" + " + '_SW.png')\n")
         f.write("        plt.savefig('" + str(cellidentifier) + "_' + linkage_method +'")
         if file_suffix is not None:
             f.write(file_suffix)
@@ -622,7 +228,248 @@ def figures_division_hierarchical_clustering(atlases, parameters):
         f.write("    else:\n")
         f.write("        plt.show()\n")
         f.write("    plt.close()\n")
+
         f.write("\n")
+
+    f.write("\n")
+    f.write("\n")
+    f.write("def draw_all(savefig=False):\n")
+    for cellidentifier in cellidentifierlist:
+        f.write("    draw_" + cellidentifier + "(savefig=savefig)\n")
+
+    f.write("\n")
+    f.write("\n")
+    for cellidentifier in cellidentifierlist:
+        f.write("if False:\n")
+        f.write("    draw_" + cellidentifier + "(savefig=False)\n")
+    f.write("\n")
+    f.write("if True:\n")
+    f.write("    draw_all(savefig=savefig)\n")
+    f.write("\n")
+
+    generations = list(merge_values.keys())
+    generations = sorted(generations)
+    f.write("merge_values = [")
+    for i, g in enumerate(generations):
+        f.write(str(list(merge_values[g])))
+        if i < len(generations) - 1:
+            f.write(", ")
+    f.write("]\n")
+    f.write("lastmerge_values = [")
+    for i, g in enumerate(generations):
+        f.write(str(list(lastmerge_values[g])))
+        if i < len(generations) - 1:
+            f.write(", ")
+    f.write("]\n")
+    f.write("merge_labels = [")
+    for i, g in enumerate(generations):
+        f.write("'" + str(g) + "'")
+        if i < len(generations) - 1:
+            f.write(", ")
+    f.write("]\n")
+
+    f.write("\n")
+    f.write("fig, (ax1, ax2) = plt.subplots(ncols=2, figsize=(16, 6.5))\n")
+
+    f.write("ax1.hist(merge_values, bins=list(range(101)), histtype='bar', stacked=True, label=merge_labels)\n")
+    f.write("ax1.set_title('dendrogram merge values', fontsize=12)\n")
+    f.write("ax1.legend(prop={'size': 10})\n")
+    f.write("ax1.tick_params(labelsize=10)\n")
+
+    f.write("ax2.hist(lastmerge_values, bins=list(range(101)), histtype='bar', stacked=True, label=merge_labels)\n")
+    f.write("ax2.set_title('dendrogram last merge values', fontsize=12)\n")
+    f.write("ax2.legend(prop={'size': 10})\n")
+    f.write("ax2.tick_params(labelsize=10)\n")
+
+    f.write("\n")
+    f.write("if savefig:\n")
+    f.write("    plt.savefig('dendrogram_merge_histogram_' + linkage_method +'")
+    if file_suffix is not None:
+        f.write(file_suffix)
+    f.write("'" + " + '.png')\n")
+    f.write("else:\n")
+    f.write("    plt.show()\n")
+    f.write("    plt.close()\n")
+
+    f.write("\n")
+
+    f.close()
+
+
+def figures_division_graph(atlases, parameters):
+    """
+    Build a file to draw graphs for each division where a node is a reference and
+    Parameters
+    ----------
+    atlases: nested dictionary of neighborhood, where the keys are ['cell name']['reference name']
+        where 'reference name' is the name of the reference lineage, and neighborhood a dictionary of contact surfaces
+        indexed by cell names (only for the first time point after the division)
+    parameters
+
+    Returns
+    -------
+
+    """
+
+    proc = "figures_division_graph"
+
+    filename = 'figures_division_graph'
+    file_suffix = None
+
+    if not isinstance(parameters, ucontacta.AtlasParameters):
+        monitoring.to_log_and_console(str(proc) + ": unexpected type for 'parameters' variable: " +
+                                      str(type(parameters)))
+        sys.exit(1)
+
+    if parameters.figurefile_suffix is not None and isinstance(parameters.figurefile_suffix, str) and \
+            len(parameters.figurefile_suffix) > 0:
+        file_suffix = '_' + parameters.figurefile_suffix
+    if file_suffix is not None:
+        filename += file_suffix
+    filename += '.py'
+
+    #
+    # get the references per mother_name
+    #
+    divisions = atlases.get_divisions()
+    ccs = not parameters.use_common_neighborhood
+
+    #
+    # edgeValues[division][ref1][ref2]: set an edge value in [0, 1]
+    # 1 means perfect equality, while 0 means total difference
+    # values[division]: all edge values for division
+    #
+    mother_names = sorted(divisions.keys())
+    edgeValues = {}
+    values = {}
+    for n in mother_names:
+        edgeValues[n] = {}
+        for r1 in divisions[n]:
+            edgeValues[n][r1] = {}
+            for r2 in divisions[n]:
+                if r2 <= r1:
+                    continue
+                edgeValues[n][r1][r2] = atlases.get_division_similarity(n, r1, r2, change_contact_surfaces=ccs)
+            if edgeValues[n][r1] != {}:
+                values[n] = values.get(n, []) + list(edgeValues[n][r1].values())
+
+    #
+    # values[n] is a list of all the score values for any couple of atlases exhibiting the division of 'n'
+    # max_values[n] is the worst value for a comparison of two atlases exhibiting the division of 'n'
+    #
+    min_values = {}
+    for n in values.keys():
+        min_values[n] = min(values[n])
+
+    f = open(filename, "w")
+
+    f.write("import networkx as nx\n")
+    f.write("import numpy as np\n")
+    f.write("import matplotlib.pyplot as plt\n")
+
+    sublist = ['a7.0002_', 'a8.0003_', 'a8.0004_']
+
+    cellidentifierlist = []
+    for mother_name in min_values:
+
+        if False and mother_name not in sublist:
+            continue
+
+        min_value = 100.0 * min_values[mother_name]
+
+        # identifier for mother cell
+        cellname = mother_name.split('.')[0] + "_" + mother_name.split('.')[1][0:4]
+        if mother_name.split('.')[1][4] == '_':
+            cellname += 'U'
+        elif mother_name.split('.')[1][4] == '*':
+            cellname += 'S'
+        else:
+            cellname += 'S'
+        fileidentifier = 'GRAPH{:03d}_'.format(int(min_value)) + cellname
+        cellidentifier = cellname + '_GRAPH{:03d}'.format(int(min_value))
+        cellidentifierlist.append(cellidentifier)
+
+        #
+        # edges[n1][n2] in [1,5] is an integer giving the weight of an edge
+        # the smallest the weight, the weakest the edge
+        #
+        edges = {}
+        for n1 in divisions[mother_name]:
+            if n1 not in edgeValues[mother_name]:
+                continue
+            edges[n1] = {}
+            for n2 in divisions[mother_name]:
+                if n2 not in edgeValues[mother_name][n1]:
+                    continue
+                if n2 <= n1:
+                    continue
+                edges[n1][n2] = int(1.0 + 4.0 * edgeValues[mother_name][n1][n2])
+
+        f.write("\n")
+        f.write("\n")
+        f.write("def draw_" + cellidentifier + "(savefig=False):\n")
+
+        nodes = list(divisions[mother_name])
+        nodes.sort()
+
+        f.write("\n")
+        f.write("    G_" + cellidentifier + " = nx.Graph()\n")
+        f.write("    G_" + cellidentifier + ".add_nodes_from(" + str(nodes) + ")\n")
+        f.write("\n")
+
+        #
+        # for each edge weight, get the edge weight, and use the right edge value for colorization
+        #
+        edgelist = {}
+        edgecolor = {}
+        for n1 in edges:
+            for n2 in edges[n1]:
+                if n2 <= n1:
+                    continue
+                edgelist[edges[n1][n2]] = edgelist.get(edges[n1][n2], []) + [(n1, n2)]
+                edgecolor[edges[n1][n2]] = edgecolor.get(edges[n1][n2], []) + [edgeValues[mother_name][n1][n2]]
+
+        for i in edgelist:
+            f.write("    G_" + cellidentifier + ".add_edges_from(" + str(edgelist[i]) + ", weight=" + str(i) + ")\n")
+
+        f.write("\n")
+        f.write("    node_labels = {}\n")
+        for n in nodes:
+            f.write("    node_labels['" + str(n) + "'] = '" + str(n) + "'\n")
+        f.write("\n")
+
+        f.write("    fig, ax = plt.subplots(figsize=(7.5, 7.5))\n")
+        f.write("    pos = nx.circular_layout(G_" + cellidentifier + ", scale=1.8)\n")
+        f.write("    nx.draw_networkx_nodes(G_" + cellidentifier + ", pos=pos, ax=ax, node_size=1000)\n")
+        f.write("    nx.draw_networkx_labels(G_" + cellidentifier + ", ax=ax, pos=pos, labels=node_labels," +
+                " font_weight='bold')\n")
+        f.write("    ax.set_xlim([-2.2, 2.2])\n")
+        f.write("    ax.set_ylim([-2.1, 2.1])\n")
+        for i in edgelist:
+            f.write("    nx.draw_networkx_edges(G_" + cellidentifier + ", pos=pos, ax=ax, edgelist=" + str(edgelist[i]))
+            f.write(", edge_color=" + str(edgecolor[i]))
+            f.write(", edge_vmin=0.0, edge_vmax=1.0")
+            # '_r' at the end of the colormap name means reversed colormap
+            f.write(", edge_cmap = plt.cm.brg_r")
+            f.write(", width=" + str(i))
+            f.write(")\n")
+        title = "division of " + str(mother_name)
+        title += ", edge value in [{:.2f}, {:.2f}]".format(min_values[mother_name], max(values[mother_name]))
+
+        f.write("    ax.set_title(\"" + str(title) + "\")\n")
+
+        f.write("    if savefig:\n")
+        f.write("        plt.savefig('" + str(fileidentifier))
+        if file_suffix is not None:
+            f.write(file_suffix)
+        f.write("'" + " + '.png')\n")
+        f.write("        plt.savefig('" + str(cellidentifier))
+        if file_suffix is not None:
+            f.write(file_suffix)
+        f.write("'" + " + '.png')\n")
+        f.write("    else:\n")
+        f.write("        plt.show()\n")
+        f.write("    plt.close()\n")
 
     f.write("\n")
     f.write("\n")
@@ -643,11 +490,9 @@ def figures_division_hierarchical_clustering(atlases, parameters):
     f.close()
 
 
-def figures_cell_neighborhood_pca(neighborhoods, parameters, min_samples=4):
+def figures_distance_histogram(atlases, parameters):
 
-    cells = sorted(neighborhoods, key=lambda key: len(neighborhoods[key]), reverse=True)
-
-    filename = 'figures_cell_neighborhood_pca'
+    filename = 'figures_distance_histogram'
     file_suffix = None
     if parameters.figurefile_suffix is not None and isinstance(parameters.figurefile_suffix, str) and \
             len(parameters.figurefile_suffix) > 0:
@@ -656,254 +501,38 @@ def figures_cell_neighborhood_pca(neighborhoods, parameters, min_samples=4):
         filename += file_suffix
     filename += '.py'
 
-    f = open(filename, "w")
-
-    f.write("import matplotlib.pyplot as plt\n")
-    f.write("import matplotlib.colors as clr\n")
-    f.write("from sklearn.decomposition import PCA\n")
-
-    cellidentifierlist = []
-    for cell in cells:
-        if len(neighborhoods[cell]) <= min_samples:
-            continue
-        cellname = cell.split('.')[0] + "_" + cell.split('.')[1][0:4]
-        if cell.split('.')[1][4] == '_':
-            cellname += 'U'
-        elif cell.split('.')[1][4] == '*':
-            cellname += 'S'
-        else:
-            cellname += 'S'
-        cellidentifier = cellname + '_NA{:03d}'.format(int(len(neighborhoods[cell])))
-        cellidentifierlist.append(cellidentifier)
-
-        atlases = list(neighborhoods[cell].keys())
-        neighbors = neighborhoods[cell][atlases[0]]
-        arr = []
-        for a in atlases:
-            vec = []
-            norm = 0.0
-            for n in neighbors:
-                vec += [neighborhoods[cell][a][n]]
-                norm += neighborhoods[cell][a][n]
-            vec = [i/norm for i in vec]
-            arr += [vec]
-
-        f.write("\n")
-        f.write("\n")
-        f.write("def draw_" + cellidentifier + "(savefig=False, cmap=plt.cm.gist_rainbow):\n")
-
-        f.write("\n")
-        f.write("    L_" + cellname + " = " + str(list(neighborhoods[cell].keys())) + "\n")
-        f.write("    N_" + cellname + " = " + str(arr) + "\n")
-
-        f.write("\n")
-        f.write("    pca = PCA(n_components=3)\n")
-        f.write("    pca.fit(N_" + cellname + ")\n")
-        f.write("    explained_variance_2D = pca.explained_variance_ratio_[0] + pca.explained_variance_ratio_[1]\n")
-        f.write("    explained_variance_3D = sum(pca.explained_variance_ratio_)\n")
-        f.write("    components = pca.fit_transform(N_" + cellname + ")\n")
-        f.write("    sortedcomp = sorted(list(zip(L_" + cellname + ", components)), key=lambda x: x[1][0])\n")
-        f.write("    fig = plt.figure(figsize=(15, 6.5))\n")
-        f.write("    ax = fig.add_subplot(1, 2, 1)\n")
-        f.write("    ax.set_xlabel('Principal Component 1', fontsize=15)\n")
-        f.write("    ax.set_ylabel('Principal Component 2', fontsize=15)\n")
-        f.write("    title = '" + str(cell) + "' + ', explained variance = {:.2f}'.format(explained_variance_2D)\n")
-        f.write("    ax.set_title(title, fontsize=20)\n")
-        f.write("    for i in range(len(N_" + cellname + ")):\n")
-        f.write("        ax.scatter(x=[sortedcomp[i][1][0]], y=[sortedcomp[i][1][1]], c=[i], vmin=0, \\\n")
-        f.write("            vmax=len(L_" + cellname + "), label=sortedcomp[i][0], cmap=cmap)\n")
-        f.write("    ax.grid()\n")
-        f.write("    ax.legend()\n")
-        f.write("    ymin, ymax = ax.get_ylim()\n")
-        f.write("\n")
-
-        f.write("    ax1 = fig.add_subplot(1, 2, 2, projection='3d')\n")
-        f.write("    ax1.set_xlabel('Principal Component 2', fontsize=15)\n")
-        f.write("    ax1.set_ylabel('Principal Component 1', fontsize=15)\n")
-        f.write("    ax1.set_zlabel('Principal Component 3', fontsize=15)\n")
-        f.write("    ax1.set_xlim(ymax, ymin)\n")
-        f.write("    title = '" + str(cell) + "' + ', explained variance = {:.2f}'.format(explained_variance_3D)\n")
-        f.write("    ax1.set_title(title, fontsize=20)\n")
-        f.write("    for i in range(len(N_" + cellname + ")):\n")
-        f.write("        ax1.scatter([sortedcomp[i][1][1]], [sortedcomp[i][1][0]], [sortedcomp[i][1][2]], c=[i], \\\n")
-        f.write("            vmin=0, vmax=len(L_" + cellname + "), label=sortedcomp[i][0], cmap=cmap)\n")
-        f.write("    norm = clr.Normalize(vmin=0, vmax=len(L_" + cellname + "))\n")
-        f.write("    zmin, zmax = ax1.get_zlim()\n")
-        f.write("    for i in range(len(N_" + cellname + ")):\n")
-        f.write("        color = cmap(norm(i))\n")
-        f.write("        ax1.plot([sortedcomp[i][1][1], sortedcomp[i][1][1]], \\\n")
-        f.write("            [sortedcomp[i][1][0], sortedcomp[i][1][0]], [zmin, sortedcomp[i][1][2]], color=color)\n")
-        f.write("\n")
-
-        f.write("    if savefig:\n")
-        f.write("        plt.savefig('" + str(cellidentifier))
-        if file_suffix is not None:
-            f.write(file_suffix)
-        f.write("'" + " + '.png')\n")
-        f.write("    else:\n")
-        f.write("        plt.show()\n")
-
-    f.write("\n")
-    f.write("\n")
-    f.write("def draw_all(savefig=False, cmap=plt.cm.gist_rainbow):\n")
-    for cellidentifier in cellidentifierlist:
-        f.write("    draw_" + cellidentifier + "(savefig=savefig, cmap=cmap)\n")
-        f.write("    plt.close()\n")
-
-    f.write("\n")
-    f.write("\n")
-    f.write("cmap = plt.cm.gist_rainbow\n")
-    for cellidentifier in cellidentifierlist:
-        f.write("if False:\n")
-        f.write("    draw_" + cellidentifier + "(savefig=False, cmap=cmap)\n")
-    f.write("\n")
-    f.write("if True:\n")
-    f.write("    draw_all(savefig=True, cmap=cmap)\n")
-    f.write("\n")
-
-    f.close()
-
-
-def figures_histogram_scores(neighborhoods, parameters):
-
-    filename = 'figures_histogram_scores'
-    file_suffix = None
-    if parameters.figurefile_suffix is not None and isinstance(parameters.figurefile_suffix, str) and \
-            len(parameters.figurefile_suffix) > 0:
-        file_suffix = '_' + parameters.figurefile_suffix
-    if file_suffix is not None:
-        filename += file_suffix
-    filename += '.py'
-
-    cell_score_by_stage = {}
-    sister_score_by_stage = {}
-
-    for cell in neighborhoods:
-        stage = int(cell.split('.')[0][1:])
-        sister = uname.get_sister_name(cell)
-        for ref in neighborhoods[cell]:
-            #
-            # cell score
-            #
-            for r in neighborhoods[cell]:
-                score = ucontact.contact_distance(neighborhoods[cell][ref], neighborhoods[cell][r],
-                                                  similarity=parameters.contact_similarity)
-                cell_score_by_stage[stage] = cell_score_by_stage.get(stage, []) + [score]
-            if sister not in neighborhoods:
-                continue
-            if sister < cell:
-                continue
-            for r in neighborhoods[sister]:
-                score = ucontact.contact_distance(neighborhoods[cell][ref], neighborhoods[sister][r],
-                                                  similarity=parameters.contact_similarity)
-                sister_score_by_stage[stage] = sister_score_by_stage.get(stage, []) + [score]
-
-    cell_scores = []
-    sister_scores = []
-    for s in cell_score_by_stage:
-        cell_scores += cell_score_by_stage[s]
-    for s in sister_score_by_stage:
-        sister_scores += sister_score_by_stage[s]
-
-    f = open(filename, "w")
-
-    f.write("import numpy as np\n")
-    f.write("import matplotlib.pyplot as plt\n")
-    f.write("\n")
-    f.write("savefig = True\n")
-    f.write("\n")
-    f.write("cell_score_by_stage = " + str(cell_score_by_stage))
-    f.write("\n")
-    f.write("sister_score_by_stage = " + str(sister_score_by_stage))
-    f.write("\n")
-    f.write("cell_scores = []\n")
-    f.write("sister_scores = []\n")
-    f.write("for s in cell_score_by_stage:\n")
-    f.write("    cell_scores += cell_score_by_stage[s]\n")
-    f.write("for s in sister_score_by_stage:\n")
-    f.write("    sister_scores += sister_score_by_stage[s]\n")
-    f.write("\n")
-
-    f.write("fig, ax = plt.subplots(figsize=(7.5, 7.5))\n")
-    f.write("labels = ['same cell', 'sister cell']\n")
-    f.write("ax.hist([cell_scores, sister_scores], 100, histtype='bar', label=labels)\n")
-    f.write("ax.legend(prop={'size': 10})\n")
-    f.write("ax.set_title('all scores', fontsize=12)\n")
-    f.write("ax.tick_params(labelsize=10)\n")
-    f.write("if savefig:\n")
-    f.write("    plt.savefig('histogram_scores_all")
-    if file_suffix is not None:
-        f.write(file_suffix)
-    f.write("'" + " + '.png')\n")
-    f.write("else:\n")
-    f.write("    plt.show()\n")
-    f.write("\n")
-
-    f.write("for s in cell_score_by_stage:\n")
-    f.write("    fig, ax = plt.subplots(figsize=(7.5, 7.5))\n")
-    f.write("    labels = ['same cell', 'sister cell']\n")
-    f.write("    ax.hist([cell_score_by_stage[s], sister_score_by_stage[s]], 100, histtype='bar', label=labels)\n")
-    f.write("    ax.legend(prop={'size': 10})\n")
-    f.write("    title = \"scores for stage #{:02d}\".format(s)\n")
-    f.write("    ax.set_title(title, fontsize=15)\n")
-    f.write("    ax.tick_params(labelsize=15)\n")
-    f.write("    if savefig:\n")
-    f.write("        plt.savefig('histogram_scores_by_stage_S{:02d}")
-    if file_suffix is not None:
-        f.write(file_suffix)
-    f.write("'.format(s)" + " + '.png')\n")
-    f.write("    else:\n")
-    f.write("        plt.show()\n")
-    f.write("\n")
-
-    f.close()
-
-
-def figures_histogram2D_scores(atlases, parameters):
-
-    filename = 'figures_histogram2D_scores'
-    file_suffix = None
-    if parameters.figurefile_suffix is not None and isinstance(parameters.figurefile_suffix, str) and \
-            len(parameters.figurefile_suffix) > 0:
-        file_suffix = '_' + parameters.figurefile_suffix
-    if file_suffix is not None:
-        filename += file_suffix
-    filename += '.py'
-
-    neighborhoods = atlases.get_neighborhoods()
+    #
+    # get the references per mother_name
+    #
+    divisions = atlases.get_divisions()
+    ccs = not parameters.use_common_neighborhood
 
     right_cscores = []
     right_sscores = []
-
     wrong_cscores = []
     wrong_sscores = []
 
-    for cell in neighborhoods:
-        sister = uname.get_sister_name(cell)
-        for ref in neighborhoods[cell]:
-            if sister not in neighborhoods:
-                continue
-            if ref not in neighborhoods[sister]:
-                continue
-            #
-            # cell score
-            #
-            for r in neighborhoods[cell]:
-                if r == ref:
+    for n in divisions:
+        d = uname.get_daughter_names(n)
+        for r1 in divisions[n]:
+            for r2 in divisions[n]:
+                if r2 <= r1:
                     continue
-                if r not in neighborhoods[sister]:
-                    continue
+                d00 = atlases.get_cell_distance(d[0], r1, d[0], r2, change_contact_surfaces=ccs)
+                d11 = atlases.get_cell_distance(d[1], r1, d[1], r2, change_contact_surfaces=ccs)
+                d01 = atlases.get_cell_distance(d[0], r1, d[1], r2, change_contact_surfaces=ccs)
+                d10 = atlases.get_cell_distance(d[1], r1, d[0], r2, change_contact_surfaces=ccs)
+                if d01 > 2.0 or d10 > 2.0:
+                    print("mother = " + str(n))
+                    print("  d[0,1] = " + str(d[0]) + ", " + str(d[1]))
+                    print("  r1, r2 = " + str(r1) + ", " + str(r2))
+                    print("  d01, d10 = " + str(d01) + ", " + str(d10))
+                right_cscores += [d00, d11]
+                right_sscores += [d11, d00]
+                wrong_cscores += [d01, d10]
+                wrong_sscores += [d10, d01]
 
-                right_cscores.append(ucontact.contact_distance(neighborhoods[cell][ref], neighborhoods[cell][r],
-                                                               similarity=parameters.contact_similarity))
-                right_sscores.append(ucontact.contact_distance(neighborhoods[sister][ref], neighborhoods[sister][r],
-                                                               similarity=parameters.contact_similarity))
-                wrong_cscores.append(ucontact.contact_distance(neighborhoods[cell][ref], neighborhoods[sister][r],
-                                                               similarity=parameters.contact_similarity))
-                wrong_sscores.append(ucontact.contact_distance(neighborhoods[sister][ref], neighborhoods[cell][r],
-                                                               similarity=parameters.contact_similarity))
-
-    step = 0.01
+    step = atlases.get_probability_step()
 
     f = open(filename, "w")
 
@@ -934,15 +563,15 @@ def figures_histogram2D_scores(atlases, parameters):
     f.write("ax1.plot(right_cscores, right_sscores, 'k.', markersize=2)\n")
     f.write("ax1.set_box_aspect(1)\n")
     f.write("ax1.set_xlim(0, 1)\n")
-    f.write("ax1.set_xlabel('Daughter #1/daughter #1 score', fontsize=15)\n")
-    f.write("ax1.set_ylabel('Daughter #2/daughter #2 score', fontsize=15)\n")
-    f.write("title = 'score couples'\n")
+    f.write("ax1.set_xlabel('Daughter #1/daughter #1 distance', fontsize=15)\n")
+    f.write("ax1.set_ylabel('Daughter #2/daughter #2 distance', fontsize=15)\n")
+    f.write("title = 'distance couples'\n")
     f.write("ax1.set_title(title, fontsize=15)\n")
 
     f.write("\n")
     f.write("ax2.imshow(np.rot90(Z), cmap=plt.cm.rainbow_r, extent=[0, 1, 0, 1], vmin=Z.min(), vmax=Z.max())\n")
     f.write("ax2.set_box_aspect(1)\n")
-    f.write("ax2.set_xlabel('Daughter #1/daughter #1 score', fontsize=15)\n")
+    f.write("ax2.set_xlabel('Daughter #1/daughter #1 distance', fontsize=15)\n")
     f.write("title = 'kernel estimation in [{:.2f}, {:.2f}]'.format(Z.min(), Z.max())\n")
     f.write("ax2.set_title(title, fontsize=15)\n")
 
@@ -951,18 +580,19 @@ def figures_histogram2D_scores(atlases, parameters):
     f.write("ax3.set_box_aspect(1)\n")
     f.write("CS = ax3.contour(X, Y, N, levels=np.arange(10, 100, 10))\n")
     f.write("ax3.clabel(CS, inline=True, fontsize=10)\n")
-    f.write("ax3.set_xlabel('Daughter #1/daughter #1 score', fontsize=15)\n")
-    f.write("title = 'score probability'\n")
+    f.write("ax3.set_xlabel('Daughter #1/daughter #1 distance', fontsize=15)\n")
+    f.write("title = 'distance couple probability'\n")
     f.write("ax3.set_title(title, fontsize=15)\n")
 
     f.write("\n")
     f.write("if savefig:\n")
-    f.write("    plt.savefig('kde_estimation_rightpairing")
+    f.write("    plt.savefig('histogram2D_rightpairing")
     if file_suffix is not None:
         f.write(file_suffix)
     f.write("'" + " + '.png')\n")
     f.write("else:\n")
     f.write("    plt.show()\n")
+    f.write("    plt.close()\n")
 
     f.write("\n")
     f.write("wrong_cscores = " + str(wrong_cscores) + "\n")
@@ -984,15 +614,15 @@ def figures_histogram2D_scores(atlases, parameters):
     f.write("ax1.plot(wrong_cscores, wrong_sscores, 'k.', markersize=2)\n")
     f.write("ax1.set_box_aspect(1)\n")
     f.write("ax1.set_xlim(0, 1)\n")
-    f.write("ax1.set_xlabel('Daughter #1/daughter #2 score', fontsize=15)\n")
-    f.write("ax1.set_ylabel('Daughter #2/daughter #1 score', fontsize=15)\n")
+    f.write("ax1.set_xlabel('Daughter #1/daughter #2 distance', fontsize=15)\n")
+    f.write("ax1.set_ylabel('Daughter #2/daughter #1 distance', fontsize=15)\n")
     f.write("title = 'score couples'\n")
     f.write("ax1.set_title(title, fontsize=15)\n")
 
     f.write("\n")
     f.write("ax2.imshow(np.rot90(Z), cmap=plt.cm.rainbow_r, extent=[0, 1, 0, 1], vmin=Z.min(), vmax=Z.max())\n")
     f.write("ax2.set_box_aspect(1)\n")
-    f.write("ax2.set_xlabel('Daughter #1/daughter #2 score', fontsize=15)\n")
+    f.write("ax2.set_xlabel('Daughter #1/daughter #2 distance', fontsize=15)\n")
     f.write("title = 'kernel estimation in [{:.2f}, {:.2f}]'.format(Z.min(), Z.max())\n")
     f.write("ax2.set_title(title, fontsize=15)\n")
 
@@ -1001,16 +631,38 @@ def figures_histogram2D_scores(atlases, parameters):
     f.write("ax3.set_box_aspect(1)\n")
     f.write("CS = ax3.contour(X, Y, N, levels=np.arange(10, 100, 10))\n")
     f.write("ax3.clabel(CS, inline=True, fontsize=10)\n")
-    f.write("ax3.set_xlabel('Daughter #1/daughter #2 score', fontsize=15)\n")
+    f.write("ax3.set_xlabel('Daughter #1/daughter #2 distance', fontsize=15)\n")
     f.write("title = 'score probability'\n")
     f.write("ax3.set_title(title, fontsize=15)\n")
 
     f.write("\n")
     f.write("if savefig:\n")
-    f.write("    plt.savefig('kde_estimation_wrongpairing")
+    f.write("    plt.savefig('histogram2D_wrongpairing")
     if file_suffix is not None:
         f.write(file_suffix)
     f.write("'" + " + '.png')\n")
     f.write("else:\n")
     f.write("    plt.show()\n")
+    f.write("    plt.close()\n")
+
+    f.write("\n")
+    f.write("fig, ax = plt.subplots(figsize=(7.5, 7.5))\n")
+    f.write("labels = ['same cell', 'sister cell']\n")
+    f.write("ax.hist([right_cscores, wrong_cscores], 100, histtype='bar', label=labels)\n")
+    f.write("ax.legend(prop={'size': 10})\n")
+    f.write("ax.set_title('atlas/atlas daughter cell distances', fontsize=12)\n")
+    f.write("ax.tick_params(labelsize=10)\n")
+
+    f.write("\n")
+    f.write("if savefig:\n")
+    f.write("    plt.savefig('histogram1D")
+    if file_suffix is not None:
+        f.write(file_suffix)
+    f.write("'" + " + '.png')\n")
+    f.write("else:\n")
+    f.write("    plt.show()\n")
+    f.write("    plt.close()\n")
+
+    f.write("\n")
+
     f.close()

@@ -1,6 +1,5 @@
 
 import copy
-import functools
 import math
 import os
 import sys
@@ -9,6 +8,7 @@ import astec.utils.common as common
 import astec.utils.ascidian_name as uname
 
 monitoring = common.Monitoring()
+
 
 class ContactSurfaceParameters(common.PrefixedParameter):
 
@@ -25,15 +25,13 @@ class ContactSurfaceParameters(common.PrefixedParameter):
         if "doc" not in self.__dict__:
             self.doc = {}
 
-        doc = "\t Defines the contact surface similarity. Contact surface vectors are normalized before"
-        doc += "comparison. Possible values are:\n"
-        doc += "\t - 'inner_product': normalization by the inner product.\n"
+        doc = "\t Defines the contact surface similarity. Contact surface vectors are normalized before\n"
+        doc += "\t comparison. Possible values are:\n"
         doc += "\t - 'l1_distance': normalization by the l1-norm. \n"
-        doc += "\t - 'l2_distance': normalization by the l1-norm.\n"
-        doc += "\t Default is 'l2_distance'"
+        doc += "\t - 'l2_distance': normalization by the l2-norm.\n"
         doc += "\t This measure is normalized into [0, 1]: 0 means perfect equality, 1 means total dissimilarity"
-        self.doc['contact_similarity'] = doc
-        self.contact_similarity = 'l2_distance'
+        self.doc['cell_contact_distance'] = doc
+        self.cell_contact_distance = 'l1_distance'
 
     ############################################################
     #
@@ -50,7 +48,7 @@ class ContactSurfaceParameters(common.PrefixedParameter):
 
         common.PrefixedParameter.print_parameters(self)
 
-        self.varprint('contact_similarity', self.contact_similarity)
+        self.varprint('cell_contact_distance', self.cell_contact_distance, self.doc.get('cell_contact_distance', None))
 
         print("")
 
@@ -63,7 +61,8 @@ class ContactSurfaceParameters(common.PrefixedParameter):
 
         common.PrefixedParameter.write_parameters_in_file(self, logfile)
 
-        self.varwrite(logfile, 'contact_similarity', self.contact_similarity)
+        self.varwrite(logfile, 'cell_contact_distance', self.cell_contact_distance,
+                      self.doc.get('cell_contact_distance', None))
 
         logfile.write("\n")
         return
@@ -80,8 +79,8 @@ class ContactSurfaceParameters(common.PrefixedParameter):
     ############################################################
 
     def update_from_parameters(self, parameters):
-        self.contact_similarity = self.read_parameter(parameters, 'contact_similarity', self.contact_similarity)
-        self.contact_similarity = self.read_parameter(parameters, 'neighborhood_comparison', self.contact_similarity)
+        self.cell_contact_distance = self.read_parameter(parameters, 'cell_contact_distance',
+                                                         self.cell_contact_distance)
 
     def update_from_parameter_file(self, parameter_file):
         if parameter_file is None:
@@ -312,25 +311,12 @@ def build_same_contact_surfaces(neighborhoods, debug=False):
 
     return common_neighborhoods
 
+
 #######################################################################################
 #
 # compute distance between two vectors of contact surfaces
 #
 ########################################################################################
-
-def _scalar_product(vect0, vect1):
-    n0 = 0.0
-    n1 = 0.0
-    ps = 0.0
-    for k in vect0:
-        n0 += vect0[k] * vect0[k]
-    for k in vect1:
-        n1 += vect1[k] * vect1[k]
-    # & = set intersection
-    for k in set(vect0.keys()) & set(vect1.keys()):
-        ps += vect0[k] * vect1[k]
-    return ps / (math.sqrt(n0 * n1))
-
 
 def _l1_normalized_modulus(vect0, vect1):
     n0 = 0.0
@@ -345,11 +331,11 @@ def _l1_normalized_modulus(vect0, vect1):
     for k in set(vect0.keys()) - set(vect1.keys()):
         nm += abs(vect0[k] / n0)
     for k in set(vect1.keys()) - set(vect0.keys()):
-        nm += abs(vect1[k] / n0)
+        nm += abs(vect1[k] / n1)
     return nm
 
 
-def _l2_normalized_modulus(vect0, vect1):
+def _square_l2_normalized_modulus(vect0, vect1):
     n0 = 0.0
     n1 = 0.0
     nm = 0.0
@@ -363,44 +349,40 @@ def _l2_normalized_modulus(vect0, vect1):
         nm += vect0[k]/n0 * vect0[k]/n0
     for k in set(vect1.keys()) - set(vect0.keys()):
         nm += vect1[k]/n1 * vect1[k]/n1
-    return math.sqrt(nm)
+    return nm
 
 
-def _contact_distance(neigh0, neigh1, similarity='l2_distance'):
+def _cell_contact_distance(neigh0, neigh1, distance='l1_distance'):
     """
     Compute distance between two contact surface vectors. Do not compute 'common' neighborhood.
     Parameters
     ----------
     neigh0
     neigh1
-    similarity
+    distance
 
     Returns
     -------
 
     """
-    proc = "_contact_distance"
+    proc = "_cell_contact_distance"
     #
-    # scalar product in [0, 1] (0: full disagreement, 1: perfect agreement)
     # _l1_normalized_modulus in [0, 2] (0: perfect agreement, 2:full disagreement)
-    # _l2_normalized_modulus in [0, sqrt(2)] (0: perfect agreement, sqrt(2):full disagreement)
+    # _square_l2_normalized_modulus in [0, 2] (0: perfect agreement, 2:full disagreement)
     #
-    if similarity.lower() == 'l1_distance' or similarity.lower() == 'l1-distance' or similarity.lower() == 'l1_norm' \
-            or similarity.lower() == 'l1-norm':
+    if distance.lower() == 'l1_distance' or distance.lower() == 'l1-distance' or distance.lower() == 'l1_norm' \
+            or distance.lower() == 'l1-norm':
         score = _l1_normalized_modulus(neigh0, neigh1) / 2.0
-    elif similarity.lower() == 'l2_distance' or similarity.lower() == 'l2-distance' or similarity.lower() == 'l2_norm' \
-            or similarity.lower() == 'l2-norm':
-        score = _l2_normalized_modulus(neigh0, neigh1) / 1.4142136
-    elif similarity.lower() == 'scalar_product' or similarity.lower() == 'scalar-product' \
-            or similarity.lower() == 'inner_product' or similarity.lower() == 'inner-product':
-        score = 1.0 - _scalar_product(neigh0, neigh1)
+    elif distance.lower() == 'l2_distance' or distance.lower() == 'l2-distance' or distance.lower() == 'l2_norm' \
+            or distance.lower() == 'l2-norm':
+        score = math.sqrt(_square_l2_normalized_modulus(neigh0, neigh1) / 2.0)
     else:
-        monitoring.to_log_and_console(proc + ": unhandled score computation '" + str(similarity) + "'\n")
+        monitoring.to_log_and_console(proc + ": unhandled score computation '" + str(distance) + "'\n")
         sys.exit(1)
     return score
 
 
-def contact_distance(neigh0, neigh1, similarity='l2_distance', change_contact_surfaces=True, title=None, debug=False):
+def cell_contact_distance(neigh0, neigh1, distance='l1_distance', change_contact_surfaces=True, title=None):
     """
     Compute the similarity score of two neighborhoods, as the normalized scalar
     product of the vectors of contact surfaces.
@@ -409,10 +391,81 @@ def contact_distance(neigh0, neigh1, similarity='l2_distance', change_contact_su
     neigh0: dictionary depicting a cell neighborhood. Each key is a neighbor, and the
             associated dictionary value give the contact surface
     neigh1: dictionary depicting a cell neighborhood
-    similarity:
+    distance:
     change_contact_surfaces: if True, build vectors with neighboring cell of same name
         (eg may fuse daughters into a fake mother cell, etc)
     title: if not None, print out the neighborhoods as well as the score. For debug purpose.
+
+    Returns
+    -------
+    the similarity score.
+
+    """
+
+    if change_contact_surfaces:
+        tmp = {0: neigh0, 1: neigh1}
+        vect = build_same_contact_surfaces(tmp)
+        score = _cell_contact_distance(vect[0], vect[1], distance=distance)
+        if title is not None:
+            _print_common_neighborhoods(vect[0], vect[1], title=title)
+            monitoring.to_log_and_console("\t score = " + str(score) + "\n")
+    else:
+        score = _cell_contact_distance(neigh0, neigh1, distance=distance)
+
+    return score
+
+
+def _division_contact_distance(daughter00, daughter01, daughter10, daughter11, distance='l1_distance'):
+    """
+    Compute distance between two contact surface vectors. Do not compute 'common' neighborhood.
+    Parameters
+    ----------
+    daughter00
+    daughter01
+    daughter10
+    daughter11
+    distance
+
+    Returns
+    -------
+
+    """
+    proc = "_division_contact_distance"
+    #
+    # _l1_normalized_modulus in [0, 2] (0: perfect agreement, 2:full disagreement)
+    # _square_l2_normalized_modulus in [0, 2] (0: perfect agreement, 2:full disagreement)
+    #
+    if distance.lower() == 'l1_distance' or distance.lower() == 'l1-distance' or distance.lower() == 'l1_norm' \
+            or distance.lower() == 'l1-norm':
+        score = _l1_normalized_modulus(daughter00, daughter10)
+        score += _l1_normalized_modulus(daughter01, daughter11)
+        score /= 4.0
+    elif distance.lower() == 'l2_distance' or distance.lower() == 'l2-distance' or distance.lower() == 'l2_norm' \
+            or distance.lower() == 'l2-norm':
+        score = _square_l2_normalized_modulus(daughter00, daughter10)
+        score += _square_l2_normalized_modulus(daughter01, daughter11)
+        score = math.sqrt(score / 4.0)
+    else:
+        monitoring.to_log_and_console(proc + ": unhandled score computation '" + str(distance) + "'\n")
+        sys.exit(1)
+    return score
+
+
+def division_contact_distance(daughter00, daughter01, daughter10, daughter11, distance='l1_distance',
+                              change_contact_surfaces=True, debug=False):
+    """
+    Compute the similarity score of two neighborhoods, as the normalized scalar
+    product of the vectors of contact surfaces.
+    Parameters
+    ----------
+    daughter00: dictionary depicting a cell neighborhood. Each key is a neighbor, and the
+            associated dictionary value give the contact surface
+    daughter01: dictionary depicting a cell neighborhood
+    daughter10: dictionary depicting a cell neighborhood
+    daughter11: dictionary depicting a cell neighborhood
+    distance:
+    change_contact_surfaces: if True, build vectors with neighboring cell of same name
+        (eg may fuse daughters into a fake mother cell, etc)
     debug
 
     Returns
@@ -422,15 +475,12 @@ def contact_distance(neigh0, neigh1, similarity='l2_distance', change_contact_su
     """
 
     if change_contact_surfaces:
-        tmp = {}
-        tmp[0] = neigh0
-        tmp[1] = neigh1
-        vect = build_same_contact_surfaces(tmp, debug=debug)
-        score = _contact_distance(vect[0], vect[1], similarity)
-        if title is not None:
-            _print_common_neighborhoods(vect[0], vect[1], title=title)
-            monitoring.to_log_and_console("\t score = " + str(score) + "\n")
+        tmp = {0: daughter00, 1: daughter10}
+        vect0 = build_same_contact_surfaces(tmp, debug=debug)
+        tmp = {0: daughter01, 1: daughter11}
+        vect1 = build_same_contact_surfaces(tmp, debug=debug)
+        score = _division_contact_distance(vect0[0], vect1[0], vect0[1], vect1[1], distance=distance)
     else:
-        score = _contact_distance(neigh0, neigh1, similarity)
+        score = _division_contact_distance(daughter00, daughter01, daughter10, daughter11, distance=distance)
 
     return score

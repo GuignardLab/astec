@@ -38,7 +38,7 @@ class NamingParameters(ucontacta.AtlasParameters):
     #
     ############################################################
 
-    def __init__(self, prefix ='naming_'):
+    def __init__(self, prefix='naming_'):
 
         if "doc" not in self.__dict__:
             self.doc = {}
@@ -305,7 +305,7 @@ def _test_naming(prop, reference_prop, discrepancies):
 #
 ########################################################################################
 
-def _compute_distances(mother, daughters, ancestor_name, prop, neighborhoods, parameters, time_digits_for_cell_id=4):
+def _compute_distances(mother, daughters, ancestor_name, prop, atlases, parameters, time_digits_for_cell_id=4):
     """
 
     Parameters
@@ -314,8 +314,7 @@ def _compute_distances(mother, daughters, ancestor_name, prop, neighborhoods, pa
     daughters: cell ids of the daughter cells
     ancestor_name: dictionary indexed by cell ids, giving the name of the last named ancestor
     prop: property dictionary of the embryo to be named
-    neighborhoods: dictionary of neighborhoods (contact surface vectors), 
-        where the keys are ['cell name']['reference name']
+    atlases:
     parameters:
     time_digits_for_cell_id
 
@@ -328,6 +327,7 @@ def _compute_distances(mother, daughters, ancestor_name, prop, neighborhoods, pa
     """
     proc = "_compute_distances"
 
+    neighborhoods = atlases.get_neighborhoods()
     #
     # are daughter names indexed?
     #
@@ -406,8 +406,11 @@ def _compute_distances(mother, daughters, ancestor_name, prop, neighborhoods, pa
             if sister is not None:
                 contact[sister_name] = prop['cell_contact_surface'][d][sister]
             for reference_name in neighborhoods[name]:
-                score[d][name][reference_name] = ucontact.contact_distance(contact, neighborhoods[name][reference_name],
-                                                                           similarity=parameters.contact_similarity)
+                score[d][name][reference_name] = ucontact.cell_contact_distance(contact,
+                                                                                neighborhoods[name][reference_name],
+                                                                                distance=atlases.cell_contact_distance,
+                                                                                change_contact_surfaces=True)
+
             if sister is not None:
                 del contact[sister_name]
     return score
@@ -584,13 +587,13 @@ def _give_name_probability_sum(scores, atlases, debug=False):
     if sum_probability00 > sum_probability01:
         name[ids[0]] = candidates[0]
         name[ids[1]] = candidates[1]
-        name_certainty[ids[0]] = int(sum_probability00/ len(references))
-        name_certainty[ids[1]] = int(sum_probability00/ len(references))
+        name_certainty[ids[0]] = int(sum_probability00 / len(references))
+        name_certainty[ids[1]] = int(sum_probability00 / len(references))
     elif sum_probability01 > sum_probability00:
         name[ids[0]] = candidates[1]
         name[ids[1]] = candidates[0]
-        name_certainty[ids[0]] = int(sum_probability01/ len(references))
-        name_certainty[ids[1]] = int(sum_probability01/ len(references))
+        name_certainty[ids[0]] = int(sum_probability01 / len(references))
+        name_certainty[ids[1]] = int(sum_probability01 / len(references))
     else:
         msg = "there is no agreement at all for cells " + str(candidates)
         monitoring.to_log_and_console(str(proc) + ": " + msg)
@@ -682,7 +685,6 @@ def _give_name(distance, atlases, parameters, debug=False):
             parameters.selection_method.lower() == 'probability-max':
         return _give_name_probability_max(distance, atlases, debug)
 
-
     monitoring.to_log_and_console(str(proc) + ": selection method '" + str(parameters.selection_method) +
                                   "' not handled yet")
     sys.exit(1)
@@ -713,7 +715,6 @@ def _propagate_naming(prop, atlases, parameters, time_digits_for_cell_id=4):
     if 'cell_name' not in prop:
         monitoring.to_log_and_console(str(proc) + ": 'cell_name' was not in dictionary")
         return None
-
 
     if parameters.delay_from_division > 0:
         monitoring.to_log_and_console(str(proc) + ": WARNING, delay_from_division > 0 is not handled yet")
@@ -812,8 +813,6 @@ def _propagate_naming(prop, atlases, parameters, time_digits_for_cell_id=4):
     ancestor_name = {}
     cell_not_named = []
 
-    neighborhoods = atlases.get_neighborhoods()
-
     for t in timepoints:
         division_to_be_named = {}
         for c in missing_name[t]:
@@ -897,7 +896,7 @@ def _propagate_naming(prop, atlases, parameters, time_digits_for_cell_id=4):
                     cell_not_named.append(mother)
                 cell_not_named.append(c)
                 msg = ": weird, cell " + str(mother) + " has " + str(len(lineage[mother])) + " daughter(s)."
-                msg += " Its offspring will not be named."
+                msg += " Its offspring '" + str(lineage[mother]) + "' will not be named."
                 monitoring.to_log_and_console(str(proc) + msg)
 
         if division_to_be_named == {}:
@@ -917,7 +916,7 @@ def _propagate_naming(prop, atlases, parameters, time_digits_for_cell_id=4):
             # the length of the array is the occurrence of [n in daughter_names(mother)] in the
             # neighborhood dictionary
             #
-            distance = _compute_distances(mother, daughters, ancestor_name, prop, neighborhoods, parameters,
+            distance = _compute_distances(mother, daughters, ancestor_name, prop, atlases, parameters,
                                           time_digits_for_cell_id=time_digits_for_cell_id)
             if debug:
                 print("distance = " + str(distance))
@@ -973,7 +972,7 @@ def naming_process(experiment, parameters):
     #
     # should we clean reference here?
     #
-    atlases = ucontacta.Atlases()
+    atlases = ucontacta.Atlases(parameters=parameters)
     atlases.build_neighborhoods(parameters.atlasFiles, parameters, time_digits_for_cell_id=time_digits_for_cell_id)
 
     if atlases.get_neighborhoods() is None or atlases.get_neighborhoods() == {}:

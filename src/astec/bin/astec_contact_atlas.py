@@ -13,6 +13,7 @@ import sys
 import astec.utils.common as common
 import astec.algorithms.contact_atlas as acontacta
 import astec.utils.contact_atlas as ucontacta
+import astec.utils.contact_figure as ucontactf
 import astec.utils.properties as properties
 import astec.utils.diagnosis as diagnosis
 from astec.wrapping.cpp_wrapping import path_to_vt
@@ -72,11 +73,11 @@ def _set_options(my_parser):
                            action='store_const', dest='debug', const=0,
                            help='no debug information')
 
-    help = "print the list of parameters (with explanations) in the console and exit. "
-    help += "If a parameter file is given, it is taken into account"
+    msg = "print the list of parameters (with explanations) in the console and exit. "
+    msg += "If a parameter file is given, it is taken into account"
     my_parser.add_argument('-pp', '--print-param',
                            action='store_const', dest='printParameters',
-                           default=False, const=True, help=help)
+                           default=False, const=True, help=msg)
 
     return
 
@@ -173,6 +174,7 @@ def main():
     #
     acontacta.monitoring.copy(monitoring)
     ucontacta.monitoring.copy(monitoring)
+    ucontactf.monitoring.copy(monitoring)
     properties.monitoring.copy(monitoring)
     diagnosis.monitoring.copy(monitoring)
 

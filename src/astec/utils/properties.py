@@ -454,9 +454,11 @@ def _set_xml_element_text(element, value):
 
         elif type(value[0]) in (int, float, np.int64, np.float64):
             # element.text = str(value)
+            value.sort()
             element.text = repr(value)
 
         elif isinstance(value[0], str):
+            value.sort()
             text = "["
             for i in range(len(value)):
                 text += "'" + value[i] + "'"

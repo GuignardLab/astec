@@ -1,7 +1,6 @@
 import os
 import sys
 import copy
-import operator
 
 import scipy.stats as stats
 import numpy as np
@@ -44,15 +43,13 @@ class AtlasParameters(udiagnosis.DiagnosisParameters):
         # add the symmetric neighborhood as neighborhood
         # consider the other half of the embryo as a single cell
         #
-        doc = "\t if 'True', add the symmetric neighborhood as additionnal exemplar.\n"
-        doc += "\t Default is 'True'"
+        doc = "\t if 'True', add the symmetric neighborhood as additional exemplar.\n"
         self.doc['add_symmetric_neighborhood'] = doc
         self.add_symmetric_neighborhood = True
 
         doc = "\t if 'True', differentiate the cells of the symmetric half-embryo.\n"
         doc += "\t If 'False', consider all the cells of the symmetric half-embryo.\n"
         doc += "\t as a single cell.\n"
-        doc += "\t Default is 'True'"
         self.doc['differentiate_other_half'] = doc
         self.differentiate_other_half = True
 
@@ -70,15 +67,29 @@ class AtlasParameters(udiagnosis.DiagnosisParameters):
         #
         #
         #
-        doc = "\t Performs some diagnosis when reading an additional property file into the atlases"
+        doc = "\t How to compare two division patterns (a division is considered here\n"
+        doc += "\t as the concatenation of the contact surface vectors of the 2 daughter\n"
+        doc += "\t cells). Choices are:\n"
+        doc += "\t - 'distance': the distance type is given by 'cell_contact_distance'\n"
+        doc += "\t   distances are normalized between 0 (perfect match) and 1 (complete mismatch)\n"
+        doc += "\t - 'probability': 1-(division probability) is used to keep the same meaning\n"
+        doc += "\t   for the 0 and 1 extremal values. Probabilities are built with the distance\n"
+        doc += "\t   'cell_contact_distance'\n"
+        self.doc['division_contact_similarity'] = doc
+        self.division_contact_similarity = 'distance'
+
+        #
+        #
+        #
+        doc = "\t Performs some diagnosis when reading an additional property file into the atlases\n"
+        doc += "\t Incrementing the verboseness ('-v' in the command line) may give more details."
         self.doc['diagnosis_properties'] = doc
         self.diagnosis_properties = False
 
         #
-        # investigate whether daughters have to be switched for a division
+        #
         #
         self.naming_improvement = False
-        self.cluster_fusion_probability = 75.0
 
     ############################################################
     #
@@ -105,10 +116,11 @@ class AtlasParameters(udiagnosis.DiagnosisParameters):
         self.varprint('use_common_neighborhood', self.use_common_neighborhood)
         self.varprint('delay_from_division', self.delay_from_division)
 
+        self.varprint('division_contact_similarity', self.division_contact_similarity)
+
         self.varprint('diagnosis_properties', self.diagnosis_properties)
 
         self.varprint('naming_improvement', self.naming_improvement)
-        self.varprint('cluster_fusion_probability', self.cluster_fusion_probability)
 
         print("")
 
@@ -123,18 +135,25 @@ class AtlasParameters(udiagnosis.DiagnosisParameters):
 
         udiagnosis.DiagnosisParameters.write_parameters_in_file(self, logfile)
 
-        self.varwrite(logfile, 'outputAtlasFile', self.outputAtlasFile)
-        self.varwrite(logfile, 'atlasFiles', self.atlasFiles)
+        self.varwrite(logfile, 'outputAtlasFile', self.outputAtlasFile, self.doc.get('outputAtlasFile', None))
+        self.varwrite(logfile, 'atlasFiles', self.atlasFiles, self.doc.get('atlasFiles', None))
 
-        self.varwrite(logfile, 'add_symmetric_neighborhood', self.add_symmetric_neighborhood)
-        self.varwrite(logfile, 'differentiate_other_half', self.differentiate_other_half)
-        self.varwrite(logfile, 'use_common_neighborhood', self.use_common_neighborhood)
-        self.varwrite(logfile, 'delay_from_division', self.delay_from_division)
+        self.varwrite(logfile, 'add_symmetric_neighborhood', self.add_symmetric_neighborhood,
+                      self.doc.get('add_symmetric_neighborhood', None))
+        self.varwrite(logfile, 'differentiate_other_half', self.differentiate_other_half,
+                      self.doc.get('differentiate_other_half', None))
+        self.varwrite(logfile, 'use_common_neighborhood', self.use_common_neighborhood,
+                      self.doc.get('use_common_neighborhood', None))
+        self.varwrite(logfile, 'delay_from_division', self.delay_from_division,
+                      self.doc.get('delay_from_division', None))
 
-        self.varwrite(logfile, 'diagnosis_properties', self.diagnosis_properties)
+        self.varwrite(logfile, 'division_contact_similarity', self.division_contact_similarity,
+                      self.doc.get('division_contact_similarity', None))
 
-        self.varwrite(logfile, 'naming_improvement', self.naming_improvement)
-        self.varwrite(logfile, 'cluster_fusion_probability', self.cluster_fusion_probability)
+        self.varwrite(logfile, 'diagnosis_properties', self.diagnosis_properties,
+                      self.doc.get('diagnosis_properties', None))
+
+        self.varwrite(logfile, 'naming_improvement', self.naming_improvement, self.doc.get('naming_improvement', None))
 
         logfile.write("\n")
         return
@@ -166,13 +185,16 @@ class AtlasParameters(udiagnosis.DiagnosisParameters):
                                                            self.use_common_neighborhood)
         self.delay_from_division = self.read_parameter(parameters, 'delay_from_division', self.delay_from_division)
 
+        self.division_contact_similarity = self.read_parameter(parameters, 'cell_contact_distance',
+                                                               self.division_contact_similarity)
+        self.division_contact_similarity = self.read_parameter(parameters, 'division_contact_similarity',
+                                                               self.division_contact_similarity)
+
         self.diagnosis_properties = self.read_parameter(parameters, 'diagnosis_properties', self.diagnosis_properties)
         self.diagnosis_properties = self.read_parameter(parameters, 'naming_diagnosis', self.diagnosis_properties)
         self.diagnosis_properties = self.read_parameter(parameters, 'diagnosis_naming', self.diagnosis_properties)
 
         self.naming_improvement = self.read_parameter(parameters, 'naming_improvement', self.naming_improvement)
-        self.cluster_fusion_probability = self.read_parameter(parameters, 'cluster_fusion_probability',
-                                                              self.cluster_fusion_probability)
 
     def update_from_parameter_file(self, parameter_file):
         if parameter_file is None:
@@ -209,585 +231,114 @@ def get_symmetric_neighborhood(neighborhood):
     return symneighborhood
 
 
-#######################################################################################
-#
-#
-#
-########################################################################################
-
-def _get_probability_consistency(atlases, parameters):
-    proc = "_get_probability_consistency"
-    has_written_something = False
-
-    neighborhoods = atlases.get_neighborhoods()
-
-    #
-    # list of daughter cells
-    #
-    cell_names = sorted(list(neighborhoods.keys()))
-
-    #
-    # get the list of references per division
-    #
-    references = {}
-    for cell_name in cell_names:
-        mother_name = uname.get_mother_name(cell_name)
-        references[mother_name] = references.get(mother_name, set()).union(set(neighborhoods[cell_name].keys()))
-
-    #
-    # get discrepancies
-    #
-
-    discrepancy = {}
-    tested_couples = {}
-
-    # cell_names is the list of daughter cell names of the neighborhood list
-    for cell_name in cell_names:
-
-        #
-        # get cell name and sister name
-        #
-        sister_name = uname.get_sister_name(cell_name)
-        if sister_name not in neighborhoods:
-            msg = "weird, cell " + str(cell_name) + " is in the reference neighborhoods, while its sister "
-            msg += str(sister_name) + " is not "
-            monitoring.to_log_and_console(str(proc) + ": " + msg)
-            has_written_something = True
-            # cell_names.remove(cell_name)
-            continue
-
-        #
-        # only one neighborhood, nothing to test
-        #
-        if len(neighborhoods[cell_name]) == 1:
-            # cell_names.remove(cell_name)
-            # cell_names.remove(sister_name)
-            continue
-
-        mother_name = uname.get_mother_name(cell_name)
-        #
-        # get two reference embryos
-        #
-        warnings = []
-        for ref1 in neighborhoods[cell_name]:
-            if ref1 not in neighborhoods[sister_name]:
-                if ref1 in warnings:
-                    continue
-                msg = "weird, reference " + str(ref1) + " is in the neighborhoods of cell "
-                msg += str(cell_name) + " but not of its sister " + str(sister_name)
-                monitoring.to_log_and_console(str(proc) + ": " + msg)
-                has_written_something = True
-                warnings.append(ref1)
-                continue
-            for ref2 in neighborhoods[cell_name]:
-                if ref2 == ref1:
-                    continue
-                if ref2 not in neighborhoods[sister_name]:
-                    if ref2 in warnings:
-                        continue
-                    msg = "weird, reference " + str(ref2) + " is in the neighborhoods of cell "
-                    msg += str(cell_name) + " but not of its sister " + str(sister_name)
-                    monitoring.to_log_and_console(str(proc) + ": " + msg)
-                    has_written_something = True
-                    warnings.append(ref2)
-                    continue
-
-                same_choice_1 = ucontact.contact_distance(neighborhoods[cell_name][ref1],
-                                                          neighborhoods[cell_name][ref2],
-                                                          similarity=parameters.contact_similarity)
-                same_choice_2 = ucontact.contact_distance(neighborhoods[sister_name][ref1],
-                                                          neighborhoods[sister_name][ref2],
-                                                          similarity=parameters.contact_similarity)
-                sister_choice_1 = ucontact.contact_distance(neighborhoods[cell_name][ref1],
-                                                            neighborhoods[sister_name][ref2],
-                                                            similarity=parameters.contact_similarity)
-                sister_choice_2 = ucontact.contact_distance(neighborhoods[sister_name][ref1],
-                                                            neighborhoods[cell_name][ref2],
-                                                            similarity=parameters.contact_similarity)
-
-                prob_same_choice = atlases.get_probability(same_choice_1, same_choice_2)
-                prob_sister_choice = atlases.get_probability(sister_choice_1, sister_choice_2)
-
-                if mother_name not in tested_couples:
-                    tested_couples[mother_name] = 1
-                else:
-                    tested_couples[mother_name] += 1
-                if prob_sister_choice < prob_same_choice:
-                    continue
-                if mother_name not in discrepancy:
-                    discrepancy[mother_name] = []
-                discrepancy[mother_name].append((ref1, ref2))
-
-    if has_written_something:
-        monitoring.to_log_and_console("")
-
-    #
-    # for each division/mother cell
-    # - reference is a dictionary that gives the set of references
-    # - tested_couples is a dictionary that gives the number of tests done
-    # - discrepancy is a dictionary (key = mother_name) that gives the list of couple (of references) of non-agreement
-    #
-    return references, tested_couples, discrepancy
-
-
-def _check_probability_consistency(atlases, parameters):
-    proc = "_check_probability_consistency"
-
-    references, tested_couples, discrepancy = _get_probability_consistency(atlases, parameters)
-
-    monitoring.to_log_and_console("")
-    monitoring.to_log_and_console(str(proc))
-    monitoring.to_log_and_console("-------------------------------------------")
-    monitoring.to_log_and_console("--- reference probabilities consistency ---")
-
-    #
-    # if some divisions have some discrepancies, the following ones in the lineage
-    # are likely to exhibit discrepancies also
-    #
-    mother_names = sorted(discrepancy.keys())
-    if len(mother_names) > 0:
-        _write_neighborhood_consistency("probability discrepancies", mother_names, references, tested_couples,
-                                        discrepancy)
-
-    msg = "tested divisions = " + str(len(tested_couples))
-    monitoring.to_log_and_console(str(proc) + ": " + msg)
-    msg = "divisions with probability discrepancies =  " + str(len(discrepancy))
-    monitoring.to_log_and_console("\t " + msg)
-
-    monitoring.to_log_and_console("-------------------------------------------")
-    monitoring.to_log_and_console("")
-
-
-def diagnosis_atlases_probability(atlases, parameters):
-
-    proc = "diagnosis_atlases_probability"
-
-    if not isinstance(atlases, Atlases):
-        monitoring.to_log_and_console(str(proc) + ": unexpected type for 'atlases' variable: "
-                                      + str(type(atlases)))
-        sys.exit(1)
-
-    if not isinstance(parameters, AtlasParameters):
-        monitoring.to_log_and_console(str(proc) + ": unexpected type for 'parameters' variable: "
-                                      + str(type(parameters)))
-        sys.exit(1)
-
-    neighborhoods = atlases.get_neighborhoods()
-
-    processed_mothers = []
-    mother_refs = {}
-    mother_maxproba = {}
-
-    sorted_cells = sorted(neighborhoods.keys())
-    for cell in sorted_cells:
-        #
-        # check whether 'mother' has both daughters in neighborhoods
-        #
-        mother = uname.get_mother_name(cell)
-        if mother in processed_mothers:
-            continue
-        processed_mothers.append(mother)
-
-        sister = uname.get_sister_name(cell)
-        if sister not in neighborhoods:
-            continue
-
-        #
-        # get couple of atlases (ref, r) having bother d and sister
-        # and compute score. Keep the one yielding the best probability
-        #
-
-        for ref in neighborhoods[cell]:
-            key = (mother, ref)
-            if key in mother_refs:
-                continue
-            if ref not in neighborhoods[sister]:
-                continue
-
-            probas = []
-            for r in neighborhoods[cell]:
-                if r == ref:
-                    continue
-                if r not in neighborhoods[sister]:
-                    continue
-                cscore = ucontact.contact_distance(neighborhoods[cell][ref], neighborhoods[cell][r],
-                                                   similarity=parameters.contact_similarity)
-                sscore = ucontact.contact_distance(neighborhoods[sister][ref], neighborhoods[sister][r],
-                                                   similarity=parameters.contact_similarity)
-                prob = atlases.get_probability(cscore, sscore)
-                probas += [(prob, r)]
-
-            if len(probas) > 0:
-                mother_refs[key] = sorted(probas, key=operator.itemgetter(0), reverse=True)
-                mother_maxproba[key] = mother_refs[key][0]
-
-    sorted_mother = sorted(mother_maxproba.items(), key=operator.itemgetter(1))
-
-    print("\n")
-    print("\n")
-    print("\n")
-    print("\n")
-    print(str(sorted_mother))
-    print("\n")
-    print("\n")
-    print("\n")
-    print("\n")
-    monitoring.to_log_and_console(str(proc) + ": details")
-    for t in sorted_mother:
-        msg = "  division of " + str(t[0][0]) + " in embryo " + str(t[0][1]) + " has maximal probability of "
-        msg += "{:.2f} with embryo ".format(t[1][0]) + str(t[1][1])
-        monitoring.to_log_and_console(msg)
-    #
-    #
-    #
-
-
 ########################################################################################
 #
 #
 #
 ########################################################################################
 
-def get_neighborhood_consistency(neighborhoods, parameters):
-    proc = "get_neighborhood_consistency"
-    has_written_something = False
+def _write_summary_pairwise_switches(atlases, summary):
 
-    #
-    # list of daughter cells
-    #
-    cell_names = sorted(list(neighborhoods.keys()))
-
-    #
-    # get the list of references per division
-    #
-    references = {}
-    for cell_name in cell_names:
-        mother_name = uname.get_mother_name(cell_name)
-        references[mother_name] = references.get(mother_name, set()).union(set(neighborhoods[cell_name].keys()))
-
-    #
-    # get discrepancies
-    #
-
-    discrepancy = {}
-    tested_couples = {}
-
-    # cell_names is the list of daughter cell names of the neighborhood list
-    for cell_name in cell_names:
-
-        #
-        # get cell name and sister name
-        #
-        sister_name = uname.get_sister_name(cell_name)
-        if sister_name not in neighborhoods:
-            msg = "weird, cell " + str(cell_name) + " is in the reference neighborhoods, while its sister "
-            msg += str(sister_name) + " is not "
-            monitoring.to_log_and_console(str(proc) + ": " + msg)
-            has_written_something = True
-            # cell_names.remove(cell_name)
-            continue
-
-        #
-        # only one neighborhood, nothing to test
-        #
-        if len(neighborhoods[cell_name]) == 1:
-            # cell_names.remove(cell_name)
-            # cell_names.remove(sister_name)
-            continue
-
-        mother_name = uname.get_mother_name(cell_name)
-        #
-        # get two reference embryos
-        #
-        warnings = []
-        for ref1 in neighborhoods[cell_name]:
-            # print("ref1 = " + str(ref1) + " - " + str(type(ref1)) + " - " + str(ref1 == ))
-            for ref2 in neighborhoods[cell_name]:
-                if ref2 == ref1:
-                    continue
-                if ref2 not in neighborhoods[sister_name]:
-                    if ref2 in warnings:
-                        continue
-                    msg = "weird, reference " + str(ref2) + " is in the neighborhoods of cell "
-                    msg += str(cell_name) + " but not of its sister " + str(sister_name)
-                    monitoring.to_log_and_console(str(proc) + ": " + msg)
-                    has_written_something = True
-                    warnings.append(ref2)
-                    continue
-
-                same_choice = ucontact.contact_distance(neighborhoods[cell_name][ref1], neighborhoods[cell_name][ref2],
-                                                        similarity=parameters.contact_similarity)
-                sister_choice = ucontact.contact_distance(neighborhoods[cell_name][ref1],
-                                                          neighborhoods[sister_name][ref2],
-                                                          similarity=parameters.contact_similarity)
-
-                if mother_name not in tested_couples:
-                    tested_couples[mother_name] = 1
-                else:
-                    tested_couples[mother_name] += 1
-                if same_choice < sister_choice:
-                    continue
-                if mother_name not in discrepancy:
-                    discrepancy[mother_name] = []
-                discrepancy[mother_name].append((ref1, ref2))
-
-    if has_written_something:
-        monitoring.to_log_and_console("")
-
-    #
-    # for each division/mother cell
-    # - reference is a dictionary that gives the set of references
-    # - tested_couples is a dictionary that gives the number of tests done
-    # - discrepancy is a dictionary (key = mother_name) that gives the list of couple (of references) of non-agreement
-    #
-    return references, tested_couples, discrepancy
-
-
-def _write_neighborhood_consistency(txt, mother_names, references, tested_couples, discrepancy):
-    #
-    # get discrepancy/inconsistency percentage per division
-    #
+    divisions = atlases.get_divisions()
     percents = []
-    for mother_name in mother_names:
-        percents.append(100.0 * float(len(discrepancy[mother_name])) / float(tested_couples[mother_name]))
+    mother_names = list(summary.keys())
+
+    for n in mother_names:
+        percents.append(100.0 * float(len(summary[n]['disagreement'])) / float(summary[n]['tested_couples']))
     [sorted_percents, sorted_mothers] = list(zip(*sorted(zip(percents, mother_names), reverse=True)))
 
-    msg = "\n*** " + str(txt) + " = " + str(len(mother_names))
-    monitoring.to_log_and_console(msg)
-
-    for mother_name in sorted_mothers:
-        msg = " - " + str(mother_name) + " cell division into "
-        msg += str(uname.get_daughter_names(mother_name)) + " has " + str(len(discrepancy[mother_name]))
-        if len(discrepancy[mother_name]) > 1:
-            msg += " discrepancies"
+    for n in sorted_mothers:
+        if len(summary[n]['disagreement']) == 0:
+            continue
+        msg = " - " + str(n) + " cell division into "
+        msg += str(uname.get_daughter_names(n)) + " has " + str(len(summary[n]['disagreement']))
+        if len(summary[n]['disagreement']) > 1:
+            msg += " disagreements"
         else:
-            msg += " discrepancy"
-        percent = 100.0 * float(len(discrepancy[mother_name])) / float(tested_couples[mother_name])
+            msg += " disagreement"
+        percent = 100.0 * float(len(summary[n]['disagreement'])) / float(summary[n]['tested_couples'])
         msg += " (" + "{:2.2f}%".format(percent) + ") "
-        msg += " over " + str(tested_couples[mother_name]) + " tested configurations "
+        msg += " over " + str(summary[n]['tested_couples']) + " tested configurations "
         monitoring.to_log_and_console(msg)
-        msg = "\t over " + str(len(references[mother_name]))
-        msg += " references: " + str(references[mother_name])
+        msg = "\t over " + str(len(divisions[n]))
+        msg += " references: " + str(divisions[n])
         monitoring.to_log_and_console(msg)
-        msg = "\t " + str(discrepancy[mother_name])
+        msg = "\t " + str(summary[n]['disagreement'])
         monitoring.to_log_and_console(msg, 3)
 
 
-def _check_neighborhood_consistency(neighborhoods, parameters):
-    proc = "_check_neighborhood_consistency"
+def _diagnosis_pairwise_switches(atlases, parameters):
+    proc = "_diagnosis_pairwise_switches"
 
-    references, tested_couples, discrepancy = get_neighborhood_consistency(neighborhoods, parameters)
+    divisions = atlases.get_divisions()
+    ccs = not parameters.use_common_neighborhood
+    neighborhoods = atlases.get_neighborhoods()
+    similarity = atlases.get_division_contact_similarity()
 
-    monitoring.to_log_and_console("")
-    monitoring.to_log_and_console(str(proc))
-    monitoring.to_log_and_console("-------------------------------------------")
-    monitoring.to_log_and_console("--- reference neighborhoods consistency ---")
+    summary = {}
 
-    #
-    # if some divisions have some discrepancies, the following ones in the lineage
-    # are likely to exhibit discrepancies also
-    #
-    mother_names = sorted(discrepancy.keys())
-    if len(mother_names) > 0:
-        _write_neighborhood_consistency("neighborhood discrepancies", mother_names, references, tested_couples,
-                                        discrepancy)
+    for n in divisions:
+        #
+        # only one reference/atlas for mother cell 'n': nothing to do
+        #
+        if len(divisions[n]) <= 1:
+            continue
+        summary[n] = {}
+        summary[n]['tested_couples'] = 0
+        summary[n]['disagreement'] = []
 
-    msg = "tested divisions = " + str(len(tested_couples))
+        d = uname.get_daughter_names(n)
+        for r1 in divisions[n]:
+            for r2 in divisions[n]:
+                if r2 <= r1:
+                    continue
+                summary[n]['tested_couples'] += 1
+                #
+                # test reference r1 versus r2
+                # it is assumed that (r1, switched(r2)) is similar to (switched(r1), r2)
+                # so only (r1, switched(r2)) is tested
+                #
+                switch_neighs = {d[0]: copy.deepcopy(neighborhoods[d[1]][r2]),
+                                 d[1]: copy.deepcopy(neighborhoods[d[0]][r2])}
+                if d[0] in switch_neighs[d[0]]:
+                    switch_neighs[d[0]][d[1]] = switch_neighs[d[0]][d[0]]
+                    del switch_neighs[d[0]][d[0]]
+                if d[1] in switch_neighs[d[1]]:
+                    switch_neighs[d[1]][d[0]] = switch_neighs[d[1]][d[1]]
+                    del switch_neighs[d[1]][d[1]]
+                #
+                # same
+                #
+                same_dist = division_contact_generic_distance(atlases, neighborhoods[d[0]][r1], neighborhoods[d[1]][r1],
+                                                              neighborhoods[d[0]][r2], neighborhoods[d[1]][r2],
+                                                              similarity=similarity, change_contact_surfaces=ccs)
+                swit_dist = division_contact_generic_distance(atlases, neighborhoods[d[0]][r1], neighborhoods[d[1]][r1],
+                                                              switch_neighs[d[0]], switch_neighs[d[1]],
+                                                              similarity=similarity, change_contact_surfaces=ccs)
+                if same_dist < swit_dist:
+                    continue
+                summary[n]['disagreement'] += [(r1, r2)]
+
+    divisions_with_disagreement = [n for n in summary if len(summary[n]['disagreement']) > 0]
+
+    msg = "tested divisions = " + str(len(summary))
     monitoring.to_log_and_console(str(proc) + ": " + msg)
-    msg = "divisions with discrepancies =  " + str(len(discrepancy))
+    msg = "divisions with pairwise disagreement =  " + str(len(divisions_with_disagreement))
     monitoring.to_log_and_console("\t " + msg)
-
-    monitoring.to_log_and_console("-------------------------------------------")
     monitoring.to_log_and_console("")
+    if len(divisions_with_disagreement) > 0:
+        _write_summary_pairwise_switches(atlases, summary)
+
+    return summary
 
 
-def _check_leftright_consistency(neighborhoods, parameters):
-    monitoring.to_log_and_console("")
-    monitoring.to_log_and_console("-------------------------------------------")
-    monitoring.to_log_and_console("--- left/right neighborhood consistency ---")
-
-    #
-    # list of daughter cells
-    #
-    cell_names = sorted(list(neighborhoods.keys()))
-
-    #
-    # get the list of references per division
-    #
-    references = {}
-    for cell_name in cell_names:
-        mother_name = uname.get_mother_name(cell_name)
-        references[mother_name] = references.get(mother_name, set()).union(set(neighborhoods[cell_name].keys()))
-
-    #
-    #
-    #
-    mother_names = sorted(list(references.keys()))
-    processed_mothers = []
-    discrepancy = {}
-    tested_cells = {}
-    messages = {}
-    for mother in mother_names:
-        if mother in processed_mothers:
-            continue
-        symmother = uname.get_symmetric_name(mother)
-        processed_mothers.append(mother)
-
-        if symmother not in references:
-            continue
-        daughters = uname.get_daughter_names(mother)
-
-        for reference in references[mother]:
-            if reference not in references[symmother]:
-                continue
-
-            if reference not in tested_cells:
-                tested_cells[reference] = 1
-            else:
-                tested_cells[reference] += 1
-
-            for daughter in daughters:
-                if daughter not in neighborhoods:
-                    continue
-                if reference not in neighborhoods[daughter]:
-                    continue
-                symdaughter = uname.get_symmetric_name(daughter)
-                symsister = uname.get_sister_name(symdaughter)
-                if symdaughter not in neighborhoods or symsister not in neighborhoods:
-                    continue
-                if reference not in neighborhoods[symdaughter] or reference not in neighborhoods[symsister]:
-                    continue
-                #
-                #
-                #
-                symsameneigh = get_symmetric_neighborhood(neighborhoods[symdaughter][reference])
-                symsisterneigh = get_symmetric_neighborhood(neighborhoods[symsister][reference])
-
-                same_choice = ucontact.contact_distance(neighborhoods[daughter][reference], symsameneigh,
-                                                        similarity=parameters.contact_similarity)
-                sister_choice = ucontact.contact_distance(neighborhoods[daughter][reference], symsisterneigh,
-                                                          similarity=parameters.contact_similarity)
-
-                if same_choice < sister_choice:
-                    continue
-
-                if reference not in discrepancy:
-                    discrepancy[reference] = {}
-                discrepancy[reference][mother] = discrepancy[reference].get(mother, []) + [(daughter, symdaughter)]
-
-                messages[mother] = messages.get(mother, []) + [(reference, daughter, symsister, symdaughter)]
-                # msg = "   - '" + str(reference) + "': " + str(daughter) + " neighborhood is closest to "
-                # msg += str(symsister) + " neighborhood than to " + str(symdaughter) + " one"
-                # monitoring.to_log_and_console(msg, 3)
-
-    mothers = sorted(messages.keys())
-    for mother in mothers:
-        msg = "   - '" + str(mother) + "' division"
-        monitoring.to_log_and_console(msg, 3)
-        for (reference, daughter, symsister, symdaughter) in messages[mother]:
-            msg = "      - '" + str(reference) + "': " + str(daughter) + " neighborhood is closest to "
-            msg += str(symsister) + " neighborhood than to " + str(symdaughter) + " one"
-            monitoring.to_log_and_console(msg, 3)
-
-    for reference in discrepancy:
-        msg = "- '" + str(reference) + "' tested divisions = " + str(tested_cells[reference])
-        monitoring.to_log_and_console(msg)
-
-        #
-        # get the mother cell for each discrepancy value
-        #
-        mother_by_discrepancy = {}
-        processed_mothers = []
-        for mother in discrepancy[reference]:
-            if mother in processed_mothers:
-                continue
-            symmother = uname.get_symmetric_name(mother)
-            processed_mothers += [mother, symmother]
-
-            d = len(discrepancy[reference][mother])
-            if symmother in discrepancy[reference]:
-                d += len(discrepancy[reference][symmother])
-            mother_by_discrepancy[d] = mother_by_discrepancy.get(d, []) + [mother]
-
-        divisions_with_discrepancy = 0
-        for d in mother_by_discrepancy:
-            divisions_with_discrepancy += len(mother_by_discrepancy[d])
-        msg = "\t divisions with left/right discrepancies =  " + str(divisions_with_discrepancy)
-        monitoring.to_log_and_console(msg)
-
-        for d in sorted(mother_by_discrepancy.keys()):
-            if d == 1:
-                msg = "\t - divisions with left/right " + str(d) + " discrepancy = "
-            else:
-                msg = "\t - divisions with left/right " + str(d) + " discrepancies = "
-            msg += str(len(mother_by_discrepancy[d]))
-            monitoring.to_log_and_console(msg)
-            processed_mothers = []
-            for mother in mother_by_discrepancy[d]:
-                if mother in processed_mothers:
-                    continue
-                symmother = uname.get_symmetric_name(mother)
-                processed_mothers += [mother, symmother]
-                msg = "(" + str(mother) + ", " + str(symmother) + ") divisions: " + str(d)
-                if d == 1:
-                    msg += " discrepancy"
-                else:
-                    msg += " discrepancies"
-                monitoring.to_log_and_console("\t   " + msg)
-
-    monitoring.to_log_and_console("-------------------------------------------")
-    monitoring.to_log_and_console("")
-    return discrepancy
-
-
-def diagnosis_neighborhood_consistency(neighborhoods, parameters):
-    _check_leftright_consistency(neighborhoods, parameters)
-    _check_neighborhood_consistency(neighborhoods, parameters)
-
-
-#######################################################################################
+########################################################################################
 #
-# consistency is a measure between two reference embryos exhibiting the same division
-# there is an inconsistency when the score computed between the same daughter cells
-# of two reference embryos is lower than the score of this daughter cell (of one reference)
-# and its sister cell (of the other reference). Thus, the consistency is a measure in
-# [0, 4]: 0 means a total consistency while 4 designs a total inconsistency.
+#
 #
 ########################################################################################
 
-def _si_global_score(neighbors, references, parameters, debug=False):
-    """
-    Compute a global score. The global score is the sume of local scores over all couple of references/atlases.
-    A local score is the score (ie the scalar product) of association of each daughter (of a reference) with
-    the same daughter (of the other reference).
-    Parameters
-    ----------
-    neighbors: neighborhoods for the two daughters (dictionary indexed by [0,1] then by the references
-    references: set of references
-    debug
-
-    Returns
-    -------
-
-    """
-    score = 0
-    for r1 in references:
-        for r2 in references:
-            if r2 <= r1:
-                continue
-            score00 = ucontact.contact_distance(neighbors[0][r1], neighbors[0][r2],
-                                                similarity=parameters.contact_similarity)
-            score11 = ucontact.contact_distance(neighbors[1][r1], neighbors[1][r2],
-                                                similarity=parameters.contact_similarity)
-            if debug:
-                print("   - score[" + str(r1) + ", " + str(r2) + "] = " + str(score00))
-                print("   - score[" + str(r1) + ", " + str(r2) + "] = " + str(score11))
-            score += score00
-            score += score11
-    return score
-
-
-def _si_switch_contact_surfaces(neighbors, reference, daughters):
+def _di_switch_contact_surfaces(neighbors, reference, daughters):
     """
     Switch contact surfaces for the two daughters and atlas 'reference'.
     Parameters
@@ -804,63 +355,86 @@ def _si_switch_contact_surfaces(neighbors, reference, daughters):
     # contact surfaces of daughters[0] for atlas 'reference'
     # replace contact surface with daughters[1] with a contact surface with daughters[0]
     #
-    n = copy.deepcopy(neighbors[0][reference])
-    for c in n:
-        if c == daughters[1]:
-            neighbors[0][reference][daughters[0]] = neighbors[0][reference][daughters[1]]
-            del neighbors[0][reference][daughters[1]]
-    #
-    # contact surfaces of daughters[0] for atlas 'reference'
-    # replace contact surface with daughters[1] with a contact surface with daughters[0]
-    #
-    n = copy.deepcopy(neighbors[1][reference])
-    for c in n:
-        if c == daughters[0]:
-            neighbors[1][reference][daughters[1]] = neighbors[1][reference][daughters[0]]
-            del neighbors[1][reference][daughters[0]]
-    #
-    # switch the contact surfaces of daughters[0] with the ones of daughters[1] for atlas 'reference'
-    #
-    tmp = copy.deepcopy(neighbors[0][reference])
-    neighbors[0][reference] = neighbors[1][reference]
-    neighbors[1][reference] = tmp
+    neighs = {0: copy.deepcopy(neighbors[1][reference]), 1: copy.deepcopy(neighbors[0][reference])}
+    if daughters[0] in neighs[0]:
+        neighs[0][daughters[1]] = neighs[0][daughters[0]]
+        del neighs[0][daughters[0]]
+    if daughters[1] in neighs[1]:
+        neighs[1][daughters[0]] = neighs[1][daughters[1]]
+        del neighs[1][daughters[1]]
+
+    neighbors[0][reference] = neighs[0]
+    neighbors[1][reference] = neighs[1]
     return neighbors
 
 
-def _si_test_one_division(neighborhoods, mother, parameters):
+def _di_global_generic_distance(neighbors, references, atlases, parameters, debug=False):
     """
-    Test whether any daughter switch (for a given reference) improve the global score
+    Compute a global score. The global score is the sum of local similarities over all couple of references/atlases.
+
     Parameters
     ----------
-    neighborhoods
-    mother
+    neighbors: neighborhoods for the two daughters (dictionary indexed by [0,1] then by the references
+    references: set of references
+    debug
 
     Returns
     -------
 
     """
-    daughters = uname.get_daughter_names(mother)
-    neighbors = {0: copy.deepcopy(neighborhoods[daughters[0]]), 1: copy.deepcopy(neighborhoods[daughters[1]])}
 
-    references = set.intersection(set(neighbors[0].keys()), set(neighbors[1].keys()))
-    if len(references) <= 1:
+    similarity = atlases.get_division_contact_similarity()
+    ccs = not parameters.use_common_neighborhood
+    score = 0
+    for r1 in references:
+        for r2 in references:
+            if r2 <= r1:
+                continue
+            dist = division_contact_generic_distance(atlases, neighbors[0][r1], neighbors[1][r1], neighbors[0][r2],
+                                                     neighbors[1][r2], similarity=similarity,
+                                                     change_contact_surfaces=ccs)
+            if debug:
+                print("   - dist[" + str(r1) + ", " + str(r2) + "] = " + str(dist))
+            score += dist
+    return score
+
+
+def _di_test_one_division(atlases, mother, parameters):
+    """
+    Test whether any daughter switch (for a given reference) improve a global score
+    Parameters
+    ----------
+    atlases
+    mother
+    parameters
+
+    Returns
+    -------
+
+    """
+    divisions = atlases.get_divisions()
+    if len(divisions[mother]) <= 1:
         return {}
 
-    # score before any changes
-    score = _si_global_score(neighbors, references, parameters)
+    daughters = uname.get_daughter_names(mother)
+    neighborhoods = atlases.get_neighborhoods()
+    neighbors = {0: copy.deepcopy(neighborhoods[daughters[0]]), 1: copy.deepcopy(neighborhoods[daughters[1]])}
 
-    corrections = {}
+    # score before any changes
+    score = _di_global_generic_distance(neighbors, divisions[mother], atlases, parameters)
+
+    corrections = []
     i = 1
     while True:
         newscore = {}
-        for r in references:
+        for r in divisions[mother]:
             #
             # switch contact surfaces for the daughters in atlas 'r'
             #
             tmp = copy.deepcopy(neighbors)
-            tmp = _si_switch_contact_surfaces(tmp, r, daughters)
+            tmp = _di_switch_contact_surfaces(tmp, r, daughters)
             # compute a new score, keep it if it better than the one before any changes
-            newscore[r] = _si_global_score(tmp, references, parameters)
+            newscore[r] = _di_global_generic_distance(tmp, divisions[mother], atlases, parameters)
             if newscore[r] > score:
                 del newscore[r]
         # no found correction at this iteration
@@ -873,454 +447,18 @@ def _si_test_one_division(neighborhoods, mother, parameters):
             ref = list(newscore.keys())[0]
         else:
             ref = min(newscore, key=lambda key: newscore[key])
-        corrections[i] = (ref, score - newscore[ref])
+        corrections += [(ref, score - newscore[ref])]
         i += 1
         # if one correction has been found, apply it
         # and look for an other additional correction
         tmp = copy.deepcopy(neighbors)
-        tmp = _si_switch_contact_surfaces(tmp, ref, daughters)
+        tmp = _di_switch_contact_surfaces(tmp, ref, daughters)
         neighbors[0] = copy.deepcopy(tmp[0])
         neighbors[1] = copy.deepcopy(tmp[1])
         score = newscore[ref]
 
 
-def global_score_improvement(neighborhoods, parameters):
-    """
-    Check whether the global score can be improved by switching the two daughter cells of a
-    mother cell in a given reference. The global score score (for a mother cell) is the sum
-    (over all possible reference embryo couple) of the local scores.
-    Parameters
-    ----------
-    neighborhoods: dictionary of dictionaries. First level of keys is the cell name (name of a daughter), and the
-                   second level of keys is the reference embryo name.
-    parameters:
-    Returns
-    -------
-    There is no returned values. It just prints out some change suggestions.
-    """
-    proc = "global_score_improvement"
-
-    # neighborhoods is a dictionary of dictionaries
-    # ['cell name']['reference name']
-    # first key is a cell name (daughter cell)
-    # second key is the reference from which the neighborhood has been extracted
-
-    corrections = {}
-
-    processed_mothers = {}
-    sorted_cells = sorted(neighborhoods.keys())
-    for d in sorted_cells:
-        mother = uname.get_mother_name(d)
-        if mother in processed_mothers:
-            continue
-        sister = uname.get_sister_name(d)
-        if sister not in neighborhoods:
-            msg = "weird, cell " + str(d) + " is in the reference neighborhoods, while its sister "
-            msg += str(sister) + " is not "
-            monitoring.to_log_and_console(str(proc) + ": " + msg)
-            continue
-        correction = _si_test_one_division(neighborhoods, mother, parameters)
-        #
-        # correction is a dictionary indexed by the iteration index
-        # each value is a tuple ('atlas name', score increment)
-        #
-        if len(correction) > 0:
-            corrections[mother] = correction
-
-    tmp = {}
-    for c in corrections:
-        for i in corrections[c]:
-            tmp[corrections[c][i][0]] = tmp.get(corrections[c][i][0], []) + [c]
-
-    monitoring.to_log_and_console("====== global score improvement =====")
-    # print(str(corrections))
-    refs = sorted(tmp.keys())
-    for r in refs:
-        msg = str(r) + ": "
-        cells = sorted(tmp[r])
-        for i in range(len(cells)):
-            msg += str(cells[i])
-            if i < len(cells)-1:
-                msg += ", "
-        monitoring.to_log_and_console(msg)
-    monitoring.to_log_and_console("====================================")
-
-
-########################################################################################
-#
-#
-#
-########################################################################################
-
-def _pi_ref_in_cluster(clusters, ref):
-    proc = "_pi_ref_in_cluster"
-    ret = None
-    for c in clusters:
-        if ref in clusters[c]:
-            if ret is not None:
-                msg = proc + ": weird, " + str(ref) + " is in cluster " + str(clusters[c])
-                msg += "\t but was already in " + str(ret)
-            ret = (c, "non-switched")
-    if ref[0:9] == 'switched-':
-        sref = ref[9:]
-    else:
-        sref = 'switched-' + ref
-    for c in clusters:
-        if sref in clusters[c]:
-            if ret is not None:
-                msg = proc + ": weird, switched" + str(sref) + " is in cluster " + str(clusters[c])
-                msg += "\t but was already in " + str(ret)
-            ret = (c, "switched")
-    return ret
-
-
-def _pi_delete_refs(tmp, ref0, ref1):
-
-    if ref0[0:9] == 'switched-':
-        r0 = ref0[9:]
-    else:
-        r0 = ref0
-    if ref1[0:9] == 'switched-':
-        r1 = ref1[9:]
-    else:
-        r1 = ref1
-
-    if (r0, r1) in tmp:
-        del tmp[(r0, r1)]
-    if (r1, r0) in tmp:
-        del tmp[(r1, r0)]
-
-    if ('switched-' + r0, r1) in tmp:
-        del tmp[('switched-' + r0, r1)]
-    if (r1, 'switched-' + r0) in tmp:
-        del tmp[(r1, 'switched-' + r0)]
-
-    if (r0, 'switched-' + r1) in tmp:
-        del tmp[(r0, 'switched-' + r1)]
-    if ('switched-' + r1, r0) in tmp:
-        del tmp[('switched-' + r1, r0)]
-
-    if ('switched-' + r0, 'switched-' + r1) in tmp:
-        del tmp[('switched-' + r0, 'switched-' + r1)]
-    if ('switched-' + r1, 'switched-' + r0) in tmp:
-        del tmp[('switched-' + r1, 'switched-' + r0)]
-
-    return tmp
-
-
-def _pi_test_one_division(atlases, mother, parameters, debug=False):
-    proc = "_pi_test_one_division"
-
-    if debug:
-        monitoring.to_log_and_console("      " + proc + ": clustering of divisions of " + str(mother))
-
-    daughters = uname.get_daughter_names(mother)
-    neighborhoods = atlases.get_neighborhoods()
-
-    #
-    #
-    #
-    references = set.intersection(set(neighborhoods[daughters[0]].keys()), set(neighborhoods[daughters[1]].keys()))
-    stages = []
-    for r in references:
-        for d in daughters:
-            for n in neighborhoods[d][r]:
-                if n == 'background' or n == 'other-half':
-                    continue
-                stages += [str(n).split('.')[0][1:]]
-    if debug:
-        msg = "      - maximal stage in neighbors is " + str(max(stages))
-        monitoring.to_log_and_console("    " + msg)
-
-    #
-    # construction of the dictionary of neighborhood config[(switched-)ref][0,1]
-    #
-    config = {}
-    for r in references:
-        config[r] = {}
-        config[r][0] = copy.deepcopy(neighborhoods[daughters[0]][r])
-        config[r][1] = copy.deepcopy(neighborhoods[daughters[1]][r])
-        sr = 'switched-' + str(r)
-        config[sr] = {}
-        config[sr][0] = copy.deepcopy(neighborhoods[daughters[1]][r])
-        config[sr][1] = copy.deepcopy(neighborhoods[daughters[0]][r])
-        if daughters[1] in config[sr][0]:
-            if debug:
-                msg = "  weird, " + str(daughters[1]) + " was found in its neighborhood for reference " + str(r)
-                monitoring.to_log_and_console("      " + msg)
-        if daughters[0] in config[sr][0]:
-            config[sr][0][daughters[1]] = config[sr][0][daughters[0]]
-            del config[sr][0][daughters[0]]
-        if daughters[0] in config[sr][1]:
-            if debug:
-                msg = "  weird, " + str(daughters[0]) + " was found in its neighborhood for reference " + str(r)
-                monitoring.to_log_and_console("      " + msg)
-        if daughters[1] in config[sr][1]:
-            config[sr][1][daughters[0]] = config[sr][1][daughters[1]]
-            del config[sr][1][daughters[1]]
-
-    #
-    # computation of probabilities
-    #
-    prob = {}
-    for r in config:
-        for s in config:
-            if r >= s:
-                continue
-            if r == 'switched-' + str(s) or s == 'switched-' + str(r):
-                continue
-            a = ucontact.contact_distance(config[r][0], config[s][0], similarity=parameters.contact_similarity)
-            b = ucontact.contact_distance(config[r][1], config[s][1], similarity=parameters.contact_similarity)
-            #
-            # probabilities are supposed to be symmetrical but are not ...
-            #
-            prob[(r, s)] = (atlases.get_probability(a, b) + atlases.get_probability(b, a)) / 2.0
-            prob[(s, r)] = prob[(r, s)]
-
-    #
-    #
-    #
-    tmp = copy.deepcopy(prob)
-    clusters = {}
-    ncluster = 0
-    i = 0
-    while len(tmp) > 0:
-        i += 1
-        #
-        # sortedprob is an array of [tuple, value] where the 2-tuple is a couple of reference
-        #
-        sortedprob = [[c, tmp[c]] for c in tmp]
-        sortedprob = sorted(sortedprob, key=operator.itemgetter(1), reverse=True)
-        if debug:
-            msg = "  #" + str(i) + " max prob = " + str(sortedprob[0][1]) + " for " + str(sortedprob[0][0])
-            monitoring.to_log_and_console("      " + msg)
-
-        #
-        # sortedprob[0]       = first value after sort, ie the largest value
-        # sortedprob[0][0]    = the corresponding tuple, ie the couple of references yielding the largest value
-        # sortedprob[0][0][0] = the first reference
-        # sortedprob[0][0][1] = the second reference
-        #
-        c0 = _pi_ref_in_cluster(clusters, sortedprob[0][0][0])
-        c1 = _pi_ref_in_cluster(clusters, sortedprob[0][0][1])
-
-        clusters_have_changed = False
-
-        if c0 is None:
-            # new cluster
-            if c1 is None:
-                clusters_have_changed = True
-                if debug:
-                    monitoring.to_log_and_console("      " + "  - new cluster " + str(ncluster))
-                if sortedprob[0][0][0][0:9] == 'switched-' and sortedprob[0][0][1][0:9] == 'switched-':
-                    clusters[str(ncluster)] = [sortedprob[0][0][0][9:], sortedprob[0][0][1][9:]]
-                else:
-                    clusters[str(ncluster)] = [sortedprob[0][0][0], sortedprob[0][0][1]]
-                ncluster += 1
-            # add sortedprob[0][0][0] to c1 cluster
-            else:
-                clusters_have_changed = True
-                if debug:
-                    monitoring.to_log_and_console("      " + "  - add to cluster " + str(c1[0]))
-                if c1[1] == "non-switched":
-                    clusters[c1[0]] += [sortedprob[0][0][0]]
-                else:
-                    if sortedprob[0][0][0][0:9] == 'switched-':
-                        clusters[c1[0]] += [sortedprob[0][0][0][9:]]
-                    else:
-                        clusters[c1[0]] += ['switched-' + sortedprob[0][0][0]]
-                for r in clusters[c1[0]]:
-                    if r == sortedprob[0][0][0]:
-                        continue
-                    _pi_delete_refs(tmp, sortedprob[0][0][0], r)
-        else:
-            # add sortedprob[0][0][1] to c0 cluster
-            if c1 is None:
-                clusters_have_changed = True
-                if debug:
-                    monitoring.to_log_and_console("      " + "  - add to cluster " + str(c0[0]))
-                if c0[1] == "non-switched":
-                    clusters[c0[0]] += [sortedprob[0][0][1]]
-                else:
-                    if sortedprob[0][0][1][0:9] == 'switched-':
-                        clusters[c0[0]] += [sortedprob[0][0][1][9:]]
-                    else:
-                        clusters[c0[0]] += ['switched-' + sortedprob[0][0][1]]
-                for r in clusters[c0[0]]:
-                    if r == sortedprob[0][0][1]:
-                        continue
-                    _pi_delete_refs(tmp, sortedprob[0][0][1], r)
-            # bridge between 2 clusters
-            else:
-                if debug:
-                    msg = "  - could fuse clusters " + str(c0[0]) + " and " + str(c1[0])
-                    if c0[1] == c1[1]:
-                        msg += " without switch"
-                    else:
-                        msg += ", one of them being switched"
-                    monitoring.to_log_and_console("      " + msg)
-
-        #
-        # remove couples of probabilities
-        #
-        tmp = _pi_delete_refs(tmp, sortedprob[0][0][0], sortedprob[0][0][1])
-
-        if debug and clusters_have_changed:
-            monitoring.to_log_and_console("      " + "  - clusters = " + str(clusters))
-
-    return clusters, prob, references
-
-
-def _pi_intra_cluster_statistics(cluster, prob):
-    p = []
-    for r in cluster:
-        for s in cluster:
-            if r >= s:
-                continue
-            p += [prob[(r, s)]]
-    return p
-
-
-def _pi_inter_cluster_statistics(cluster, dluster, prob):
-    proc = "_pi_inter_cluster_statistics"
-    p = {"non-switched": [], "switched": []}
-    for r in cluster:
-        for s in dluster:
-            p["non-switched"] += [prob[(r, s)]]
-            if r[0:9] == 'switched-':
-                sr = r[9:]
-            else:
-                sr = 'switched-' + r
-            if s[0:9] == 'switched-':
-                ss = s[9:]
-            else:
-                ss = 'switched-' + s
-            p["switched"] += [prob[(sr, s)]]
-            p["switched"] += [prob[(r, ss)]]
-    return p
-
-
-def _pi_cluster_fusion(clusters, stats, prob, parameters):
-    if len(clusters) == 1:
-        return clusters, stats
-
-    tmpprob = {}
-    representative = {}
-    #
-    # clusters keys are 0, 1, 2, ...
-    #
-    for c in clusters:
-        representative[c] = str(c)
-        for d in clusters:
-            if c >= d:
-                continue
-            tmpprob[(c, d, "non-switched")] = max(stats[c][d]["non-switched"])
-            tmpprob[(c, d, "switched")] = max(stats[c][d]["switched"])
-
-    #
-    #
-    #
-    tmp = copy.deepcopy(tmpprob)
-    i = 0
-    while len(tmp) > 0:
-
-        sortedprob = [[c, tmp[c]] for c in tmp]
-        sortedprob = sorted(sortedprob, key=operator.itemgetter(1), reverse=True)
-        #
-        # sortedprob[0][0] = (c, d, ["switched", "non-switched"] with d > c
-        # c, d are 0, 1, 2, ...
-        # representative keys are clusters keys, ie 0, 1, 2, ...
-        # representative values are 0, 1, 2, ... potentially prefixed with 'switched-'
-        #
-
-        if sortedprob[0][1] < parameters.cluster_fusion_probability:
-            break
-
-        r = representative[sortedprob[0][0][0]]
-        if r[0:9] == 'switched-':
-            sr = r[9:]
-        else:
-            sr = 'switched-' + str(r)
-        #
-        # build equivalences
-        #
-        for c in clusters:
-            #
-            # look for representative = sortedprob[0][0][1] or 'switched-'sortedprob[0][0][1]
-            #
-            if representative[c] == str(sortedprob[0][0][1]):
-                if sortedprob[0][0][2] == "switched":
-                    representative[c] = sr
-                else:
-                    representative[c] = r
-            elif representative[c] == 'switched-' + str(sortedprob[0][0][1]):
-                if sortedprob[0][0][2] == "switched":
-                    representative[c] = r
-                else:
-                    representative[c] = sr
-
-        del tmp[sortedprob[0][0]]
-        i += 1
-
-    newclusters = {}
-    ncluster = 0
-    for c in representative:
-        if representative[c] == c:
-            newclusters[c] = clusters[c]
-            ncluster += 1
-        else:
-            if representative[c][0:9] == 'switched-':
-                r = representative[c][9:]
-                for ref in clusters[c]:
-                    if ref[0:9] == 'switched-':
-                        newclusters[r] += [ref[9:]]
-                    else:
-                        newclusters[r] += ['switched-' + ref]
-            else:
-                newclusters[representative[c]] += clusters[c]
-
-    newstats = {}
-    for c in newclusters:
-        newstats[c] = {}
-        newstats[c][c] = _pi_intra_cluster_statistics(newclusters[c], prob)
-        for d in newclusters:
-            if c >= d:
-                continue
-            newstats[c][d] = _pi_inter_cluster_statistics(newclusters[c], newclusters[d], prob)
-
-    return newclusters, newstats
-
-
-def _pi_print_cluster_stats(clusters, stats, cluster_name="cluster", verbose=3):
-    for c in clusters:
-        msg = "    - " + str(cluster_name) + " #" + str(c) + " = " + str(clusters[c])
-        monitoring.to_log_and_console(msg, verbose)
-        if monitoring.verbose >= verbose:
-            msg = "      intra-" + str(cluster_name) + " probabilities:"
-            msg += " min = {:2.2f}".format(min(stats[c][c]))
-            msg += " mean = {:2.2f}".format(np.mean(stats[c][c]))
-            msg += " max = {:2.2f}".format(max(stats[c][c]))
-            monitoring.to_log_and_console(msg, verbose)
-    for c in clusters:
-        for d in clusters:
-            if c >= d:
-                continue
-            msg = "      - " + str(cluster_name) + " #" + str(c) + " <=> " + str(cluster_name) + " #" + str(d)
-            monitoring.to_log_and_console(msg, verbose)
-            msg = "        inter-" + str(cluster_name) + " probabilities (without switch):"
-            msg += " min = {:2.2f}".format(min(stats[c][d]["non-switched"]))
-            msg += " mean = {:2.2f}".format(np.mean(stats[c][d]["non-switched"]))
-            msg += " max = {:2.2f}".format(max(stats[c][d]["non-switched"]))
-            monitoring.to_log_and_console(msg, verbose)
-            msg = "                                    (with switch):  "
-            msg += " min = {:2.2f}".format(min(stats[c][d]["switched"]))
-            msg += " mean = {:2.2f}".format(np.mean(stats[c][d]["switched"]))
-            msg += " max = {:2.2f}".format(max(stats[c][d]["switched"]))
-            monitoring.to_log_and_console(msg, verbose)
-
-
-def global_probability_improvement(atlases, parameters):
-    proc = "global_probability_improvement"
+def division_improvement(atlases, parameters):
 
     # neighborhoods is a dictionary of dictionaries
     # ['cell name']['reference name']
@@ -1332,52 +470,64 @@ def global_probability_improvement(atlases, parameters):
     # stage 6: 32 cells
     # stage 7: 64 cells
     #
+    divisions = atlases.get_divisions()
     mothers = {}
-    neighborhoods = atlases.get_neighborhoods()
-    for c in neighborhoods:
-        mother = uname.get_mother_name(c)
-        stage = mother.split('.')[0][1:]
-        if stage not in mothers:
-            mothers[stage] = []
-        if mother not in mothers[stage]:
-            mothers[stage] += [mother]
-
+    for n in divisions:
+        stage = n.split('.')[0][1:]
+        mothers[stage] = mothers.get(stage, []) + [n]
     for s in mothers:
         mothers[s] = sorted(mothers[s])
 
     stages = list(mothers.keys())
     stages.sort()
+    corrections = {}
 
-    monitoring.to_log_and_console("====== global probability improvement =====")
     for s in stages:
+        corrections[s] = {}
         # if int(s) != 7:
         #    continue
-        monitoring.to_log_and_console("")
-        msg = "- stage " + str(s)
-        monitoring.to_log_and_console(msg)
         for m in mothers[s]:
             # if m != 'a7.0002_':
             #     continue
+            correction = _di_test_one_division(atlases, m, parameters)
+            #
+            # correction is a dictionary indexed by the iteration index
+            # each value is a tuple ('atlas name', score increment)
+            #
+            if len(correction) > 0:
+                corrections[s][m] = correction
 
-            clusters, prob, references = _pi_test_one_division(atlases, m, parameters, debug=False)
-            stats = {}
-            for c in clusters:
-                stats[c] = {}
-                stats[c][c] = _pi_intra_cluster_statistics(clusters[c], prob)
-                for d in clusters:
-                    if c >= d:
-                        continue
-                    stats[c][d] = _pi_inter_cluster_statistics(clusters[c], clusters[d], prob)
-
-            msg = "  - division of " + str(m)
+    monitoring.to_log_and_console("====== daughter switch proposal =====")
+    monitoring.to_log_and_console("------ cell-based view")
+    corrections_by_atlas = {}
+    for s in stages:
+        if len(corrections[s]) == 0:
+            continue
+        msg = "- generation " + str(s)
+        monitoring.to_log_and_console(msg)
+        mothers = list(corrections[s].keys())
+        mothers.sort()
+        for m in mothers:
+            if len(corrections[s][m]) == 0:
+                continue
+            tmp = [c[0] for c in corrections[s][m]]
+            tmp.sort()
+            for a in tmp:
+                corrections_by_atlas[a] = corrections_by_atlas.get(a, []) + [m]
+            msg = "  - division of '" + str(m) + "': "
+            for i, r in enumerate(tmp):
+                msg += str(r)
+                if i < len(tmp)-1:
+                    msg += ", "
             monitoring.to_log_and_console(msg)
-
-            _pi_print_cluster_stats(clusters, stats, cluster_name="cluster", verbose=4)
-
-            newclusters, newstats = _pi_cluster_fusion(clusters, stats, prob, parameters)
-            _pi_print_cluster_stats(newclusters, newstats, cluster_name="fused-cluster", verbose=3)
-
-    monitoring.to_log_and_console("===========================================")
+    if len(corrections_by_atlas) > 0:
+        monitoring.to_log_and_console("------ atlas-based view")
+        refs = list(corrections_by_atlas.keys())
+        refs.sort()
+        for r in refs:
+            msg = "- reference '" + str(r) + "': " + str(corrections_by_atlas[r])
+            monitoring.to_log_and_console(msg)
+    monitoring.to_log_and_console("==========================================")
 
 
 ########################################################################################
@@ -1588,27 +738,135 @@ def _build_common_neighborhoods(neighborhoods):
 ########################################################################################
 
 class Atlases(object):
-    def __init__(self):
+    def __init__(self, parameters=None):
+
+        self.cell_contact_distance = 'l1_distance'
+        self.division_contact_similarity = 'l1_distance'
+
+        # nested dictionary of neighborhoods, where the keys are ['cell name']['reference name']
+        # where 'cell name' is the cell name (Conklin), and 'reference name' is the file name,
+        # a neighborhood is a dictionary of contact surfaces indexed by cell names
+        # it only considers the first time point after the division
         self._neighborhoods = {}
+
+        # dictionary indexed by 'cell name' where 'cell name' is a mother cell giving the list
+        # of references/atlases available for the two daughters
+        self._divisions = {}
+
         self._probability_step = 0.01
         self._probability = None
+
+        if parameters is not None:
+            self.update_from_parameters(parameters)
 
     ############################################################
     #
     # getters
     #
     ############################################################
+
+    def get_cell_contact_distance(self):
+        return self.cell_contact_distance
+
+    def get_division_contact_similarity(self):
+        return self.division_contact_similarity
+
     def get_neighborhoods(self):
         return self._neighborhoods
+
+    def get_divisions(self):
+        return self._divisions
 
     def get_probability_step(self):
         return self._probability_step
 
     ############################################################
     #
+    # update
+    #
+    ############################################################
+
+    def update_from_parameters(self, parameters):
+        proc = "update_from_parameters"
+
+        if not isinstance(parameters, ucontact.ContactSurfaceParameters):
+            monitoring.to_log_and_console(str(proc) + ": unexpected type for 'parameters' variable: "
+                                          + str(type(parameters)))
+
+        if parameters.cell_contact_distance.lower() == 'l1_distance' \
+                or parameters.cell_contact_distance.lower() == 'l1-distance' \
+                or parameters.cell_contact_distance.lower() == 'l1_norm' \
+                or parameters.cell_contact_distance.lower() == 'l1-norm':
+            self.cell_contact_distance = 'l1_distance'
+        elif parameters.cell_contact_distance.lower() == 'l2_distance' \
+                or parameters.cell_contact_distance.lower() == 'l2-distance' \
+                or parameters.cell_contact_distance.lower() == 'l2_norm' \
+                or parameters.cell_contact_distance.lower() == 'l2-norm':
+            self.cell_contact_distance = 'l2_distance'
+        else:
+            monitoring.to_log_and_console(str(proc) + ": unhandled cell contact distance: '" +
+                                          str(parameters.cell_contact_distance) + "'")
+
+        if not isinstance(parameters, AtlasParameters):
+            monitoring.to_log_and_console(str(proc) + ": unexpected type for 'parameters' variable: "
+                                          + str(type(parameters)))
+
+        if parameters.division_contact_similarity.lower() == 'distance' \
+                or parameters.division_contact_similarity.lower() == 'norm' \
+                or parameters.division_contact_similarity.lower() == 'l1_distance' \
+                or parameters.division_contact_similarity.lower() == 'l1-distance' \
+                or parameters.division_contact_similarity.lower() == 'l1_norm' \
+                or parameters.division_contact_similarity.lower() == 'l1-norm' \
+                or parameters.division_contact_similarity.lower() == 'l2_distance' \
+                or parameters.division_contact_similarity.lower() == 'l2-distance' \
+                or parameters.division_contact_similarity.lower() == 'l2_norm' \
+                or parameters.division_contact_similarity.lower() == 'l2-norm':
+            self.division_contact_similarity = 'distance'
+        elif parameters.division_contact_similarity.lower() == 'probability':
+            self.division_contact_similarity = 'probability'
+        else:
+            monitoring.to_log_and_console(str(proc) + ": unhandled division contact similarity: '" +
+                                          str(parameters.division_contact_similarity) + "'")
+
+    ############################################################
+    #
     #
     #
     ############################################################
+
+    def build_divisions(self):
+        proc = "build_divisions"
+
+        if self._divisions is not None:
+            del self._divisions
+            self._divisions = {}
+
+        #
+        # get all references per division/mother cells
+        #
+        neighborhoods = self._neighborhoods
+        cell_names = sorted(list(neighborhoods.keys()))
+        references = {}
+        for cell_name in cell_names:
+            mother_name = uname.get_mother_name(cell_name)
+            references[mother_name] = references.get(mother_name, set()).union(set(neighborhoods[cell_name].keys()))
+
+        #
+        # remove references that does not exist for one daughter
+        #
+        mother_names = sorted(references.keys())
+        for n in mother_names:
+            daughters = uname.get_daughter_names(n)
+            #
+            # check whether each reference has the two daughters
+            #
+            refs = list(references[n])
+            for r in refs:
+                if r in neighborhoods[daughters[0]] and r in neighborhoods[daughters[1]]:
+                    self._divisions[n] = self._divisions.get(n, []) + [r]
+                else:
+                    monitoring.to_log_and_console(str(proc) + ": remove atlas '" + str(r) + "' for division '" + str(n)
+                                                  + "'")
 
     def build_neighborhoods(self, atlasfiles, parameters, time_digits_for_cell_id=4):
         """
@@ -1623,7 +881,7 @@ class Atlases(object):
         -------
         a nested dictionary of neighborhoods, where the keys are ['cell name']['reference name']
         where 'cell name' is the cell name (Conklin), and 'reference name' is the file name,
-        a neighborhood a dictionary of contact surfaces indexed by cell names
+        a neighborhood is a dictionary of contact surfaces indexed by cell names
         it only considers the first time point after the division
 
         """
@@ -1633,6 +891,9 @@ class Atlases(object):
             monitoring.to_log_and_console(str(proc) + ": unexpected type for 'parameters' variable: "
                                           + str(type(parameters)))
             sys.exit(1)
+
+        if isinstance(parameters, ucontact.ContactSurfaceParameters):
+            self.update_from_parameters(parameters)
 
         if isinstance(atlasfiles, str):
             prop = properties.read_dictionary(atlasfiles, inputpropertiesdict={})
@@ -1658,38 +919,26 @@ class Atlases(object):
                                                          time_digits_for_cell_id=time_digits_for_cell_id)
                 del prop
 
-        # consistency is a measure between two reference embryos exhibiting the same division
-        # there is an inconsistency when the score computed between the same daughter cells
-        # of two reference embryos is lower than the score of this daughter cell (of one reference)
-        # and its sister cell (of the other reference). Thus, the consistency is a measure in
-        # [0, 4]: 0 means a total consistency while 4 designs a total inconsistency.
-
         if parameters.use_common_neighborhood:
             monitoring.to_log_and_console("... build common neighborhoods", 1)
             self._neighborhoods = _build_common_neighborhoods(self._neighborhoods)
             monitoring.to_log_and_console("    done", 1)
 
-        monitoring.to_log_and_console("... build probabilities", 1)
-        self.build_probabilities(parameters)
+        monitoring.to_log_and_console("... build division list", 1)
+        self.build_divisions()
         monitoring.to_log_and_console("    done", 1)
 
         if parameters.diagnosis_properties:
+            monitoring.to_log_and_console("")
             monitoring.to_log_and_console("============================================================")
-            monitoring.to_log_and_console("===== diagnosis on consistency")
-            # diagnosis_neighborhood_consistency(self._neighborhoods, parameters)
-            monitoring.to_log_and_console("===== diagnosis on probabilities")
-            _check_probability_consistency(self, parameters)
-            # diagnosis_atlases_probability(self, parameters)
+            monitoring.to_log_and_console("===== diagnosis: atlases pairwise disagreements")
+            _diagnosis_pairwise_switches(self, parameters)
             monitoring.to_log_and_console("============================================================")
+            monitoring.to_log_and_console("")
 
-    def build_probabilities(self, parameters):
-        proc = "build_probabilities"
+    def build_probabilities(self):
 
-        if not isinstance(parameters, AtlasParameters):
-            monitoring.to_log_and_console(str(proc) + ": unexpected type for 'parameters' variable: "
-                                          + str(type(parameters)))
-            sys.exit(1)
-
+        monitoring.to_log_and_console("... build probabilities", 1)
         neighborhoods = self.get_neighborhoods()
 
         #
@@ -1713,10 +962,10 @@ class Atlases(object):
                         continue
                     if r not in neighborhoods[sister]:
                         continue
-                    cscores.append(ucontact.contact_distance(neighborhoods[cell][ref], neighborhoods[cell][r],
-                                                             similarity=parameters.contact_similarity))
-                    sscores.append(ucontact.contact_distance(neighborhoods[sister][ref], neighborhoods[sister][r],
-                                                             similarity=parameters.contact_similarity))
+                    cscores.append(ucontact.cell_contact_distance(neighborhoods[cell][ref], neighborhoods[cell][r],
+                                                                  distance=self.cell_contact_distance))
+                    sscores.append(ucontact.cell_contact_distance(neighborhoods[sister][ref], neighborhoods[sister][r],
+                                                                  distance=self.cell_contact_distance))
         values = np.array([cscores, sscores])
         kernel = stats.gaussian_kde(values)
 
@@ -1728,18 +977,124 @@ class Atlases(object):
         self._probability = np.reshape([[(z[z <= z[j][i]].sum()) * scale for i in range(z.shape[1])]
                                         for j in range(z.shape[0])], z.shape)
 
+        monitoring.to_log_and_console("    done", 1)
+
     def get_probability(self, a, b):
         proc = "get_probability"
+
+        if self._probability is None:
+            self.build_probabilities()
+
         i = int(b // self.get_probability_step())
         j = int(a // self.get_probability_step())
-        if i >= self._probability.shape[1]:
+        if i >= self._probability.shape[0] or i >= self._probability.shape[1]:
             monitoring.to_log_and_console(str(proc) + ": too large second value in (" + str(a) + ", " + str(b) + "")
             return -1.0
-        if j >= self._probability.shape[0]:
+        if j >= self._probability.shape[0] or j >= self._probability.shape[1]:
             monitoring.to_log_and_console(str(proc) + ": too large first value in (" + str(a) + ", " + str(b) + "")
             return -1.0
-        return self._probability[j][i]
 
+        return (self._probability[j][i] + self._probability[i][j]) / 2.0
+
+    def get_cell_distance(self, cell_name1, ref1, cell_name2, ref2, change_contact_surfaces=True):
+        """
+        Returns a value in [0, 1].
+        Parameters
+        ----------
+        cell_name1
+        ref1
+        cell_name2
+        ref2
+        change_contact_surfaces
+
+        Returns
+        -------
+
+        """
+        proc = "get_cell_distance"
+        neighborhoods = self.get_neighborhoods()
+
+        if ref1 not in neighborhoods[cell_name1]:
+            msg = proc + ": '" + str(ref1) + "' in not in neighborhoods of '" + str(cell_name1) + "'"
+            monitoring.to_log_and_console(msg, 1)
+            return -1
+        if ref2 not in neighborhoods[cell_name2]:
+            msg = proc + ": '" + str(ref2) + "' in not in neighborhoods of '" + str(cell_name2) + "'"
+            monitoring.to_log_and_console(msg, 1)
+            return -1
+        return ucontact.cell_contact_distance(neighborhoods[cell_name1][ref1], neighborhoods[cell_name2][ref2],
+                                              distance=self.cell_contact_distance,
+                                              change_contact_surfaces=change_contact_surfaces)
+
+    def get_division_similarity(self, cell_name, ref1, ref2, change_contact_surfaces=True):
+        """
+        Returns a value in [0, 1]. 0 means dissimilarity while 1 means perfect similarity.
+        Parameters
+        ----------
+        cell_name: division/mother cell name
+        ref1: first reference/atlas
+        ref2: first reference/atlas
+        change_contact_surfaces:
+
+        Returns
+        -------
+
+        """
+        proc = "get_division_similarity"
+        neighborhoods = self.get_neighborhoods()
+        d = uname.get_daughter_names(cell_name)
+
+        if ref1 not in neighborhoods[d[0]]:
+            msg = proc + ": '" + str(ref1) + "' in not in neighborhoods of '" + str(d[0]) + "'"
+            monitoring.to_log_and_console(msg, 1)
+            return -1
+        if ref2 not in neighborhoods[d[0]]:
+            msg = proc + ": '" + str(ref2) + "' in not in neighborhoods of '" + str(d[0]) + "'"
+            monitoring.to_log_and_console(msg, 1)
+            return -1
+        if ref1 not in neighborhoods[d[1]]:
+            msg = proc + ": '" + str(ref1) + "' in not in neighborhoods of '" + str(d[1]) + "'"
+            monitoring.to_log_and_console(msg, 1)
+            return -1
+        if ref2 not in neighborhoods[d[1]]:
+            msg = proc + ": '" + str(ref2) + "' in not in neighborhoods of '" + str(d[1]) + "'"
+            monitoring.to_log_and_console(msg, 1)
+            return -1
+
+        similarity = self.get_division_contact_similarity()
+        d = division_contact_generic_distance(self, neighborhoods[d[0]][ref1], neighborhoods[d[1]][ref1],
+                                              neighborhoods[d[0]][ref2], neighborhoods[d[1]][ref2],
+                                              similarity=similarity, change_contact_surfaces=change_contact_surfaces)
+        if d >= 0.0:
+            return 1.0 - d
+        else:
+            msg = proc + ": distance computation failed"
+            monitoring.to_log_and_console(msg, 1)
+            return -1
+
+
+def division_contact_generic_distance(atlases, daughter00, daughter01, daughter10, daughter11, similarity='l1_distance',
+                                      change_contact_surfaces=True):
+    proc = "division_contact_generic_distance"
+
+    if similarity.lower() == 'distance' or similarity.lower() == 'norm' or \
+            similarity.lower() == 'l1_distance' or similarity.lower() == 'l1-distance' or \
+            similarity.lower() == 'l1_norm' or similarity.lower() == 'l1-norm' or \
+            similarity.lower() == 'l2_distance' or similarity.lower() == 'l2-distance' or \
+            similarity.lower() == 'l2_norm' or similarity.lower() == 'l2-norm':
+        return ucontact.division_contact_distance(daughter00, daughter01, daughter10, daughter11,
+                                                  distance=atlases.cell_contact_distance,
+                                                  change_contact_surfaces=change_contact_surfaces)
+    elif similarity.lower() == 'probability':
+        d0 = ucontact.cell_contact_distance(daughter00, daughter10, distance=atlases.cell_contact_distance,
+                                            change_contact_surfaces=change_contact_surfaces)
+        d1 = ucontact.cell_contact_distance(daughter01, daughter11, distance=atlases.cell_contact_distance,
+                                            change_contact_surfaces=change_contact_surfaces)
+        return 1.0 - atlases.get_probability(d0, d1)/100.0
+
+    msg = proc + ": unhandled similarity '" + str(similarity) + "'"
+    monitoring.to_log_and_console(msg, 1)
+    return -1.0
 
 ########################################################################################
 #

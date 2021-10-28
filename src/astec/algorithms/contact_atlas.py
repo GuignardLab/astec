@@ -43,7 +43,7 @@ def contact_atlas_process(experiment, parameters):
     #
     # should we clean reference here?
     #
-    atlases = ucontacta.Atlases()
+    atlases = ucontacta.Atlases(parameters=parameters)
     atlases.build_neighborhoods(parameters.atlasFiles, parameters, time_digits_for_cell_id=time_digits_for_cell_id)
 
     if parameters.generate_figure:
@@ -52,36 +52,26 @@ def contact_atlas_process(experiment, parameters):
         # draw a graph of reference/atlas embryos per division where edge are valued by the sum of scores
         # (do the right pairing between reference/atlas embryos)
         #
-        # ucontactf.figures_division_score(atlases.get_neighborhoods(), parameters)
+        monitoring.to_log_and_console("... generate division graph figure file", 1)
+        ucontactf.figures_division_graph(atlases, parameters)
+        monitoring.to_log_and_console("... done", 1)
 
         #
-        # draw score histogram of both right pairing and wrong pairing
-        # this is then done at the cell level, not at the division level
+        # draw histograms of both right pairing and wrong pairing
+        # 2D histograms are at division level
+        # 1D histograms are at cell (daughter) level
         #
-        # ucontactf.figures_histogram_scores(atlases.get_neighborhoods(), parameters)
+        monitoring.to_log_and_console("... generate division distance histogram file", 1)
+        ucontactf.figures_distance_histogram(atlases, parameters)
+        monitoring.to_log_and_console("... done", 1)
 
         #
-        # draw 2D histogram of right/wrong pairing scores of both daugthers
-        # this is then done at the division level
+        # draw a graph per division where edges are valued with similarity between division
         #
-        # ucontactf.figures_histogram2D_scores(atlases, parameters)
-
-        #
-        # draw a graph per division where edges rae valued with probability
-        #
-        # ucontactf.figures_division_probability(atlases, parameters)
-
-        #
-        # draw a graph per division where edges rae valued with probability
-        #
-        ucontactf.figures_division_hierarchical_clustering(atlases, parameters)
-
-        if False and parameters.use_common_neighborhood:
-            #
-            # do a pca analysis of L1-normalized surface contact vectors per cell/neighborhood
-            #
-            ucontactf.figures_cell_neighborhood_pca(atlases.get_neighborhoods(), parameters)
+        monitoring.to_log_and_console("... generate division dendrogram figure file", 1)
+        ucontactf.figures_division_dendrogram(atlases, parameters)
+        monitoring.to_log_and_console("... done", 1)
 
     if parameters.naming_improvement:
         # ucontacta.global_score_improvement(atlases.get_neighborhoods(), parameters)
-        ucontacta.global_probability_improvement(atlases, parameters)
+        ucontacta.division_improvement(atlases, parameters)
