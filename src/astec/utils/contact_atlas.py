@@ -89,7 +89,7 @@ class AtlasParameters(udiagnosis.DiagnosisParameters):
         #
         #
         #
-        self.naming_improvement = False
+        self.daughter_switch_proposal = False
 
     ############################################################
     #
@@ -120,7 +120,7 @@ class AtlasParameters(udiagnosis.DiagnosisParameters):
 
         self.varprint('diagnosis_properties', self.diagnosis_properties)
 
-        self.varprint('naming_improvement', self.naming_improvement)
+        self.varprint('daughter_switch_proposal', self.daughter_switch_proposal)
 
         print("")
 
@@ -153,7 +153,8 @@ class AtlasParameters(udiagnosis.DiagnosisParameters):
         self.varwrite(logfile, 'diagnosis_properties', self.diagnosis_properties,
                       self.doc.get('diagnosis_properties', None))
 
-        self.varwrite(logfile, 'naming_improvement', self.naming_improvement, self.doc.get('naming_improvement', None))
+        self.varwrite(logfile, 'daughter_switch_proposal', self.daughter_switch_proposal,
+                      self.doc.get('daughter_switch_proposal', None))
 
         logfile.write("\n")
         return
@@ -194,7 +195,8 @@ class AtlasParameters(udiagnosis.DiagnosisParameters):
         self.diagnosis_properties = self.read_parameter(parameters, 'naming_diagnosis', self.diagnosis_properties)
         self.diagnosis_properties = self.read_parameter(parameters, 'diagnosis_naming', self.diagnosis_properties)
 
-        self.naming_improvement = self.read_parameter(parameters, 'naming_improvement', self.naming_improvement)
+        self.daughter_switch_proposal = self.read_parameter(parameters, 'daughter_switch_proposal',
+                                                            self.daughter_switch_proposal)
 
     def update_from_parameter_file(self, parameter_file):
         if parameter_file is None:
@@ -338,7 +340,7 @@ def _diagnosis_pairwise_switches(atlases, parameters):
 #
 ########################################################################################
 
-def _di_switch_contact_surfaces(neighbors, reference, daughters):
+def _dsp_switch_contact_surfaces(neighbors, reference, daughters):
     """
     Switch contact surfaces for the two daughters and atlas 'reference'.
     Parameters
@@ -368,7 +370,7 @@ def _di_switch_contact_surfaces(neighbors, reference, daughters):
     return neighbors
 
 
-def _di_global_generic_distance(neighbors, references, atlases, parameters, debug=False):
+def _dsp_global_generic_distance(neighbors, references, atlases, parameters, debug=False):
     """
     Compute a global score. The global score is the sum of local similarities over all couple of references/atlases.
 
@@ -399,7 +401,7 @@ def _di_global_generic_distance(neighbors, references, atlases, parameters, debu
     return score
 
 
-def _di_test_one_division(atlases, mother, parameters):
+def _dsp_test_one_division(atlases, mother, parameters):
     """
     Test whether any daughter switch (for a given reference) improve a global score
     Parameters
@@ -421,7 +423,7 @@ def _di_test_one_division(atlases, mother, parameters):
     neighbors = {0: copy.deepcopy(neighborhoods[daughters[0]]), 1: copy.deepcopy(neighborhoods[daughters[1]])}
 
     # score before any changes
-    score = _di_global_generic_distance(neighbors, divisions[mother], atlases, parameters)
+    score = _dsp_global_generic_distance(neighbors, divisions[mother], atlases, parameters)
 
     corrections = []
     i = 1
@@ -432,9 +434,9 @@ def _di_test_one_division(atlases, mother, parameters):
             # switch contact surfaces for the daughters in atlas 'r'
             #
             tmp = copy.deepcopy(neighbors)
-            tmp = _di_switch_contact_surfaces(tmp, r, daughters)
+            tmp = _dsp_switch_contact_surfaces(tmp, r, daughters)
             # compute a new score, keep it if it better than the one before any changes
-            newscore[r] = _di_global_generic_distance(tmp, divisions[mother], atlases, parameters)
+            newscore[r] = _dsp_global_generic_distance(tmp, divisions[mother], atlases, parameters)
             if newscore[r] > score:
                 del newscore[r]
         # no found correction at this iteration
@@ -452,13 +454,13 @@ def _di_test_one_division(atlases, mother, parameters):
         # if one correction has been found, apply it
         # and look for an other additional correction
         tmp = copy.deepcopy(neighbors)
-        tmp = _di_switch_contact_surfaces(tmp, ref, daughters)
+        tmp = _dsp_switch_contact_surfaces(tmp, ref, daughters)
         neighbors[0] = copy.deepcopy(tmp[0])
         neighbors[1] = copy.deepcopy(tmp[1])
         score = newscore[ref]
 
 
-def division_improvement(atlases, parameters):
+def daughter_switch_proposal(atlases, parameters):
 
     # neighborhoods is a dictionary of dictionaries
     # ['cell name']['reference name']
@@ -489,7 +491,7 @@ def division_improvement(atlases, parameters):
         for m in mothers[s]:
             # if m != 'a7.0002_':
             #     continue
-            correction = _di_test_one_division(atlases, m, parameters)
+            correction = _dsp_test_one_division(atlases, m, parameters)
             #
             # correction is a dictionary indexed by the iteration index
             # each value is a tuple ('atlas name', score increment)
@@ -741,13 +743,14 @@ class Atlases(object):
     def __init__(self, parameters=None):
 
         self.cell_contact_distance = 'l1_distance'
-        self.division_contact_similarity = 'l1_distance'
+        self.division_contact_similarity = 'distance'
 
         # nested dictionary of neighborhoods, where the keys are ['cell name']['reference name']
         # where 'cell name' is the cell name (Conklin), and 'reference name' is the file name,
         # a neighborhood is a dictionary of contact surfaces indexed by cell names
         # it only considers the first time point after the division
         self._neighborhoods = {}
+        self._use_common_neighborhood = False
 
         # dictionary indexed by 'cell name' where 'cell name' is a mother cell giving the list
         # of references/atlases available for the two daughters
@@ -755,6 +758,7 @@ class Atlases(object):
 
         self._probability_step = 0.01
         self._probability = None
+        self._gaussian_kde = None
 
         if parameters is not None:
             self.update_from_parameters(parameters)
@@ -773,6 +777,9 @@ class Atlases(object):
 
     def get_neighborhoods(self):
         return self._neighborhoods
+
+    def get_use_common_neighborhood(self):
+        return self._use_common_neighborhood
 
     def get_divisions(self):
         return self._divisions
@@ -919,9 +926,14 @@ class Atlases(object):
                                                          time_digits_for_cell_id=time_digits_for_cell_id)
                 del prop
 
+        if self._neighborhoods is None:
+            monitoring.to_log_and_console(str(proc) + ": empty neighborhoods ...")
+            sys.exit(1)
+
         if parameters.use_common_neighborhood:
             monitoring.to_log_and_console("... build common neighborhoods", 1)
             self._neighborhoods = _build_common_neighborhoods(self._neighborhoods)
+            self._use_common_neighborhood = True
             monitoring.to_log_and_console("    done", 1)
 
         monitoring.to_log_and_console("... build division list", 1)
@@ -939,7 +951,8 @@ class Atlases(object):
     def build_probabilities(self):
 
         monitoring.to_log_and_console("... build probabilities", 1)
-        neighborhoods = self.get_neighborhoods()
+        divisions = self.get_divisions()
+        css = not self._use_common_neighborhood
 
         #
         # compute all score couples
@@ -947,42 +960,50 @@ class Atlases(object):
         cscores = []
         sscores = []
 
-        for cell in neighborhoods:
-            sister = uname.get_sister_name(cell)
-            for ref in neighborhoods[cell]:
-                if sister not in neighborhoods:
-                    continue
-                if ref not in neighborhoods[sister]:
-                    continue
-                #
-                # cell score
-                #
-                for r in neighborhoods[cell]:
-                    if r == ref:
+        for n in divisions:
+            d = uname.get_daughter_names(n)
+            for r1 in divisions[n]:
+                for r2 in divisions[n]:
+                    if r2 <= r1:
                         continue
-                    if r not in neighborhoods[sister]:
-                        continue
-                    cscores.append(ucontact.cell_contact_distance(neighborhoods[cell][ref], neighborhoods[cell][r],
-                                                                  distance=self.cell_contact_distance))
-                    sscores.append(ucontact.cell_contact_distance(neighborhoods[sister][ref], neighborhoods[sister][r],
-                                                                  distance=self.cell_contact_distance))
+                    d00 = self.get_cell_distance(d[0], r1, d[0], r2, change_contact_surfaces=css)
+                    d11 = self.get_cell_distance(d[1], r1, d[1], r2, change_contact_surfaces=css)
+                    cscores += [d00, d11]
+                    sscores += [d11, d00]
         values = np.array([cscores, sscores])
-        kernel = stats.gaussian_kde(values)
+        #
+        # compute the kde from the training set
+        #
+        self._gaussian_kde = stats.gaussian_kde(values)
 
+        #
+        # compute the kde value of a discrete grid
+        #
         step = self.get_probability_step()
         x, y = np.mgrid[0:1:step, 0:1:step]
         positions = np.vstack([x.ravel(), y.ravel()])
-        z = np.reshape(kernel(positions).T, x.shape)
-        scale = 100.0 / z.sum()
-        self._probability = np.reshape([[(z[z <= z[j][i]].sum()) * scale for i in range(z.shape[1])]
-                                        for j in range(z.shape[0])], z.shape)
+        z = np.reshape(self._gaussian_kde(positions).T, x.shape)
+        # monitoring.to_log_and_console("          z.sum() = " + str(z.sum()), 1)
+        # monitoring.to_log_and_console("          z.max() = " + str(z.max()), 1)
+
+        #
+        # rescale the discrete value
+        #
+        if True:
+            scale = 100.0 / z.sum()
+            self._probability = np.reshape([[(z[z <= z[j][i]].sum()) * scale for i in range(z.shape[1])]
+                                            for j in range(z.shape[0])], z.shape)
+        else:
+            scale = 100.0 / z.max()
+            scale = 1.0
+            self._probability = np.reshape(z * scale, z.shape)
 
         monitoring.to_log_and_console("    done", 1)
 
     def get_probability(self, a, b):
         proc = "get_probability"
 
-        if self._probability is None:
+        if self._probability is None or self._gaussian_kde is None:
             self.build_probabilities()
 
         i = int(b // self.get_probability_step())
@@ -994,7 +1015,15 @@ class Atlases(object):
             monitoring.to_log_and_console(str(proc) + ": too large first value in (" + str(a) + ", " + str(b) + "")
             return -1.0
 
-        return (self._probability[j][i] + self._probability[i][j]) / 2.0
+        #
+        # probability should be symmetrical but is not
+        #
+        p = (self._probability[j][i] + self._probability[i][j]) / 2.0
+        if p >= 100.0:
+            return 100.0
+        if p <= 0.0:
+            return 0.0
+        return p
 
     def get_cell_distance(self, cell_name1, ref1, cell_name2, ref2, change_contact_surfaces=True):
         """
@@ -1068,12 +1097,18 @@ class Atlases(object):
         if d >= 0.0:
             return 1.0 - d
         else:
-            msg = proc + ": distance computation failed"
+            msg = proc + ": distance computation failed" + " " + str(d)
             monitoring.to_log_and_console(msg, 1)
             return -1
 
 
-def division_contact_generic_distance(atlases, daughter00, daughter01, daughter10, daughter11, similarity='l1_distance',
+########################################################################################
+#
+#
+#
+########################################################################################
+
+def division_contact_generic_distance(atlases, daughter00, daughter01, daughter10, daughter11, similarity='distance',
                                       change_contact_surfaces=True):
     proc = "division_contact_generic_distance"
 
@@ -1095,9 +1130,3 @@ def division_contact_generic_distance(atlases, daughter00, daughter01, daughter1
     msg = proc + ": unhandled similarity '" + str(similarity) + "'"
     monitoring.to_log_and_console(msg, 1)
     return -1.0
-
-########################################################################################
-#
-#
-#
-########################################################################################

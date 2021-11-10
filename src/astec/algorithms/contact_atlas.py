@@ -72,6 +72,5 @@ def contact_atlas_process(experiment, parameters):
         ucontactf.figures_division_dendrogram(atlases, parameters)
         monitoring.to_log_and_console("... done", 1)
 
-    if parameters.naming_improvement:
-        # ucontacta.global_score_improvement(atlases.get_neighborhoods(), parameters)
-        ucontacta.division_improvement(atlases, parameters)
+    if parameters.daughter_switch_proposal:
+        ucontacta.daughter_switch_proposal(atlases, parameters)

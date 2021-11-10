@@ -505,23 +505,34 @@ def figures_distance_histogram(atlases, parameters):
     # get the references per mother_name
     #
     divisions = atlases.get_divisions()
-    ccs = not parameters.use_common_neighborhood
+    ccs = not atlases.get_use_common_neighborhood()
+    neighborhoods = atlases.get_neighborhoods()
+    similarity = atlases.get_division_contact_similarity()
 
     right_cscores = []
     right_sscores = []
     wrong_cscores = []
     wrong_sscores = []
 
+    compute_other_scores = True
+    other_scores = []
+
+    right_dscores = []
+    wrong_dscores = []
+
     for n in divisions:
         d = uname.get_daughter_names(n)
+        #
+        # if int(n.split('.')[0][1:]) > 6:
+        #     continue
         for r1 in divisions[n]:
             for r2 in divisions[n]:
                 if r2 <= r1:
                     continue
                 d00 = atlases.get_cell_distance(d[0], r1, d[0], r2, change_contact_surfaces=ccs)
                 d11 = atlases.get_cell_distance(d[1], r1, d[1], r2, change_contact_surfaces=ccs)
-                d01 = atlases.get_cell_distance(d[0], r1, d[1], r2, change_contact_surfaces=ccs)
-                d10 = atlases.get_cell_distance(d[1], r1, d[0], r2, change_contact_surfaces=ccs)
+                d01 = atlases.get_cell_distance(d[0], r1, d[1], r2, change_contact_surfaces=True)
+                d10 = atlases.get_cell_distance(d[1], r1, d[0], r2, change_contact_surfaces=True)
                 if d01 > 2.0 or d10 > 2.0:
                     print("mother = " + str(n))
                     print("  d[0,1] = " + str(d[0]) + ", " + str(d[1]))
@@ -531,6 +542,39 @@ def figures_distance_histogram(atlases, parameters):
                 right_sscores += [d11, d00]
                 wrong_cscores += [d01, d10]
                 wrong_sscores += [d10, d01]
+
+                div00 = ucontacta.division_contact_generic_distance(atlases, neighborhoods[d[0]][r1],
+                                                                    neighborhoods[d[1]][r1], neighborhoods[d[0]][r2],
+                                                                    neighborhoods[d[1]][r2],
+                                                                    similarity=similarity, change_contact_surfaces=ccs)
+                div01 = ucontacta.division_contact_generic_distance(atlases, neighborhoods[d[0]][r1],
+                                                                    neighborhoods[d[1]][r1], neighborhoods[d[1]][r2],
+                                                                    neighborhoods[d[0]][r2],
+                                                                    similarity=similarity, change_contact_surfaces=ccs)
+                right_dscores += [div00]
+                wrong_dscores += [div01]
+
+    if compute_other_scores:
+        for n in divisions:
+            d = uname.get_daughter_names(n)
+            generation = n.split('.')[0][1:]
+            if int(generation) > 7:
+                continue
+            for m in divisions:
+                if m <= n:
+                    continue
+                if m.split('.')[0][1:] != generation:
+                    continue
+                f = uname.get_daughter_names(m)
+                for r1 in divisions[n]:
+                    for r2 in divisions[m]:
+                        if r2 == r1:
+                            continue
+                        d00 = atlases.get_cell_distance(d[0], r1, f[0], r2, change_contact_surfaces=True)
+                        d11 = atlases.get_cell_distance(d[1], r1, f[1], r2, change_contact_surfaces=True)
+                        d01 = atlases.get_cell_distance(d[0], r1, f[1], r2, change_contact_surfaces=True)
+                        d10 = atlases.get_cell_distance(d[1], r1, f[0], r2, change_contact_surfaces=True)
+                        other_scores += [d00, d11, d01, d10]
 
     step = atlases.get_probability_step()
 
@@ -556,7 +600,7 @@ def figures_distance_histogram(atlases, parameters):
     f.write("Z = np.reshape(kernel(positions).T, X.shape)\n")
     f.write("\n")
     f.write("scale = 100.0 / Z.sum()\n")
-    f.write("N = [[(Z[Z <= Z[j][i]].sum()) * scale for i in range(Z.shape[1])] for j in range(Z.shape[0])]\n")
+    f.write("N = np.reshape([[(Z[Z <= Z[j][i]].sum()) * scale for i in range(Z.shape[1])] for j in range(Z.shape[0])], Z.shape)\n")
 
     f.write("\n")
     f.write("fig, (ax1, ax2, ax3) = plt.subplots(ncols=3, sharey=True, figsize=(16, 6.5))\n")
@@ -650,12 +694,54 @@ def figures_distance_histogram(atlases, parameters):
     f.write("labels = ['same cell', 'sister cell']\n")
     f.write("ax.hist([right_cscores, wrong_cscores], 100, histtype='bar', label=labels)\n")
     f.write("ax.legend(prop={'size': 10})\n")
-    f.write("ax.set_title('atlas/atlas daughter cell distances', fontsize=12)\n")
+    f.write("ax.set_title('atlas-to-atlas cell distances', fontsize=12)\n")
     f.write("ax.tick_params(labelsize=10)\n")
 
     f.write("\n")
     f.write("if savefig:\n")
-    f.write("    plt.savefig('histogram1D")
+    f.write("    plt.savefig('histogram1D_cell")
+    if file_suffix is not None:
+        f.write(file_suffix)
+    f.write("'" + " + '.png')\n")
+    f.write("else:\n")
+    f.write("    plt.show()\n")
+    f.write("    plt.close()\n")
+
+    if compute_other_scores:
+        f.write("\n")
+        f.write("other_scores = " + str(other_scores) + "\n")
+        f.write("\n")
+        f.write("fig, ax = plt.subplots(figsize=(7.5, 7.5))\n")
+        f.write("labels = ['same cell', 'sister cell', 'other cell']\n")
+        f.write("ax.hist([right_cscores, wrong_cscores, other_scores], 100, histtype='bar', label=labels, density=True)\n")
+        f.write("ax.legend(prop={'size': 10})\n")
+        f.write("ax.set_title('atlas-to-atlas cell distances', fontsize=12)\n")
+        f.write("ax.tick_params(labelsize=10)\n")
+
+        f.write("\n")
+        f.write("if savefig:\n")
+        f.write("    plt.savefig('density1D_cell")
+        if file_suffix is not None:
+            f.write(file_suffix)
+        f.write("'" + " + '.png')\n")
+        f.write("else:\n")
+        f.write("    plt.show()\n")
+        f.write("    plt.close()\n")
+
+    f.write("\n")
+    f.write("right_dscores = " + str(right_dscores) + "\n")
+    f.write("wrong_dscores = " + str(wrong_dscores) + "\n")
+    f.write("\n")
+    f.write("fig, ax = plt.subplots(figsize=(7.5, 7.5))\n")
+    f.write("labels = ['right pairing', 'wrong pairing']\n")
+    f.write("ax.hist([right_dscores, wrong_dscores], 100, histtype='bar', label=labels)\n")
+    f.write("ax.legend(prop={'size': 10})\n")
+    f.write("ax.set_title('atlas-to-atlas division distances', fontsize=12)\n")
+    f.write("ax.tick_params(labelsize=10)\n")
+
+    f.write("\n")
+    f.write("if savefig:\n")
+    f.write("    plt.savefig('histogram1D_division")
     if file_suffix is not None:
         f.write(file_suffix)
     f.write("'" + " + '.png')\n")
