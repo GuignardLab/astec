@@ -991,30 +991,34 @@ def _intersection_cell_keys(e1, e2, name1, name2):
     :param name2:
     :return:
     """
-    intersection = list(set(e1.keys()).intersection(set(e2.keys())))
-    difference1 = list(set(e1.keys()).difference(set(e2.keys())))
-    difference2 = list(set(e2.keys()).difference(set(e1.keys())))
+    intersection = sorted(list(set(e1.keys()).intersection(set(e2.keys()))))
+    difference1 = sorted(list(set(e1.keys()).difference(set(e2.keys()))))
+    difference2 = sorted(list(set(e2.keys()).difference(set(e1.keys()))))
 
-    monitoring.to_log_and_console("    ... " + str(len(list(e1.keys()))) + " cells are in '" + str(name1) + "'")
-    monitoring.to_log_and_console("    ... " + str(len(list(e2.keys()))) + " cells are in '" + str(name2) + "'")
+    monitoring.to_log_and_console("    ... " + str(len(list(e1.keys()))) + " key cells are in '" + str(name1) + "'")
+    monitoring.to_log_and_console("    ... " + str(len(list(e2.keys()))) + " key cells are in '" + str(name2) + "'")
     if len(difference1) > 0:
         monitoring.to_log_and_console("    ... " + str(len(difference1)) + " cells are in '" + str(name1)
-                                      + "' and not in '" + str(name2) + "'", 1)
+                                      + "' and are not in '" + str(name2) + "'", 1)
         s = repr(difference1)
-        monitoring.to_log_and_console("        " + s, 2)
+        monitoring.to_log_and_console("        " + s, 1)
 
     if len(difference2) > 0:
         monitoring.to_log_and_console("    ... " + str(len(difference2)) + " cells are not in '" + str(name1)
-                                      + "' but in '" + str(name2) + "'", 1)
+                                      + "' but are in '" + str(name2) + "'", 1)
         s = repr(difference2)
-        monitoring.to_log_and_console("        " + s, 2)
+        monitoring.to_log_and_console("        " + s, 1)
 
     return intersection
 
 
-def _compare_lineage(e1, e2, name1, name2, description):
+def _compare_lineage(d1, d2, name1, name2, description):
 
-    monitoring.to_log_and_console("  === " + str(description) + " comparison === ", 1)
+    # e1 and e2 are respectively the lineages of name1 and name2
+    e1 = d1[description]
+    e2 = d2[description]
+    msg = "  === " + str(description) + " comparison between " + str(name1) + " and " + str(name2) + " === "
+    monitoring.to_log_and_console(msg, 1)
 
     intersection = _intersection_cell_keys(e1, e2, name1, name2)
     if len(intersection) > 0:
@@ -1022,22 +1026,25 @@ def _compare_lineage(e1, e2, name1, name2, description):
         for k in intersection:
             if e1[k] != e2[k]:
                 n += 1
-        monitoring.to_log_and_console("    ... " + str(n) + " cells have different lineages", 1)
+
         if n > 0:
+            monitoring.to_log_and_console("    ... " + str(n) + " cells have different lineages", 1)
             for k in intersection:
                 if e1[k] != e2[k]:
-                    s = "cell #'" + str(k) + "' has different lineage: "
-                    s += str(e1[k]) + " and " + str(e2[k])
-                    monitoring.to_log_and_console("        " + s, 2)
-
+                    s = "cell " + str(k) + " has different lineages: "
+                    monitoring.to_log_and_console("        " + s, 1)
+                    s = str(e1[k]) + " in '" + str(name1) + "'"
+                    monitoring.to_log_and_console("          " + s, 1)
+                    s = str(e2[k]) + " in '" + str(name2) + "'"
+                    monitoring.to_log_and_console("          " + s, 1)
     return
 
 
-# def _compare_h_min(e1, e2, name1, name2, description):
+# def _compare_h_min(d1, d2, name1, name2, description):
 #     return
 
 
-def _compare_volume(e1, e2, name1, name2, description):
+def _compare_volume(d1, d2, name1, name2, description):
     """
 
     :param e1:
@@ -1051,29 +1058,40 @@ def _compare_volume(e1, e2, name1, name2, description):
     #     cell_volume.590002 = <type 'int'>
     #     590002: 236936
 
-    monitoring.to_log_and_console("  === " + str(description) + " comparison === ", 1)
+    e1 = d1[description]
+    e2 = d2[description]
+
+    msg = "  === " + str(description) + " comparison between " + str(name1) + " and " + str(name2) + " === "
+    monitoring.to_log_and_console(msg, 1)
 
     intersection = _intersection_cell_keys(e1, e2, name1, name2)
     if len(intersection) > 0:
-        monitoring.to_log_and_console("    ... " + str(len(intersection)) + " cells have different volumes", 1)
+        n = 0
         for k in intersection:
             if e1[k] != e2[k]:
-                s = "cell #'" + str(k) + "' has different volumes: "
-                s += str(e1[k]) + " and " + str(e2[k])
-                monitoring.to_log_and_console("        " + s, 2)
-
+                n += 1
+        if n > 0:
+            monitoring.to_log_and_console("    ... " + str(n) + " cells have different volumes", 1)
+            for k in intersection:
+                if e1[k] != e2[k]:
+                    s = "cell " + str(k) + " has different volumes: "
+                    monitoring.to_log_and_console("        " + s, 1)
+                    s = str(e1[k]) + " in " + str(name1)
+                    monitoring.to_log_and_console("          " + s, 1)
+                    s = str(e2[k]) + " in " + str(name2)
+                    monitoring.to_log_and_console("          " + s, 1)
     return
 
 
-# def _compare_sigma(e1, e2, name1, name2, description):
+# def _compare_sigma(d1, d2, name1, name2, description):
 #     return
 
 
-# def _compare_label_in_time(e1, e2, name1, name2, description):
+# def _compare_label_in_time(d1, d2, name1, name2, description):
 #     return
 
 
-def _compare_barycenter(e1, e2, name1, name2, description):
+def _compare_barycenter(d1, d2, name1, name2, description):
     """
 
     :param e1:
@@ -1088,6 +1106,9 @@ def _compare_barycenter(e1, e2, name1, name2, description):
     #     dictionary de numpy.ndarray de numpy.float64
     #     cell_barycenter.590002 = <type 'numpy.ndarray'>
     #     590002: array([ 258.41037242,  226.74975943,  303.67167927])
+
+    e1 = d1[description]
+    e2 = d2[description]
 
     monitoring.to_log_and_console("  === " + str(description) + " comparison === ", 1)
 
@@ -1111,11 +1132,11 @@ def _compare_barycenter(e1, e2, name1, name2, description):
     return
 
 
-# def _compare_fate(e1, e2, name1, name2, description):
+# def _compare_fate(d1, d2, name1, name2, description):
 #     return
 
 
-def _compare_all_cells(e1, e2, name1, name2, description):
+def _compare_all_cells(d1, d2, name1, name2, description):
     """
 
     :param e1:
@@ -1129,6 +1150,9 @@ def _compare_all_cells(e1, e2, name1, name2, description):
     # 'all-cells': 'all_cells'  # liste de toutes les cellules ?
     #     liste de numpy.int64
     #     all_cells = <type 'list'>
+
+    e1 = d1[description]
+    e2 = d2[description]
 
     monitoring.to_log_and_console("  === " + str(description) + " comparison === ", 1)
 
@@ -1150,7 +1174,7 @@ def _compare_all_cells(e1, e2, name1, name2, description):
     return
 
 
-def _compare_principal_value(e1, e2, name1, name2, description):
+def _compare_principal_value(d1, d2, name1, name2, description):
     """
 
     :param e1:
@@ -1165,6 +1189,9 @@ def _compare_principal_value(e1, e2, name1, name2, description):
     #     dictionary de liste de numpy.float64
     #     cell_principal_values.590002 = <type 'list'>
     #     590002: [1526.0489371146978, 230.60881177650205, 91.063513300019849]
+
+    e1 = d1[description]
+    e2 = d2[description]
 
     monitoring.to_log_and_console("  === " + str(description) + " comparison === ", 1)
 
@@ -1188,11 +1215,147 @@ def _compare_principal_value(e1, e2, name1, name2, description):
     return
 
 
-# def _compare_name(e1, e2, name1, name2, description):
-#     return
+def _compare_name(d1, d2, name1, name2, description):
+
+    e1 = d1[description]
+    e2 = d2[description]
+
+    lineage1 = d1['cell_lineage']
+    mother1 = [k for k, values in lineage1.items() if len(values) > 1]
+    reverse_lineage1 = {v: k for k, values in lineage1.items() for v in values}
+    lineage2 = d2['cell_lineage']
+    mother2 = [k for k, values in lineage1.items() if len(values) > 1]
+    reverse_lineage2 = {v: k for k, values in lineage2.items() for v in values}
+
+    msg = "  === " + str(description) + " comparison between " + str(name1) + " and " + str(name2) + " === "
+    monitoring.to_log_and_console(msg, 1)
+
+    intersection = _intersection_cell_keys(e1, e2, name1, name2)
+    if len(intersection) == 0:
+        return
+
+    n = 0
+    for k in intersection:
+        if e1[k] != e2[k]:
+            n += 1
+    if n == 0:
+        return
+    monitoring.to_log_and_console("    ... " + str(n) + " cells have different names", 1)
+
+    cell_starting = []
+    cell_with_diff_mothers = []
+    cell_before_change = []
+
+    for k in intersection:
+        if e1[k] == e2[k]:
+            continue
+        if k not in reverse_lineage1 or k not in reverse_lineage2:
+            cell_starting += [k]
+            continue
+        if reverse_lineage1[k] != reverse_lineage2[k]:
+            cell_with_diff_mothers += [k]
+            continue
+        if e1[reverse_lineage1[k]] == e2[reverse_lineage2[k]]:
+            cell_before_change += [reverse_lineage1[k]]
+    cell_before_change = sorted(list(set(cell_before_change)))
+
+    if len(cell_starting) > 0:
+        s = str(len(cell_starting)) + " branchs starting with different names"
+        monitoring.to_log_and_console("    ... " + s, 1)
+        for k in cell_starting:
+            s = "cell " + str(k) + " (and cells of its branch) has different names: "
+            monitoring.to_log_and_console("        " + s, 1)
+            s = str(e1[k]) + " in '" + str(name1) + "'"
+            monitoring.to_log_and_console("          " + s, 1)
+            s = str(e2[k]) + " in '" + str(name2) + "'"
+            monitoring.to_log_and_console("          " + s, 1)
+
+    if len(cell_with_diff_mothers) > 0:
+        s = str(len(cell_with_diff_mothers)) + " cells with different names and different mothers"
+        monitoring.to_log_and_console("    ... " + s, 1)
+        for k in cell_with_diff_mothers:
+            s = "cell " + str(k) + " has different names and mothers: "
+            monitoring.to_log_and_console("        " + s, 1)
+            s = "named " + str(e1[k]) + " and issued from " + str(reverse_lineage1[k]) + " in '" + str(name1) + "'"
+            monitoring.to_log_and_console("          " + s, 1)
+            s = "named " + str(e2[k]) + " and issued from " + str(reverse_lineage2[k]) + " in '" + str(name2) + "'"
+            monitoring.to_log_and_console("          " + s, 1)
+
+    if len(cell_before_change) > 0:
+        s = str(len(cell_before_change)) + " cells with differently named daughters"
+        monitoring.to_log_and_console("    ... " + s, 1)
+        division_switches = []
+        other_cases = []
+        for c in cell_before_change:
+            daughters = sorted(list(set(lineage1[c]).intersection(set(lineage2[c]))))
+            if len(lineage1[c]) == 2 and len(lineage2[c]) == 2 and len(daughters) == 2:
+                if e1[daughters[0]] == e2[daughters[1]] and e1[daughters[1]] == e2[daughters[0]]:
+                    division_switches += [c]
+                    continue
+            other_cases += [c]
+        if len(division_switches) > 0:
+            s = str(len(division_switches)) + " divisions with switched names"
+            monitoring.to_log_and_console("      - " + s, 1)
+            for c in division_switches:
+                s = "cell " + str(c) + " (" + str(e1[c]) + ") has daughters with different names:"
+                monitoring.to_log_and_console("        " + s, 1)
+                daughters = sorted(list(set(lineage1[c]).intersection(set(lineage2[c]))))
+                l1 = ""
+                l2 = ""
+                for i, d in enumerate(daughters):
+                    l1 += str(e1[d])
+                    l2 += str(e2[d])
+                    if i < len(daughters)-1:
+                        l1 += ", "
+                        l2 += ", "
+                s = str(daughters) + " are named [" + str(l1) + "] in '" + str(name1) + "'"
+                monitoring.to_log_and_console("          " + s, 1)
+                s = " " * len(str(daughters)) + " and named [" + str(l2) + "] in '" + str(name2) + "'"
+                monitoring.to_log_and_console("          " + s, 1)
+
+        if len(other_cases) > 0:
+            s = str(len(other_cases)) + " other cases"
+            monitoring.to_log_and_console("      - " + s, 1)
+            for c in other_cases:
+                s = "cell " + str(c) + " (" + str(e1[c]) + ") has daughters with different names:"
+                monitoring.to_log_and_console("        " + s, 1)
+                daughters = sorted(list(set(lineage1[c]).intersection(set(lineage2[c]))))
+                difference1 = sorted(list(set(lineage1[c]).difference(set(lineage2[c]))))
+                difference2 = sorted(list(set(lineage2[c]).difference(set(lineage1[c]))))
+
+                l1 = ""
+                l2 = ""
+                for i, d in enumerate(daughters):
+                    l1 += str(e1[d])
+                    l2 += str(e2[d])
+                    if i < len(daughters)-1:
+                        l1 += ", "
+                        l2 += ", "
+                s = str(daughters) + " are named [" + str(l1) + "] in '" + str(name1) + "'"
+                monitoring.to_log_and_console("          " + s, 1)
+                s = " " * len(str(daughters)) + " and named [" + str(l2) + "] in '" + str(name2) + "'"
+                monitoring.to_log_and_console("          " + s, 1)
+
+                for d in difference1:
+                    spaces = ""
+                    for i in range(len(str(d))):
+                        spaces += " "
+                    s = str(d) + " is named " + str(e1[d]) + " in '" + str(name1) + "'"
+                    monitoring.to_log_and_console("          " + s, 1)
+                    s = spaces + "and is not a daughter of " + str(c) + " in '" + str(name2) + "'"
+                    monitoring.to_log_and_console("          " + s, 1)
+                for d in difference2:
+                    spaces = ""
+                    for i in range(len(str(d))):
+                        spaces += " "
+                    s = str(d) + " is named " + str(e2[d]) + " in '" + str(name2) + "'"
+                    monitoring.to_log_and_console("          " + s, 1)
+                    s = spaces + "and is not a daughter of " + str(c) + " in '" + str(name1) + "'"
+                    monitoring.to_log_and_console("          " + s, 1)
+    return
 
 
-def _compare_contact(e1, e2, name1, name2, description):
+def _compare_contact(d1, d2, name1, name2, description):
     """
 
     :param e1:
@@ -1206,38 +1369,42 @@ def _compare_contact(e1, e2, name1, name2, description):
     #     dictionary de dictionary de int
     #     cell_contact_surface.590002.590019 = <type 'int'>
 
-    monitoring.to_log_and_console("  === " + str(description) + " comparison === ", 1)
+    e1 = d1[description]
+    e2 = d2[description]
+
+    msg = "  === " + str(description) + " comparison between " + str(name1) + " and " + str(name2) + " === "
+    monitoring.to_log_and_console(msg, 1)
 
     intersection = _intersection_cell_keys(e1, e2, name1, name2)
-
     if len(intersection) > 0:
+        n = 0
         for k in intersection:
-
             d = list(set(e1[k].keys()).symmetric_difference(set(e2[k].keys())))
-            i = list(set(e1[k].keys()).intersection(set(e2[k].keys())))
-
             if len(d) > 0:
-                s = "cell #" + str(k) + "has different contacts in '" + str(name1) + "' and '" + str(name2) + "'"
-                monitoring.to_log_and_console("        " + s, 1)
-                monitoring.to_log_and_console("        " + str(list(e1[k].keys())), 1)
-                monitoring.to_log_and_console("        " + "<-> " + str(list(e2[k].keys())), 1)
-
-            if len(i) > 0:
-                for c in i:
-                    if e1[k][c] != e2[k][c]:
-                        s = "surface contact of cell #" + str(k) + " with cell #" + str(c)
-                        s += " is " + str(e1[k][c]) + " in '" + str(name1) + "'"
-                        s += " and " + str(e2[k][c]) + " in '" + str(name2) + "'"
-                        monitoring.to_log_and_console("        " + s, 1)
-
+                n += 1
+        if n > 0:
+            monitoring.to_log_and_console("    ... " + str(n) + " cells have different contact surfaces", 1)
+            for k in intersection:
+                d = list(set(e1[k].keys()).symmetric_difference(set(e2[k].keys())))
+                if len(d) > 0:
+                    difference1 = list(set(e1[k].keys()).difference(set(e2[k].keys())))
+                    difference2 = list(set(e2[k].keys()).difference(set(e1[k].keys())))
+                    s = "cell " + str(k) + " has different contact surfaces: "
+                    monitoring.to_log_and_console("        " + s, 1)
+                    if len(difference1) > 0:
+                        s = str(difference1) + " in '" + str(name1) + "' and not in '" + str(name2) + "'"
+                        monitoring.to_log_and_console("          " + s, 1)
+                    if len(difference2) > 0:
+                        s = str(difference2) + " in '" + str(name2) + "' and not in '" + str(name1) + "'"
+                        monitoring.to_log_and_console("          " + s, 1)
     return
 
 
-# def _compare_history(e1, e2, name1, name2, description):
+# def _compare_history(d1, d2, name1, name2, description):
 #    return
 
 
-def _compare_principal_vector(e1, e2, name1, name2, description):
+def _compare_principal_vector(d1, d2, name1, name2, description):
     """
 
     :param e1:
@@ -1253,6 +1420,9 @@ def _compare_principal_vector(e1, e2, name1, name2, description):
     #     590002: [array([ 0.17420991, -0.74923203,  0.63898534]),
     #         array([-0.24877611,  0.59437038,  0.7647446 ]),
     #         array([ 0.95276511,  0.29219037,  0.08284582])]
+
+    e1 = d1[description]
+    e2 = d2[description]
 
     monitoring.to_log_and_console("  === " + str(description) + " comparison === ", 1)
 
@@ -1316,7 +1486,7 @@ def comparison(d1, d2, features, name1, name2):
                 for k2 in d2:
                     if k2 in keydictionary[k]['input_keys']:
                         pairedkey = True
-                        pairedkeys.append([k1, k2])
+                        pairedkeys.append([k1, k2, k])
                         break
                 if pairedkey is False:
                     unpairedkeys1.append(k1)
@@ -1404,90 +1574,55 @@ def comparison(d1, d2, features, name1, name2):
     #
 
     if features is None or len(features) == 0:
-
-        monitoring.to_log_and_console("", 1)
-
-        for pk in pairedkeys:
-            if pk[0] == keydictionary['lineage']['output_key']:
-                _compare_lineage(d1[pk[0]], d2[pk[1]], name1, name2, pk[0])
-            elif pk[0] == keydictionary['h_min']['output_key']:
-                pass
-                # monitoring.to_log_and_console("    comparison of '" + str(pk[0]) + "' not implemented yet", 1)
-            elif pk[0] == keydictionary['volume']['output_key']:
-                _compare_volume(d1[pk[0]], d2[pk[1]], name1, name2, pk[0])
-            elif pk[0] == keydictionary['sigma']['output_key']:
-                pass
-                # monitoring.to_log_and_console("    comparison of '" + str(pk[0]) + "' not implemented yet", 1)
-            elif pk[0] == keydictionary['label_in_time']['output_key']:
-                pass
-                # monitoring.to_log_and_console("    comparison of '" + str(pk[0]) + "' not implemented yet", 1)
-            elif pk[0] == keydictionary['barycenter']['output_key']:
-                _compare_barycenter(d1[pk[0]], d2[pk[1]], name1, name2, pk[0])
-            elif pk[0] == keydictionary['fate']['output_key']:
-                pass
-                # monitoring.to_log_and_console("    comparison of '" + str(pk[0]) + "' not implemented yet", 1)
-            elif pk[0] == keydictionary['all-cells']['output_key']:
-                _compare_all_cells(d1[pk[0]], d2[pk[1]], name1, name2, pk[0])
-            elif pk[0] == keydictionary['principal-value']['output_key']:
-                _compare_principal_value(d1[pk[0]], d2[pk[1]], name1, name2, pk[0])
-            elif pk[0] == keydictionary['name']['output_key']:
-                pass
-                # monitoring.to_log_and_console("    comparison of '" + str(pk[0]) + "' not implemented yet", 1)
-            elif pk[0] == keydictionary['contact']['output_key']:
-                _compare_contact(d1[pk[0]], d2[pk[1]], name1, name2, pk[0])
-            elif pk[0] == keydictionary['history']['output_key']:
-                pass
-                # monitoring.to_log_and_console("    comparison of '" + str(pk[0]) + "' not implemented yet", 1)
-            elif pk[0] == keydictionary['principal-vector']['output_key']:
-                _compare_principal_vector(d1[pk[0]], d2[pk[1]], name1, name2, pk[0])
-            else:
-                monitoring.to_log_and_console("    unknown key '" + str(pk[0]) + "' for comparison", 1)
-
+        comparison_keys = [k[2] for k in pairedkeys]
     else:
-        for f in features:
-            if f not in keydictionary:
-                monitoring.to_log_and_console("    unknown property '" + str(f) + "' for comparison", 1)
-                continue
+        comparison_keys = features
 
-            outk = keydictionary[f]['output_key']
+    monitoring.to_log_and_console("", 1)
 
-            for i in range(len(pairedkeys)):
-                if pairedkeys[i][0] == outk:
-                    if outk == keydictionary['lineage']['output_key']:
-                        _compare_lineage(d1[outk], d2[outk], name1, name2, outk)
-                    elif outk == keydictionary['h_min']['output_key']:
-                        pass
-                        # monitoring.to_log_and_console("    comparison of '" + str(outk) + "' not implemented yet", 1)
-                    elif outk == keydictionary['volume']['output_key']:
-                        _compare_volume(d1[outk], d2[outk], name1, name2, outk)
-                    elif outk == keydictionary['sigma']['output_key']:
-                        pass
-                        # monitoring.to_log_and_console("    comparison of '" + str(outk) + "' not implemented yet", 1)
-                    elif outk == keydictionary['label_in_time']['output_key']:
-                        pass
-                        # monitoring.to_log_and_console("    comparison of '" + str(outk) + "' not implemented yet", 1)
-                    elif outk == keydictionary['barycenter']['output_key']:
-                        _compare_barycenter(d1[outk], d2[outk], name1, name2, outk)
-                    elif outk == keydictionary['fate']['output_key']:
-                        pass
-                        # monitoring.to_log_and_console("    comparison of '" + str(outk) + "' not implemented yet", 1)
-                    elif outk == keydictionary['all-cells']['output_key']:
-                        _compare_all_cells(d1[outk], d2[outk], name1, name2, outk)
-                    elif outk == keydictionary['principal-value']['output_key']:
-                        _compare_principal_value(d1[outk], d2[outk], name1, name2, outk)
-                    elif outk == keydictionary['name']['output_key']:
-                        pass
-                        # monitoring.to_log_and_console("    comparison of '" + str(outk) + "' not implemented yet", 1)
-                    elif outk == keydictionary['contact']['output_key']:
-                        _compare_contact(d1[outk], d2[outk], name1, name2, outk)
-                    elif outk == keydictionary['history']['output_key']:
-                        pass
-                        # monitoring.to_log_and_console("    comparison of '" + str(outk) + "' not implemented yet", 1)
-                    elif outk == keydictionary['principal-vector']['output_key']:
-                        _compare_principal_vector(d1[outk], d2[outk], name1, name2, outk)
-                    else:
-                        monitoring.to_log_and_console("    unknown key '" + str(outk) + "' for comparison", 1)
-                    break
+    for f in comparison_keys:
+        if f not in keydictionary:
+            monitoring.to_log_and_console("    unknown property '" + str(f) + "' for comparison", 1)
+            continue
+
+        outk = keydictionary[f]['output_key']
+
+        for i in range(len(pairedkeys)):
+            if pairedkeys[i][0] == outk:
+                if outk == keydictionary['lineage']['output_key']:
+                    _compare_lineage(d1, d2, name1, name2, outk)
+                elif outk == keydictionary['h_min']['output_key']:
+                    pass
+                    # monitoring.to_log_and_console("    comparison of '" + str(outk) + "' not implemented yet", 1)
+                elif outk == keydictionary['volume']['output_key']:
+                    _compare_volume(d1, d2, name1, name2, outk)
+                elif outk == keydictionary['sigma']['output_key']:
+                    pass
+                    # monitoring.to_log_and_console("    comparison of '" + str(outk) + "' not implemented yet", 1)
+                elif outk == keydictionary['label_in_time']['output_key']:
+                    pass
+                    # monitoring.to_log_and_console("    comparison of '" + str(outk) + "' not implemented yet", 1)
+                elif outk == keydictionary['barycenter']['output_key']:
+                    _compare_barycenter(d1, d2, name1, name2, outk)
+                elif outk == keydictionary['fate']['output_key']:
+                    pass
+                    # monitoring.to_log_and_console("    comparison of '" + str(outk) + "' not implemented yet", 1)
+                elif outk == keydictionary['all-cells']['output_key']:
+                    _compare_all_cells(d1, d2, name1, name2, outk)
+                elif outk == keydictionary['principal-value']['output_key']:
+                    _compare_principal_value(d1, d2, name1, name2, outk)
+                elif outk == keydictionary['name']['output_key']:
+                    _compare_name(d1, d2, name1, name2, outk)
+                elif outk == keydictionary['contact']['output_key']:
+                    _compare_contact(d1, d2, name1, name2, outk)
+                elif outk == keydictionary['history']['output_key']:
+                    pass
+                    # monitoring.to_log_and_console("    comparison of '" + str(outk) + "' not implemented yet", 1)
+                elif outk == keydictionary['principal-vector']['output_key']:
+                    _compare_principal_vector(d1, d2, name1, name2, outk)
+                else:
+                    monitoring.to_log_and_console("    unknown key '" + str(outk) + "' for comparison", 1)
+                break
 
     return
 

@@ -362,7 +362,13 @@ def main():
             if comparedict == {}:
                 print("error: empty dictionary to be compared with")
             else:
-                properties.comparison(inputdict, comparedict, args.outputFeatures, 'input entry', 'compared entry')
+                input_entry = 'input entry'
+                if len(args.inputFiles) == 1:
+                    input_entry = str(args.inputFiles[0])
+                compared_entry = 'compared entry'
+                if len(args.inputFiles) == 1:
+                    compared_entry = str(args.compareFiles[0])
+                properties.comparison(inputdict, comparedict, args.outputFeatures, input_entry, compared_entry)
 
         #
         # compute fate from name
