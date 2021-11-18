@@ -21,6 +21,8 @@ Its development has been pursued, and it was used to process 3D+t movies acquire
    astec_postcorrection.rst
    astec_intraregistration.rst
    astec_embryoproperties.rst
+   astec_contact_atlas.rst
+   astec_contact_naming.rst
    astec_input_image.rst
    astec_parameters.rst
    overview.rst

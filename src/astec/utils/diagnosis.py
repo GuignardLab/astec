@@ -40,25 +40,53 @@ class DiagnosisParameters(ucontact.ContactSurfaceParameters):
         #
         # parametres pour le diagnostic sur le volume
         #
+        doc = "\t for diagnosis on cell volume. Threshold on cell volume. Snapshot cells\n"
+        doc += "\t that have a volume below this threshold are displayed."
+        self.doc['minimal_volume'] = doc
         self.minimal_volume = 0
+        doc = "\t for diagnosis on cell volume. Threshold on volume variation along branches.\n"
+        doc += "\t Branches that have a volume variation above this threshold are displayed.\n"
+        doc += "\t The volume variation along a branch is calculated as\n"
+        doc += "\t 100 * (max v(c) - min v(c)) / median v(c)\n"
+        doc += "\t where v(c) is the volume of the cell c"
+        self.doc['maximal_volume_variation'] = doc
         self.maximal_volume_variation = 40.0
+        doc = "\t for diagnosis on cell volume. Threshold on volume derivative along branches.\n"
+        doc += "\t Time points along branches that have a volume derivative above this threshold\n"
+        doc += "\t are displayed. The volume derivative along a branch is calculated as\n"
+        doc += "\t 100 * (v(c_{t+1}) - v(c_{t}))/v(c_{t}) where t denotes the successive acquisition\n"
+        doc += "\t time points."
+        self.doc['maximal_volume_derivative'] = doc
         self.maximal_volume_derivative = 30.0
 
         #
         # nombre d'items a imprimer
         #
+        doc = "\t if strictly positif, numbeems (ie cells) to be displayed in diagnosis.\n"
+        self.doc['items'] = doc
         self.items = 10
         
         #
         # diagnostic pour le lignage
         #
+        doc = "\t for diagnosis on lineage. Threshold on branch length. Branches that have a length\n"
+        doc += "\t below this threshold are displayed."
+        self.doc['minimal_length'] = doc
         self.minimal_length = 10
-        
         #
         # parametres pour le diagnostic sur les surfaces de contact
         #
-        self.maximal_contact_similarity = 0.1
+        doc = "\t for diagnosis on cell contact surface. Threshold on cell contact surface\n"
+        doc += "\t distance along branches. Time points along branches that have a cell\n"
+        doc += "\t contact surface distance above this threshold are displayed (recall that\n"
+        doc += "\t the distance is in [0, 1])."
+        self.doc['maximal_contact_distance'] = doc
+        self.maximal_contact_distance = 0.1
+        doc = "\t if True, generate python files (prefixed by 'figures_') that generate figures."
+        self.doc['generate_figure'] = doc
         self.generate_figure = False
+        doc = "\t suffix used to named the above python files as well as the generated figures."
+        self.doc['figurefile_suffix'] = doc
         self.figurefile_suffix = ""
 
     def print_parameters(self):
@@ -82,8 +110,8 @@ class DiagnosisParameters(ucontact.ContactSurfaceParameters):
 
         self.varprint('minimal_length', self.minimal_length, self.doc.get('minimal_length', None))
 
-        self.varprint('maximal_contact_similarity', self.maximal_contact_similarity,
-                      self.doc.get('maximal_contact_similarity', None))
+        self.varprint('maximal_contact_distance', self.maximal_contact_distance,
+                      self.doc.get('maximal_contact_distance', None))
         self.varprint('generate_figure', self.generate_figure, self.doc.get('generate_figure', None))
         self.varprint('figurefile_suffix', self.figurefile_suffix, self.doc.get('figurefile_suffix', None))
 
@@ -110,8 +138,8 @@ class DiagnosisParameters(ucontact.ContactSurfaceParameters):
 
         self.varwrite(logfile, 'minimal_length', self.minimal_length, self.doc.get('minimal_length', None))
 
-        self.varwrite(logfile, 'maximal_contact_similarity', self.maximal_contact_similarity,
-                      self.doc.get('maximal_contact_similarity', None))
+        self.varwrite(logfile, 'maximal_contact_distance', self.maximal_contact_distance,
+                      self.doc.get('maximal_contact_distance', None))
         self.varwrite(logfile, 'generate_figure', self.generate_figure, self.doc.get('generate_figure', None))
         self.varwrite(logfile, 'figurefile_suffix', self.figurefile_suffix, self.doc.get('figurefile_suffix', None))
 
@@ -137,8 +165,8 @@ class DiagnosisParameters(ucontact.ContactSurfaceParameters):
 
         self.minimal_length = self.read_parameter(parameters, 'minimal_length', self.minimal_length)
 
-        self.maximal_contact_similarity = self.read_parameter(parameters, 'maximal_contact_similarity',
-                                                              self.maximal_contact_similarity)
+        self.maximal_contact_distance = self.read_parameter(parameters, 'maximal_contact_distance',
+                                                              self.maximal_contact_distance)
         self.generate_figure = self.read_parameter(parameters, 'generate_figure', self.generate_figure)
         self.generate_figure = self.read_parameter(parameters, 'generate_figures', self.generate_figure)
         self.figurefile_suffix = self.read_parameter(parameters, 'figurefile_suffix', self.figurefile_suffix)
@@ -1055,7 +1083,7 @@ def _diagnosis_contact(prop, description, diagnosis_parameters, time_digits_for_
         #
         # branch with all distances (between successive contact surface vectors) below the threshold
         #
-        if max(score_along_time[cell][1:]) < diagnosis_parameters.maximal_contact_similarity:
+        if max(score_along_time[cell][1:]) < diagnosis_parameters.maximal_contact_distance:
             continue
         #
         # here, the branch has at least a couple of successive successive contact surface vectors has
@@ -1063,7 +1091,7 @@ def _diagnosis_contact(prop, description, diagnosis_parameters, time_digits_for_
         #
         monitoring.to_log_and_console(msg)
         for i in range(1, len(score_along_time[cell])):
-            if score_along_time[cell][i] < diagnosis_parameters.maximal_contact_similarity:
+            if score_along_time[cell][i] < diagnosis_parameters.maximal_contact_distance:
                 continue
             c = cell
             for j in range(i):

@@ -26,10 +26,11 @@ class ContactSurfaceParameters(common.PrefixedParameter):
             self.doc = {}
 
         doc = "\t Defines the contact surface similarity. Contact surface vectors are normalized before\n"
-        doc += "\t comparison. Possible values are:\n"
-        doc += "\t - 'l1_distance': normalization by the l1-norm. \n"
-        doc += "\t - 'l2_distance': normalization by the l2-norm.\n"
-        doc += "\t This measure is normalized into [0, 1]: 0 means perfect equality, 1 means total dissimilarity"
+        doc += "\t comparison (by the l1-norm, so percentages of the total surface are compared).\n"
+        doc += "\t Possible values are:\n"
+        doc += "\t - 'l1_distance': sum of absolute value of coordinate difference (or Manhattan distance). \n"
+        doc += "\t - 'l2_distance': euclidean distance.\n"
+        doc += "\t This measure is normalized into [0, 1]: 0 means perfect equality, 1 means total dissimilarity."
         self.doc['cell_contact_distance'] = doc
         self.cell_contact_distance = 'l1_distance'
 

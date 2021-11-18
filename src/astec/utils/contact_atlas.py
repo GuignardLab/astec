@@ -35,6 +35,9 @@ class AtlasParameters(udiagnosis.DiagnosisParameters):
         udiagnosis.DiagnosisParameters.__init__(self, prefix=[prefix, "diagnosis_"])
 
         self.outputAtlasFile = None
+        doc = "\t List of atlas files. An atlas file is a property file that contains lineage,\n"
+        doc += "\t names, and contact surfaces for an embryo."
+        self.doc['atlasFiles'] = doc
         self.atlasFiles = []
 
         #
@@ -48,14 +51,17 @@ class AtlasParameters(udiagnosis.DiagnosisParameters):
         self.add_symmetric_neighborhood = True
 
         doc = "\t if 'True', differentiate the cells of the symmetric half-embryo.\n"
-        doc += "\t If 'False', consider all the cells of the symmetric half-embryo.\n"
+        doc += "\t If 'False', consider all the cells of the symmetric half-embryo\n"
         doc += "\t as a single cell.\n"
         self.doc['differentiate_other_half'] = doc
         self.differentiate_other_half = True
 
         doc = "\t The same cell has different neighbors from an atlas to the other.\n"
         doc += "\t If 'True' build and keep an unique common neighborhood (set of\n"
-        doc += "\t neighbors) for all atlases."
+        doc += "\t neighbors) for all atlases by keeping the closest ancestor for\n"
+        doc += "\t neighboring cells. Eg, if a division has occurred in some embryos\n"
+        doc += "\t and not in others, daughter cells will be fused so that all\n"
+        doc += "\t neighborhoods only exhibit the parent cell."
         self.doc['use_common_neighborhood'] = doc
         self.use_common_neighborhood = True
 
@@ -74,21 +80,27 @@ class AtlasParameters(udiagnosis.DiagnosisParameters):
         doc += "\t   distances are normalized between 0 (perfect match) and 1 (complete mismatch)\n"
         doc += "\t - 'probability': 1-(division probability) is used to keep the same meaning\n"
         doc += "\t   for the 0 and 1 extremal values. Probabilities are built with the distance\n"
-        doc += "\t   'cell_contact_distance'\n"
+        doc += "\t   'cell_contact_distance'. This is kept for test purposes and should be used\n"
+        doc += "\t   with care.\n"
         self.doc['division_contact_similarity'] = doc
         self.division_contact_similarity = 'distance'
 
         #
         #
         #
-        doc = "\t Performs some diagnosis when reading an additional property file into the atlases\n"
-        doc += "\t Incrementing the verboseness ('-v' in the command line) may give more details."
+        doc = "\t True or False. Performs some diagnosis when reading an additional property file \n"
+        doc += "\t into the atlases. Incrementing the verboseness ('-v' in the command line) may give\n"
+        doc += "\t more details."
         self.doc['diagnosis_properties'] = doc
         self.diagnosis_properties = False
 
         #
         #
         #
+        doc = "\t If True, will propose some daughters switches in the atlases. For a given division,\n"
+        doc += "\t a global score is computed as the sum of all pairwise division similarity.\n"
+        doc += "\t A switch is proposed for an atlas if it allows to decrease this global score."
+        self.doc['daughter_switch_proposal'] = doc
         self.daughter_switch_proposal = False
 
     ############################################################

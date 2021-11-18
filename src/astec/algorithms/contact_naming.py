@@ -44,22 +44,41 @@ class NamingParameters(ucontacta.AtlasParameters):
 
         ucontacta.AtlasParameters.__init__(self, prefix=[prefix, "atlas_"])
 
+        doc = "\t Input property file to be named. Must contain lineage and contact surfaces"
+        doc += "\t as well as some input names (one time point should be entirely named)."
+        self.doc['inputFile'] = doc
         self.inputFile = []
+        oc = "\t Output property file."
+        self.doc['outputFile'] = doc
         self.outputFile = None
 
         #
         #
         #
-        doc = "\t Method to name the daugthers after a division \n"
-        doc += "\t - 'sum' \n"
-        doc += "\t - 'min' \n"
+        doc = "\t Method to name the daughters after a division. Distances are computed\n"
+        doc += "\t between the couple of daughters as well as the couple of switched\n"
+        doc += "\t daughters and all the atlas divisions.\n"
+        doc += "\t - 'mean': choose the couple of names that yield the minimal average \n"
+        doc += "\t   distance over all the atlases. \n"
+        doc += "\t - 'minimum': choose the couple of names that yield a minimal distance.\n"
+        doc += "\t   It comes to name after the closest atlas (for this division).\n"
+        doc += "\t - 'sum': same as 'mean' \n"
         self.doc['selection_method'] = doc
-        self.selection_method = 'sum'
+        self.selection_method = 'mean'
 
         #
         # for test:
         # names will be deleted, and tried to be rebuilt
+        doc = "\t Input property file to be tested (must include cell names).\n"
+        doc += "\t A 64-cells time point is searched and the embryo is renamed from\n"
+        doc += "\t this given time point. Comparison between new names and actual ones\n"
+        doc += "\t are reported.\n"
+        doc += "\t If given, 'inputFile' is ignored.\n"
+        self.doc['testFile'] = doc
         self.testFile = None
+        doc = "\t If True, some diagnosis are conducted on the property file to\n"
+        doc += "\t be tested.\n"
+        self.doc['test_diagnosis'] = doc
         self.test_diagnosis = False
 
     ############################################################
@@ -506,7 +525,8 @@ def _give_name(daughters, daughter_names, distance, parameters, debug=False):
             name_certainty[daughters[1]] = name_certainty[daughters[0]]
         return name, name_certainty
 
-    if parameters.selection_method.lower() == 'sum':
+    if parameters.selection_method.lower() == 'sum' or parameters.selection_method.lower() == 'mean' \
+            or parameters.selection_method.lower() == 'average':
         if sum(arr0) < sum(arr1):
             name[daughters[0]] = daughter_names[0]
             name[daughters[1]] = daughter_names[1]

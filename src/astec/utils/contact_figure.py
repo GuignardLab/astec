@@ -51,6 +51,11 @@ def figures_division_dendrogram(atlases, parameters, linkage_method='single'):
     merge_values = {}
     lastmerge_values = {}
 
+    swmerge_values = {}
+    swlastmerge_values = {}
+
+    division_lastmerge_values = {}
+
     f = open(filename, "w")
 
     f.write("import numpy as np\n")
@@ -129,6 +134,9 @@ def figures_division_dendrogram(atlases, parameters, linkage_method='single'):
         lastmerge_value = z[:, 2][-1]
         lastmerge_values[stage] = lastmerge_values.get(stage, []) + [lastmerge_value]
 
+        #
+        # distance array for couples of atlases/references plus the switched ones
+        #
         swdist = np.zeros((len(swconfig), len(swconfig)))
         swlabels = []
         for i, r in enumerate(swconfig):
@@ -148,6 +156,13 @@ def figures_division_dendrogram(atlases, parameters, linkage_method='single'):
                                                                                    change_contact_surfaces=ccs)
                 swdist[j][i] = swdist[i][j]
         swconddist = sp.spatial.distance.squareform(swdist)
+        swz = sch.linkage(swconddist, method=linkage_method)
+
+        swmerge_values[stage] = swmerge_values.get(stage, []) + list(swz[:, 2])
+        swlastmerge_value = swz[:, 2][-1]
+        swlastmerge_values[stage] = swlastmerge_values.get(stage, []) + [swlastmerge_value]
+
+        division_lastmerge_values[n] = [lastmerge_value, swlastmerge_value]
 
         #
         # identifier for mother cell
@@ -231,6 +246,25 @@ def figures_division_dendrogram(atlases, parameters, linkage_method='single'):
 
         f.write("\n")
 
+    if True:
+        nochanges = {n: v for n, v in division_lastmerge_values.items() if v[1] <= v[0]}
+        sorted_nochanges = sorted(nochanges.items(), key=lambda v: v[0])
+        msg = "division with same dendrogram last values (without and with switch), cell order"
+        msg += ": " + str(len(nochanges)) + "/" + str(len(division_lastmerge_values)) + " divisions"
+        monitoring.to_log_and_console("")
+        monitoring.to_log_and_console("    ... " + msg)
+        for s in sorted_nochanges:
+            msg = str(s[0]) + " with last values " + str(s[1])
+            monitoring.to_log_and_console("        " + msg)
+        sorted_nochanges = sorted(nochanges.items(), key=lambda v: v[1][0], reverse=True)
+        monitoring.to_log_and_console("")
+        msg = "division with same dendrogram last values (without and with switch), value order"
+        monitoring.to_log_and_console("    ... " + msg)
+        for s in sorted_nochanges:
+            msg = str(s[0]) + " with last values " + str(s[1])
+            monitoring.to_log_and_console("        " + msg)
+        monitoring.to_log_and_console("")
+
     f.write("\n")
     f.write("\n")
     f.write("def draw_all(savefig=False):\n")
@@ -263,7 +297,7 @@ def figures_division_dendrogram(atlases, parameters, linkage_method='single'):
     f.write("]\n")
     f.write("merge_labels = [")
     for i, g in enumerate(generations):
-        f.write("'" + str(g) + "'")
+        f.write("'generation " + str(g) + "'")
         if i < len(generations) - 1:
             f.write(", ")
     f.write("]\n")
@@ -271,12 +305,12 @@ def figures_division_dendrogram(atlases, parameters, linkage_method='single'):
     f.write("\n")
     f.write("fig, (ax1, ax2) = plt.subplots(ncols=2, figsize=(16, 6.5))\n")
 
-    f.write("ax1.hist(merge_values, bins=list(range(101)), histtype='bar', stacked=True, label=merge_labels)\n")
+    f.write("ax1.hist(merge_values, bins=list(range(0, 101, 2)), histtype='bar', stacked=True, label=merge_labels)\n")
     f.write("ax1.set_title('dendrogram merge values', fontsize=12)\n")
     f.write("ax1.legend(prop={'size': 10})\n")
     f.write("ax1.tick_params(labelsize=10)\n")
 
-    f.write("ax2.hist(lastmerge_values, bins=list(range(101)), histtype='bar', stacked=True, label=merge_labels)\n")
+    f.write("ax2.hist(lastmerge_values, bins=list(range(0, 101, 2)), histtype='bar', stacked=True, label=merge_labels)\n")
     f.write("ax2.set_title('dendrogram last merge values', fontsize=12)\n")
     f.write("ax2.legend(prop={'size': 10})\n")
     f.write("ax2.tick_params(labelsize=10)\n")

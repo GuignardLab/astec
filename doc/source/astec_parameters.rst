@@ -1070,3 +1070,144 @@ These parameters are prefixed by ``postcorrection_``.
 
 
 
+.. _cli-parameters-contact-surface:
+
+Contact surface parameters
+--------------------------
+
+* ``cell_contact_distance``
+  Defines the contact surface similarity. Contact surface vectors are normalized before
+  comparison (by the l1-norm, so percentages of the total surface are compared). Possible values are:
+
+  * ``l1_distance``: sum of absolute value of coordinate difference (or Manhattan distance).
+  * ``l2_distance``: euclidean distance.
+
+  This measure is normalized into [0, 1]: 0 means perfect equality, 1 means total dissimilarity.
+
+
+
+.. _cli-parameters-diagnosis:
+
+Diagnosis parameters
+--------------------
+
+These parameters are prefixed by ``diagnosis_``.
+
+* Contact surface parameters 
+  (see section :ref:`cli-parameters-contact-surface`)
+
+* ``minimal_volume``: for diagnosis on cell volume.
+  Threshold on cell volume. Snapshot cells that have a volume below this threshold are displayed.
+
+* ``maximal_volume_variation``: for diagnosis on cell volume.
+  Threshold on volume variation along branches. Branches that have a volume variation
+  above this threshold are displayed.
+  The volume variation along a branch is calculated as 
+  :math:`100 * \frac{\max_{t} v(c_t) - \min_{t} v(c_t)}{\mathrm{med}_t v(c_t)}` where :math:`v(c_t)` is the volume
+  of the cell :math:`c_t` and :math:`\mathrm{med}` is the median value.
+
+* ``maximal_volume_derivative``: for diagnosis on cell volume.
+  Threshold on volume derivative along branches. 
+  Time points along branches that have a volume derivative
+  above this threshold are displayed.
+  The volume derivative along a branch is calculated as 
+  :math:`100 * \frac{v(c_{t+1}) - v(c_{t})}{v(c_{t})}` where :math:`t` denotes the successive acquisition time points.
+
+* ``items``: if strictly positif, number minimal of items (ie cells) to be displayed in diagnosis.
+
+* ``minimal_length``: for diagnosis on lineage.
+  Threshold on branch length. Branches that have a length below this threshold are displayed.
+
+* ``maximal_contact_distance``: for diagnosis on cell contact surface. Threshold on cell contact surface distance 
+  along branches. Time points along branches that have a cell contact surface distance 
+  above this threshold are displayed (recall that the distance is in [0, 1]).
+
+* ``generate_figure``: if ``True``, generate python files (prefixed by ``figures_``) that generate figures.
+
+* ``figurefile_suffix``: suffix used to named the above python files as well as the generated figures.
+
+
+
+.. _cli-parameters-contact-atlas:
+
+``astec_contact_atlas`` parameters
+----------------------------------
+
+These parameters are prefixed by ``atlas_``.
+
+* Diagnosis parameters 
+  (see section :ref:`cli-parameters-diagnosis`)
+
+* ``outputAtlasFile``: unused
+
+* ``atlasFiles``: List of atlas files. An atlas file is a property file that contains lineage,
+  names, and contact surfaces for an embryo.
+
+* ``add_symmetric_neighborhood``: if ``True``, add the symmetric neighborhood as additional exemplar.
+
+* ``differentiate_other_half``: if 'True', differentiate the cells of the symmetric half-embryo.
+  If 'False', consider all the cells of the symmetric half-embryo as a single cell.
+
+* ``use_common_neighborhood``: The same cell has different neighbors from an atlas to the other.
+  If 'True' build and keep an unique common neighborhood (set of neighbors) for all atlases by
+  keeping the closest ancestor for neighboring cells. Eg, if a division has occurred in some
+  embryos and not in others, daughter cells will be fused so that all neighborhoods only
+  exhibit the parent cell.
+
+* ``delay_from_division``: Delay from the division to extract the neighborhooods.
+  0 means right after the division.
+
+* ``division_contact_similarity``: How to compare two division patterns (a division is considered here
+  as the concatenation of the contact surface vectors of the 2 daughter cells). Choices are:
+
+  * ``distance``: the distance type is given by ``cell_contact_distance`` 
+    (see section :ref:`cli-parameters-contact-surface`).
+    Distances are normalized between 0 (perfect match) and 1 (complete mismatch).
+  * ``probability``: 1-(division probability) is used to keep the same meaning
+    for the 0 and 1 extremal values. Probabilities are built with the distance
+    ``cell_contact_distance``. This is kept for test purposes and should be used with care.
+
+* ``diagnosis_properties``: ``True`` or ``False``. Performs some diagnosis when reading an additional 
+  property file into the atlases. Incrementing the verboseness ('-v' in the command line) may give more details.
+
+* ``daughter_switch_proposal``: If True, will propose some daughters switches in the atlases. 
+  For a given division, a global score is computed as the sum of all pairwise division similarity. 
+  A switch is proposed for an atlas if it allows to decrease this global score.
+
+
+
+
+.. _cli-parameters-contact-naming:
+
+``astec_contact_naming`` parameters
+-----------------------------------
+
+These parameters are prefixed by ``naming_``.
+
+* ``astec_contact_atlas`` parameters
+  (see section :ref:`cli-parameters-contact-atlas`)
+
+* ``inputFile``: input property file to be named. Must contain lineage and contact surfaces
+  as well as some input names (one time point should be entirely named).
+
+* ``outputFile``: output property file.
+
+* ``selection_method``: decision method to name the daughters after a division. Distances are computed
+  between the couple of daugthers to be named as well as the couple of switched daughters and 
+  all the atlas divisions.
+
+  * ``mean``: choose the couple of names that yield the minimal average distance over all the atlases.
+  * ``minimum``: choose the couple of names that yield a minimal distance.
+    It comes to name after the closest atlas (for this division).
+  * ``sum``: same as ``mean``.
+
+* ``testFile``: input property file to be tested (must include cell names).
+   64-cells time point is searched and the embryo is renamed from 
+   this given time point. Comparison between new names and actual ones are reported.
+   If given, ``inputFile`` is ignored.
+
+
+* ``test_diagnosis``: if ``True``, some diagnosis are conducted on the property file to be tested.
+
+
+

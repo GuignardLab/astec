@@ -40,6 +40,12 @@ The following options are available:
 ``--diagnosis-items DIAGNOSIS_ITEMS``
    minimal number of items to be displayed
 
+``-extract-selection, --extract-selection``
+   convert xml selections into morphonet files
+
+``-fate, --compute-fate``
+   delete previous fates ('fate', 'fate2', 'fate3' and 'fate4') and recompute 'fate4'
+
 ``--print-content``
    print the keys of the input file(s) (read as python dictionary)
 
@@ -67,8 +73,8 @@ sub-directory.
 
 
 
-Embry properties Output data
-----------------------------
+Embryo properties output data
+-----------------------------
 
 The results are stored in the ``POST/POST_<EXP_POST>/`` or
 ``SEG/SEG_<EXP_SEG>/`` sub-directory under the
@@ -145,11 +151,27 @@ The text file ``<EN>_intrareg_post_lineage.txt`` contains diagnosis information 
 * cells having a small intersection with its mother cell with respect
   to either the mother cell volume or the cell volume.  
 
+Note that a property file may contain some other information that can be computed either by ``astec_embryoproperties`` 
+(e.g. with the ``--compute-fate`` option) or by other means.
 
 
 
-Handling properties files
--------------------------
+Comparing property files
+------------------------
+
+Comparing property files may help to view changes and/or correction between two property files
+
+  .. code-block:: bash
+
+     $ astec_embryoproperties -i file.pkl -c file_to_be_compared_to.pkl
+
+compare the two files ``file.pkl`` and ``file_to_be_compared_to.pkl``. The comparison is made on all
+common properties (according it has been implemented). The ``-feature`` option allows to select the features to be compared.
+
+
+
+Handling property files
+-----------------------
 
 ``astec_embryoproperties`` can also help managing property files.
 
