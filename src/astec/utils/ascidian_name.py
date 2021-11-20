@@ -66,6 +66,22 @@ def get_mother_name(name):
     return parent
 
 
+def get_ancestor_name(name, generation):
+    if name == 'background':
+        return 'background'
+    if name == 'other-half':
+        return 'other-half'
+    g = int(name.split('.')[0][1:])
+    if int(generation) > g:
+        return None
+    if int(generation) == g:
+        return name
+    n = name
+    for i in range(g-int(generation)):
+        n = get_mother_name(n)
+        return n
+
+
 def get_sister_name(name):
     sister_names = get_daughter_names(get_mother_name(name))
     sister_names.remove(name)
