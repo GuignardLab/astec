@@ -1,3 +1,6 @@
+
+.. _cli-embryoproperties:
+
 ``astec_embryoproperties``
 ==========================
 
@@ -40,7 +43,7 @@ The following options are available:
 ``--diagnosis-items DIAGNOSIS_ITEMS``
    minimal number of items to be displayed
 
-``-extract-selection, --extract-selection``
+``-write-selection, --write-selection``
    convert xml selections into morphonet files
 
 ``-fate, --compute-fate``
@@ -156,19 +159,6 @@ Note that a property file may contain some other information that can be compute
 
 
 
-Comparing property files
-------------------------
-
-Comparing property files may help to view changes and/or correction between two property files
-
-  .. code-block:: bash
-
-     $ astec_embryoproperties -i file.pkl -c file_to_be_compared_to.pkl
-
-compare the two files ``file.pkl`` and ``file_to_be_compared_to.pkl``. The comparison is made on all
-common properties (according it has been implemented). The ``-feature`` option allows to select the features to be compared.
-
-
 
 Handling property files
 -----------------------
@@ -211,6 +201,27 @@ Handling property files
   will extract the cell volume and surface information from the
   pickle file ``file.pkl`` and write them into the xml file
   ``file.xml``. 
+
+* Comparing property files may help to view changes and/or correction between two property files
+
+  .. code-block:: bash
+
+     $ astec_embryoproperties -i file.pkl -c file_to_be_compared_to.pkl
+
+  compare the two files ``file.pkl`` and ``file_to_be_compared_to.pkl``. 
+  The comparison is made on all common properties (according it has been implemented). 
+  The ``-feature`` option allows to select the features to be compared.
+
+* Assessing a property file
+
+  .. code-block:: bash
+
+     $ astec_embryoproperties -i file.pkl --diagnosis
+
+   will run some test/diagnosis on some properties (only a few features are tested). It may help 
+   at detecting errors either in the segmented images or in the property file.
+   The ``-feature`` option allows to select the features to be tested.
+
 
 
 .. [#] Tulip is a Data Visualization Software, see `tulip.labri.fr <http://tulip.labri.fr/>`_

@@ -72,8 +72,8 @@ def _set_options(my_parser):
                            default=None,
                            help='displays all cells with smaller volume')
 
-    my_parser.add_argument('-extract-selection', '--extract-selection',
-                           action='store_const', dest='extract_selection',
+    my_parser.add_argument('-write-selection', '--write-selection',
+                           action='store_const', dest='write_selection',
                            default=False, const=True,
                            help='convert xml selections into morphonet files')
 
@@ -446,7 +446,7 @@ def main():
                 print("... writing '" + str(ofile) + "'")
                 properties.write_dictionary(ofile, outputdict)
 
-        if args.extract_selection:
+        if args.write_selection:
             time_digits_for_cell_id = experiment.get_time_digits_for_cell_id()
             properties.write_morphonet_selection(inputdict, time_digits_for_cell_id=time_digits_for_cell_id)
 

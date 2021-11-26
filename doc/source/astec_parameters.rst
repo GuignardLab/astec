@@ -107,7 +107,7 @@ Data organisation parameters
 
 ``DIR_LEFTCAM_STACKZERO`` 
   see section :ref:`cli-fuse-input-data`,
-  see figures \ref{fig:data:rawdata:1}, :numref:`fig-data-rawdata-2`, 
+  see figures :numref:`fig-data-rawdata-1`, :numref:`fig-data-rawdata-2`, 
   and :numref:`fig-data-rawdata-3`.
 
 ``DIR_LEFTCAM_STACKZERO_CHANNEL_2`` 
@@ -571,6 +571,7 @@ Registration parameters
 * ``normalization``
 
 
+.. _cli-parameters-seed-edition:
 
 Seed edition parameters
 -----------------------
@@ -614,7 +615,7 @@ Watershed parameters
   (real coordinates).
 
 
-
+.. _cli-parameters-fuse:
 
 ``astec_fuse`` parameters
 -------------------------
@@ -846,7 +847,7 @@ These parameters are prefixed by ``intra_registration_``.
 * ``reference_transformation_file``:
   resampling transformation to be applied to the reference image 
   (and to the whole serie) after transformation compositions.
-  See section \ref{sec:cli:intraregistration:template}.
+  See section :ref:`cli-intraregistration-template`.
 * ``reference_transformation_angles``:
   list of rotations wrt the X, Y,or Z axis that defines the resampling
   transformation.
@@ -910,7 +911,7 @@ These parameters are prefixed by ``mars_``.
 * Watershed parameters 
   (see section :ref:`cli-parameters-watershed`)
 * Seed edition parameters
-  (see section \ref{sec:cli:parameters:seed:edition})
+  (see section :ref:`cli-parameters-seed-edition`)
 * Preprocessing parameters
   (see section :ref:`cli-parameters-preprocessing`)
   prefixed by ``seed_``
@@ -1122,10 +1123,6 @@ These parameters are prefixed by ``diagnosis_``.
   along branches. Time points along branches that have a cell contact surface distance 
   above this threshold are displayed (recall that the distance is in [0, 1]).
 
-* ``generate_figure``: if ``True``, generate python files (prefixed by ``figures_``) that generate figures.
-
-* ``figurefile_suffix``: suffix used to named the above python files as well as the generated figures.
-
 
 
 .. _cli-parameters-contact-atlas:
@@ -1138,10 +1135,14 @@ These parameters are prefixed by ``atlas_``.
 * Diagnosis parameters 
   (see section :ref:`cli-parameters-diagnosis`)
 
-* ``outputAtlasFile``: unused
 
-* ``atlasFiles``: List of atlas files. An atlas file is a property file that contains lineage,
+* ``atlasFiles``: list of atlas files. An atlas file is a property file that contains lineage,
   names, and contact surfaces for an embryo.
+
+* ``outputDir``: output directory where to write atlas-individualized output files,
+  ie morphonet selection files or figure files.
+
+* ``write_selection``: write morphonet selection file on disk.
 
 * ``add_symmetric_neighborhood``: if ``True``, add the symmetric neighborhood as additional exemplar.
 
@@ -1174,7 +1175,22 @@ These parameters are prefixed by ``atlas_``.
   For a given division, a global score is computed as the sum of all pairwise division similarity. 
   A switch is proposed for an atlas if it allows to decrease this global score.
 
+* ``dendrogram_cluster_distance``: cluster distance used to build dendrograms.
+  Dendrograms are used either for diagnosis purpose (if ``diagnosis_properties`` is set to ``True``)
+  or to generate figures (if ``generate_figure`` is set to ``True``)
+  See `scipy.cluster.hierarchy.linkage documentation  <https://docs.scipy.org/doc/scipy/reference/generated/scipy.cluster.hierarchy.linkage.html/>`_. Choices are:
 
+  * ``'single'``
+  * ``'complete'``
+  * ``'average'``
+  * ``'weighted'``
+  * ``'centroid'``
+  * ``'median'``
+  * ``'ward'``
+
+* ``generate_figure``: if ``True``, generate python files (prefixed by ``figures_``) that generate figures.
+
+* ``figurefile_suffix``: suffix used to named the above python files as well as the generated figures.
 
 
 .. _cli-parameters-contact-naming:

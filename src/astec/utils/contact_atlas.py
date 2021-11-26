@@ -1,8 +1,11 @@
 import os
 import sys
 import copy
+import operator
 
+import scipy as sp
 import scipy.stats as stats
+import scipy.cluster.hierarchy as sch
 import numpy as np
 
 import astec.utils.common as common
@@ -34,11 +37,19 @@ class AtlasParameters(udiagnosis.DiagnosisParameters):
 
         udiagnosis.DiagnosisParameters.__init__(self, prefix=[prefix, "diagnosis_"])
 
-        self.outputAtlasFile = None
         doc = "\t List of atlas files. An atlas file is a property file that contains lineage,\n"
         doc += "\t names, and contact surfaces for an embryo."
         self.doc['atlasFiles'] = doc
         self.atlasFiles = []
+
+        doc = "\t Output directory where to write atlas-individualized output files,"
+        doc += "\t ie morphonet selection files or figure files."
+        self.doc['outputDir'] = doc
+        self.outputDir = "."
+
+        doc = "\t Write out morphonet selection files."
+        self.doc['write_selection'] = doc
+        self.write_selection = False
 
         #
         # how to build an atlas
@@ -103,6 +114,30 @@ class AtlasParameters(udiagnosis.DiagnosisParameters):
         self.doc['daughter_switch_proposal'] = doc
         self.daughter_switch_proposal = False
 
+        #
+        #
+        #
+        doc = "\t Cluster distance used to build dendrograms. choices are\n"
+        doc += "\t - 'single'\n"
+        doc += "\t - 'complete'\n"
+        doc += "\t - 'average'\n"
+        doc += "\t - 'weighted'\n"
+        doc += "\t - 'centroid'\n"
+        doc += "\t - 'median'\n"
+        doc += "\t - 'ward'\n"
+        doc += "\t see https://docs.scipy.org/doc/scipy/reference/generated/scipy.cluster.hierarchy.linkage.html.\n"
+        self.doc['dendrogram_cluster_distance'] = doc
+        self.dendrogram_cluster_distance = 'single'
+        #
+        #
+        #
+        doc = "\t if True, generate python files (prefixed by 'figures_') that generate figures."
+        self.doc['generate_figure'] = doc
+        self.generate_figure = False
+        doc = "\t suffix used to named the above python files as well as the generated figures."
+        self.doc['figurefile_suffix'] = doc
+        self.figurefile_suffix = ""
+
     ############################################################
     #
     # print / write
@@ -120,8 +155,10 @@ class AtlasParameters(udiagnosis.DiagnosisParameters):
 
         udiagnosis.DiagnosisParameters.print_parameters(self)
 
-        self.varprint('outputAtlasFile', self.outputAtlasFile)
         self.varprint('atlasFiles', self.atlasFiles)
+
+        self.varprint('outputDir', self.outputDir)
+        self.varprint('write_selection', self.write_selection)
 
         self.varprint('add_symmetric_neighborhood', self.add_symmetric_neighborhood)
         self.varprint('differentiate_other_half', self.differentiate_other_half)
@@ -133,6 +170,11 @@ class AtlasParameters(udiagnosis.DiagnosisParameters):
         self.varprint('diagnosis_properties', self.diagnosis_properties)
 
         self.varprint('daughter_switch_proposal', self.daughter_switch_proposal)
+
+        self.varprint('dendrogram_cluster_distance', self.dendrogram_cluster_distance)
+
+        self.varprint('generate_figure', self.generate_figure)
+        self.varprint('figurefile_suffix', self.figurefile_suffix)
 
         print("")
 
@@ -147,8 +189,10 @@ class AtlasParameters(udiagnosis.DiagnosisParameters):
 
         udiagnosis.DiagnosisParameters.write_parameters_in_file(self, logfile)
 
-        self.varwrite(logfile, 'outputAtlasFile', self.outputAtlasFile, self.doc.get('outputAtlasFile', None))
         self.varwrite(logfile, 'atlasFiles', self.atlasFiles, self.doc.get('atlasFiles', None))
+
+        self.varwrite(logfile, 'outputDir', self.outputDir, self.doc.get('outputDir', None))
+        self.varwrite(logfile, 'write_selection', self.write_selection, self.doc.get('write_selection', None))
 
         self.varwrite(logfile, 'add_symmetric_neighborhood', self.add_symmetric_neighborhood,
                       self.doc.get('add_symmetric_neighborhood', None))
@@ -168,6 +212,12 @@ class AtlasParameters(udiagnosis.DiagnosisParameters):
         self.varwrite(logfile, 'daughter_switch_proposal', self.daughter_switch_proposal,
                       self.doc.get('daughter_switch_proposal', None))
 
+        self.varwrite(logfile, 'dendrogram_cluster_distance', self.dendrogram_cluster_distance,
+                      self.doc.get('dendrogram_cluster_distance', None))
+
+        self.varwrite(logfile, 'generate_figure', self.generate_figure, self.doc.get('generate_figure', None))
+        self.varwrite(logfile, 'figurefile_suffix', self.figurefile_suffix, self.doc.get('figurefile_suffix', None))
+
         logfile.write("\n")
         return
 
@@ -186,9 +236,11 @@ class AtlasParameters(udiagnosis.DiagnosisParameters):
 
         udiagnosis.DiagnosisParameters.update_from_parameters(self, parameters)
 
-        self.outputAtlasFile = self.read_parameter(parameters, 'outputAtlasFile', self.outputAtlasFile)
         self.atlasFiles = self.read_parameter(parameters, 'atlasFiles', self.atlasFiles)
         self.atlasFiles = self.read_parameter(parameters, 'referenceFiles', self.atlasFiles)
+
+        self.outputDir = self.read_parameter(parameters, 'outputDir', self.outputDir)
+        self.write_selection = self.read_parameter(parameters, 'write_selection', self.write_selection)
 
         self.add_symmetric_neighborhood = self.read_parameter(parameters, 'add_symmetric_neighborhood',
                                                               self.add_symmetric_neighborhood)
@@ -209,6 +261,12 @@ class AtlasParameters(udiagnosis.DiagnosisParameters):
 
         self.daughter_switch_proposal = self.read_parameter(parameters, 'daughter_switch_proposal',
                                                             self.daughter_switch_proposal)
+
+        self.dendrogram_cluster_distance = self.read_parameter(parameters, 'dendrogram_cluster_distance',
+                                                               self.dendrogram_cluster_distance)
+
+        self.generate_figure = self.read_parameter(parameters, 'generate_figure', self.generate_figure)
+        self.figurefile_suffix = self.read_parameter(parameters, 'figurefile_suffix', self.figurefile_suffix)
 
     def update_from_parameter_file(self, parameter_file):
         if parameter_file is None:
@@ -339,9 +397,13 @@ def _diagnosis_pairwise_switches(atlases, parameters):
     monitoring.to_log_and_console(str(proc) + ": " + msg)
     msg = "divisions with pairwise disagreement =  " + str(len(divisions_with_disagreement))
     monitoring.to_log_and_console("\t " + msg)
+    msg = "  A disagreement means that a division from a reference is closer to the\n"
+    msg += "  switched division of an other reference than the division itself."
+    monitoring.to_log_and_console(msg)
     monitoring.to_log_and_console("")
     if len(divisions_with_disagreement) > 0:
         _write_summary_pairwise_switches(atlases, summary)
+    monitoring.to_log_and_console("")
 
     return summary
 
@@ -384,7 +446,8 @@ def _dsp_switch_contact_surfaces(neighbors, reference, daughters):
 
 def _dsp_global_generic_distance(neighbors, references, atlases, parameters, debug=False):
     """
-    Compute a global score. The global score is the sum of local similarities over all couple of references/atlases.
+    Compute a global score. The global score is the average of local similarities over all
+    couples of references/atlases.
 
     Parameters
     ----------
@@ -400,6 +463,7 @@ def _dsp_global_generic_distance(neighbors, references, atlases, parameters, deb
     similarity = atlases.get_division_contact_similarity()
     ccs = not parameters.use_common_neighborhood
     score = 0
+    n = 0
     for r1 in references:
         for r2 in references:
             if r2 <= r1:
@@ -410,7 +474,8 @@ def _dsp_global_generic_distance(neighbors, references, atlases, parameters, deb
             if debug:
                 print("   - dist[" + str(r1) + ", " + str(r2) + "] = " + str(dist))
             score += dist
-    return score
+            n += 1
+    return score / n
 
 
 def _dsp_test_one_division(atlases, mother, parameters):
@@ -428,7 +493,7 @@ def _dsp_test_one_division(atlases, mother, parameters):
     """
     divisions = atlases.get_divisions()
     if len(divisions[mother]) <= 1:
-        return {}
+        return {}, []
 
     daughters = uname.get_daughter_names(mother)
     neighborhoods = atlases.get_neighborhoods()
@@ -437,6 +502,7 @@ def _dsp_test_one_division(atlases, mother, parameters):
     # score before any changes
     score = _dsp_global_generic_distance(neighbors, divisions[mother], atlases, parameters)
 
+    returned_scores = [(None, score)]
     corrections = []
     i = 1
     while True:
@@ -453,7 +519,7 @@ def _dsp_test_one_division(atlases, mother, parameters):
                 del newscore[r]
         # no found correction at this iteration
         if len(newscore) == 0:
-            return corrections
+            return corrections, returned_scores
         # found several correction
         # 1. pick the only one (if only one is found)
         # 2. or pick the one with maximal score change
@@ -461,6 +527,10 @@ def _dsp_test_one_division(atlases, mother, parameters):
             ref = list(newscore.keys())[0]
         else:
             ref = min(newscore, key=lambda key: newscore[key])
+        # first iteration, keep the value of the global score decrease
+        if i == 1:
+            for r in newscore:
+                returned_scores += [(r, score - newscore[r])]
         corrections += [(ref, score - newscore[ref])]
         i += 1
         # if one correction has been found, apply it
@@ -484,6 +554,9 @@ def daughter_switch_proposal(atlases, parameters):
     # stage 6: 32 cells
     # stage 7: 64 cells
     #
+
+    proc = "daughter_switch_proposal"
+
     divisions = atlases.get_divisions()
     mothers = {}
     for n in divisions:
@@ -495,6 +568,7 @@ def daughter_switch_proposal(atlases, parameters):
     stages = list(mothers.keys())
     stages.sort()
     corrections = {}
+    selection = {}
 
     for s in stages:
         corrections[s] = {}
@@ -503,21 +577,61 @@ def daughter_switch_proposal(atlases, parameters):
         for m in mothers[s]:
             # if m != 'a7.0002_':
             #     continue
-            correction = _dsp_test_one_division(atlases, m, parameters)
+            correction, returned_score = _dsp_test_one_division(atlases, m, parameters)
             #
             # correction is a dictionary indexed by the iteration index
             # each value is a tuple ('atlas name', score increment)
             #
             if len(correction) > 0:
                 corrections[s][m] = correction
+                selection[m] = returned_score
 
+    #
+    # build output selections
+    #
+    ref_atlases = atlases.get_atlases()
+    output_selections = atlases.get_output_selections()
+
+    for m in selection:
+        if len(selection[m]) <= 1:
+            continue
+        (a, score) = selection[m][0]
+
+        for i, (ref, ds) in enumerate(selection[m]):
+
+            if i == 0:
+                continue
+
+            if ref not in ref_atlases:
+                monitoring.to_log_and_console(proc + ": weird, '" + str(ref) + "' is not in reference atlases.", 4)
+                continue
+
+            keyscore = "selection_" + str(ref) + "_distance_average_before_switch_proposal"
+            keydecre = "selection_" + str(ref) + "_distance_decrement_percentage_after_switch_proposal"
+            output_selections[keyscore] = output_selections.get(keyscore, {})
+            output_selections[keydecre] = output_selections.get(keydecre, {})
+
+            lineage = ref_atlases[ref]['cell_lineage']
+            name = ref_atlases[ref]['cell_name']
+            cells = list(set(lineage.keys()).union(set([v for values in list(lineage.values()) for v in values])))
+
+            for c in cells:
+                if c not in name:
+                    continue
+                if name[c] == m:
+                    output_selections[keyscore][c] = round(100.0 * score)
+                    output_selections[keydecre][c] = round(100.0 * ds / score)
+
+    #
+    # reporting
+    #
     monitoring.to_log_and_console("====== daughter switch proposal =====")
     monitoring.to_log_and_console("------ cell-based view")
     corrections_by_atlas = {}
     for s in stages:
         if len(corrections[s]) == 0:
             continue
-        msg = "- generation " + str(s)
+        msg = "  - generation " + str(s)
         monitoring.to_log_and_console(msg)
         mothers = list(corrections[s].keys())
         mothers.sort()
@@ -528,7 +642,7 @@ def daughter_switch_proposal(atlases, parameters):
             tmp.sort()
             for a in tmp:
                 corrections_by_atlas[a] = corrections_by_atlas.get(a, []) + [m]
-            msg = "  - division of '" + str(m) + "': "
+            msg = "    - division of '" + str(m) + "': "
             for i, r in enumerate(tmp):
                 msg += str(r)
                 if i < len(tmp)-1:
@@ -539,10 +653,192 @@ def daughter_switch_proposal(atlases, parameters):
         refs = list(corrections_by_atlas.keys())
         refs.sort()
         for r in refs:
-            msg = "- reference '" + str(r) + "': " + str(corrections_by_atlas[r])
+            msg = "  - reference '" + str(r) + "': " + str(corrections_by_atlas[r])
             monitoring.to_log_and_console(msg)
+
+    if len(selection) > 0:
+        quadruplet = []
+        for m in selection:
+            (a, score) = selection[m][0]
+            if len(selection[m]) <= 1:
+                continue
+            for i, (ref, ds) in enumerate(selection[m]):
+                if i == 0:
+                    continue
+                quadruplet += [(m, ref, score, 100.0 * ds / score)]
+        quadruplet = sorted(quadruplet, key=operator.itemgetter(1))
+        quadruplet = sorted(quadruplet, key=operator.itemgetter(3), reverse=True)
+        monitoring.to_log_and_console("------ average distance percentage decrease view")
+        for q in quadruplet:
+            msg = "  - division of '" + str(q[0]) + "' in '" + str(q[1]) + "': "
+            msg += "{:2.2f}% decrease of {:1.2f} average distance".format(q[3], q[2])
+            monitoring.to_log_and_console(msg)
+
     monitoring.to_log_and_console("==========================================")
 
+
+########################################################################################
+#
+#
+#
+########################################################################################
+
+
+def call_to_scipy_linkage(atlases, config, cluster_distance='single', change_contact_surfaces=True):
+    """
+
+    Parameters
+    ----------
+    atlases
+    config: dictionary of dictionary of neighborhoods indexed by [reference] then by [0,1],
+        where 0 stands for one daughter, and 1 for the other
+    cluster_distance
+    change_contact_surfaces
+
+    Returns
+    -------
+
+    """
+    similarity = atlases.get_division_contact_similarity()
+
+    labels = []
+    #
+    # build a square matrix of distances
+    #
+    dist = np.zeros((len(config), len(config)))
+    for i, r in enumerate(config):
+        labels += [r]
+        for j, s in enumerate(config):
+            if r == s:
+                dist[i][i] = 0.0
+                continue
+            if r > s:
+                continue
+            # if r == 'switched-' + str(s) or s == 'switched-' + str(r):
+            #    continue
+            dist[i][j] = 100.0 * division_contact_generic_distance(atlases, config[r][0], config[r][1], config[s][0],
+                                                                   config[s][1], similarity=similarity,
+                                                                   change_contact_surfaces=change_contact_surfaces)
+            dist[j][i] = dist[i][j]
+
+    conddist = sp.spatial.distance.squareform(dist)
+    z = sch.linkage(conddist, method=cluster_distance)
+
+    return conddist, z, labels
+
+
+def _diagnosis_linkage(atlases, parameters):
+    proc = "_diagnosis_linkage"
+    divisions = atlases.get_divisions()
+    ccs = not parameters.use_common_neighborhood
+    cluster_distance = parameters.dendrogram_cluster_distance
+
+    ref_atlases = atlases.get_atlases()
+    output_selections = atlases.get_output_selections()
+
+    merge_values = {}
+    lastmerge_values = {}
+
+    swmerge_values = {}
+    swlastmerge_values = {}
+
+    division_lastmerge_values = {}
+
+    for n in divisions:
+        stage = n.split('.')[0][1:]
+        if len(divisions[n]) <= 2:
+            continue
+        #
+        #
+        #
+        config = atlases.extract_division_neighborhoods(n)
+        swconfig = switched_division_neighborhoods(config, n)
+
+        #
+        # distance array for couples of atlases/references
+        #
+        conddist, z, labels = call_to_scipy_linkage(atlases, config, cluster_distance=cluster_distance,
+                                                    change_contact_surfaces=ccs)
+
+        merge_values[stage] = merge_values.get(stage, []) + list(z[:, 2])
+        lastmerge_value = z[:, 2][-1]
+        lastmerge_values[stage] = lastmerge_values.get(stage, []) + [lastmerge_value]
+
+        #
+        # set the lastmerge_value in morphonet selection
+        #
+        for r in divisions[n]:
+            if r not in ref_atlases:
+                monitoring.to_log_and_console(proc + ": weird, '" + str(r) + "' is not in reference atlases.", 4)
+                continue
+            keyselection = "selection_" + str(r) + "_last_dendrogram_value"
+            output_selections[keyselection] = output_selections.get(keyselection, {})
+            lineage = ref_atlases[r]['cell_lineage']
+            name = ref_atlases[r]['cell_name']
+            cells = list(set(lineage.keys()).union(set([v for values in list(lineage.values()) for v in values])))
+            for c in cells:
+                if c not in name:
+                    continue
+                if name[c] == n:
+                    output_selections[keyselection][c] = round(lastmerge_value)
+
+        #
+        # distance array for couples of atlases/references plus the switched ones
+        #
+        swconddist, swz, swlabels = call_to_scipy_linkage(atlases, swconfig, cluster_distance=cluster_distance,
+                                                          change_contact_surfaces=ccs)
+
+        swmerge_values[stage] = swmerge_values.get(stage, []) + list(swz[:, 2])
+        swlastmerge_value = swz[:, 2][-1]
+        swlastmerge_values[stage] = swlastmerge_values.get(stage, []) + [swlastmerge_value]
+
+        division_lastmerge_values[n] = [lastmerge_value, swlastmerge_value]
+
+    nochanges = {n: v for n, v in division_lastmerge_values.items() if v[1] <= v[0]}
+    mother_with_nochanges = [n for n, v in division_lastmerge_values.items() if v[1] <= v[0]]
+    #
+    # set the lastmerge_value in morphonet selection
+    #
+    for n in mother_with_nochanges:
+        for r in divisions[n]:
+            if r not in ref_atlases:
+                monitoring.to_log_and_console(proc + ": weird, '" + str(r) + "' is not in reference atlases.", 4)
+                continue
+            keyselection = "selection_" + str(r) + "_dendrogram_warning"
+            output_selections[keyselection] = output_selections.get(keyselection, {})
+            lineage = ref_atlases[r]['cell_lineage']
+            name = ref_atlases[r]['cell_name']
+            cells = list(set(lineage.keys()).union(set([v for values in list(lineage.values()) for v in values])))
+            for c in cells:
+                if c not in name:
+                    continue
+                if name[c] == n:
+                    output_selections[keyselection][c] = 100
+
+
+    monitoring.to_log_and_console("------ division with same dendrogram last values (without and with switch)")
+    msg = str(len(nochanges)) + "/" + str(len(division_lastmerge_values)) + " divisions"
+    monitoring.to_log_and_console("\t " + msg)
+
+    monitoring.to_log_and_console("------ cell-based view")
+    division_by_generation = {}
+    for m in mother_with_nochanges:
+        g = m.split('.')[0][1:]
+        division_by_generation[g] = division_by_generation.get(g, []) + [m]
+    for g in division_by_generation:
+        monitoring.to_log_and_console("  - generation " + str(g))
+        mothers = list(division_by_generation[g])
+        mothers.sort()
+        for m in mothers:
+            msg = "    - division of '" + str(m) + "': " + str(division_lastmerge_values[m])
+            monitoring.to_log_and_console(msg)
+
+    monitoring.to_log_and_console("------ dendrogram last-value view")
+    sorted_nochanges = sorted(nochanges.items(), key=lambda v: v[1][0], reverse=True)
+    for s in sorted_nochanges:
+        msg = "    - division of '" + str(s[0]) + "': " + str(s[1])
+        monitoring.to_log_and_console(msg)
+    monitoring.to_log_and_console("")
 
 ########################################################################################
 #
@@ -582,15 +878,15 @@ def _add_neighborhoods(previous_neighborhoods, prop, parameters, atlas_name, tim
 
     if 'cell_lineage' not in prop:
         monitoring.to_log_and_console(str(proc) + ": 'cell_lineage' was not in dictionary")
-        return
+        return previous_neighborhoods
 
     if 'cell_contact_surface' not in prop:
         monitoring.to_log_and_console(str(proc) + ": 'cell_contact_surface' was not in dictionary")
-        return
+        return previous_neighborhoods
 
     if 'cell_name' not in prop:
         monitoring.to_log_and_console(str(proc) + ": 'cell_name' was not in dictionary")
-        return
+        return previous_neighborhoods
 
     #
     # remove empty names
@@ -724,6 +1020,55 @@ def _add_neighborhoods(previous_neighborhoods, prop, parameters, atlas_name, tim
     return previous_neighborhoods
 
 
+def _add_atlas(atlases, name, prop, parameters):
+    """
+
+    Parameters
+    ----------
+    atlases: already existing properties
+    name
+    prop: embryo properties (atlas to be added)
+    parameters:
+
+    Returns
+    -------
+
+    """
+    proc = "_add_atlas"
+
+    if not isinstance(parameters, AtlasParameters):
+        monitoring.to_log_and_console(str(proc) + ": unexpected type for 'parameters' variable: "
+                                      + str(type(parameters)))
+        sys.exit(1)
+
+    #
+    # build a nested dictionary of neighborhood, where the keys are
+    # ['cell name']['reference name']
+    # where 'reference name' is the name
+    # of the reference lineage, and neighborhood a dictionary of contact surfaces indexed by cell names
+    # only consider the first time point after the division
+    #
+
+    if 'cell_lineage' not in prop:
+        monitoring.to_log_and_console(str(proc) + ": 'cell_lineage' was not in dictionary")
+        return atlases
+
+    if 'cell_name' not in prop:
+        monitoring.to_log_and_console(str(proc) + ": 'cell_name' was not in dictionary")
+        return atlases
+
+    if 'cell_contact_surface' not in prop:
+        monitoring.to_log_and_console(str(proc) + ": 'cell_contact_surface' was not in dictionary")
+        return atlases
+
+    atlases[name] = {}
+    atlases[name]['cell_lineage'] = copy.deepcopy(prop['cell_lineage'])
+    atlases[name]['cell_name'] = copy.deepcopy(prop['cell_name'])
+    atlases[name]['cell_contact_surface'] = copy.deepcopy(prop['cell_contact_surface'])
+
+    return atlases
+
+
 ########################################################################################
 #
 #
@@ -745,6 +1090,32 @@ def _build_common_neighborhoods(neighborhoods):
     return common_neighborhoods
 
 
+def switched_division_neighborhoods(config, mother_name):
+    daughters = uname.get_daughter_names(mother_name)
+    swconfig = {}
+    for r in config:
+        swconfig[r] = {}
+        swconfig[r][0] = copy.deepcopy(config[r][0])
+        swconfig[r][1] = copy.deepcopy(config[r][1])
+        sr = 'switched-' + str(r)
+        swconfig[sr] = {}
+        swconfig[sr][0] = copy.deepcopy(config[r][1])
+        swconfig[sr][1] = copy.deepcopy(config[r][0])
+        if daughters[1] in swconfig[sr][0]:
+            msg = "  weird, " + str(daughters[1]) + " was found in its neighborhood for reference " + str(r)
+            print("      " + msg)
+        if daughters[0] in swconfig[sr][0]:
+            swconfig[sr][0][daughters[1]] = swconfig[sr][0][daughters[0]]
+            del swconfig[sr][0][daughters[0]]
+        if daughters[0] in swconfig[sr][1]:
+            msg = "  weird, " + str(daughters[0]) + " was found in its neighborhood for reference " + str(r)
+            print("      " + msg)
+        if daughters[1] in swconfig[sr][1]:
+            swconfig[sr][1][daughters[0]] = swconfig[sr][1][daughters[1]]
+            del swconfig[sr][1][daughters[1]]
+    return swconfig
+
+
 ########################################################################################
 #
 #
@@ -757,6 +1128,9 @@ class Atlases(object):
         self.cell_contact_distance = 'l1_distance'
         self.division_contact_similarity = 'distance'
 
+        # partial copy of the read atlases, required when figures have to be generated
+        self._atlases = {}
+
         # nested dictionary of neighborhoods, where the keys are ['cell name']['reference name']
         # where 'cell name' is the cell name (Conklin), and 'reference name' is the file name,
         # a neighborhood is a dictionary of contact surfaces indexed by cell names
@@ -768,6 +1142,11 @@ class Atlases(object):
         # of references/atlases available for the two daughters
         self._divisions = {}
 
+        # dictionary index by atlas name
+        # to keep trace of some output (kept as morphonet selection)
+        self._output_selections = {}
+
+        # probability stuff
         self._probability_step = 0.01
         self._probability = None
         self._gaussian_kde = None
@@ -790,11 +1169,17 @@ class Atlases(object):
     def get_neighborhoods(self):
         return self._neighborhoods
 
+    def get_atlases(self):
+        return self._atlases
+
     def get_use_common_neighborhood(self):
         return self._use_common_neighborhood
 
     def get_divisions(self):
         return self._divisions
+
+    def get_output_selections(self):
+        return self._output_selections
 
     def get_probability_step(self):
         return self._probability_step
@@ -854,6 +1239,13 @@ class Atlases(object):
     ############################################################
 
     def build_divisions(self):
+        """
+        Build a dictionary index by mother cell name. Each entry contains reference names
+        for which the both daughters exist
+        Returns
+        -------
+
+        """
         proc = "build_divisions"
 
         if self._divisions is not None:
@@ -924,6 +1316,7 @@ class Atlases(object):
                                      time_digits_for_cell_id=time_digits_for_cell_id)
             self._neighborhoods = _add_neighborhoods(self._neighborhoods, prop, parameters, atlas_name=name,
                                                      time_digits_for_cell_id=time_digits_for_cell_id)
+            self._atlases = _add_atlas(self._atlases, name, prop, parameters)
             del prop
         elif isinstance(atlasfiles, list):
             for f in atlasfiles:
@@ -936,6 +1329,7 @@ class Atlases(object):
                                          time_digits_for_cell_id=time_digits_for_cell_id)
                 self._neighborhoods = _add_neighborhoods(self._neighborhoods, prop, parameters, atlas_name=name,
                                                          time_digits_for_cell_id=time_digits_for_cell_id)
+                self._atlases = _add_atlas(self._atlases, name, prop, parameters)
                 del prop
 
         if self._neighborhoods is None:
@@ -957,6 +1351,8 @@ class Atlases(object):
             monitoring.to_log_and_console("============================================================")
             monitoring.to_log_and_console("===== diagnosis: atlases pairwise disagreements")
             _diagnosis_pairwise_switches(self, parameters)
+            monitoring.to_log_and_console("===== diagnosis: dendrogram/linkage diagnosis")
+            _diagnosis_linkage(self, parameters)
             monitoring.to_log_and_console("============================================================")
             monitoring.to_log_and_console("")
 
@@ -1011,6 +1407,31 @@ class Atlases(object):
             self._probability = np.reshape(z * scale, z.shape)
 
         monitoring.to_log_and_console("    done", 1)
+
+    ############################################################
+    #
+    #
+    #
+    ############################################################
+
+    def extract_division_neighborhoods(self, mother_name):
+
+        divisions = self.get_divisions()
+        neighborhoods = self.get_neighborhoods()
+        daughters = uname.get_daughter_names(mother_name)
+
+        config = {}
+        for r in divisions[mother_name]:
+            config[r] = {}
+            config[r][0] = copy.deepcopy(neighborhoods[daughters[0]][r])
+            config[r][1] = copy.deepcopy(neighborhoods[daughters[1]][r])
+        return config
+
+    ############################################################
+    #
+    #
+    #
+    ############################################################
 
     def get_probability(self, a, b):
         proc = "get_probability"

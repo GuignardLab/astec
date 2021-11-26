@@ -15,14 +15,17 @@ This method aims at producing a segmentation of a membrane cell image (e.g.  a f
 
 
 1. Pre-processing of the input image to produce the input seed image for seed computation.
-This is described in section \ref{sec:cli:input:image:preprocessing}. The parameters that governed the pre-processing are described in section \ref{sec:cli:parameters:preprocessing} and prefixed by ``seed_``.
+This is described in section :ref:`cli-input-image-preprocessing`.
+The parameters that governed the pre-processing are described in section :ref:`cli-parameters-preprocessing` 
+and prefixed by ``seed_``.
 
 2. Seed extraction through the computation of the `h`-minima of the input seed image
 
 3. Eventually seed correction
 
-4. Pre-processing of the input image to produce the input membrane image for the seeded watershed.
-This is described in section \ref{sec:cli:input:image:preprocessing}. The parameters that governed the pre-processing are described in section \ref{sec:cli:parameters:preprocessing} and prefixed by ``membrane_``.
+4. Pre-processing of the input image to produce the input membrane image for the seeded watershed, similarly to
+the pre-processing of the input seed image.
+The parameters that governed the pre-processing are prefixed by ``membrane_``.
 
 5. A seeded watershed.
 
@@ -59,7 +62,7 @@ watershed.The pre-processing can be different for the seed input image
 (the one that will be used to extract the seeds) and the membrane
 input image (the one that will be used as the height image for the
 seeded watershed). Details about the pre-processing can be found in
-section \ref{sec:cli:input:image:preprocessing}. 
+section :ref:`cli-input-image-preprocessing`. 
 
 Default settings are
 

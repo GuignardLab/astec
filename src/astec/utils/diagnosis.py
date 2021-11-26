@@ -82,12 +82,6 @@ class DiagnosisParameters(ucontact.ContactSurfaceParameters):
         doc += "\t the distance is in [0, 1])."
         self.doc['maximal_contact_distance'] = doc
         self.maximal_contact_distance = 0.1
-        doc = "\t if True, generate python files (prefixed by 'figures_') that generate figures."
-        self.doc['generate_figure'] = doc
-        self.generate_figure = False
-        doc = "\t suffix used to named the above python files as well as the generated figures."
-        self.doc['figurefile_suffix'] = doc
-        self.figurefile_suffix = ""
 
     def print_parameters(self):
         print("")
@@ -770,6 +764,24 @@ def _diagnosis_name(prop, description, time_digits_for_cell_id=4):
     missing_name = {}
     error_name = {}
 
+    divisions = [c for c in lineage if len(lineage[c]) >= 2]
+    unamed_mother = []
+    named_mother_per_generation = {}
+    named_division_per_generation = {}
+    for c in divisions:
+        if c not in name:
+            unamed_mother += [c]
+            continue
+        g = name[c].split('.')[0][1:]
+        dnamed = True
+        for d in lineage[c]:
+            if d not in name:
+                dnamed = False
+        if dnamed:
+            named_division_per_generation[g] = named_division_per_generation.get(g, []) + [c]
+        else:
+            named_mother_per_generation[g] = named_mother_per_generation.get(g, []) + [c]
+
     for c in cells:
         t = int(c) // div
         #
@@ -872,10 +884,25 @@ def _diagnosis_name(prop, description, time_digits_for_cell_id=4):
                                   str(len(cells_per_time[min(cells_per_time.keys())])))
     monitoring.to_log_and_console("    - #cells at last time = " +
                                   str(len(cells_per_time[max(cells_per_time.keys())])))
-    monitoring.to_log_and_console("\t - names in lineage = " +
+    monitoring.to_log_and_console("    - names in lineage = " +
                                   str(len(list(collections.Counter(list(name.keys())).keys()))))
-    monitoring.to_log_and_console("")
 
+    monitoring.to_log_and_console("    - divisions in lineage = " + str(len(divisions)))
+    generations = list(set(named_mother_per_generation.keys()).union(set(named_division_per_generation.keys())))
+    generations = sorted(generations, key=lambda v: int(v))
+    for g in generations:
+        monitoring.to_log_and_console("      - generation = " + str(g))
+        if g in named_division_per_generation:
+            msg = "         - named division (mother cell and daughter cells) = "
+            msg += str(len(named_division_per_generation[g]))
+            monitoring.to_log_and_console(msg)
+        if g in named_mother_per_generation:
+            msg = "         - named mother cell with unamed daughters = "
+            msg += str(len(named_mother_per_generation[g]))
+            monitoring.to_log_and_console(msg)
+    monitoring.to_log_and_console("      - unamed mother cells = " + str(len(unamed_mother)))
+
+    monitoring.to_log_and_console("")
     return prop
 
 
@@ -994,75 +1021,10 @@ def _diagnosis_contact(prop, description, diagnosis_parameters, time_digits_for_
             pcell = ncell
             pneigh = copy.deepcopy(nneigh)
 
-    if diagnosis_parameters.generate_figure:
-        filename = 'figures_contact_score_evolution'
-        file_suffix = ""
-        if diagnosis_parameters.figurefile_suffix is not None and \
-                isinstance(diagnosis_parameters.figurefile_suffix, str) and \
-                len(diagnosis_parameters.figurefile_suffix) > 0:
-            file_suffix = '_' + diagnosis_parameters.figurefile_suffix
-        filename += file_suffix + '.py'
-
-        f = open(filename, "w")
-
-        f.write("import numpy as np\n")
-        f.write("import matplotlib.pyplot as plt\n")
-        f.write("import scipy.stats as stats\n")
-
-        f.write("\n")
-        f.write("savefig = True\n")
-
-        f.write("\n")
-        f.write("score_along_time = " + str(score_along_time) + "\n")
-        f.write("lengths = [len(score_along_time[c]) for c in score_along_time]\n")
-
-        f.write("\n")
-        f.write("score_per_time = {}\n")
-        f.write("for c in score_along_time:\n")
-        f.write("    for i in range(len(score_along_time[c])):\n")
-        f.write("        score_per_time[i] = score_per_time.get(i, []) + [score_along_time[c][i]]\n")
-        f.write("scores_per_time = []\n")
-        f.write("for i in range(max(lengths)):\n")
-        f.write("    scores_per_time.append(score_per_time[i])\n")
-
-        f.write("\n")
-        f.write("fig, (ax1, ax2, ax3) = plt.subplots(ncols=3, sharey=True, figsize=(16, 6.5))\n")
-
-        f.write("for c in score_along_time:\n")
-        f.write("    ax1.plot(range(len(score_along_time[c])), score_along_time[c], 'k', markersize=1)\n")
-        f.write("ax1.set_ylim(0, 0.7)\n")
-        f.write("ax1.set_xlabel('time from division', fontsize=15)\n")
-        f.write("ax1.set_ylabel('Score', fontsize=15)\n")
-        f.write("title = 'Score/distance from t to t+1'\n")
-        if diagnosis_parameters.figurefile_suffix is not None and \
-                isinstance(diagnosis_parameters.figurefile_suffix, str) and \
-                len(diagnosis_parameters.figurefile_suffix) > 0:
-            f.write("title += ': ' + '" + str(diagnosis_parameters.figurefile_suffix) + "'\n")
-        f.write("ax1.set_title(title, fontsize=15)\n")
-
-        f.write("\n")
-        f.write("ax2.boxplot(scores_per_time)\n")
-        f.write("ax2.set_title(\"Box plot representation\", fontsize=15)\n")
-        f.write("\n")
-        f.write("for c in score_along_time:\n")
-        f.write("    ax3.plot(range(len(score_along_time[c])), score_along_time[c], 'k', markersize=1)\n")
-        f.write("ax3.set_xlabel('time from division', fontsize=15)\n")
-        f.write("ax3.set_xlim(0, 5)\n")
-        f.write("title = 'Score/distance from t to t+1'\n")
-        f.write("ax3.set_title(title, fontsize=15)\n")
-        f.write("\n")
-        f.write("if savefig:\n")
-        f.write("    plt.savefig('contact_score_evolution")
-        if file_suffix is not None:
-            f.write(file_suffix)
-        f.write("'" + " + '.png')\n")
-        f.write("else:\n")
-        f.write("    plt.show()\n")
-        f.close()
-
     #
     # report
     #
+    monitoring.to_log_and_console("  - largest contact surface distance between successive cells in time", 1)
 
     for cell in score_along_time:
         first_time = int(cell) // div

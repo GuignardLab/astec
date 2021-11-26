@@ -61,7 +61,8 @@ default value is '``RELEASE``').
 Input image pre-processing
 --------------------------
 
-The input image (typically the fused image representing the cell membranes/walls) can be pre-processed before use in the astec stage (as for ``astec_mars``, see section :ref:`cli-mars-input-data`)
+The input image (typically the fused image representing the cell membranes/walls) can be pre-processed before use in the astec stage (as for ``astec_mars``, see section :ref:`cli-mars-input-data`). 
+More details can be found in section :ref:`cli-input-image-preprocessing`.
 The pre-processing can be different for the 
 
 * the seed input image (the one that will be used to compute the :math:`h`-minima),
@@ -69,7 +70,7 @@ The pre-processing can be different for the
 * the morphosnake input image (the one that will be used to define the morphosnake energy).
 
 
-Pre-processing parameters, described in section \ref{sec:cli:parameters:preprocessing}, and prefixed respectively by ``seed_``, ``membrane_`` and ``morphosnake_`` allow to tune these pre-processing.
+Pre-processing parameters, described in section :ref:`cli-parameters-preprocessing`, and prefixed respectively by ``seed_``, ``membrane_`` and ``morphosnake_`` allow to tune these pre-processings.
 Hence, the lines
 \begin{verbatim}
 seed_intensity_transformation = 'Identity'

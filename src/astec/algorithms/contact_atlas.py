@@ -48,13 +48,18 @@ def contact_atlas_process(experiment, parameters):
 
     if parameters.generate_figure:
 
+        monitoring.to_log_and_console("... generate distance along branch file", 1)
+        ucontactf.figures_distance_along_branch(atlases, parameters, time_digits_for_cell_id=time_digits_for_cell_id)
+        monitoring.to_log_and_console("... done", 1)
+
         #
         # draw a graph of reference/atlas embryos per division where edge are valued by the sum of scores
         # (do the right pairing between reference/atlas embryos)
         #
-        monitoring.to_log_and_console("... generate division graph figure file", 1)
-        ucontactf.figures_division_graph(atlases, parameters)
-        monitoring.to_log_and_console("... done", 1)
+        if False:
+            monitoring.to_log_and_console("... generate division graph figure file", 1)
+            ucontactf.figures_division_graph(atlases, parameters)
+            monitoring.to_log_and_console("... done", 1)
 
         #
         # draw histograms of both right pairing and wrong pairing
@@ -72,5 +77,12 @@ def contact_atlas_process(experiment, parameters):
         ucontactf.figures_division_dendrogram(atlases, parameters)
         monitoring.to_log_and_console("... done", 1)
 
+    #
+    # look for daughter that may improve a global score
+    # report it in the console/log file
+    # as well as in morphonet selection filea
+    #
     if parameters.daughter_switch_proposal:
         ucontacta.daughter_switch_proposal(atlases, parameters)
+
+    return atlases

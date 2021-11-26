@@ -947,7 +947,8 @@ def write_dictionary(inputfilename, inputpropertiesdict):
 #
 ########################################################################################
 
-def write_morphonet_selection(d, time_digits_for_cell_id=4):
+def write_morphonet_selection(d, time_digits_for_cell_id=4, directory=None):
+    proc = "write_morphonet_selection"
     div = int(10 ** time_digits_for_cell_id)
     for key in d:
         if not isinstance(key, str):
@@ -967,8 +968,16 @@ def write_morphonet_selection(d, time_digits_for_cell_id=4):
             name = key[9:]
 
         # print("write key '" + str(key) + "'")
-
-        f = open(key + '.txt', "w")
+        filename = key + '.txt'
+        if directory is not None and isinstance(directory, str):
+            if not os.path.isdir(directory):
+                if not os.path.exists(directory):
+                    os.makedirs(directory)
+                else:
+                    monitoring.to_log_and_console(proc + ": '" + str(directory) + "' is not a directory ?!")
+            if os.path.isdir(directory):
+                filename = os.path.join(directory, filename)
+        f = open(filename, "w")
         f.write("# " + str(name) + "\n")
         f.write("type:selection\n")
         for c in d[key]:

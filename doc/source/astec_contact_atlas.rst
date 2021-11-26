@@ -11,6 +11,18 @@ named embryos (or atlases) as well to point out potential corrections.
 It assumes that the set (or mathematically speaking the vector) of valued surface
 contact of a named cell can be used as its signature.
 
+``astec_contact_atlas`` additional options
+------------------------------------------
+
+The following options are available:
+
+``-write-selection, --write-selection``
+   write out morphonet selection files
+
+
+``astec_contact_atlas`` principle
+---------------------------------
+
 Eg, the cell :math:`c^{R}_i` (the cell :math:`c_i` of atlas :math:`R`) is represented by the 
 vector
 :math:`c^{R}_i = \left( \begin{array}{c} 
@@ -67,12 +79,32 @@ Thus, to assess the quality of a set of atlases, a typical parameter file may be
 
 * ``diagnosis_properties`` may be quite verbose. It may be adviced to set it to ``True`` when
   introducing a new atlas, but not when using a set of already curated atlases.
+  Two kinds of diagnosis are conducted.
+
+  * on each single atlas/reference file, the ``name`` and the ``contact`` properties are assessed. 
+    Such diagnosis can also be conducted with ``astec_embryoproperties``
+    (see section :ref:`cli-embryoproperties`)
+  * on the population of division neighborhoods:
+
+    * pairwise disagreements: for a given cell and every couple of reference embryos, 
+      the distance of the two divisions (one per reference) is compared to the distance
+      of one division compared to the other being switched. If the later is prefered, 
+      it is denoted as a disagreement.
+    * linkage/dendrogram analysis: it is checked whether adding the switched divisions
+      to the set of divisions changes the largest value of cluster distance in
+      a dendrogram. If yes, it also suggest that some divisions may be switched.
+      Individualized morphonet selection files are written (if ``write_selection`` is set to ``True)
+      in the ``outputDir`` directory.
+
 
 * ``daughter_switch_proposal`` may propose to switch the names of some divisions. It calculates
   whether a name switch result in a global score improvement, and, if so, proposes the switch.
   It is somehow computationally costly.
+  Individualized morphonet selection files are written (if ``write_selection`` is set to ``True)
+  in the ``outputDir`` directory.
 
-* ``generate_figure`` will generate python files that, when executed, generates some figures.
+* ``generate_figure`` will generate python files (in the ``outputDir`` directory) 
+  that, when executed, generates some figures.
   It is somehow computationally costly.
 
 

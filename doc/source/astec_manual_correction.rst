@@ -68,13 +68,15 @@ Segmentation correction parameters
 
 ``astec_manual_correction`` parses a correction file whose name is given by the variable ``mancor_mapping_file``. The syntax of this file is very simple. Lines beginning with ``#`` are ignored (and can be used to insert comments in the files). Non-empty lines should contain two numbers separated by a space, and ``astec_manual_correction`` will replace the first number by the second in the segmentation file.
 
-E.g. a cell c is recognized to be over-segmented, and then is
+E.g. a cell ``c`` is recognized to be over-segmented, and then is
 represented by two labels, says 9 and 10. Thus the line
 
 .. code-block:: none
 
    10 9		
 
-will replace all 10's by 9's in the segmentation image,  thus c will only be represented by 9's after correction. See also the tutorial section \ref{sec:tutorial:manual:correction} for an other example.
+will replace all 10's by 9's in the segmentation image,  thus ``c`` will only be represented by 9's after correction. See also the 
+`tutorial section <https://astec.gitlabpages.inria.fr/astec-tutorial/astec_tutorial.html#correction-of-the-first-time-point-segmentation>`_
+for an other example.
 
 

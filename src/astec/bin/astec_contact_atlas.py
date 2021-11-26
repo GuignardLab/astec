@@ -47,6 +47,13 @@ def _set_options(my_parser):
                            help='path to the embryo data')
 
     #
+    # other options
+    #
+    my_parser.add_argument('-write-selection', '--write-selection',
+                           action='store_const', dest='write_selection',
+                           default=False, const=True,
+                           help='write out morphonet selection files')
+    #
     # control parameters
     #
 
@@ -193,8 +200,13 @@ def main():
     # processing
     #
 
-    acontacta.contact_atlas_process(experiment, parameters)
+    atlases = acontacta.contact_atlas_process(experiment, parameters)
 
+    if args.write_selection or parameters.write_selection:
+        time_digits_for_cell_id = experiment.get_time_digits_for_cell_id()
+        properties.write_morphonet_selection(atlases.get_output_selections(),
+                                             time_digits_for_cell_id=time_digits_for_cell_id,
+                                             directory=parameters.outputDir)
     #
     # end of execution
     # write execution time in both log and history file
