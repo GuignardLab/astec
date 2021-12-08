@@ -1178,7 +1178,7 @@ These parameters are prefixed by ``atlas_``.
 * ``dendrogram_cluster_distance``: cluster distance used to build dendrograms.
   Dendrograms are used either for diagnosis purpose (if ``diagnosis_properties`` is set to ``True``)
   or to generate figures (if ``generate_figure`` is set to ``True``)
-  See `scipy.cluster.hierarchy.linkage documentation  <https://docs.scipy.org/doc/scipy/reference/generated/scipy.cluster.hierarchy.linkage.html/>`_. Choices are:
+  See `scipy.cluster.hierarchy.linkage documentation <https://docs.scipy.org/doc/scipy/reference/generated/scipy.cluster.hierarchy.linkage.html>`_. Choices are:
 
   * ``'single'``
   * ``'complete'``

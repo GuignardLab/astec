@@ -218,9 +218,86 @@ Handling property files
 
      $ astec_embryoproperties -i file.pkl --diagnosis
 
-   will run some test/diagnosis on some properties (only a few features are tested). It may help 
-   at detecting errors either in the segmented images or in the property file.
-   The ``-feature`` option allows to select the features to be tested.
+  will run some test/diagnosis on some properties (only a few features are tested). It may help 
+  at detecting errors either in the segmented images or in the property file.
+  The ``-feature`` option allows to select the features to be tested.
+
+
+.. _cli-embryoproperties-diagnosis:
+
+Diagnosis on property file
+--------------------------
+
+Apart reporting diagnosis in the console and in the log file, 
+``selection`` properties (in the ``morphonet`` sense) may be added in the output property file 
+(if specified thanks to the ``-o`` option) that can be also written as ``selection`` files 
+(if the option ``-write-selection`` is used).
+
+Contact surfaces
+^^^^^^^^^^^^^^^^
+
+This diagnosis checks whether 
+there are branches with large contact surface distance between consecutive cells
+(large means larger than ``maximal_contact_distance``, see section :ref:`cli-parameters-diagnosis`).
+A ``morphonet`` selection (of ``float`` type) is created whose values are the distance value
+for both consecutive points that participate in the distance calculation.
+
+Lineage
+^^^^^^^
+This diagnosis checks whether the lineage is well-formed. 
+
+A ``morphonet`` selection (of ``selection`` type) is created whose values are
+
+* ``10`` for the first cell of lineage trees starting after the first time point,
+* ``20`` for cells with multiple mother cells,
+* ``30`` for the last cell of branches ending before the last time point,
+* ``40`` for dividing cells with more than 2 daughter cells,
+* ``50`` for the first cell of short non-terminal branches 
+  (short means less than the value of ``minimal_length``, see section :ref:`cli-parameters-diagnosis`).
+
+Name
+^^^^
+This diagnosis checks whether the cell names obey to Conklin's syntax :cite:p:`conklin:1905aa`.
+
+A ``morphonet`` selection (of ``selection`` type) is created whose values are
+
+* ``10`` for cells that are not named but have a non-dividing predecessor that is named
+* ``20`` for cells that are named but have an unamed predecessor
+* ``30`` for cells that are named but differently than their non-dividing predecessor 
+* ``40`` for named cells that come after a dividing cell, with a name that does not follow
+  Conklin's syntax
+* ``50`` for cells that come after a dividing cell, with a name that follows
+  Conklin's syntax, but with a sibling without name
+* ``60`` for cells that come after a dividing cell, with a name that follows
+  Conklin's syntax, but with a sibling that has the same name
+* ``70`` for cells that come after a dividing cell, with a name that follows
+  Conklin's syntax, but with a sibling name that does not follow
+  Conklin's syntax
+* ``80`` for other errors
+
+
+Volume 
+^^^^^^
+
+This diagnosis checks whether 
+
+* there are small cell volume 
+  (small means less than ``minimal_volume``, see section :ref:`cli-parameters-diagnosis`).
+
+* there are branches with a large volume variation
+  (large means larger than ``maximal_volume_variation``, see section :ref:`cli-parameters-diagnosis`).
+  Branch volume variation is computed by
+  :math:`100 * \frac{\max_{t} v(c_t) - \min_{t} v(c_t)}{\mathrm{med}_t v(c_t)}` where :math:`v(c_t)` is the volume
+  of the cell :math:`c_t` and :math:`\mathrm{med}` is the median value.
+
+* there are branches with large volume derivatives
+  (large means larger than ``maximal_volume_derivative``, see section :ref:`cli-parameters-diagnosis`).
+  The volume derivative along a branch is calculated as 
+  :math:`100 * \frac{v(c_{t+1}) - v(c_{t})}{v(c_{t})}` where :math:`t` denotes the successive acquisition time points.
+  A ``morphonet`` selection (of ``float`` type) is created whose values are the absolute value of derivative
+  for both points (:math:`v(c_{t})` and :math:`v(c_{t+1})`) that participate in the derivative calculation.
+
+
 
 
 

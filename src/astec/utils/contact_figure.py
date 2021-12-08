@@ -96,11 +96,13 @@ def figures_distance_along_branch(atlases, parameters, time_digits_for_cell_id=4
         for cell in first_cells:
             if cell not in contact:
                 msg = "    * weird, cell " + str(cell) + " is not in the 'contact surface' dictionary"
+                msg += " of atlas '" + str(ref) + "'"
                 monitoring.to_log_and_console(msg, 3)
                 continue
 
             if cell not in name:
                 msg = "    * weird, cell " + str(cell) + " is not in the 'name' dictionary"
+                msg += " of atlas '" + str(ref) + "'"
                 monitoring.to_log_and_console(msg, 3)
                 keyd = cell
             else:
@@ -112,6 +114,7 @@ def figures_distance_along_branch(atlases, parameters, time_digits_for_cell_id=4
             #
             # extract next neighborhood, change neighbors wrt first cell and compute distance
             #
+            emergency_break = False
             while True:
                 if pcell not in lineage or len(lineage[pcell]) > 1:
                     break
@@ -132,9 +135,16 @@ def figures_distance_along_branch(atlases, parameters, time_digits_for_cell_id=4
                         for i in range(t - first_time):
                             if c not in reverse_lineage:
                                 msg = "    * weird, cell " + str(c) + " is not in the reversed lineage"
+                                msg += " of atlas '" + str(ref) + "'"
                                 monitoring.to_log_and_console(msg)
+                                emergency_break = True
+                                break
                             c = reverse_lineage[c]
+                        if emergency_break:
+                            break
                         nneigh[c] = nneigh.get(c, 0.0) + contrib
+                if emergency_break:
+                    break
                 #
                 #
                 #
@@ -247,8 +257,8 @@ def figures_division_dendrogram(atlases, parameters):
     #
     #
 
+    dendro_values = {}
     merge_values = {}
-    lastmerge_values = {}
 
     swmerge_values = {}
     swlastmerge_values = {}
@@ -284,7 +294,8 @@ def figures_division_dendrogram(atlases, parameters):
 
         merge_values[stage] = merge_values.get(stage, []) + list(z[:, 2])
         lastmerge_value = z[:, 2][-1]
-        lastmerge_values[stage] = lastmerge_values.get(stage, []) + [lastmerge_value]
+        balance = ucontacta.linkage_balance(z, len(labels))
+        dendro_values[stage] = dendro_values.get(stage, []) + [(lastmerge_value, balance, len(labels))]
 
         #
         # distance array for couples of atlases/references plus the switched ones
@@ -309,6 +320,7 @@ def figures_division_dendrogram(atlases, parameters):
             cellname += 'S'
         fileidentifier = 'HC{:03d}_'.format(int(lastmerge_value)) + cellname
         cellidentifier = cellname + '_HC{:03d}'.format(int(lastmerge_value))
+        cellidentifier += '_BAL{:03d}'.format(round(100.0 * balance))
         cellidentifierlist.append(cellidentifier)
 
         f.write("\n")
@@ -390,15 +402,17 @@ def figures_division_dendrogram(atlases, parameters):
 
     generations = list(merge_values.keys())
     generations = sorted(generations)
+    f.write("generations = " + str(generations) + "\n")
     f.write("merge_values = [")
     for i, g in enumerate(generations):
         f.write(str(list(merge_values[g])))
         if i < len(generations) - 1:
             f.write(", ")
     f.write("]\n")
-    f.write("lastmerge_values = [")
+    dendro_values[stage] = dendro_values.get(stage, []) + [(lastmerge_value, balance, len(labels))]
+    f.write("dendro_values = [")
     for i, g in enumerate(generations):
-        f.write(str(list(lastmerge_values[g])))
+        f.write(str(list(dendro_values[g])))
         if i < len(generations) - 1:
             f.write(", ")
     f.write("]\n")
@@ -408,6 +422,10 @@ def figures_division_dendrogram(atlases, parameters):
         if i < len(generations) - 1:
             f.write(", ")
     f.write("]\n")
+
+    f.write("\n")
+    f.write("lastmerge_values = [[v[0] for v in dv] for dv in dendro_values]\n")
+    f.write("balance_values = [[v[1] for v in dv] for dv in dendro_values]\n")
 
     f.write("\n")
     f.write("fig, (ax1, ax2) = plt.subplots(ncols=2, figsize=(16, 6.5))\n")
@@ -425,6 +443,53 @@ def figures_division_dendrogram(atlases, parameters):
     f.write("\n")
     f.write("if savefig:\n")
     f.write("    plt.savefig('dendrogram_merge_histogram_' + cluster_distance +'")
+    if file_suffix is not None:
+        f.write(file_suffix)
+    f.write("'" + " + '.png')\n")
+    f.write("else:\n")
+    f.write("    plt.show()\n")
+    f.write("    plt.close()\n")
+
+    f.write("\n")
+    f.write("fig, ax = plt.subplots(figsize=(8, 8))\n")
+
+    f.write("ax.hist(balance_values, bins=50, range=(0, 1), histtype='bar', stacked=True, label=merge_labels)\n")
+    f.write("ax.set_title('dendrogram balance values', fontsize=12)\n")
+    f.write("ax.legend(prop={'size': 10})\n")
+    f.write("ax.tick_params(labelsize=10)\n")
+
+    f.write("\n")
+    f.write("if savefig:\n")
+    f.write("    plt.savefig('dendrogram_balance_histogram_' + cluster_distance +'")
+    if file_suffix is not None:
+        f.write(file_suffix)
+    f.write("'" + " + '.png')\n")
+    f.write("else:\n")
+    f.write("    plt.show()\n")
+    f.write("    plt.close()\n")
+
+    f.write("\n")
+    f.write("x = [lv for lvg in lastmerge_values for lv in lvg]\n")
+    f.write("y = [bv for bvg in balance_values for bv in bvg]\n")
+    f.write("c_values = [[int(generations[i])] * len(lvg) for i, lvg in enumerate(lastmerge_values)]\n")
+    f.write("c = [cv for cvg in c_values for cv in cvg]\n")
+    f.write("s_values = [[v[2] for v in dv] for dv in dendro_values]\n")
+    f.write("s = [10 * sv for svg in s_values for sv in svg]\n")
+
+    f.write("\n")
+    f.write("fig, ax = plt.subplots(figsize=(8, 8))\n")
+    f.write("scatter = ax.scatter(x, y, c=c, s=s, alpha=0.5)\n")
+    f.write("ax.set_xlabel('Last merge value (cluster distance * 100)')\n")
+    f.write("ax.set_ylabel('Linkage balance')\n")
+    f.write("legend1 = ax.legend(*scatter.legend_elements(alpha=0.8), loc='upper left', title='Generations')\n")
+    f.write("ax.add_artist(legend1)\n")
+    f.write("handles, labels = scatter.legend_elements(prop='sizes', alpha=0.6)\n")
+    f.write("labels = [l.replace('0}', '}') for l in labels]\n")
+    f.write("legend2 = ax.legend(handles, labels, loc='upper right', title='Sizes')\n")
+
+    f.write("\n")
+    f.write("if savefig:\n")
+    f.write("    plt.savefig('dendrogram_balance_merge_scatter_' + cluster_distance +'")
     if file_suffix is not None:
         f.write(file_suffix)
     f.write("'" + " + '.png')\n")

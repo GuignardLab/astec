@@ -16,7 +16,7 @@ Section :ref:`cli-parameters-contact-naming` provides a view on all the paramete
 The following options are available:
 
 ``-write-selection, --write-selection``
-   write out morphonet selection files
+   write out ``morphonet`` selection files
 
 Naming an embryo
 ----------------
@@ -48,6 +48,9 @@ Section :ref:`cli-parameters-contact-naming` provides a view on all the paramete
 the atlas building and are shared with ``astec_contact_atlas`` (see section :ref:`cli-astec-contact-atlas` and 
 section :ref:`cli-parameters-contact-atlas`).
 
+A ``morphonet`` selection (of ``float`` type) is added to the output file that gives an estimation of the certainty 
+(in :math:`[0, 1]`) of each naming.
+
 
 Assessing the naming procedure on an already named embryo
 ---------------------------------------------------------
@@ -71,7 +74,8 @@ If the input file is given to the ``testFile`` variable (see below), it is assum
 Then a 64-cells time point is searched and the embryo is renamed from
 this given time point. Comparison between new names and actual ones
 are reported.
-A selection  (in the ``morphonet`` sense), named ``selection_test_errors`` is added to the output file where
+
+A ``morphonet`` selection (of ``selection`` type) is added to the output file where
 
 * ``100`` indicates the future naming errors (cells that will divide, whose daughter names will be switched) 
 

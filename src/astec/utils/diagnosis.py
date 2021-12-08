@@ -47,17 +47,17 @@ class DiagnosisParameters(ucontact.ContactSurfaceParameters):
         doc = "\t for diagnosis on cell volume. Threshold on volume variation along branches.\n"
         doc += "\t Branches that have a volume variation above this threshold are displayed.\n"
         doc += "\t The volume variation along a branch is calculated as\n"
-        doc += "\t 100 * (max v(c) - min v(c)) / median v(c)\n"
+        doc += "\t (max v(c) - min v(c)) / median v(c)\n"
         doc += "\t where v(c) is the volume of the cell c"
         self.doc['maximal_volume_variation'] = doc
-        self.maximal_volume_variation = 40.0
+        self.maximal_volume_variation = 0.4
         doc = "\t for diagnosis on cell volume. Threshold on volume derivative along branches.\n"
         doc += "\t Time points along branches that have a volume derivative above this threshold\n"
         doc += "\t are displayed. The volume derivative along a branch is calculated as\n"
-        doc += "\t 100 * (v(c_{t+1}) - v(c_{t}))/v(c_{t}) where t denotes the successive acquisition\n"
+        doc += "\t (v(c_{t+1}) - v(c_{t}))/v(c_{t}) where t denotes the successive acquisition\n"
         doc += "\t time points."
         self.doc['maximal_volume_derivative'] = doc
-        self.maximal_volume_derivative = 30.0
+        self.maximal_volume_derivative = 0.3
 
         #
         # nombre d'items a imprimer
@@ -361,7 +361,7 @@ def _diagnosis_lineage(prop, description, diagnosis_parameters, time_digits_for_
     if len(keyset) > 0:
         keyname = list(keyset)[0]
 
-    keydiagnosis = 'selection_diagnosis_lineage'
+    keydiagnosis = 'selection_selection_diagnosis_lineage'
     if keydiagnosis in prop:
         del prop[keydiagnosis]
     prop[keydiagnosis] = {}
@@ -419,9 +419,11 @@ def _diagnosis_lineage(prop, description, diagnosis_parameters, time_digits_for_
     # branch lengths
     #
     length = {}
-    daughters = [direct_lineage[c][0] for c in direct_lineage if len(direct_lineage[c]) == 2]
-    daughters += [direct_lineage[c][1] for c in direct_lineage if len(direct_lineage[c]) == 2]
-    daughters += [direct_lineage[c][2] for c in direct_lineage if len(direct_lineage[c]) == 3]
+    daughters = []
+    for c in direct_lineage:
+        if len(direct_lineage[c]) <= 1:
+            continue
+        daughters += direct_lineage[c]
     for d in daughters:
         length[d] = 0
         c = d
@@ -501,7 +503,7 @@ def _diagnosis_lineage(prop, description, diagnosis_parameters, time_digits_for_
                                       + " divisions yielding more than 2 branches", 1)
         _print_list(prop, multiple_daughters, time_digits_for_cell_id=time_digits_for_cell_id, verbose=cell_verbose)
         for c in multiple_daughters:
-            prop[keydiagnosis][c] = 30
+            prop[keydiagnosis][c] = 40
 
     if len(short_length) > 0:
         monitoring.to_log_and_console("  - " + str(len(short_length)) + " non-terminal branch length < " +
@@ -521,7 +523,7 @@ def _diagnosis_lineage(prop, description, diagnosis_parameters, time_digits_for_
             msg = "    ... "
             monitoring.to_log_and_console(msg, 1)
         for c in short_length:
-            prop[keydiagnosis][c[0]] = 40
+            prop[keydiagnosis][c[0]] = 50
 
     monitoring.to_log_and_console("")
     return prop
@@ -559,7 +561,7 @@ def _diagnosis_volume(prop, description, diagnosis_parameters, time_digits_for_c
     if len(keyset) > 0:
         keyvolume = list(keyset)[0]
 
-    keydiagnosis = 'selection_diagnosis_volume'
+    keydiagnosis = 'selection_float_diagnosis_volume'
     if keydiagnosis in prop:
         del prop[keydiagnosis]
     prop[keydiagnosis] = {}
@@ -619,8 +621,7 @@ def _diagnosis_volume(prop, description, diagnosis_parameters, time_digits_for_c
             if ncell not in prop[keyvolume]:
                 break
             volume_along_time[cell] += [prop[keyvolume][ncell]]
-            volume_derivative[cell] += [100.0 * (prop[keyvolume][ncell] - prop[keyvolume][pcell]) /
-                                        prop[keyvolume][pcell]]
+            volume_derivative[cell] += [(prop[keyvolume][ncell] - prop[keyvolume][pcell]) / prop[keyvolume][pcell]]
             pcell = ncell
             if pcell not in lineage or len(lineage[pcell]) > 1:
                 break
@@ -636,7 +637,7 @@ def _diagnosis_volume(prop, description, diagnosis_parameters, time_digits_for_c
             msg += " has a branch (life) length of " + str(len(volume_along_time[cell]))
             monitoring.to_log_and_console(msg, 1)
             continue
-        volume_variation[cell] = 100.0 * (max(volume_along_time[cell]) - min(volume_along_time[cell])) / \
+        volume_variation[cell] = (max(volume_along_time[cell]) - min(volume_along_time[cell])) / \
                                  statistics.median(volume_along_time[cell])
         if max(volume_derivative[cell]) > 0:
             volume_max_derivative[cell] = max(volume_derivative[cell])
@@ -647,7 +648,7 @@ def _diagnosis_volume(prop, description, diagnosis_parameters, time_digits_for_c
     volume = sorted(volume, key=itemgetter(1), reverse=True)
 
     monitoring.to_log_and_console("")
-    monitoring.to_log_and_console("  - largest volume variation [100.0 * (max-min)/median]", 1)
+    monitoring.to_log_and_console("  - largest volume variation [(max-min)/median]", 1)
 
     if isinstance(diagnosis_parameters, DiagnosisParameters):
         n = int(diagnosis_parameters.items)
@@ -659,7 +660,7 @@ def _diagnosis_volume(prop, description, diagnosis_parameters, time_digits_for_c
             if keyname is not None:
                 if volume[i][0] in prop[keyname]:
                     msg += " (" + str(prop[keyname][volume[i][0]]) + ")"
-            msg += " has volume variation = {:.2f}".format(volume[i][1])
+            msg += " has volume variation = {:.4f}".format(volume[i][1])
             msg += " [branch length = " + str(len(volume_along_time[volume[i][0]])) + "]"
             monitoring.to_log_and_console("    " + msg, 1)
 
@@ -667,7 +668,7 @@ def _diagnosis_volume(prop, description, diagnosis_parameters, time_digits_for_c
     volume = sorted(volume, key=itemgetter(1), reverse=True)
 
     monitoring.to_log_and_console("")
-    monitoring.to_log_and_console("  - largest volume derivative [100.0 * (v[t+1]-v[t])/v[t]]", 1)
+    monitoring.to_log_and_console("  - largest volume derivative [(v[t+1]-v[t])/v[t]]", 1)
 
     if isinstance(diagnosis_parameters, DiagnosisParameters):
         n = int(diagnosis_parameters.items)
@@ -680,7 +681,7 @@ def _diagnosis_volume(prop, description, diagnosis_parameters, time_digits_for_c
             if keyname is not None:
                 if volume[i][0] in prop[keyname]:
                     msg += " (" + str(prop[keyname][volume[i][0]]) + ")"
-            msg += " has volume maximal derivative = {:.2f}".format(volume[i][1])
+            msg += " has volume maximal derivative = {:.4f}".format(volume[i][1])
             msg += " [branch length = " + str(len(volume_along_time[volume[i][0]])) + "]"
             monitoring.to_log_and_console("    " + msg, 1)
             cell = volume[i][0]
@@ -690,18 +691,14 @@ def _diagnosis_volume(prop, description, diagnosis_parameters, time_digits_for_c
                     msg = "    - from time " + str(t+j) + " to " + str(t+j+1)
                     msg += ", volume evolves from " + str(volume_along_time[cell][j]) + " to "
                     msg += str(volume_along_time[cell][j+1])
-                    msg += " (derivative = {:.2f}".format(volume_derivative[cell][j]) + ")"
+                    msg += " (derivative = {:.4f}".format(volume_derivative[cell][j]) + ")"
                     monitoring.to_log_and_console(msg, 1)
                     if c not in prop[keydiagnosis]:
-                        prop[keydiagnosis][c] = int(abs(volume_derivative[cell][j]))
+                        prop[keydiagnosis][c] = abs(volume_derivative[cell][j])
                     else:
-                        prop[keydiagnosis][c] = max(prop[keydiagnosis][c], int(abs(volume_derivative[cell][j])))
-                    prop[keydiagnosis][lineage[c][0]] = int(abs(volume_derivative[cell][j]))
+                        prop[keydiagnosis][c] = max(prop[keydiagnosis][c], abs(volume_derivative[cell][j]))
+                    prop[keydiagnosis][lineage[c][0]] = abs(volume_derivative[cell][j])
                     c = lineage[c][0]
-
-    for c in prop[keydiagnosis]:
-        if prop[keydiagnosis][c] > 255:
-            prop[keydiagnosis][c] = 255
 
     monitoring.to_log_and_console("")
     return prop
@@ -743,7 +740,7 @@ def _diagnosis_name(prop, description, time_digits_for_cell_id=4):
     if len(keyset) > 0:
         keylineage = list(keyset)[0]
 
-    keydiagnosis = 'selection_diagnosis_name'
+    keydiagnosis = 'selection_selection_diagnosis_name'
     if keydiagnosis in prop:
         del prop[keydiagnosis]
     prop[keydiagnosis] = {}
@@ -932,7 +929,7 @@ def _diagnosis_contact(prop, description, diagnosis_parameters, time_digits_for_
     if len(keyset) > 0:
         keylineage = list(keyset)[0]
 
-    keydiagnosis = 'selection_diagnosis_contact_surface'
+    keydiagnosis = 'selection_float_diagnosis_contact_surface'
     if keydiagnosis in prop:
         del prop[keydiagnosis]
     prop[keydiagnosis] = {}
@@ -1059,11 +1056,11 @@ def _diagnosis_contact(prop, description, diagnosis_parameters, time_digits_for_
             for j in range(i):
                 c = lineage[c][0]
             if c not in prop[keydiagnosis]:
-                prop[keydiagnosis][c] = int(255 * score_along_time[cell][i])
+                prop[keydiagnosis][c] = score_along_time[cell][i]
             else:
-                prop[keydiagnosis][c] = max(prop[keydiagnosis][c], int(255 * score_along_time[cell][i]))
-            prop[keydiagnosis][lineage[c][0]] = int(255 * score_along_time[cell][i])
-            msg = "    - distance of " + str(score_along_time[cell][i]) + " between "
+                prop[keydiagnosis][c] = max(prop[keydiagnosis][c], score_along_time[cell][i])
+            prop[keydiagnosis][lineage[c][0]] = score_along_time[cell][i]
+            msg = "    - distance of {:.4f}".format(score_along_time[cell][i]) + " between "
             msg += "times " + str(first_time + i) + " and " + str(first_time + i + 1)
             msg += " (cells " + str(c) + " and " + str(lineage[c][0]) + ")"
             monitoring.to_log_and_console(msg)

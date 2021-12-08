@@ -270,7 +270,7 @@ def _test_naming(prop, reference_prop, discrepancies):
     #
     # keep trace of the test result as a selection
     #
-    keyselection = 'selection_leave_one_out_errors'
+    keyselection = 'selection_selection_leave_one_out_errors'
     lineage = prop['cell_lineage']
     name = prop['cell_name']
     prop[keyselection] = {}
@@ -542,7 +542,10 @@ def _compute_distances(mother, daughters, prop, atlases, parameters, last_time, 
             d1 = ucontact.cell_contact_distance(neighborhoods[daughter_names[1]][ref], contacts[ic1],
                                                 distance=atlases.cell_contact_distance,
                                                 change_contact_surfaces=True, title=None)
-            certainty[i][ref] = atlases.get_probability(d0, d1)
+            #
+            # atlases.get_probability() returns values in 0, 100]
+            #
+            certainty[i][ref] = atlases.get_probability(d0, d1) / 100.0
             scores[i][ref] = ucontacta.division_contact_generic_distance(atlases, neighborhoods[daughter_names[0]][ref],
                                                                          neighborhoods[daughter_names[1]][ref],
                                                                          contacts[ic0], contacts[ic1],
@@ -618,7 +621,7 @@ def _give_name(daughters, daughter_names, distance, certainty, parameters, debug
 #
 ########################################################################################
 
-def _propagate_name_along_branch(prop, cell):
+def _propagate_name_along_branch(prop, cell, keyselection):
     proc = "_propagate_name_along_branch"
     lineage = prop['cell_lineage']
     if cell not in prop['cell_name']:
@@ -634,7 +637,7 @@ def _propagate_name_along_branch(prop, cell):
                 monitoring.to_log_and_console(str(proc) + msg)
         else:
             prop['cell_name'][nc] = prop['cell_name'][c]
-            prop['selection_name_choice_certainty'][nc] = prop['selection_name_choice_certainty'][c]
+            prop[keyselection][nc] = prop[keyselection][c]
         c = nc
     return
 
@@ -678,11 +681,12 @@ def _propagate_naming(prop, atlases, parameters, time_digits_for_cell_id=4):
         prop['cell_name'][c] = prop['cell_name'][c].strip()
 
     #
-    # initialize 'selection_name_choice_certainty'
+    # initialize 'selection_float_name_choice_certainty'
     #
-    prop['selection_name_choice_certainty'] = {}
+    keyselection = 'selection_float_name_choice_certainty'
+    prop[keyselection] = {}
     for k in prop['cell_name']:
-        prop['selection_name_choice_certainty'][k] = 100
+        prop[keyselection][k] = 1.0
 
     #
     #
@@ -704,26 +708,26 @@ def _propagate_naming(prop, atlases, parameters, time_digits_for_cell_id=4):
         if len(lineage[mother]) == 1:
             if mother in prop['cell_name']:
                 if prop['cell_name'][mother] != prop['cell_name'][c]:
-                    prop['selection_name_choice_certainty'][mother] = 0
+                    prop[keyselection][mother] = 0
                     msg = ": weird, cell " + str(mother) + " is named " + str(prop['cell_name'][mother])
                     msg += ", but should be named " + str(prop['cell_name'][c])
                     msg += " as its single daughter"
                     monitoring.to_log_and_console(str(proc) + msg)
             else:
                 prop['cell_name'][mother] = prop['cell_name'][c]
-                prop['selection_name_choice_certainty'][mother] = 100
+                prop[keyselection][mother] = 1.0
         elif len(lineage[mother]) == 2:
             mother_name = uname.get_mother_name(prop['cell_name'][c])
             if mother in prop['cell_name']:
                 if prop['cell_name'][mother] != mother_name:
-                    prop['selection_name_choice_certainty'][mother] = 0
+                    prop[keyselection][mother] = 0
                     msg = ": weird, cell " + str(mother) + " is named " + str(prop['cell_name'][mother])
                     msg += ", but should be named " + str(mother_name)
                     msg += " since one of its daughter is named " + str(prop['cell_name'][c])
                     monitoring.to_log_and_console(str(proc) + msg)
             else:
                 prop['cell_name'][mother] = mother_name
-                prop['selection_name_choice_certainty'][mother] = 100
+                prop[keyselection][mother] = 1.0
         else:
             msg = ": weird, cell " + str(mother) + " has " + str(len(lineage[mother])) + "daughter(s)"
             monitoring.to_log_and_console(str(proc) + msg)
@@ -797,8 +801,8 @@ def _propagate_naming(prop, atlases, parameters, time_digits_for_cell_id=4):
             #
             if len(lineage[mother]) == 1:
                 prop['cell_name'][c] = prop['cell_name'][mother]
-                prop['selection_name_choice_certainty'][c] = prop['selection_name_choice_certainty'][mother]
-                _propagate_name_along_branch(prop, c)
+                prop[keyselection][c] = prop[keyselection][mother]
+                _propagate_name_along_branch(prop, c, keyselection)
             #
             # in case of division:
             # 1. give name if the sister cell is named
@@ -815,8 +819,8 @@ def _propagate_naming(prop, atlases, parameters, time_digits_for_cell_id=4):
                     if prop['cell_name'][daughters[0]] in daughter_names:
                         daughter_names.remove(prop['cell_name'][daughters[0]])
                         prop['cell_name'][c] = daughter_names[0]
-                        prop['selection_name_choice_certainty'][c] = \
-                            prop['selection_name_choice_certainty'][daughters[0]]
+                        prop[keyselection][c] = \
+                            prop[keyselection][daughters[0]]
                     else:
                         msg = ": weird, cell " + str(daughters[0]) + " is named " + str(prop['cell_name'][daughters[0]])
                         msg += ", but should be named in " + str(daughter_names) + " since its mother cell "
@@ -850,6 +854,8 @@ def _propagate_naming(prop, atlases, parameters, time_digits_for_cell_id=4):
             # d = 1: test (contacts[1], contacts[0]) <-> (daughter_names[0], daughter_names[1])
             # ref name in embryos
             #
+            # certainty are probailities (in [0, 1])
+            #
             distance, certainty = _compute_distances(mother, daughters, prop, atlases, parameters, last_time=last_time,
                                                      time_digits_for_cell_id=time_digits_for_cell_id)
             if debug:
@@ -870,8 +876,8 @@ def _propagate_naming(prop, atlases, parameters, time_digits_for_cell_id=4):
             for c in name:
                 if name[c] is not None:
                     prop['cell_name'][c] = name[c]
-                    prop['selection_name_choice_certainty'][c] = name_certainty[c]
-                    _propagate_name_along_branch(prop, c)
+                    prop[keyselection][c] = name_certainty[c]
+                    _propagate_name_along_branch(prop, c, keyselection)
 
 
     return prop

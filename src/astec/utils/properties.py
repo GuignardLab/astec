@@ -962,13 +962,24 @@ def write_morphonet_selection(d, time_digits_for_cell_id=4, directory=None):
             continue
 
         name = None
+        type = None
+        basename = key
         if key[:10] == 'selection_':
-            name = key[10:]
+            if key[10:20] == 'selection_':
+                type = 'selection'
+                name = key[20:]
+                basename = key[:10] + key[20:]
+            elif key[10:16] == 'float_':
+                type = 'float'
+                name = key[16:]
+                basename = key[:10] + key[16:]
+            else:
+                name = key[10:]
         else:
             name = key[9:]
 
         # print("write key '" + str(key) + "'")
-        filename = key + '.txt'
+        filename = basename + '.txt'
         if directory is not None and isinstance(directory, str):
             if not os.path.isdir(directory):
                 if not os.path.exists(directory):
@@ -979,9 +990,36 @@ def write_morphonet_selection(d, time_digits_for_cell_id=4, directory=None):
                 filename = os.path.join(directory, filename)
         f = open(filename, "w")
         f.write("# " + str(name) + "\n")
-        f.write("type:selection\n")
+        if type == 'float':
+            f.write("type:float\n")
+        elif type == 'selection':
+            f.write("type:selection\n")
+        else:
+            f.write("type:float\n")
         for c in d[key]:
-            f.write("{:d}".format(int(c) // div) + ", {:d}".format(int(c) % div) + " ,0:" + str(d[key][c]) + "\n")
+            #
+            # object tuple (OTP): t, id, ch,
+            # specifying the time point (t),
+            # the visualisation channel (ch)
+            # and the id of the specific object given in the obj file (id).
+            #
+            otp = "{:d}".format(int(c) // div) + ", {:d}".format(int(c) % div) + " ,0: "
+            if isinstance(d[key][c], (int, float, np.int64, np.float64)):
+                f.write(otp + str(d[key][c]) + "\n")
+            elif isinstance(d[key][c], (list, np.ndarray)):
+                if isinstance(d[key][c][0], (int, float, np.int64, np.float64)):
+                    for v in d[key][c]:
+                        f.write(otp + str(v) + "\n")
+                else:
+                    msg = ": list element type'" + str(type(d[key][c][0])) + "'"
+                    msg += "(key = '" + str(key) + "')"
+                    msg += " not handled yet. Skip it."
+                    monitoring.to_log_and_console(proc + msg)
+            else:
+                msg = ": element type'" + str(type(d[key][c])) + "'"
+                msg += "(key = '" + str(key) + "')"
+                msg += " not handled yet. Skip it."
+                monitoring.to_log_and_console(proc + msg)
         f.close()
 
 
@@ -1892,10 +1930,10 @@ def _set_color_from_fate(d, colormap_version=2020):
     keycolormap = None
     if colormap_version == 2020:
         colormap = color_fate_2020
-        keycolormap = 'selection_tissuefate_guignard_2020'
+        keycolormap = 'selection_selection_tissuefate_guignard_2020'
     elif colormap_version == 2009:
         colormap = color_fate_2009
-        keycolormap = 'selection_tissuefate_lemaire_2009'
+        keycolormap = 'selection_selection_tissuefate_lemaire_2009'
     else:
         monitoring.to_log_and_console(proc + ": colormap version '" + str(colormap_version) + "' not handled")
         return
