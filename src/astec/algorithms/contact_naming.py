@@ -270,7 +270,7 @@ def _test_naming(prop, reference_prop, discrepancies):
     #
     # keep trace of the test result as a selection
     #
-    keyselection = 'selection_selection_leave_one_out_errors'
+    keyselection = 'morphonet_selection_leave_one_out_errors'
     lineage = prop['cell_lineage']
     name = prop['cell_name']
     prop[keyselection] = {}
@@ -681,9 +681,9 @@ def _propagate_naming(prop, atlases, parameters, time_digits_for_cell_id=4):
         prop['cell_name'][c] = prop['cell_name'][c].strip()
 
     #
-    # initialize 'selection_float_name_choice_certainty'
+    # initialize 'morphonet_float_name_choice_certainty'
     #
-    keyselection = 'selection_float_name_choice_certainty'
+    keyselection = 'morphonet_float_name_choice_certainty'
     prop[keyselection] = {}
     for k in prop['cell_name']:
         prop[keyselection][k] = 1.0

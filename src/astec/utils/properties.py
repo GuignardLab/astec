@@ -535,7 +535,11 @@ def _dict2xml(parent, tag, value):
     if type(tag) in (int, np.int64):
         child = ElementTree.Element('cell', attrib={'cell-id': str(tag)})
     else:
-        child = ElementTree.Element(str(tag))
+        mn_type, name = _get_morphonet_type_name(str(tag))
+        if mn_type is not None:
+            child = ElementTree.Element(name, attrib={'mn_type': str(mn_type)})
+        else:
+            child = ElementTree.Element(str(tag))
 
     _set_xml_element_text(child, value)
 
@@ -622,13 +626,15 @@ def _set_dictionary_value(root):
 
         for child in root:
 
-            # print "child.tag=" + str(child.tag)
+            # print("child.tag=" + str(child.tag))
             # print "len(child)=" + str(len(child))
             # print "child.text=" + str(child.text)
 
             key = child.tag
             if child.tag == 'cell':
                 key = np.int64(child.attrib['cell-id'])
+            elif 'mn_type' in child.attrib:
+                key = 'morphonet_' + child.attrib['mn_type'] + "_" + str(child.tag)
             dictionary[key] = _set_dictionary_value(child)
 
     return dictionary
@@ -661,7 +667,12 @@ def xml2dict(tree):
                 monitoring.to_log_and_console("       " + proc + ": empty property '" + str(child.tag) + "' ?! "
                                               + " ... skip it", 1)
             else:
-                dictionary[str(child.tag)] = value
+                key = child.tag
+                if child.tag == 'cell':
+                    key = np.int64(child.attrib['cell-id'])
+                elif 'mn_type' in child.attrib:
+                    key = 'morphonet_' + child.attrib['mn_type'] + "_" + str(child.tag)
+                dictionary[key] = value
 
     return dictionary
 
@@ -947,6 +958,22 @@ def write_dictionary(inputfilename, inputpropertiesdict):
 #
 ########################################################################################
 
+def _get_morphonet_type_name(key):
+    mn_type = None
+    if key[:10] == 'morphonet_' or key[:10] == 'selection_':
+        if key[10:20] == 'selection_':
+            mn_type = 'selection'
+            name = key[20:]
+        elif key[10:16] == 'float_':
+            mn_type = 'float'
+            name = key[16:]
+        else:
+            name = key[10:]
+    else:
+        name = key
+    return mn_type, name
+
+
 def write_morphonet_selection(d, time_digits_for_cell_id=4, directory=None):
     proc = "write_morphonet_selection"
     div = int(10 ** time_digits_for_cell_id)
@@ -957,29 +984,14 @@ def write_morphonet_selection(d, time_digits_for_cell_id=4, directory=None):
         if len(key) < 10:
             # print("skip key '" + str(key) + "', too short")
             continue
-        if key[:9] != 'selection':
+        if key[:9] != 'selection' and key[:9] != 'morphonet':
             # print("skip key '" + str(key) + "', not a selection")
             continue
 
-        name = None
-        type = None
-        basename = key
-        if key[:10] == 'selection_':
-            if key[10:20] == 'selection_':
-                type = 'selection'
-                name = key[20:]
-                basename = key[:10] + key[20:]
-            elif key[10:16] == 'float_':
-                type = 'float'
-                name = key[16:]
-                basename = key[:10] + key[16:]
-            else:
-                name = key[10:]
-        else:
-            name = key[9:]
+        mn_type, name = _get_morphonet_type_name(key)
 
         # print("write key '" + str(key) + "'")
-        filename = basename + '.txt'
+        filename = name + '.txt'
         if directory is not None and isinstance(directory, str):
             if not os.path.isdir(directory):
                 if not os.path.exists(directory):
@@ -990,9 +1002,9 @@ def write_morphonet_selection(d, time_digits_for_cell_id=4, directory=None):
                 filename = os.path.join(directory, filename)
         f = open(filename, "w")
         f.write("# " + str(name) + "\n")
-        if type == 'float':
+        if mn_type == 'float':
             f.write("type:float\n")
-        elif type == 'selection':
+        elif mn_type == 'selection':
             f.write("type:selection\n")
         else:
             f.write("type:float\n")
@@ -1000,10 +1012,10 @@ def write_morphonet_selection(d, time_digits_for_cell_id=4, directory=None):
             #
             # object tuple (OTP): t, id, ch,
             # specifying the time point (t),
-            # the visualisation channel (ch)
+            # the visualisation channel (ch) [can be skipped]
             # and the id of the specific object given in the obj file (id).
             #
-            otp = "{:d}".format(int(c) // div) + ", {:d}".format(int(c) % div) + " ,0: "
+            otp = "{:d}".format(int(c) // div) + ", {:d}".format(int(c) % div) + ": "
             if isinstance(d[key][c], (int, float, np.int64, np.float64)):
                 f.write(otp + str(d[key][c]) + "\n")
             elif isinstance(d[key][c], (list, np.ndarray)):
@@ -1094,8 +1106,8 @@ def _compare_lineage(d1, d2, name1, name2, description):
 def _compare_volume(d1, d2, name1, name2, description):
     """
 
-    :param e1:
-    :param e2:
+    :param d1:
+    :param d2:
     :param name1:
     :param name2:
     :param description:
@@ -1141,8 +1153,8 @@ def _compare_volume(d1, d2, name1, name2, description):
 def _compare_barycenter(d1, d2, name1, name2, description):
     """
 
-    :param e1:
-    :param e2:
+    :param d1:
+    :param d2:
     :param name1:
     :param name2:
     :param description:
@@ -1186,8 +1198,8 @@ def _compare_barycenter(d1, d2, name1, name2, description):
 def _compare_all_cells(d1, d2, name1, name2, description):
     """
 
-    :param e1:
-    :param e2:
+    :param d1:
+    :param d2:
     :param name1:
     :param name2:
     :param description:
@@ -1224,8 +1236,8 @@ def _compare_all_cells(d1, d2, name1, name2, description):
 def _compare_principal_value(d1, d2, name1, name2, description):
     """
 
-    :param e1:
-    :param e2:
+    :param d1:
+    :param d2:
     :param name1:
     :param name2:
     :param description:
@@ -1268,10 +1280,8 @@ def _compare_name(d1, d2, name1, name2, description):
     e2 = d2[description]
 
     lineage1 = d1['cell_lineage']
-    mother1 = [k for k, values in lineage1.items() if len(values) > 1]
     reverse_lineage1 = {v: k for k, values in lineage1.items() for v in values}
     lineage2 = d2['cell_lineage']
-    mother2 = [k for k, values in lineage1.items() if len(values) > 1]
     reverse_lineage2 = {v: k for k, values in lineage2.items() for v in values}
 
     msg = "  === " + str(description) + " comparison between " + str(name1) + " and " + str(name2) + " === "
@@ -1307,7 +1317,7 @@ def _compare_name(d1, d2, name1, name2, description):
     cell_before_change = sorted(list(set(cell_before_change)))
 
     if len(cell_starting) > 0:
-        s = str(len(cell_starting)) + " branchs starting with different names"
+        s = str(len(cell_starting)) + " branches starting with different names"
         monitoring.to_log_and_console("    ... " + s, 1)
         for k in cell_starting:
             s = "cell " + str(k) + " (and cells of its branch) has different names: "
@@ -1405,8 +1415,8 @@ def _compare_name(d1, d2, name1, name2, description):
 def _compare_contact(d1, d2, name1, name2, description):
     """
 
-    :param e1:
-    :param e2:
+    :param d1:
+    :param d2:
     :param name1:
     :param name2:
     :param description:
@@ -1454,8 +1464,8 @@ def _compare_contact(d1, d2, name1, name2, description):
 def _compare_principal_vector(d1, d2, name1, name2, description):
     """
 
-    :param e1:
-    :param e2:
+    :param d1:
+    :param d2:
     :param name1:
     :param name2:
     :param description:
@@ -1926,14 +1936,12 @@ def _set_color_from_fate(d, colormap_version=2020):
                        "Posterior Dorsal Neural Plate": 241, "1st Endodermal Lineage": 40,
                        "2nd Lineage, Tail Muscle": 110, "2nd Endodermal Lineage": 44}
 
-    colormap = {}
-    keycolormap = None
     if colormap_version == 2020:
         colormap = color_fate_2020
-        keycolormap = 'selection_selection_tissuefate_guignard_2020'
+        keycolormap = 'morphonet_selection_tissuefate_guignard_2020'
     elif colormap_version == 2009:
         colormap = color_fate_2009
-        keycolormap = 'selection_selection_tissuefate_lemaire_2009'
+        keycolormap = 'morphonet_selection_tissuefate_lemaire_2009'
     else:
         monitoring.to_log_and_console(proc + ": colormap version '" + str(colormap_version) + "' not handled")
         return

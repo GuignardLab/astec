@@ -361,7 +361,7 @@ def _diagnosis_lineage(prop, description, diagnosis_parameters, time_digits_for_
     if len(keyset) > 0:
         keyname = list(keyset)[0]
 
-    keydiagnosis = 'selection_selection_diagnosis_lineage'
+    keydiagnosis = 'morphonet_selection_diagnosis_lineage'
     if keydiagnosis in prop:
         del prop[keydiagnosis]
     prop[keydiagnosis] = {}
@@ -561,7 +561,7 @@ def _diagnosis_volume(prop, description, diagnosis_parameters, time_digits_for_c
     if len(keyset) > 0:
         keyvolume = list(keyset)[0]
 
-    keydiagnosis = 'selection_float_diagnosis_volume'
+    keydiagnosis = 'morphonet_float_diagnosis_volume'
     if keydiagnosis in prop:
         del prop[keydiagnosis]
     prop[keydiagnosis] = {}
@@ -740,7 +740,7 @@ def _diagnosis_name(prop, description, time_digits_for_cell_id=4):
     if len(keyset) > 0:
         keylineage = list(keyset)[0]
 
-    keydiagnosis = 'selection_selection_diagnosis_name'
+    keydiagnosis = 'morphonet_selection_diagnosis_name'
     if keydiagnosis in prop:
         del prop[keydiagnosis]
     prop[keydiagnosis] = {}
@@ -929,7 +929,7 @@ def _diagnosis_contact(prop, description, diagnosis_parameters, time_digits_for_
     if len(keyset) > 0:
         keylineage = list(keyset)[0]
 
-    keydiagnosis = 'selection_float_diagnosis_contact_surface'
+    keydiagnosis = 'morphonet_float_diagnosis_contact_surface'
     if keydiagnosis in prop:
         del prop[keydiagnosis]
     prop[keydiagnosis] = {}

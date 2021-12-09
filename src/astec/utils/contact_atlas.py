@@ -606,8 +606,8 @@ def daughter_switch_proposal(atlases, parameters):
                 monitoring.to_log_and_console(proc + ": weird, '" + str(ref) + "' is not in reference atlases.", 4)
                 continue
 
-            keyscore = "selection_float_" + str(ref) + "_distance_average_before_switch_proposal"
-            keydecre = "selection_float_" + str(ref) + "_distance_decrement_percentage_after_switch_proposal"
+            keyscore = "morphonet_float_" + str(ref) + "_distance_average_before_switch_proposal"
+            keydecre = "morphonet_float_" + str(ref) + "_distance_decrement_percentage_after_switch_proposal"
             output_selections[keyscore] = output_selections.get(keyscore, {})
             output_selections[keydecre] = output_selections.get(keydecre, {})
 
@@ -784,7 +784,7 @@ def _diagnosis_linkage(atlases, parameters):
             if r not in ref_atlases:
                 monitoring.to_log_and_console(proc + ": weird, '" + str(r) + "' is not in reference atlases.", 4)
                 continue
-            keyselection = "selection_float_" + str(r) + "_last_dendrogram_value"
+            keyselection = "morphonet_float_" + str(r) + "_last_dendrogram_value"
             output_selections[keyselection] = output_selections.get(keyselection, {})
             lineage = ref_atlases[r]['cell_lineage']
             name = ref_atlases[r]['cell_name']
@@ -817,7 +817,7 @@ def _diagnosis_linkage(atlases, parameters):
             if r not in ref_atlases:
                 monitoring.to_log_and_console(proc + ": weird, '" + str(r) + "' is not in reference atlases.", 4)
                 continue
-            keyselection = "selection_selection_" + str(r) + "_dendrogram_warning"
+            keyselection = "morphonet_selection_" + str(r) + "_dendrogram_warning"
             output_selections[keyselection] = output_selections.get(keyselection, {})
             lineage = ref_atlases[r]['cell_lineage']
             name = ref_atlases[r]['cell_name']

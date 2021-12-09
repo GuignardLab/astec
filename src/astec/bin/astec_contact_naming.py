@@ -49,7 +49,7 @@ def _set_options(my_parser):
     # other options
     #
 
-    my_parser.add_argument('-write-selection', '--write-selection',
+    my_parser.add_argument('-write-selection', '--write-selection', '-write-selections', '--write-selections',
                            action='store_const', dest='write_selection',
                            default=False, const=True,
                            help='write out morphonet selection files')
