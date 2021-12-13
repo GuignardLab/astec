@@ -48,6 +48,17 @@ def contact_atlas_process(experiment, parameters):
 
     if parameters.generate_figure:
 
+        #
+        # draw cell neighbor number with respect to number of cells in embryo
+        #
+        monitoring.to_log_and_console("... generate neighbors histogram file", 1)
+        ucontactf.figures_neighbor_histogram(parameters.atlasFiles, parameters,
+                                             time_digits_for_cell_id=time_digits_for_cell_id)
+        monitoring.to_log_and_console("... done", 1)
+
+        #
+        # draw neighborhood-to-neighborhood distance with respect to distance from division
+        #
         monitoring.to_log_and_console("... generate distance along branch file", 1)
         ucontactf.figures_distance_along_branch(atlases, parameters, time_digits_for_cell_id=time_digits_for_cell_id)
         monitoring.to_log_and_console("... done", 1)

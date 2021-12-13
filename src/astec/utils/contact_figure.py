@@ -2,11 +2,14 @@
 import sys
 import copy
 import os
+from collections import Counter
+import numpy as np
 
 import astec.utils.common as common
 import astec.utils.ascidian_name as uname
 import astec.utils.contact as ucontact
 import astec.utils.contact_atlas as ucontacta
+import astec.utils.properties as properties
 
 monitoring = common.Monitoring()
 
@@ -988,5 +991,171 @@ def figures_distance_histogram(atlases, parameters):
     f.write("    plt.close()\n")
 
     f.write("\n")
+
+    f.close()
+
+
+def _neighbor_histogram(neighbors, prop, threshold=0.05, time_digits_for_cell_id=4):
+    proc = "_neighbor_histogram"
+
+    if 'cell_contact_surface' not in prop:
+        monitoring.to_log_and_console(str(proc) + ": 'cell_contact_surface' is not in dictionary: ")
+        return neighbors
+    contact = prop['cell_contact_surface']
+
+    #
+    # nodespertime is a dictionary
+    # nodespertime[t] = nodes at time t
+    #
+    nodes = list(contact.keys())
+    div = 10 ** time_digits_for_cell_id
+    times = [n // div for n in nodes]
+    nodespertime = Counter(times)
+
+    for n in contact:
+        surface = 0
+        for k in contact[n]:
+            surface += contact[n][k]
+        frac = []
+        for k in contact[n]:
+            if k % div == 0 or k % div == 1:
+                continue
+            frac += [contact[n][k]/surface]
+        #
+        # frac: array of surface fraction (without the background)
+        #
+        l = len([x for x in frac if x >= threshold])
+        t = n // div
+        neighbors[nodespertime[t]] = neighbors.get(nodespertime[t], []) + [l]
+    return neighbors
+
+
+def _figures_neighbor_histogram_period(f):
+
+    f.write("\n")
+    f.write("axtwin = ax.secondary_xaxis('top')\n")
+    f.write("axtwin.tick_params('x', direction='inout', length=10, width=2)\n")
+    f.write("axtwin.set_xticks([76, 110, 250, 332, 624])\n")
+
+    f.write("\n")
+    f.write("x = [2, 76, 76, 2]\n")
+    f.write("y = [0, 0, 14, 14]\n")
+    f.write("plt.fill(x, y, color='grey', alpha=0.4)\n")
+    f.write("plt.text(15, 13.5, 'cleavage', ha='left', va='center', fontsize=12, wrap=True)\n")
+
+    f.write("\n")
+    f.write("x = [110, 250, 250, 110]\n")
+    f.write("y = [0, 0, 14, 14]\n")
+    f.write("plt.fill(x, y, color='grey', alpha=0.4)\n")
+    f.write("plt.text(180, 13.5, 'gastrula', ha='center', va='center', fontsize=12, wrap=True)\n")
+
+    f.write("\n")
+    f.write("x = [332, 624, 624, 332]\n")
+    f.write("y = [0, 0, 14, 14]\n")
+    f.write("plt.fill(x, y, color='grey', alpha=0.4)\n")
+    f.write("plt.text(480, 13.5, 'neurula', ha='center', va='center', fontsize=12, wrap=True)\n")
+
+
+def figures_neighbor_histogram(atlasfiles, parameters, time_digits_for_cell_id=4):
+    proc = "figures_neighbor_histogram"
+
+    neighbors = {}
+    if isinstance(atlasfiles, str):
+        prop = properties.read_dictionary(atlasfiles, inputpropertiesdict={})
+        neighbors = _neighbor_histogram(neighbors, prop, time_digits_for_cell_id=time_digits_for_cell_id)
+        del prop
+    elif isinstance(atlasfiles, list):
+        for f in atlasfiles:
+            prop = properties.read_dictionary(f, inputpropertiesdict={})
+            neighbors = _neighbor_histogram(neighbors, prop, time_digits_for_cell_id=time_digits_for_cell_id)
+            del prop
+
+    #
+    # neighbors is a dictionary indexed by the number of cells of an embryo
+    # neighbors[64] is an array containing the number of neighbors
+    #
+    filename = 'figures_neighbor_histogram'
+    file_suffix = None
+    if parameters.figurefile_suffix is not None and isinstance(parameters.figurefile_suffix, str) and \
+            len(parameters.figurefile_suffix) > 0:
+        file_suffix = '_' + parameters.figurefile_suffix
+    if file_suffix is not None:
+        filename += file_suffix
+    filename += '.py'
+
+    #
+    #
+    #
+    f = open(filename, "w")
+
+    f.write("import numpy as np\n")
+    f.write("import matplotlib.pyplot as plt\n")
+    f.write("import scipy.stats as stats\n")
+
+    f.write("\n")
+    f.write("savefig = True\n")
+
+    f.write("\n")
+    f.write("neighbors = " + str(neighbors) + "\n")
+    f.write("ncells = sorted(list(neighbors.keys()))\n")
+
+    f.write("\n")
+    f.write("neighbors_per_ncell = []\n")
+    f.write("ticks = []\n")
+    f.write("xp = []\n")
+    f.write("mp = []\n")
+    f.write("sp = []\n")
+    f.write("for i in ncells:\n")
+    f.write("    xp += [i]\n")
+    f.write("    mp += [np.mean(neighbors[i])]\n")
+    f.write("    sp += [np.std(neighbors[i])]\n")
+    f.write("    neighbors_per_ncell.append(neighbors[i])\n")
+    f.write("    if i % 20 == 0:\n")
+    f.write("        ticks += [str(i)]\n")
+    f.write("    else:\n")
+    f.write("        ticks += ['']\n")
+
+    f.write("\n")
+    f.write("fig, ax = plt.subplots(figsize=(16, 6.5))\n")
+
+    f.write("\n")
+    f.write("ax.set_xlabel('number of cells', fontsize=15)\n")
+    f.write("ax.set_ylabel('number of neighbors', fontsize=15)\n")
+    f.write("ax.boxplot(neighbors_per_ncell, positions=ncells)\n")
+    f.write("ax.set_title(\"cell neighbors\", fontsize=15)\n")
+    f.write("ax.set_xticklabels(ticks)\n")
+    f.write("ax.set_xlim(left=0)\n")
+
+    _figures_neighbor_histogram_period(f)
+
+    f.write("\n")
+    f.write("if savefig:\n")
+    f.write("    plt.savefig('neighbor_histogram_boxplot")
+    if file_suffix is not None:
+        f.write(file_suffix)
+    f.write("'" + " + '.png')\n")
+    f.write("else:\n")
+    f.write("    plt.show()\n")
+
+    f.write("\n")
+    f.write("fig, ax = plt.subplots(figsize=(16, 6.5))\n")
+
+    f.write("\n")
+    f.write("ax.set_xlabel('number of cells', fontsize=15)\n")
+    f.write("ax.set_ylabel('average number of neighbors (+/- std dev)', fontsize=15)\n")
+    f.write("ax.errorbar(xp, mp, yerr=sp, color='red', fmt='-', ecolor='blue')\n")
+    f.write("ax.set_title(\"cell neighbors\", fontsize=15)\n")
+    f.write("ax.set_xlim(left=0)\n")
+
+    _figures_neighbor_histogram_period(f)
+
+    f.write("\n")
+    f.write("if savefig:\n")
+    f.write("    plt.savefig('neighbor_histogram_average")
+    if file_suffix is not None:
+        f.write(file_suffix)
+    f.write("'" + " + '.png')\n")
+    f.write("else:\n")
+    f.write("    plt.show()\n")
 
     f.close()

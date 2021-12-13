@@ -93,14 +93,14 @@ Thus, to assess the quality of a set of atlases, a typical parameter file may be
     * linkage/dendrogram analysis: it is checked whether adding the switched divisions
       to the set of divisions changes the largest value of cluster distance in
       a dendrogram. If yes, it also suggest that some divisions may be switched.
-      Individualized morphonet selection files are written (if ``write_selection`` is set to ``True)
+      Individualized morphonet selection files are written (if ``write_selection`` is set to ``True``)
       in the ``outputDir`` directory.
 
 
 * ``daughter_switch_proposal`` may propose to switch the names of some divisions. It calculates
   whether a name switch result in a global score improvement, and, if so, proposes the switch.
   It is somehow computationally costly.
-  Individualized morphonet selection files are written (if ``write_selection`` is set to ``True)
+  Individualized ``morphonet`` selection files are written (if ``write_selection`` is set to ``True``)
   in the ``outputDir`` directory.
 
 * ``generate_figure`` will generate python files (in the ``outputDir`` directory) 
