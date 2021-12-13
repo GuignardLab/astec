@@ -12,7 +12,7 @@ import astec.utils.common as common
 import astec.utils.ace as ace
 import astec.algorithms.mars as mars
 import astec.utils.reconstruction as reconstruction
-import astec.utils.properties as properties
+import astec.utils.ioproperties as ioproperties
 import astec.utils.diagnosis as diagnosis
 from astec.utils import morphsnakes
 from astec.components.spatial_image import SpatialImage
@@ -1378,7 +1378,7 @@ def _update_volume_properties(lineage_tree_information, segmented_image, current
 
     time_digits = experiment.get_time_digits_for_cell_id()
     volumes = _compute_volumes(segmented_image)
-    volume_key = properties.keydictionary['volume']['output_key']
+    volume_key = ioproperties.keydictionary['volume']['output_key']
     # uncomment next line to have a lineage file readable by old post-correction version
     # volume_key = 'volumes_information'
     if volume_key not in lineage_tree_information:
@@ -1404,7 +1404,7 @@ def _build_correspondences_from_segmentation(segmented_image):
 def _update_lineage_properties(lineage_tree_information, correspondences, previous_time, current_time, experiment):
 
     time_digits = experiment.get_time_digits_for_cell_id()
-    lineage_key = properties.keydictionary['lineage']['output_key']
+    lineage_key = ioproperties.keydictionary['lineage']['output_key']
     # uncomment next line to have a lineage file readable by old post-correction version
     # lineage_key = 'lin_tree'
     if lineage_key not in lineage_tree_information:
@@ -2948,7 +2948,7 @@ def _get_last_time_from_lineage(lineage_tree_information, first_time_point, delt
     if lineage_tree_information == {}:
         return first_time_point
     if len(lineage_tree_information) > 0 \
-            and properties.keydictionary['lineage']['output_key'] in lineage_tree_information:
+            and ioproperties.keydictionary['lineage']['output_key'] in lineage_tree_information:
         monitoring.to_log_and_console("    .. test existing lineage tree", 1)
         cellinlineage = {}
         div = 10**time_digits_for_cell_id
@@ -2993,12 +2993,12 @@ def _clean_lineage(lineage_tree_information, first_time_point, time_digits_for_c
         return
     mul = 10 ** time_digits_for_cell_id
     for key in lineage_tree_information:
-        if key == properties.keydictionary['lineage']['output_key']:
+        if key == ioproperties.keydictionary['lineage']['output_key']:
             tmp = copy.deepcopy(lineage_tree_information[properties.keydictionary['lineage']['output_key']])
             for k in tmp:
                 if int(k) > first_time_point * mul:
                     del lineage_tree_information[properties.keydictionary['lineage']['output_key']][k]
-        elif key == properties.keydictionary['volume']['output_key']:
+        elif key == ioproperties.keydictionary['volume']['output_key']:
             tmp = copy.deepcopy(lineage_tree_information[properties.keydictionary['volume']['output_key']])
             for k in tmp:
                 if int(k) > (first_time_point + 1) * mul:
@@ -3025,7 +3025,7 @@ def _fill_volumes(lineage_tree_information, first_time_point, experiment):
     proc = "_fill_volumes"
     mul = 10 ** experiment.get_time_digits_for_cell_id()
     if lineage_tree_information != {}:
-        if properties.keydictionary['volume']['output_key'] in lineage_tree_information:
+        if ioproperties.keydictionary['volume']['output_key'] in lineage_tree_information:
             tmp = lineage_tree_information[properties.keydictionary['volume']['output_key']]
             for k in tmp:
                 if k / mul == first_time_point:
@@ -3085,7 +3085,7 @@ def astec_control(experiment, parameters):
     ace.monitoring.copy(monitoring)
     common.monitoring.copy(monitoring)
     mars.monitoring.copy(monitoring)
-    properties.monitoring.copy(monitoring)
+    ioproperties.monitoring.copy(monitoring)
     reconstruction.monitoring.copy(monitoring)
 
     #
@@ -3107,7 +3107,7 @@ def astec_control(experiment, parameters):
 
     if lineage_tree_file is not None and os.path.isfile(os.path.join(segmentation_dir, lineage_tree_file)):
         lineage_tree_path = os.path.join(segmentation_dir, lineage_tree_file)
-        lineage_tree_information = properties.read_dictionary(lineage_tree_path)
+        lineage_tree_information = ioproperties.read_dictionary(lineage_tree_path)
     else:
         lineage_tree_path = os.path.join(segmentation_dir, experiment.astec_dir.get_file_name("_lineage") + "."
                                          + experiment.result_lineage_suffix)
@@ -3207,7 +3207,7 @@ def astec_control(experiment, parameters):
         # thus, we have intermediary pkl in case of future failure
         #
 
-        properties.write_dictionary(lineage_tree_path, lineage_tree_information)
+        ioproperties.write_dictionary(lineage_tree_path, lineage_tree_information)
 
         #
         # end processing for a time point

@@ -10,7 +10,7 @@ import sys
 from astec.utils import common
 import astec.utils.ascidian_name as uname
 import astec.utils.contact as ucontact
-import astec.utils.properties as properties
+import astec.utils.ioproperties as ioproperties
 
 
 #
@@ -106,8 +106,6 @@ class DiagnosisParameters(ucontact.ContactSurfaceParameters):
 
         self.varprint('maximal_contact_distance', self.maximal_contact_distance,
                       self.doc.get('maximal_contact_distance', None))
-        self.varprint('generate_figure', self.generate_figure, self.doc.get('generate_figure', None))
-        self.varprint('figurefile_suffix', self.figurefile_suffix, self.doc.get('figurefile_suffix', None))
 
         print("")
 
@@ -134,8 +132,6 @@ class DiagnosisParameters(ucontact.ContactSurfaceParameters):
 
         self.varwrite(logfile, 'maximal_contact_distance', self.maximal_contact_distance,
                       self.doc.get('maximal_contact_distance', None))
-        self.varwrite(logfile, 'generate_figure', self.generate_figure, self.doc.get('generate_figure', None))
-        self.varwrite(logfile, 'figurefile_suffix', self.figurefile_suffix, self.doc.get('figurefile_suffix', None))
 
         logfile.write("\n")
         return
@@ -161,9 +157,6 @@ class DiagnosisParameters(ucontact.ContactSurfaceParameters):
 
         self.maximal_contact_distance = self.read_parameter(parameters, 'maximal_contact_distance',
                                                               self.maximal_contact_distance)
-        self.generate_figure = self.read_parameter(parameters, 'generate_figure', self.generate_figure)
-        self.generate_figure = self.read_parameter(parameters, 'generate_figures', self.generate_figure)
-        self.figurefile_suffix = self.read_parameter(parameters, 'figurefile_suffix', self.figurefile_suffix)
 
     def update_from_parameter_file(self, parameter_file):
         if parameter_file is None:
@@ -203,7 +196,7 @@ def _get_time_interval_from_properties(d, time_digits_for_cell_id=4):
     keylineage = None
 
     for k in d:
-        if k in properties.keydictionary['lineage']['input_keys']:
+        if k in ioproperties.keydictionary['lineage']['input_keys']:
             keylineage = k
 
     if keylineage is None:
@@ -233,7 +226,7 @@ def _cell_id(c, time_digits_for_cell_id=4):
 def _print_list(prop, tab, time_digits_for_cell_id=4, verbose=2):
 
     keyname = None
-    keynameset = set(prop.keys()).intersection(properties.keydictionary['name']['input_keys'])
+    keynameset = set(prop.keys()).intersection(ioproperties.keydictionary['name']['input_keys'])
     if len(keynameset) > 0:
         keyname = list(keynameset)[0]
 
@@ -277,35 +270,35 @@ def _get_nodes(prop, key):
 def _find_node(prop, key, cell_id):
 
     keyname = None
-    keynameset = set(prop.keys()).intersection(properties.keydictionary['name']['input_keys'])
+    keynameset = set(prop.keys()).intersection(ioproperties.keydictionary['name']['input_keys'])
     if len(keynameset) > 0:
         keyname = list(keynameset)[0]
 
-    if key in properties.keydictionary['lineage']['input_keys']:
+    if key in ioproperties.keydictionary['lineage']['input_keys']:
         pass
-    elif key in properties.keydictionary['h_min']['input_keys']:
+    elif key in ioproperties.keydictionary['h_min']['input_keys']:
         pass
-    elif key in properties.keydictionary['volume']['input_keys']:
+    elif key in ioproperties.keydictionary['volume']['input_keys']:
         pass
-    elif key in properties.keydictionary['surface']['input_keys']:
+    elif key in ioproperties.keydictionary['surface']['input_keys']:
         pass
-    elif key in properties.keydictionary['compactness']['input_keys']:
+    elif key in ioproperties.keydictionary['compactness']['input_keys']:
         pass
-    elif key in properties.keydictionary['sigma']['input_keys']:
+    elif key in ioproperties.keydictionary['sigma']['input_keys']:
         pass
-    elif key in properties.keydictionary['label_in_time']['input_keys']:
+    elif key in ioproperties.keydictionary['label_in_time']['input_keys']:
         pass
-    elif key in properties.keydictionary['barycenter']['input_keys']:
+    elif key in ioproperties.keydictionary['barycenter']['input_keys']:
         pass
-    elif key in properties.keydictionary['fate']['input_keys']:
+    elif key in ioproperties.keydictionary['fate']['input_keys']:
         pass
-    elif key in properties.keydictionary['all-cells']['input_keys']:
+    elif key in ioproperties.keydictionary['all-cells']['input_keys']:
         pass
-    elif key in properties.keydictionary['principal-value']['input_keys']:
+    elif key in ioproperties.keydictionary['principal-value']['input_keys']:
         pass
-    elif key in properties.keydictionary['name']['input_keys']:
+    elif key in ioproperties.keydictionary['name']['input_keys']:
         pass
-    elif key in properties.keydictionary['contact']['input_keys']:
+    elif key in ioproperties.keydictionary['contact']['input_keys']:
         if cell_id in prop[key]:
             msg = "    - " + str(cell_id)
             if keyname is not None:
@@ -335,9 +328,9 @@ def _find_node(prop, key, cell_id):
 
             monitoring.to_log_and_console(msg)
 
-    elif key in properties.keydictionary['history']['input_keys']:
+    elif key in ioproperties.keydictionary['history']['input_keys']:
         pass
-    elif key in properties.keydictionary['principal-vector']['input_keys']:
+    elif key in ioproperties.keydictionary['principal-vector']['input_keys']:
         pass
     else:
         monitoring.to_log_and_console("    unknown key '" + str(key) + "' for diagnosis", 1)
@@ -352,12 +345,12 @@ def _find_node(prop, key, cell_id):
 def _diagnosis_lineage(prop, description, diagnosis_parameters, time_digits_for_cell_id=4):
 
     keylineage = None
-    keyset = set(prop.keys()).intersection(properties.keydictionary['lineage']['input_keys'])
+    keyset = set(prop.keys()).intersection(ioproperties.keydictionary['lineage']['input_keys'])
     if len(keyset) > 0:
         keylineage = list(keyset)[0]
 
     keyname = None
-    keyset = set(prop.keys()).intersection(properties.keydictionary['name']['input_keys'])
+    keyset = set(prop.keys()).intersection(ioproperties.keydictionary['name']['input_keys'])
     if len(keyset) > 0:
         keyname = list(keyset)[0]
 
@@ -547,17 +540,17 @@ def _diagnosis_volume(prop, description, diagnosis_parameters, time_digits_for_c
     #     590002: 236936
 
     keyname = None
-    keyset = set(prop.keys()).intersection(properties.keydictionary['name']['input_keys'])
+    keyset = set(prop.keys()).intersection(ioproperties.keydictionary['name']['input_keys'])
     if len(keyset) > 0:
         keyname = list(keyset)[0]
 
     keylineage = None
-    keyset = set(prop.keys()).intersection(properties.keydictionary['lineage']['input_keys'])
+    keyset = set(prop.keys()).intersection(ioproperties.keydictionary['lineage']['input_keys'])
     if len(keyset) > 0:
         keylineage = list(keyset)[0]
 
     keyvolume = None
-    keyset = set(prop.keys()).intersection(properties.keydictionary['volume']['input_keys'])
+    keyset = set(prop.keys()).intersection(ioproperties.keydictionary['volume']['input_keys'])
     if len(keyset) > 0:
         keyvolume = list(keyset)[0]
 
@@ -731,12 +724,12 @@ def _diagnosis_volume(prop, description, diagnosis_parameters, time_digits_for_c
 def _diagnosis_name(prop, description, time_digits_for_cell_id=4):
 
     keyname = None
-    keyset = set(prop.keys()).intersection(properties.keydictionary['name']['input_keys'])
+    keyset = set(prop.keys()).intersection(ioproperties.keydictionary['name']['input_keys'])
     if len(keyset) > 0:
         keyname = list(keyset)[0]
 
     keylineage = None
-    keyset = set(prop.keys()).intersection(properties.keydictionary['lineage']['input_keys'])
+    keyset = set(prop.keys()).intersection(ioproperties.keydictionary['lineage']['input_keys'])
     if len(keyset) > 0:
         keylineage = list(keyset)[0]
 
@@ -915,17 +908,17 @@ def _diagnosis_contact(prop, description, diagnosis_parameters, time_digits_for_
         sys.exit(1)
 
     keycontact = None
-    keyset = set(prop.keys()).intersection(properties.keydictionary['contact']['input_keys'])
+    keyset = set(prop.keys()).intersection(ioproperties.keydictionary['contact']['input_keys'])
     if len(keyset) > 0:
         keycontact = list(keyset)[0]
 
     keyname = None
-    keyset = set(prop.keys()).intersection(properties.keydictionary['name']['input_keys'])
+    keyset = set(prop.keys()).intersection(ioproperties.keydictionary['name']['input_keys'])
     if len(keyset) > 0:
         keyname = list(keyset)[0]
 
     keylineage = None
-    keyset = set(prop.keys()).intersection(properties.keydictionary['lineage']['input_keys'])
+    keyset = set(prop.keys()).intersection(ioproperties.keydictionary['lineage']['input_keys'])
     if len(keyset) > 0:
         keylineage = list(keyset)[0]
 
@@ -1082,8 +1075,8 @@ def _diagnosis_one_feature(prop, feature, diagnosis_parameters, time_digits_for_
     #
     #
     key = None
-    for k in properties.keydictionary:
-        if feature == k or feature in properties.keydictionary[k]['input_keys']:
+    for k in ioproperties.keydictionary:
+        if feature == k or feature in ioproperties.keydictionary[k]['input_keys']:
             key = k
     if key is None:
         monitoring.to_log_and_console(proc + ": property '" + str(feature) + "' not found in 'keydictionary'", 1)
@@ -1094,41 +1087,41 @@ def _diagnosis_one_feature(prop, feature, diagnosis_parameters, time_digits_for_
     #
     propkeys = list(prop.keys())
     for k in propkeys:
-        if k not in properties.keydictionary[key]['input_keys']:
+        if k not in ioproperties.keydictionary[key]['input_keys']:
             continue
 
-        if k in properties.keydictionary['lineage']['input_keys']:
+        if k in ioproperties.keydictionary['lineage']['input_keys']:
             prop = _diagnosis_lineage(prop, k, diagnosis_parameters=diagnosis_parameters,
                                       time_digits_for_cell_id=time_digits_for_cell_id)
-        elif k in properties.keydictionary['h_min']['input_keys']:
+        elif k in ioproperties.keydictionary['h_min']['input_keys']:
             pass
-        elif k in properties.keydictionary['volume']['input_keys']:
+        elif k in ioproperties.keydictionary['volume']['input_keys']:
             prop = _diagnosis_volume(prop, k, diagnosis_parameters=diagnosis_parameters,
                                      time_digits_for_cell_id=time_digits_for_cell_id)
-        elif k in properties.keydictionary['surface']['input_keys']:
+        elif k in ioproperties.keydictionary['surface']['input_keys']:
             pass
-        elif k in properties.keydictionary['compactness']['input_keys']:
+        elif k in ioproperties.keydictionary['compactness']['input_keys']:
             pass
-        elif k in properties.keydictionary['sigma']['input_keys']:
+        elif k in ioproperties.keydictionary['sigma']['input_keys']:
             pass
-        elif k in properties.keydictionary['label_in_time']['input_keys']:
+        elif k in ioproperties.keydictionary['label_in_time']['input_keys']:
             pass
-        elif k in properties.keydictionary['barycenter']['input_keys']:
+        elif k in ioproperties.keydictionary['barycenter']['input_keys']:
             pass
-        elif k in properties.keydictionary['fate']['input_keys']:
+        elif k in ioproperties.keydictionary['fate']['input_keys']:
             pass
-        elif k in properties.keydictionary['all-cells']['input_keys']:
+        elif k in ioproperties.keydictionary['all-cells']['input_keys']:
             pass
-        elif k in properties.keydictionary['principal-value']['input_keys']:
+        elif k in ioproperties.keydictionary['principal-value']['input_keys']:
             pass
-        elif k in properties.keydictionary['name']['input_keys']:
+        elif k in ioproperties.keydictionary['name']['input_keys']:
             prop = _diagnosis_name(prop, k, time_digits_for_cell_id=time_digits_for_cell_id)
-        elif k in properties.keydictionary['contact']['input_keys']:
+        elif k in ioproperties.keydictionary['contact']['input_keys']:
             prop = _diagnosis_contact(prop, k, diagnosis_parameters=diagnosis_parameters,
                                       time_digits_for_cell_id=time_digits_for_cell_id)
-        elif k in properties.keydictionary['history']['input_keys']:
+        elif k in ioproperties.keydictionary['history']['input_keys']:
             pass
-        elif k in properties.keydictionary['principal-vector']['input_keys']:
+        elif k in ioproperties.keydictionary['principal-vector']['input_keys']:
             pass
         else:
             monitoring.to_log_and_console("    unknown key '" + str(k) + "' for diagnosis", 1)
@@ -1151,7 +1144,7 @@ def diagnosis(prop, features=None, parameters=None, time_digits_for_cell_id=4):
         diagnosis_parameters = DiagnosisParameters()
 
     keyname = None
-    keynameset = set(prop.keys()).intersection(properties.keydictionary['name']['input_keys'])
+    keynameset = set(prop.keys()).intersection(ioproperties.keydictionary['name']['input_keys'])
     if len(keynameset) > 0:
         keyname = list(keynameset)[0]
 

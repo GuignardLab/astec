@@ -9,7 +9,7 @@ import scipy.cluster.hierarchy as sch
 import numpy as np
 
 import astec.utils.common as common
-import astec.utils.properties as properties
+import astec.utils.ioproperties as ioproperties
 import astec.utils.ascidian_name as uname
 import astec.utils.contact as ucontact
 import astec.utils.diagnosis as udiagnosis
@@ -676,7 +676,6 @@ def daughter_switch_proposal(atlases, parameters):
 
     monitoring.to_log_and_console("==========================================")
 
-
 ########################################################################################
 #
 #
@@ -859,227 +858,9 @@ def _diagnosis_linkage(atlases, parameters):
 #
 ########################################################################################
 
-def _add_neighborhoods(previous_neighborhoods, prop, parameters, atlas_name, time_digits_for_cell_id=4):
-    """
-
-    Parameters
-    ----------
-    previous_neighborhoods: already built neighborhood atlas
-    prop: embryo properties (atlas to be added)
-    parameters:
-    atlas_name: file or atlas name (will indexed the added neighborhoods for each cell name)
-    time_digits_for_cell_id;
-
-    Returns
-    -------
-
-    """
-    proc = "_add_neighborhoods"
-
-    if not isinstance(parameters, AtlasParameters):
-        monitoring.to_log_and_console(str(proc) + ": unexpected type for 'parameters' variable: "
-                                      + str(type(parameters)))
-        sys.exit(1)
-
-    #
-    # build a nested dictionary of neighborhood, where the keys are
-    # ['cell name']['reference name']
-    # where 'reference name' is the name
-    # of the reference lineage, and neighborhood a dictionary of contact surfaces indexed by cell names
-    # only consider the first time point after the division
-    #
-
-    if 'cell_lineage' not in prop:
-        monitoring.to_log_and_console(str(proc) + ": 'cell_lineage' was not in dictionary")
-        return previous_neighborhoods
-
-    if 'cell_contact_surface' not in prop:
-        monitoring.to_log_and_console(str(proc) + ": 'cell_contact_surface' was not in dictionary")
-        return previous_neighborhoods
-
-    if 'cell_name' not in prop:
-        monitoring.to_log_and_console(str(proc) + ": 'cell_name' was not in dictionary")
-        return previous_neighborhoods
-
-    #
-    # remove empty names
-    # leading or trailing spaces
-    #
-    cells = list(prop['cell_name'].keys())
-    for c in cells:
-        if prop['cell_name'][c] == '':
-            del prop['cell_name'][c]
-            continue
-        prop['cell_name'][c] = prop['cell_name'][c].strip()
-
-    #
-    lineage = prop['cell_lineage']
-    name = prop['cell_name']
-    contact = prop['cell_contact_surface']
-
-    div = 10 ** time_digits_for_cell_id
-
-    #
-    # get the daughter cells just after division
-    #
-    reverse_lineage = {v: k for k, values in lineage.items() for v in values}
-    daughters = [lineage[c][0] for c in lineage if len(lineage[c]) == 2]
-    daughters += [lineage[c][1] for c in lineage if len(lineage[c]) == 2]
-
-    missing_name = []
-    missing_contact = []
-    missing_neighbors = []
-
-    for daugh in daughters:
-        if reverse_lineage[daugh] not in name:
-            continue
-        #
-        # check whether the cell is in dictionaries
-        #
-        if daugh not in name:
-            if daugh not in missing_name:
-                missing_name.append(daugh)
-                monitoring.to_log_and_console(str(proc) + ": daughter cell #" + str(daugh)
-                                              + " was not found in 'cell_name' dictionary. Skip it", 6)
-            continue
-
-        if daugh not in contact:
-            if daugh not in missing_contact:
-                missing_contact.append(daugh)
-                monitoring.to_log_and_console(str(proc) + ": cell #" + str(daugh)
-                                              + " was not found in 'cell_contact_surface' dictionary. Skip it")
-            continue
-
-        #
-        # get the daughter cell after some additional delay
-        #
-        d = daugh
-        for i in range(parameters.delay_from_division):
-            if d not in lineage:
-                break
-            if len(lineage[d]) > 1:
-                break
-            nextd = lineage[d][0]
-            if nextd not in name or nextd not in contact:
-                break
-            if nextd not in name or nextd not in contact:
-                break
-            d = nextd
-
-        #
-        # build the neighborhood
-        #
-        neighbor = {}
-        neighbor_is_complete = True
-        half_id = prop['cell_name'][d][-1]
-        for c in contact[d]:
-            n = int(c) % div
-            if n == 1 or n == 0:
-                neighbor['background'] = neighbor.get('background', 0) + contact[d][c]
-            elif c in name:
-                if parameters.differentiate_other_half:
-                    neighbor[prop['cell_name'][c]] = contact[d][c]
-                else:
-                    if prop['cell_name'][c][-1] == half_id:
-                        neighbor[prop['cell_name'][c]] = contact[d][c]
-                    else:
-                        neighbor['other-half'] = neighbor.get('other-half', 0) + contact[d][c]
-            else:
-                neighbor_is_complete = False
-                if c not in missing_neighbors:
-                    missing_neighbors.append(c)
-                    msg = "\t cell #" + str(c) + " was not found in 'cell_name' dictionary."
-                    monitoring.to_log_and_console(msg)
-                continue
-
-        if not neighbor_is_complete:
-            msg = ": neighborhood of " + str(prop['cell_name'][d]) + " is not complete. Skip it"
-            monitoring.to_log_and_console(str(proc) + msg)
-
-        if neighbor_is_complete:
-            if prop['cell_name'][d] not in previous_neighborhoods:
-                previous_neighborhoods[prop['cell_name'][d]] = {}
-            if atlas_name in previous_neighborhoods[prop['cell_name'][d]]:
-                msg = "weird, " + str(atlas_name) + " was already indexed for cell " + str(prop['cell_name'][d])
-                monitoring.to_log_and_console(str(proc) + ": " + msg)
-            previous_neighborhoods[prop['cell_name'][d]][atlas_name] = neighbor
-            #
-            # add symmetric neighborhood if asked
-            #
-            if parameters.add_symmetric_neighborhood:
-                sname = uname.get_symmetric_name(prop['cell_name'][d])
-                sreference = 'sym-' + atlas_name
-                sneighbor = get_symmetric_neighborhood(neighbor)
-                if sname not in previous_neighborhoods:
-                    previous_neighborhoods[sname] = {}
-                if sreference in previous_neighborhoods[sname]:
-                    msg = "weird, " + str(sreference) + " was already indexed for cell " + str(sname)
-                    monitoring.to_log_and_console(str(proc) + ": " + msg)
-                previous_neighborhoods[sname][sreference] = sneighbor
-
-    if len(missing_name) > 0:
-        monitoring.to_log_and_console(str(proc) + ": daughter cells without names = " + str(len(missing_name)) + "/" +
-                                      str(len(daughters)))
-
-    if len(missing_contact) > 0:
-        monitoring.to_log_and_console(str(proc) + ": daughter cells without contact surfaces  = " +
-                                      str(len(missing_contact)) + "/" + str(len(daughters)))
-
-    if len(missing_neighbors) > 0:
-        monitoring.to_log_and_console(str(proc) + ": neighboring cells without names  = " + str(len(missing_neighbors)))
-
-    monitoring.to_log_and_console("")
-
-    return previous_neighborhoods
 
 
-def _add_atlas(atlases, name, prop, parameters):
-    """
 
-    Parameters
-    ----------
-    atlases: already existing properties
-    name
-    prop: embryo properties (atlas to be added)
-    parameters:
-
-    Returns
-    -------
-
-    """
-    proc = "_add_atlas"
-
-    if not isinstance(parameters, AtlasParameters):
-        monitoring.to_log_and_console(str(proc) + ": unexpected type for 'parameters' variable: "
-                                      + str(type(parameters)))
-        sys.exit(1)
-
-    #
-    # build a nested dictionary of neighborhood, where the keys are
-    # ['cell name']['reference name']
-    # where 'reference name' is the name
-    # of the reference lineage, and neighborhood a dictionary of contact surfaces indexed by cell names
-    # only consider the first time point after the division
-    #
-
-    if 'cell_lineage' not in prop:
-        monitoring.to_log_and_console(str(proc) + ": 'cell_lineage' was not in dictionary")
-        return atlases
-
-    if 'cell_name' not in prop:
-        monitoring.to_log_and_console(str(proc) + ": 'cell_name' was not in dictionary")
-        return atlases
-
-    if 'cell_contact_surface' not in prop:
-        monitoring.to_log_and_console(str(proc) + ": 'cell_contact_surface' was not in dictionary")
-        return atlases
-
-    atlases[name] = {}
-    atlases[name]['cell_lineage'] = copy.deepcopy(prop['cell_lineage'])
-    atlases[name]['cell_name'] = copy.deepcopy(prop['cell_name'])
-    atlases[name]['cell_contact_surface'] = copy.deepcopy(prop['cell_contact_surface'])
-
-    return atlases
 
 
 ########################################################################################
@@ -1149,11 +930,16 @@ class Atlases(object):
         # a neighborhood is a dictionary of contact surfaces indexed by cell names
         # it only considers the first time point after the division
         self._neighborhoods = {}
+
+        # nested dictionary of volumes, where the keys are ['cell name']['reference name']
+        self._volumes = {}
+
         self._use_common_neighborhood = False
 
         # dictionary indexed by 'cell name' where 'cell name' is a mother cell giving the list
         # of references/atlases available for the two daughters
         self._divisions = {}
+        self._asymmetric_divisions = {}
 
         # dictionary index by atlas name
         # to keep trace of some output (kept as morphonet selection)
@@ -1182,6 +968,9 @@ class Atlases(object):
     def get_neighborhoods(self):
         return self._neighborhoods
 
+    def get_volumes(self):
+        return self._volumes
+
     def get_atlases(self):
         return self._atlases
 
@@ -1190,6 +979,9 @@ class Atlases(object):
 
     def get_divisions(self):
         return self._divisions
+
+    def get_asymmetric_divisions(self):
+        return self._asymmetric_divisions
 
     def get_output_selections(self):
         return self._output_selections
@@ -1292,6 +1084,310 @@ class Atlases(object):
                     monitoring.to_log_and_console(str(proc) + ": remove atlas '" + str(r) + "' for division '" + str(n)
                                                   + "'")
 
+    def build_asymmetric_divisions(self):
+        """
+        Build a dictionary index by mother cell name. Each entry contains reference names
+        for which the both daughters exist
+        Returns
+        -------
+
+        """
+        proc = "build_asymmetric_divisions"
+        minimal_references = 5
+
+        if self._asymmetric_divisions is not None:
+            del self._asymmetric_divisions
+            self._asymmetric_divisions = {}
+
+        divisions = self.get_divisions()
+        volumes = self.get_volumes()
+
+        for mother in divisions:
+            d = uname.get_daughter_names(mother)
+            vol01 = 0
+            vol10 = 0
+            for r in divisions[mother]:
+                if volumes[d[0]][r] > volumes[d[1]][r]:
+                    vol01 += 1
+                elif volumes[d[0]][r] < volumes[d[1]][r]:
+                    vol10 += 1
+            if vol01 > minimal_references and vol10 == 0:
+                self._asymmetric_divisions[mother] = [d[0], d[1]]
+            elif vol10 > minimal_references and vol01 == 0:
+                self._asymmetric_divisions[mother] = [d[1], d[0]]
+
+        msg = "found " + str(len(self._asymmetric_divisions)) + " asymmetric divisions "
+        msg += "(more than " + str(minimal_references) + " atlases) in " + str(len(divisions)) + " divisions"
+        monitoring.to_log_and_console("\t" + msg)
+        return
+
+
+
+    ############################################################
+    #
+    #
+    #
+    ############################################################
+
+    def add_neighborhoods(self, prop, parameters, atlas_name, time_digits_for_cell_id=4):
+        """
+
+        Parameters
+        ----------
+        previous_neighborhoods: already built neighborhood atlas
+        prop: embryo properties (atlas to be added)
+        parameters:
+        atlas_name: file or atlas name (will indexed the added neighborhoods for each cell name)
+        time_digits_for_cell_id;
+
+        Returns
+        -------
+
+        """
+        proc = "add_neighborhoods"
+
+        if not isinstance(parameters, AtlasParameters):
+            monitoring.to_log_and_console(str(proc) + ": unexpected type for 'parameters' variable: "
+                                          + str(type(parameters)))
+            sys.exit(1)
+
+        #
+        # build a nested dictionary of neighborhood, where the keys are
+        # ['cell name']['reference name']
+        # where 'reference name' is the name
+        # of the reference lineage, and neighborhood a dictionary of contact surfaces indexed by cell names
+        # only consider the first time point after the division
+        #
+
+        if 'cell_lineage' not in prop:
+            monitoring.to_log_and_console(str(proc) + ": 'cell_lineage' was not in dictionary")
+            return
+
+        if 'cell_contact_surface' not in prop:
+            monitoring.to_log_and_console(str(proc) + ": 'cell_contact_surface' was not in dictionary")
+            return
+
+        if 'cell_name' not in prop:
+            monitoring.to_log_and_console(str(proc) + ": 'cell_name' was not in dictionary")
+            return
+
+        if 'cell_volume' not in prop:
+            monitoring.to_log_and_console(str(proc) + ": 'cell_volume' was not in dictionary")
+            return
+
+        #
+        # remove empty names
+        # leading or trailing spaces
+        #
+        cells = list(prop['cell_name'].keys())
+        for c in cells:
+            if prop['cell_name'][c] == '':
+                del prop['cell_name'][c]
+                continue
+            prop['cell_name'][c] = prop['cell_name'][c].strip()
+
+        #
+        lineage = prop['cell_lineage']
+        name = prop['cell_name']
+        contact = prop['cell_contact_surface']
+
+        div = 10 ** time_digits_for_cell_id
+
+        #
+        # get the daughter cells just after division
+        #
+        reverse_lineage = {v: k for k, values in lineage.items() for v in values}
+        daughters = [lineage[c][0] for c in lineage if len(lineage[c]) == 2]
+        daughters += [lineage[c][1] for c in lineage if len(lineage[c]) == 2]
+
+        missing_name = []
+        missing_contact = []
+        missing_neighbors = []
+
+        for daugh in daughters:
+            if reverse_lineage[daugh] not in name:
+                continue
+            #
+            # check whether the cell is in dictionaries
+            #
+            if daugh not in name:
+                if daugh not in missing_name:
+                    missing_name.append(daugh)
+                    monitoring.to_log_and_console(str(proc) + ": daughter cell #" + str(daugh)
+                                                  + " was not found in 'cell_name' dictionary. Skip it", 6)
+                continue
+
+            if daugh not in contact:
+                if daugh not in missing_contact:
+                    missing_contact.append(daugh)
+                    monitoring.to_log_and_console(str(proc) + ": cell #" + str(daugh)
+                                                  + " was not found in 'cell_contact_surface' dictionary. Skip it")
+                continue
+
+            #
+            # get the daughter cell after some additional delay
+            #
+            d = daugh
+            for i in range(parameters.delay_from_division):
+                if d not in lineage:
+                    break
+                if len(lineage[d]) > 1:
+                    break
+                nextd = lineage[d][0]
+                if nextd not in name or nextd not in contact:
+                    break
+                if nextd not in name or nextd not in contact:
+                    break
+                d = nextd
+
+            #
+            # build the neighborhood
+            #
+            neighbor = {}
+            neighbor_is_complete = True
+            half_id = prop['cell_name'][d][-1]
+            for c in contact[d]:
+                n = int(c) % div
+                if n == 1 or n == 0:
+                    neighbor['background'] = neighbor.get('background', 0) + contact[d][c]
+                elif c in name:
+                    if parameters.differentiate_other_half:
+                        neighbor[prop['cell_name'][c]] = contact[d][c]
+                    else:
+                        if prop['cell_name'][c][-1] == half_id:
+                            neighbor[prop['cell_name'][c]] = contact[d][c]
+                        else:
+                            neighbor['other-half'] = neighbor.get('other-half', 0) + contact[d][c]
+                else:
+                    neighbor_is_complete = False
+                    if c not in missing_neighbors:
+                        missing_neighbors.append(c)
+                        msg = "\t cell #" + str(c) + " was not found in 'cell_name' dictionary."
+                        monitoring.to_log_and_console(msg)
+                    continue
+
+            if not neighbor_is_complete:
+                msg = ": neighborhood of " + str(prop['cell_name'][d]) + " is not complete. Skip it"
+                monitoring.to_log_and_console(str(proc) + msg)
+                continue
+
+            #
+            # add neighborhood and volume
+            #
+            # if neighbor_is_complete:
+            if prop['cell_name'][d] not in self._neighborhoods:
+                self._neighborhoods[prop['cell_name'][d]] = {}
+            if atlas_name in self._neighborhoods[prop['cell_name'][d]]:
+                msg = "weird, " + str(atlas_name) + " was already indexed for neighbors of cell " + \
+                      str(prop['cell_name'][d])
+                monitoring.to_log_and_console(str(proc) + ": " + msg)
+            self._neighborhoods[prop['cell_name'][d]][atlas_name] = neighbor
+
+            if prop['cell_name'][d] not in self._volumes:
+                self._volumes[prop['cell_name'][d]] = {}
+            if atlas_name in self._volumes[prop['cell_name'][d]]:
+                msg = "weird, " + str(atlas_name) + " was already indexed for volume of cell " + \
+                      str(prop['cell_name'][d])
+                monitoring.to_log_and_console(str(proc) + ": " + msg)
+            if d not in prop['cell_volume']:
+                msg = "\t cell #" + str(d) + " was not found in 'cell_volume' dictionary."
+                monitoring.to_log_and_console(str(proc) + ": " + msg)
+            else:
+                self._volumes[prop['cell_name'][d]][atlas_name] = prop['cell_volume'][d]
+            #
+            # add symmetric neighborhood if asked
+            #
+            if parameters.add_symmetric_neighborhood:
+                sname = uname.get_symmetric_name(prop['cell_name'][d])
+                sreference = 'sym-' + atlas_name
+                sneighbor = get_symmetric_neighborhood(neighbor)
+                if sname not in self._neighborhoods:
+                    self._neighborhoods[sname] = {}
+                if sreference in self._neighborhoods[sname]:
+                    msg = "weird, " + str(sreference) + " was already indexed for cell " + str(sname)
+                    monitoring.to_log_and_console(str(proc) + ": " + msg)
+                self._neighborhoods[sname][sreference] = sneighbor
+
+                if sname not in self._volumes:
+                    self._volumes[sname] = {}
+                if sreference in self._volumes[sname]:
+                    msg = "weird, " + str(sreference) + " was already indexed for volume of cell " + str(sname)
+                    monitoring.to_log_and_console(str(proc) + ": " + msg)
+                if d not in prop['cell_volume']:
+                    msg = "\t cell #" + str(d) + " was not found in 'cell_volume' dictionary."
+                    monitoring.to_log_and_console(str(proc) + ": " + msg)
+                else:
+                    self._volumes[sname][sreference] = prop['cell_volume'][d]
+
+        if len(missing_name) > 0:
+            monitoring.to_log_and_console(
+                str(proc) + ": daughter cells without names = " + str(len(missing_name)) + "/" +
+                str(len(daughters)))
+
+        if len(missing_contact) > 0:
+            monitoring.to_log_and_console(str(proc) + ": daughter cells without contact surfaces  = " +
+                                          str(len(missing_contact)) + "/" + str(len(daughters)))
+
+        if len(missing_neighbors) > 0:
+            monitoring.to_log_and_console(
+                str(proc) + ": neighboring cells without names  = " + str(len(missing_neighbors)))
+
+        monitoring.to_log_and_console("")
+
+        return
+
+    def add_atlas(self, name, prop, parameters):
+        """
+
+        Parameters
+        ----------
+        name
+        prop: embryo properties (atlas to be added)
+        parameters:
+
+        Returns
+        -------
+
+        """
+        proc = "add_atlas"
+
+        if not isinstance(parameters, AtlasParameters):
+            monitoring.to_log_and_console(str(proc) + ": unexpected type for 'parameters' variable: "
+                                          + str(type(parameters)))
+            sys.exit(1)
+
+        #
+        # build a nested dictionary of neighborhood, where the keys are
+        # ['cell name']['reference name']
+        # where 'reference name' is the name
+        # of the reference lineage, and neighborhood a dictionary of contact surfaces indexed by cell names
+        # only consider the first time point after the division
+        #
+
+        if 'cell_lineage' not in prop:
+            monitoring.to_log_and_console(str(proc) + ": 'cell_lineage' was not in dictionary")
+            return
+
+        if 'cell_name' not in prop:
+            monitoring.to_log_and_console(str(proc) + ": 'cell_name' was not in dictionary")
+            return
+
+        if 'cell_contact_surface' not in prop:
+            monitoring.to_log_and_console(str(proc) + ": 'cell_contact_surface' was not in dictionary")
+            return
+
+        if 'cell_volume' not in prop:
+            monitoring.to_log_and_console(str(proc) + ": 'cell_volume' was not in dictionary")
+            return
+
+        self._atlases[name] = {}
+        self._atlases[name]['cell_lineage'] = copy.deepcopy(prop['cell_lineage'])
+        self._atlases[name]['cell_name'] = copy.deepcopy(prop['cell_name'])
+        self._atlases[name]['cell_contact_surface'] = copy.deepcopy(prop['cell_contact_surface'])
+        self._atlases[name]['cell_volume'] = copy.deepcopy(prop['cell_volume'])
+
+        return
+
     def build_neighborhoods(self, atlasfiles, parameters, time_digits_for_cell_id=4):
         """
 
@@ -1320,29 +1416,28 @@ class Atlases(object):
             self.update_from_parameters(parameters)
 
         if isinstance(atlasfiles, str):
-            prop = properties.read_dictionary(atlasfiles, inputpropertiesdict={})
+            prop = ioproperties.read_dictionary(atlasfiles, inputpropertiesdict={})
             name = atlasfiles.split(os.path.sep)[-1]
             if name.endswith(".xml") or name.endswith(".pkl"):
                 name = name[:-4]
             if parameters.diagnosis_properties:
                 udiagnosis.diagnosis(prop, ['name', 'contact'], parameters,
                                      time_digits_for_cell_id=time_digits_for_cell_id)
-            self._neighborhoods = _add_neighborhoods(self._neighborhoods, prop, parameters, atlas_name=name,
-                                                     time_digits_for_cell_id=time_digits_for_cell_id)
-            self._atlases = _add_atlas(self._atlases, name, prop, parameters)
+            self.add_neighborhoods(prop, parameters, atlas_name=name, time_digits_for_cell_id=time_digits_for_cell_id)
+            self.add_atlas(name, prop, parameters)
             del prop
         elif isinstance(atlasfiles, list):
             for f in atlasfiles:
-                prop = properties.read_dictionary(f, inputpropertiesdict={})
+                prop = ioproperties.read_dictionary(f, inputpropertiesdict={})
                 name = f.split(os.path.sep)[-1]
                 if name.endswith(".xml") or name.endswith(".pkl"):
                     name = name[:-4]
                 if parameters.diagnosis_properties:
                     udiagnosis.diagnosis(prop, ['name', 'contact'], parameters,
                                          time_digits_for_cell_id=time_digits_for_cell_id)
-                self._neighborhoods = _add_neighborhoods(self._neighborhoods, prop, parameters, atlas_name=name,
-                                                         time_digits_for_cell_id=time_digits_for_cell_id)
-                self._atlases = _add_atlas(self._atlases, name, prop, parameters)
+                self.add_neighborhoods(prop, parameters, atlas_name=name,
+                                       time_digits_for_cell_id=time_digits_for_cell_id)
+                self.add_atlas(name, prop, parameters)
                 del prop
 
         if self._neighborhoods is None:
@@ -1355,9 +1450,22 @@ class Atlases(object):
             self._use_common_neighborhood = True
             monitoring.to_log_and_console("    done", 1)
 
+        #
+        # dictionary indexed by mother cell names,
+        # give list of references for which both daughter cells exist
+        #
         monitoring.to_log_and_console("... build division list", 1)
         self.build_divisions()
         monitoring.to_log_and_console("    done", 1)
+
+        #
+        # dictionary indexed by mother cell names,
+        # give list of daughter cells, the largest one being the first one
+        #
+        monitoring.to_log_and_console("... build asymmetric division list", 1)
+        self.build_asymmetric_divisions()
+        monitoring.to_log_and_console("    done", 1)
+
 
         if parameters.diagnosis_properties:
             monitoring.to_log_and_console("")

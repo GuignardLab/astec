@@ -14,6 +14,7 @@ import astec.utils.common as common
 import astec.algorithms.contact_naming as acontactn
 import astec.utils.contact_atlas as ucontacta
 import astec.utils.properties as properties
+import astec.utils.ioproperties as ioproperties
 import astec.utils.diagnosis as diagnosis
 from astec.wrapping.cpp_wrapping import path_to_vt
 
@@ -139,11 +140,11 @@ def main():
     time_digits_for_cell_id = experiment.get_time_digits_for_cell_id()
 
     if args.parameterFile is None:
-        prop = properties.read_dictionary(args.inputFile, inputpropertiesdict={})
+        prop = ioproperties.read_dictionary(args.inputFile, inputpropertiesdict={})
         prop = properties.set_fate_from_names(prop, time_digits_for_cell_id=time_digits_for_cell_id)
         prop = properties.set_color_from_fate(prop)
         if args.outputFile is not None:
-            properties.write_dictionary(args.outputFile, prop)
+            ioproperties.write_dictionary(args.outputFile, prop)
         sys.exit(0)
 
     #
@@ -196,6 +197,7 @@ def main():
     #
     acontactn.monitoring.copy(monitoring)
     properties.monitoring.copy(monitoring)
+    ioproperties.monitoring.copy(monitoring)
     diagnosis.monitoring.copy(monitoring)
     ucontacta.monitoring.copy(monitoring)
 
@@ -218,7 +220,7 @@ def main():
 
     if args.write_selection or parameters.write_selection:
         time_digits_for_cell_id = experiment.get_time_digits_for_cell_id()
-        properties.write_morphonet_selection(prop, time_digits_for_cell_id=time_digits_for_cell_id,
+        ioproperties.write_morphonet_selection(prop, time_digits_for_cell_id=time_digits_for_cell_id,
                                              directory=parameters.outputDir)
     #
     # end of execution
