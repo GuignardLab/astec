@@ -995,7 +995,7 @@ def figures_distance_histogram(atlases, parameters):
     f.close()
 
 
-def _neighbor_histogram(neighbors, prop, threshold=0.05, time_digits_for_cell_id=4):
+def _neighbor_histogram(neighbors, prop, filename, threshold=0.05, time_digits_for_cell_id=4):
     proc = "_neighbor_histogram"
 
     if 'cell_contact_surface' not in prop:
@@ -1003,9 +1003,10 @@ def _neighbor_histogram(neighbors, prop, threshold=0.05, time_digits_for_cell_id
         return neighbors
     contact = prop['cell_contact_surface']
 
+    cell_number_threshold = 10
     #
     # nodespertime is a dictionary
-    # nodespertime[t] = nodes at time t
+    # nodespertime[t] = #nodes at time t
     #
     nodes = list(contact.keys())
     div = 10 ** time_digits_for_cell_id
@@ -1025,6 +1026,17 @@ def _neighbor_histogram(neighbors, prop, threshold=0.05, time_digits_for_cell_id
         # frac: array of surface fraction (without the background)
         #
         l = len([x for x in frac if x >= threshold])
+        #
+        # print a message for large neighbor number
+        #
+        if l > cell_number_threshold:
+            msg = "cell " + str(n)
+            if 'cell_name' in prop:
+                if n in prop['cell_name']:
+                    msg += " (" + str(prop['cell_name'][n]) + ")"
+            msg += " of properties '" + str(filename) + "' has " + str(l) + " neighbors"
+            msg += "(above " + str(threshold*100) + "%)"
+            monitoring.to_log_and_console("\t " + msg)
         t = n // div
         neighbors[nodespertime[t]] = neighbors.get(nodespertime[t], []) + [l]
     return neighbors
@@ -1062,12 +1074,12 @@ def figures_neighbor_histogram(atlasfiles, parameters, time_digits_for_cell_id=4
     neighbors = {}
     if isinstance(atlasfiles, str):
         prop = properties.read_dictionary(atlasfiles, inputpropertiesdict={})
-        neighbors = _neighbor_histogram(neighbors, prop, time_digits_for_cell_id=time_digits_for_cell_id)
+        neighbors = _neighbor_histogram(neighbors, prop, atlasfiles, time_digits_for_cell_id=time_digits_for_cell_id)
         del prop
     elif isinstance(atlasfiles, list):
         for f in atlasfiles:
             prop = properties.read_dictionary(f, inputpropertiesdict={})
-            neighbors = _neighbor_histogram(neighbors, prop, time_digits_for_cell_id=time_digits_for_cell_id)
+            neighbors = _neighbor_histogram(neighbors, prop, f, time_digits_for_cell_id=time_digits_for_cell_id)
             del prop
 
     #
