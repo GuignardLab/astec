@@ -386,7 +386,6 @@ def _test_asymmetric_divisions(prop, atlases):
 
     if len(errors) > 0:
         error_names = [name[m] for m in errors]
-        print(str(error_names))
         keyasymmetric = 'morphonet_selection_asymmetric_division_errors'
         prop[keyasymmetric] = {}
         cells = list(set(lineage.keys()).union(set([v for values in list(lineage.values()) for v in values])))
