@@ -12,7 +12,7 @@ from astec.components.spatial_image import SpatialImage
 from astec.io.image import imread, imsave
 import astec.utils.common as common
 import astec.utils.diagnosis as diagnosis
-import astec.utils.properties as properties
+import astec.utils.ioproperties as ioproperties
 from astec.wrapping import cpp_wrapping
 
 #
@@ -1150,7 +1150,7 @@ def contact_surface_computation(experiment, parameters):
 def _print_list(prop, tab, time_digits_for_cell_id=4, verbose=2):
 
     keyname = None
-    keynameset = set(prop.keys()).intersection(properties.keydictionary['name']['input_keys'])
+    keynameset = set(prop.keys()).intersection(ioproperties.keydictionary['name']['input_keys'])
     if len(keynameset) > 0:
         keyname = list(keynameset)[0]
 
@@ -1182,7 +1182,7 @@ def _check_volume_one_image(prop, image_name, current_time, time_digits_for_cell
     volume = nd.sum(np.ones_like(readim), readim, index=np.int16(labels_from_image))
     del readim
 
-    volume_from_lineage = properties.get_dictionary_entry(prop, 'volume')
+    volume_from_lineage = ioproperties.get_dictionary_entry(prop, 'volume')
 
     labels_from_image = [current_time * 10 ** time_digits_for_cell_id + int(label) for label in labels_from_image]
     volume_from_image = dict(list(zip(labels_from_image, volume)))
@@ -1272,7 +1272,7 @@ def postcorrection_process(experiment, parameters):
         sys.exit(1)
     elif os.path.isfile(os.path.join(segmentation_dir, lineage_tree_file)):
         lineage_tree_path = os.path.join(segmentation_dir, lineage_tree_file)
-        lineage_tree_information = properties.read_dictionary(lineage_tree_path)
+        lineage_tree_information = ioproperties.read_dictionary(lineage_tree_path)
     else:
         monitoring.to_log_and_console(str(proc) + ": " + str(lineage_tree_file) + " is not a file?")
         sys.exit(1)
@@ -1291,12 +1291,12 @@ def postcorrection_process(experiment, parameters):
     #
     # get lineage and volume dictionaries
     #
-    dict_lineage = properties.get_dictionary_entry(lineage_tree_information, 'lineage')
+    dict_lineage = ioproperties.get_dictionary_entry(lineage_tree_information, 'lineage')
     if dict_lineage == {}:
         monitoring.to_log_and_console(str(proc) + ": empty lineage information in " + str(lineage_tree_file))
         sys.exit(1)
 
-    dict_volume = properties.get_dictionary_entry(lineage_tree_information, 'volume')
+    dict_volume = ioproperties.get_dictionary_entry(lineage_tree_information, 'volume')
     if dict_volume == {}:
         monitoring.to_log_and_console(str(proc) + ": empty volume information in " + str(lineage_tree_file))
         sys.exit(1)
@@ -1306,8 +1306,8 @@ def postcorrection_process(experiment, parameters):
     #
     monitoring.to_log_and_console("   ... compute contact surfaces", 1)
     surface_file = contact_surface_computation(experiment, parameters)
-    surface_information = properties.read_dictionary(surface_file)
-    dict_surface = properties.get_dictionary_entry(surface_information, 'contact')
+    surface_information = ioproperties.read_dictionary(surface_file)
+    dict_surface = ioproperties.get_dictionary_entry(surface_information, 'contact')
     if dict_surface == {}:
         monitoring.to_log_and_console(str(proc) + ": empty surface information in " + str(surface_file))
         sys.exit(1)
@@ -1330,12 +1330,12 @@ def postcorrection_process(experiment, parameters):
     #
     # save lineage tree
     #
-    new_lineage_tree_information = {properties.keydictionary['lineage']['output_key']: lineage,
-                                    properties.keydictionary['volume']['output_key']: volume}
+    new_lineage_tree_information = {ioproperties.keydictionary['lineage']['output_key']: lineage,
+                                    ioproperties.keydictionary['volume']['output_key']: volume}
     segmentation_dir = experiment.post_dir.get_directory()
     lineage_tree_path = os.path.join(segmentation_dir, experiment.post_dir.get_file_name("_lineage") + "."
                                      + experiment.result_lineage_suffix)
-    properties.write_dictionary(lineage_tree_path, new_lineage_tree_information)
+    ioproperties.write_dictionary(lineage_tree_path, new_lineage_tree_information)
 
     #
     # test lineage

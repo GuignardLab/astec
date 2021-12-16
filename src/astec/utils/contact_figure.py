@@ -3,13 +3,12 @@ import sys
 import copy
 import os
 from collections import Counter
-import numpy as np
 
 import astec.utils.common as common
 import astec.utils.ascidian_name as uname
 import astec.utils.contact as ucontact
 import astec.utils.contact_atlas as ucontacta
-import astec.utils.properties as properties
+import astec.utils.ioproperties as ioproperties
 
 monitoring = common.Monitoring()
 
@@ -1073,12 +1072,12 @@ def figures_neighbor_histogram(atlasfiles, parameters, time_digits_for_cell_id=4
 
     neighbors = {}
     if isinstance(atlasfiles, str):
-        prop = properties.read_dictionary(atlasfiles, inputpropertiesdict={})
+        prop = ioproperties.read_dictionary(atlasfiles, inputpropertiesdict={})
         neighbors = _neighbor_histogram(neighbors, prop, atlasfiles, time_digits_for_cell_id=time_digits_for_cell_id)
         del prop
     elif isinstance(atlasfiles, list):
         for f in atlasfiles:
-            prop = properties.read_dictionary(f, inputpropertiesdict={})
+            prop = ioproperties.read_dictionary(f, inputpropertiesdict={})
             neighbors = _neighbor_histogram(neighbors, prop, f, time_digits_for_cell_id=time_digits_for_cell_id)
             del prop
 

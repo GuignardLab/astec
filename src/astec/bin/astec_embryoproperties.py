@@ -14,6 +14,7 @@ from argparse import ArgumentParser
 import astec.utils.common as common
 import astec.utils.diagnosis as diagnosis
 import astec.utils.properties as properties
+import astec.utils.ioproperties as ioproperties
 from astec.wrapping.cpp_wrapping import path_to_vt
 
 #
@@ -245,6 +246,7 @@ def main():
         # so the log filename is known
         #
         properties.monitoring.copy(monitoring)
+        ioproperties.monitoring.copy(monitoring)
         diagnosis.monitoring.copy(monitoring)
 
         #
@@ -300,11 +302,11 @@ def main():
         #
 
         if pkl_is_to_be_done is True or tlp_is_to_be_done is True:
-            inputdict = properties.read_dictionary(xml_output)
+            inputdict = ioproperties.read_dictionary(xml_output)
             if pkl_is_to_be_done is True:
-                properties.write_dictionary(pkl_output, inputdict)
+                ioproperties.write_dictionary(pkl_output, inputdict)
             if tlp_is_to_be_done is True:
-                properties.write_dictionary(tlp_output, inputdict)
+                ioproperties.write_dictionary(tlp_output, inputdict)
             del inputdict
 
         endtime = time.localtime()
@@ -321,6 +323,7 @@ def main():
             monitoring.set_log_filename(experiment, __file__, start_time)
 
         properties.monitoring.copy(monitoring)
+        ioproperties.monitoring.copy(monitoring)
         diagnosis.monitoring.copy(monitoring)
 
         #
@@ -329,7 +332,7 @@ def main():
         # 2. lineage file: such a key may be missing
         #
 
-        inputdict = properties.read_dictionary(args.inputFiles, inputpropertiesdict={})
+        inputdict = ioproperties.read_dictionary(args.inputFiles, inputpropertiesdict={})
 
         if args.print_input_types is True:
             properties.print_type(inputdict, desc="root")
@@ -356,7 +359,7 @@ def main():
         # is there some comparison to be done?
         #
         if args.compareFiles is not None and len(args.compareFiles) > 0:
-            comparedict = properties.read_dictionary(args.compareFiles, inputpropertiesdict={})
+            comparedict = ioproperties.read_dictionary(args.compareFiles, inputpropertiesdict={})
             if args.print_content is True:
                 properties.print_keys(comparedict, desc="dictionary to be compared with")
             if comparedict == {}:
@@ -393,7 +396,7 @@ def main():
             for feature in args.outputFeatures:
 
                 # print("search feature '" + str(feature) + "'")
-                target_key = properties.keydictionary[feature]
+                target_key = ioproperties.keydictionary[feature]
 
                 for searchedkey in target_key['input_keys']:
                     if searchedkey in inputdict:
@@ -414,9 +417,9 @@ def main():
                 outputdict = {}
                 for inputkey in inputdict:
                     foundkey = False
-                    for k in properties.keydictionary:
-                        if inputkey in properties.keydictionary[k]['input_keys']:
-                            outputkey = properties.keydictionary[k]['output_key']
+                    for k in ioproperties.keydictionary:
+                        if inputkey in ioproperties.keydictionary[k]['input_keys']:
+                            outputkey = ioproperties.keydictionary[k]['output_key']
                             if outputkey == 'cell_lineage':
                                 outputdict['lin_tree'] = inputdict[inputkey]
                             elif outputkey == 'cell_volume':
@@ -444,11 +447,11 @@ def main():
         else:
             for ofile in args.outputFiles:
                 print("... writing '" + str(ofile) + "'")
-                properties.write_dictionary(ofile, outputdict)
+                ioproperties.write_dictionary(ofile, outputdict)
 
         if args.write_selection:
             time_digits_for_cell_id = experiment.get_time_digits_for_cell_id()
-            properties.write_morphonet_selection(inputdict, time_digits_for_cell_id=time_digits_for_cell_id)
+            ioproperties.write_morphonet_selection(inputdict, time_digits_for_cell_id=time_digits_for_cell_id)
 
 #
 #

@@ -15,6 +15,7 @@ import astec.algorithms.contact_atlas as acontacta
 import astec.utils.contact_atlas as ucontacta
 import astec.utils.contact_figure as ucontactf
 import astec.utils.properties as properties
+import astec.utils.ioproperties as ioproperties
 import astec.utils.diagnosis as diagnosis
 from astec.wrapping.cpp_wrapping import path_to_vt
 
@@ -183,6 +184,7 @@ def main():
     ucontacta.monitoring.copy(monitoring)
     ucontactf.monitoring.copy(monitoring)
     properties.monitoring.copy(monitoring)
+    ioproperties.monitoring.copy(monitoring)
     diagnosis.monitoring.copy(monitoring)
 
     #
@@ -204,7 +206,7 @@ def main():
 
     if args.write_selection or parameters.write_selection:
         time_digits_for_cell_id = experiment.get_time_digits_for_cell_id()
-        properties.write_morphonet_selection(atlases.get_output_selections(),
+        ioproperties.write_morphonet_selection(atlases.get_output_selections(),
                                              time_digits_for_cell_id=time_digits_for_cell_id,
                                              directory=parameters.outputDir)
     #
