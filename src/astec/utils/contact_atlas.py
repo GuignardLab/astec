@@ -111,8 +111,8 @@ class AtlasParameters(udiagnosis.DiagnosisParameters):
         doc = "\t If True, will propose some daughters switches in the atlases. For a given division,\n"
         doc += "\t a global score is computed as the sum of all pairwise division similarity.\n"
         doc += "\t A switch is proposed for an atlas if it allows to decrease this global score."
-        self.doc['daughter_switch_proposal'] = doc
-        self.daughter_switch_proposal = False
+        self.doc['division_permutation_proposal'] = doc
+        self.division_permutation_proposal = False
 
         #
         #
@@ -169,7 +169,7 @@ class AtlasParameters(udiagnosis.DiagnosisParameters):
 
         self.varprint('diagnosis_properties', self.diagnosis_properties)
 
-        self.varprint('daughter_switch_proposal', self.daughter_switch_proposal)
+        self.varprint('division_permutation_proposal', self.division_permutation_proposal)
 
         self.varprint('dendrogram_cluster_distance', self.dendrogram_cluster_distance)
 
@@ -209,8 +209,8 @@ class AtlasParameters(udiagnosis.DiagnosisParameters):
         self.varwrite(logfile, 'diagnosis_properties', self.diagnosis_properties,
                       self.doc.get('diagnosis_properties', None))
 
-        self.varwrite(logfile, 'daughter_switch_proposal', self.daughter_switch_proposal,
-                      self.doc.get('daughter_switch_proposal', None))
+        self.varwrite(logfile, 'division_permutation_proposal', self.division_permutation_proposal,
+                      self.doc.get('division_permutation_proposal', None))
 
         self.varwrite(logfile, 'dendrogram_cluster_distance', self.dendrogram_cluster_distance,
                       self.doc.get('dendrogram_cluster_distance', None))
@@ -259,8 +259,10 @@ class AtlasParameters(udiagnosis.DiagnosisParameters):
         self.diagnosis_properties = self.read_parameter(parameters, 'naming_diagnosis', self.diagnosis_properties)
         self.diagnosis_properties = self.read_parameter(parameters, 'diagnosis_naming', self.diagnosis_properties)
 
-        self.daughter_switch_proposal = self.read_parameter(parameters, 'daughter_switch_proposal',
-                                                            self.daughter_switch_proposal)
+        self.division_permutation_proposal = self.read_parameter(parameters, 'division_permutation_proposal',
+                                                            self.division_permutation_proposal)
+        self.division_permutation_proposal = self.read_parameter(parameters, 'daughter_permutation_proposal',
+                                                                 self.division_permutation_proposal)
 
         self.dendrogram_cluster_distance = self.read_parameter(parameters, 'dendrogram_cluster_distance',
                                                                self.dendrogram_cluster_distance)
@@ -414,7 +416,7 @@ def _diagnosis_pairwise_switches(atlases, parameters):
 #
 ########################################################################################
 
-def _dsp_switch_contact_surfaces(neighbors, reference, daughters):
+def _dpp_switch_contact_surfaces(neighbors, reference, daughters):
     """
     Switch contact surfaces for the two daughters and atlas 'reference'.
     Parameters
@@ -444,7 +446,7 @@ def _dsp_switch_contact_surfaces(neighbors, reference, daughters):
     return neighbors
 
 
-def _dsp_global_generic_distance(neighbors, references, atlases, parameters, debug=False):
+def _dpp_global_generic_distance(neighbors, references, atlases, parameters, debug=False):
     """
     Compute a global score. The global score is the average of local similarities over all
     couples of references/atlases.
@@ -478,7 +480,7 @@ def _dsp_global_generic_distance(neighbors, references, atlases, parameters, deb
     return score / n
 
 
-def _dsp_test_one_division(atlases, mother, parameters):
+def _dpp_test_one_division(atlases, mother, parameters):
     """
     Test whether any daughter switch (for a given reference) improve a global score
     Parameters
@@ -500,7 +502,7 @@ def _dsp_test_one_division(atlases, mother, parameters):
     neighbors = {0: copy.deepcopy(neighborhoods[daughters[0]]), 1: copy.deepcopy(neighborhoods[daughters[1]])}
 
     # score before any changes
-    score = _dsp_global_generic_distance(neighbors, divisions[mother], atlases, parameters)
+    score = _dpp_global_generic_distance(neighbors, divisions[mother], atlases, parameters)
 
     returned_scores = [(None, score)]
     corrections = []
@@ -512,9 +514,9 @@ def _dsp_test_one_division(atlases, mother, parameters):
             # switch contact surfaces for the daughters in atlas 'r'
             #
             tmp = copy.deepcopy(neighbors)
-            tmp = _dsp_switch_contact_surfaces(tmp, r, daughters)
+            tmp = _dpp_switch_contact_surfaces(tmp, r, daughters)
             # compute a new score, keep it if it better than the one before any changes
-            newscore[r] = _dsp_global_generic_distance(tmp, divisions[mother], atlases, parameters)
+            newscore[r] = _dpp_global_generic_distance(tmp, divisions[mother], atlases, parameters)
             if newscore[r] > score:
                 del newscore[r]
         # no found correction at this iteration
@@ -536,13 +538,13 @@ def _dsp_test_one_division(atlases, mother, parameters):
         # if one correction has been found, apply it
         # and look for an other additional correction
         tmp = copy.deepcopy(neighbors)
-        tmp = _dsp_switch_contact_surfaces(tmp, ref, daughters)
+        tmp = _dpp_switch_contact_surfaces(tmp, ref, daughters)
         neighbors[0] = copy.deepcopy(tmp[0])
         neighbors[1] = copy.deepcopy(tmp[1])
         score = newscore[ref]
 
 
-def daughter_switch_proposal(atlases, parameters):
+def division_permutation_proposal(atlases, parameters):
 
     # neighborhoods is a dictionary of dictionaries
     # ['cell name']['reference name']
@@ -555,7 +557,7 @@ def daughter_switch_proposal(atlases, parameters):
     # stage 7: 64 cells
     #
 
-    proc = "daughter_switch_proposal"
+    proc = "division_permutation_proposal"
 
     divisions = atlases.get_divisions()
     mothers = {}
@@ -577,7 +579,7 @@ def daughter_switch_proposal(atlases, parameters):
         for m in mothers[s]:
             # if m != 'a7.0002_':
             #     continue
-            correction, returned_score = _dsp_test_one_division(atlases, m, parameters)
+            correction, returned_score = _dpp_test_one_division(atlases, m, parameters)
             #
             # correction is a dictionary indexed by the iteration index
             # each value is a tuple ('atlas name', score increment)
@@ -606,8 +608,8 @@ def daughter_switch_proposal(atlases, parameters):
                 monitoring.to_log_and_console(proc + ": weird, '" + str(ref) + "' is not in reference atlases.", 4)
                 continue
 
-            keyscore = "morphonet_float_" + str(ref) + "_distance_average_before_switch_proposal"
-            keydecre = "morphonet_float_" + str(ref) + "_distance_decrement_percentage_after_switch_proposal"
+            keyscore = "morphonet_float_" + str(ref) + "_distance_average_before_permutation_proposal"
+            keydecre = "morphonet_float_" + str(ref) + "_distance_decrement_percentage_after_permutation_proposal"
             output_selections[keyscore] = output_selections.get(keyscore, {})
             output_selections[keydecre] = output_selections.get(keydecre, {})
 
@@ -625,7 +627,7 @@ def daughter_switch_proposal(atlases, parameters):
     #
     # reporting
     #
-    monitoring.to_log_and_console("====== daughter switch proposal =====")
+    monitoring.to_log_and_console("====== division permutation proposal =====")
     monitoring.to_log_and_console("------ cell-based view")
     corrections_by_atlas = {}
     for s in stages:

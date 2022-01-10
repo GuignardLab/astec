@@ -93,7 +93,7 @@ def contact_atlas_process(experiment, parameters):
     # report it in the console/log file
     # as well as in morphonet selection filea
     #
-    if parameters.daughter_switch_proposal:
-        ucontacta.daughter_switch_proposal(atlases, parameters)
+    if parameters.division_permutation_proposal:
+        ucontacta.division_permutation_proposal(atlases, parameters)
 
     return atlases

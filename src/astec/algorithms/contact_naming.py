@@ -671,14 +671,14 @@ def _give_name(daughters, daughter_names, distance, certainty, parameters, debug
             name[daughters[1]] = daughter_names[1]
             name_certainty[daughters[0]] = certainty[0][min0[0]]
             name_certainty[daughters[1]] = name_certainty[daughters[0]]
-            name_gap[daughters[0]] = (min1[1] - min0[1]) / min1[1]
+            name_gap[daughters[0]] = min1[1] - min0[1]
             name_gap[daughters[1]] = name_gap[daughters[0]]
         else:
             name[daughters[1]] = daughter_names[0]
             name[daughters[0]] = daughter_names[1]
             name_certainty[daughters[0]] = certainty[1][min1[0]]
             name_certainty[daughters[1]] = name_certainty[daughters[0]]
-            name_gap[daughters[0]] = (min0[1] - min1[1]) / min0[1]
+            name_gap[daughters[0]] = min0[1] - min1[1]
             name_gap[daughters[1]] = name_gap[daughters[0]]
         return name, name_certainty, name_gap
 
@@ -691,14 +691,14 @@ def _give_name(daughters, daughter_names, distance, certainty, parameters, debug
             name[daughters[1]] = daughter_names[1]
             name_certainty[daughters[0]] = statistics.mean([certainty[0][a] for a in distance[0]])
             name_certainty[daughters[1]] = name_certainty[daughters[0]]
-            name_gap[daughters[0]] = (mean1 - mean0) / mean1
+            name_gap[daughters[0]] = mean1 - mean0
             name_gap[daughters[1]] = name_gap[daughters[0]]
         else:
             name[daughters[1]] = daughter_names[0]
             name[daughters[0]] = daughter_names[1]
             name_certainty[daughters[0]] = statistics.mean([certainty[1][a] for a in distance[1]])
             name_certainty[daughters[1]] = name_certainty[daughters[0]]
-            name_gap[daughters[0]] = (mean0 - mean1) / mean0
+            name_gap[daughters[0]] = mean0 - mean1
             name_gap[daughters[1]] = name_gap[daughters[0]]
         return name, name_certainty, name_gap
 
@@ -785,6 +785,8 @@ def _propagate_naming(prop, atlases, parameters, time_digits_for_cell_id=4):
     prop[keydifference] = {}
     for k in prop['cell_name']:
         prop[keydifference][k] = 1.0
+
+    difference_per_division = {}
     #
     #
     #
@@ -974,12 +976,22 @@ def _propagate_naming(prop, atlases, parameters, time_digits_for_cell_id=4):
             name, name_certainty, name_gap = _give_name(daughters, daughter_names, distance, certainty, parameters,
                                                         debug=debug)
 
+            difference_per_division[prop['cell_name'][mother]] = name_gap[daughters[0]]
+
             for c in name:
                 if name[c] is not None:
                     prop['cell_name'][c] = name[c]
                     prop[keycertainty][c] = name_certainty[c]
                     prop[keydifference][c] = name_gap[c]
                     _propagate_name_along_branch(prop, c, [keycertainty, keydifference])
+
+    if len(difference_per_division) > 0:
+        sorted_difference_per_division = sorted(difference_per_division.items(), key=lambda t: t[1], reverse=True)
+        monitoring.to_log_and_console("----- division naming: distance difference (decreasing order) -----")
+        for d in sorted_difference_per_division:
+            msg = "  " + str(d[0]) + ": {:.4f}".format(d[1])
+            monitoring.to_log_and_console(msg)
+        monitoring.to_log_and_console("-------------------------------------------------------------------")
 
     return prop
 

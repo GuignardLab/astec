@@ -747,6 +747,7 @@ def figures_distance_histogram(atlases, parameters):
 
     right_dscores = []
     wrong_dscores = []
+    diff_dscores = []
 
     for n in divisions:
         d = uname.get_daughter_names(n)
@@ -774,8 +775,13 @@ def figures_distance_histogram(atlases, parameters):
                                                                     neighborhoods[d[1]][r1], neighborhoods[d[1]][r2],
                                                                     neighborhoods[d[0]][r2],
                                                                     similarity=similarity, change_contact_surfaces=ccs)
+                # if n[:2] == 'a6':
+                #     print("division distance of " + n + " between " + r1 + " and " + r2 + ":")
+                #     print("\t right pairing = " + str(div00))
+                #     print("\t wrong pairing = " + str(div01))
                 right_dscores += [div00]
                 wrong_dscores += [div01]
+                diff_dscores += [div01-div00]
 
     if compute_other_scores:
 
@@ -990,6 +996,24 @@ def figures_distance_histogram(atlases, parameters):
     f.write("    plt.close()\n")
 
     f.write("\n")
+    _write_array(f, "diff_dscores", diff_dscores, length=4)
+    f.write("\n")
+    f.write("fig, ax = plt.subplots(figsize=(7.5, 7.5))\n")
+    f.write("ax.hist(diff_dscores, 100, histtype='bar')\n")
+    f.write("ax.set_title('atlas-to-atlas division distance difference', fontsize=12)\n")
+    f.write("ax.tick_params(labelsize=10)\n")
+
+    f.write("\n")
+    f.write("if savefig:\n")
+    f.write("    plt.savefig('histogram1D_division_difference")
+    if file_suffix is not None:
+        f.write(file_suffix)
+    f.write("'" + " + '.png')\n")
+    f.write("else:\n")
+    f.write("    plt.show()\n")
+    f.write("    plt.close()\n")
+
+    f.write("\n")
 
     f.close()
 
@@ -1034,7 +1058,7 @@ def _neighbor_histogram(neighbors, prop, filename, threshold=0.05, time_digits_f
                 if n in prop['cell_name']:
                     msg += " (" + str(prop['cell_name'][n]) + ")"
             msg += " of properties '" + str(filename) + "' has " + str(l) + " neighbors"
-            msg += "(above " + str(threshold*100) + "%)"
+            msg += " (above " + str(threshold*100) + "%)"
             monitoring.to_log_and_console("\t " + msg)
         t = n // div
         neighbors[nodespertime[t]] = neighbors.get(nodespertime[t], []) + [l]
