@@ -261,7 +261,7 @@ class AtlasParameters(udiagnosis.DiagnosisParameters):
 
         self.division_permutation_proposal = self.read_parameter(parameters, 'division_permutation_proposal',
                                                             self.division_permutation_proposal)
-        self.division_permutation_proposal = self.read_parameter(parameters, 'daughter_permutation_proposal',
+        self.division_permutation_proposal = self.read_parameter(parameters, 'daughter_switch_proposal',
                                                                  self.division_permutation_proposal)
 
         self.dendrogram_cluster_distance = self.read_parameter(parameters, 'dendrogram_cluster_distance',
@@ -1080,7 +1080,8 @@ class Atlases(object):
             #
             refs = list(references[n])
             for r in refs:
-                if r in neighborhoods[daughters[0]] and r in neighborhoods[daughters[1]]:
+                if daughters[0] in neighborhoods and r in neighborhoods[daughters[0]] and \
+                        daughters[1] in neighborhoods and r in neighborhoods[daughters[1]]:
                     self._divisions[n] = self._divisions.get(n, []) + [r]
                 else:
                     monitoring.to_log_and_console(str(proc) + ": remove atlas '" + str(r) + "' for division '" + str(n)

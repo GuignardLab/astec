@@ -987,11 +987,13 @@ def _propagate_naming(prop, atlases, parameters, time_digits_for_cell_id=4):
 
     if len(difference_per_division) > 0:
         sorted_difference_per_division = sorted(difference_per_division.items(), key=lambda t: t[1], reverse=True)
-        monitoring.to_log_and_console("----- division naming: distance difference (decreasing order) -----")
+        msg = "----- division naming: distance difference ((not chosen) - (chosen): decreasing order) -----"
+        monitoring.to_log_and_console(msg)
         for d in sorted_difference_per_division:
             msg = "  " + str(d[0]) + ": {:.4f}".format(d[1])
             monitoring.to_log_and_console(msg)
-        monitoring.to_log_and_console("-------------------------------------------------------------------")
+        msg = "--------------------------------------------------------------------------------------------"
+        monitoring.to_log_and_console(msg)
 
     return prop
 
