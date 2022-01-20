@@ -49,19 +49,29 @@ def contact_atlas_process(experiment, parameters):
     if parameters.generate_figure:
 
         #
+        #
+        #
+        if True:
+            monitoring.to_log_and_console("... generate cell number plot file", 1)
+            ucontactf.figures_temporal_registration(atlases, parameters, time_digits_for_cell_id=time_digits_for_cell_id)
+            monitoring.to_log_and_console("... done", 1)
+
+        #
         # draw cell neighbor number with respect to number of cells in embryo
         #
-        monitoring.to_log_and_console("... generate neighbors histogram file", 1)
-        ucontactf.figures_neighbor_histogram(parameters.atlasFiles, parameters,
-                                             time_digits_for_cell_id=time_digits_for_cell_id)
-        monitoring.to_log_and_console("... done", 1)
+        if True:
+            monitoring.to_log_and_console("... generate neighbors histogram file", 1)
+            ucontactf.figures_neighbor_histogram(parameters.atlasFiles, parameters,
+                                                 time_digits_for_cell_id=time_digits_for_cell_id)
+            monitoring.to_log_and_console("... done", 1)
 
         #
         # draw neighborhood-to-neighborhood distance with respect to distance from division
         #
-        monitoring.to_log_and_console("... generate distance along branch file", 1)
-        ucontactf.figures_distance_along_branch(atlases, parameters, time_digits_for_cell_id=time_digits_for_cell_id)
-        monitoring.to_log_and_console("... done", 1)
+        if True:
+            monitoring.to_log_and_console("... generate distance along branch file", 1)
+            ucontactf.figures_distance_along_branch(atlases, parameters, time_digits_for_cell_id=time_digits_for_cell_id)
+            monitoring.to_log_and_console("... done", 1)
 
         #
         # draw a graph of reference/atlas embryos per division where edge are valued by the sum of scores
@@ -77,16 +87,18 @@ def contact_atlas_process(experiment, parameters):
         # 2D histograms are at division level
         # 1D histograms are at cell (daughter) level
         #
-        monitoring.to_log_and_console("... generate division distance histogram file", 1)
-        ucontactf.figures_distance_histogram(atlases, parameters)
-        monitoring.to_log_and_console("... done", 1)
+        if True:
+            monitoring.to_log_and_console("... generate division distance histogram file", 1)
+            ucontactf.figures_distance_histogram(atlases, parameters)
+            monitoring.to_log_and_console("... done", 1)
 
         #
         # draw a graph per division where edges are valued with similarity between division
         #
-        monitoring.to_log_and_console("... generate division dendrogram figure file", 1)
-        ucontactf.figures_division_dendrogram(atlases, parameters)
-        monitoring.to_log_and_console("... done", 1)
+        if True:
+            monitoring.to_log_and_console("... generate division dendrogram figure file", 1)
+            ucontactf.figures_division_dendrogram(atlases, parameters)
+            monitoring.to_log_and_console("... done", 1)
 
     #
     # look for daughter that may improve a global score

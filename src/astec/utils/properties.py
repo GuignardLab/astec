@@ -1137,6 +1137,96 @@ def set_color_from_fate(d):
 
 ########################################################################################
 #
+#
+#
+########################################################################################
+
+def _find_t(cells_per_time, n):
+    if n in cells_per_time.values():
+        times = [t for t in cells_per_time if cells_per_time[t] == n]
+        return (min(times) + max(times))/2.0
+    smaller_times = [t for t in cells_per_time if cells_per_time[t] < n]
+    larger_times = [t for t in cells_per_time if cells_per_time[t] > n]
+    return (max(smaller_times) + min(larger_times)) / 2.0
+
+
+def _temporal_alignement(ref_cells_per_time, cells_per_time):
+    first = max(min(ref_cells_per_time.values()), min(cells_per_time.values()))
+    last = min(max(ref_cells_per_time.values()), max(cells_per_time.values()))
+    ref_times = []
+    times = []
+    for n in range(first, last+1):
+        if n not in ref_cells_per_time.values() and n not in cells_per_time.values():
+            continue
+        ref_times += [_find_t(ref_cells_per_time, n)]
+        times += [_find_t(cells_per_time, n)]
+    # Consider $\sum_i \left( a t_i +b - t'_i\right)^2$
+    #
+    # \begin{eqnarray*}
+    # \frac{\partial}{\partial b} \sum_i \left( a t_i +b - t'_i\right)^2 = 0
+    # & \Leftrightarrow &
+    # \sum_i 2 \left( a t_i +b - t'_i\right) = 0 \\
+    # & \Leftrightarrow & a \sum_i t_i + N b - \sum_i t'_i = 0 \\
+    # & \Leftrightarrow & b = \frac{\sum_i t'_i - a \sum_i t_i}{N}
+    # \end{eqnarray*}
+    #
+    # \begin{eqnarray*}
+    # \frac{\partial}{\partial a} \sum_i \left( a t_i +b - t'_i\right)^2 = 0
+    # & \Leftrightarrow &
+    # \sum_i 2 \left( a t_i +b - t'_i\right) t_i = 0 \\
+    # & \Leftrightarrow &
+    # a \sum_i (t_i)^2 + b \sum_i t_i - \sum_i t_i t'_i = 0 \\
+    # & \Leftrightarrow &
+    # a \sum_i (t_i)^2 +
+    # \frac{\left( \sum_i t_i \right) \left( \sum_i t'_i \right)}{N}
+    # - a \frac{\left( \sum_i t_i \right)^2}{N} - \sum_i t_i t'_i = 0 \\
+    # & \Leftrightarrow &
+    # a \left( \sum_i (t_i)^2 - \frac{\left( \sum_i t_i \right)^2}{N} \right)
+    # = \sum_i t_i t'_i - \frac{\left( \sum_i t_i \right) \left( \sum_i t'_i \right)}{N}
+    # \end{eqnarray*}
+    num = sum(np.multiply(times, ref_times)) - sum(times) * sum(ref_times) / len(times)
+    den = sum(np.multiply(times, times)) - sum(times) * sum(times) / len(times)
+    a = num/den
+    b = (sum(ref_times) - a * sum(times)) / len(times)
+    return a, b
+
+
+def temporal_alignment(ref_lineage, lineage, time_digits_for_cell_id=4):
+    """
+
+    Parameters
+    ----------
+    ref_lineage: reference lineage
+    lineage: lineage to be aligned with the reference lineage
+    time_digits_for_cell_id: number of digits for the cell number in the unique cell identifier
+
+    Returns
+    -------
+    a, b: coefficients of the linear warping. The number of cells at time 't' of the lineage is
+        made comparable to the number of cells at time 'a * t + b' of the reference lineage.
+
+    """
+    div = 10 ** time_digits_for_cell_id
+
+    cells = list(set(ref_lineage.keys()).union(set([v for values in list(ref_lineage.values()) for v in values])))
+    cells = sorted(cells)
+    ref_cells_per_time = {}
+    for c in cells:
+        t = int(c) // div
+        ref_cells_per_time[t] = ref_cells_per_time.get(t, 0) + 1
+
+    cells = list(set(lineage.keys()).union(set([v for values in list(lineage.values()) for v in values])))
+    cells = sorted(cells)
+    cells_per_time = {}
+    for c in cells:
+        t = int(c) // div
+        cells_per_time[t] = cells_per_time.get(t, 0) + 1
+
+    return _temporal_alignement(ref_cells_per_time, cells_per_time)
+
+
+########################################################################################
+#
 # utilities for debugging, etc.
 #
 ########################################################################################
