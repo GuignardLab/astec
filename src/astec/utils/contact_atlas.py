@@ -10,6 +10,7 @@ import numpy as np
 
 import astec.utils.common as common
 import astec.utils.ioproperties as ioproperties
+import astec.utils.properties as properties
 import astec.utils.ascidian_name as uname
 import astec.utils.contact as ucontact
 import astec.utils.diagnosis as udiagnosis
@@ -41,6 +42,12 @@ class AtlasParameters(udiagnosis.DiagnosisParameters):
         doc += "\t names, and contact surfaces for an embryo."
         self.doc['atlasFiles'] = doc
         self.atlasFiles = []
+
+        doc = "\t Reference atlas. Use for time alignment. If not provide, the first atlas of\n"
+        doc += "\t 'atlasFiles' is used as reference. Warning, the reference atlas has to be in\n"
+        doc += "\t 'atlasFiles' list also."
+        self.doc['referenceAtlas'] = doc
+        self.referenceAtlas = None
 
         doc = "\t Output directory where to write atlas-individualized output files,"
         doc += "\t ie morphonet selection files or figure files."
@@ -156,6 +163,7 @@ class AtlasParameters(udiagnosis.DiagnosisParameters):
         udiagnosis.DiagnosisParameters.print_parameters(self)
 
         self.varprint('atlasFiles', self.atlasFiles)
+        self.varprint('referenceAtlas', self.referenceAtlas)
 
         self.varprint('outputDir', self.outputDir)
         self.varprint('write_selection', self.write_selection)
@@ -190,6 +198,7 @@ class AtlasParameters(udiagnosis.DiagnosisParameters):
         udiagnosis.DiagnosisParameters.write_parameters_in_file(self, logfile)
 
         self.varwrite(logfile, 'atlasFiles', self.atlasFiles, self.doc.get('atlasFiles', None))
+        self.varwrite(logfile, 'referenceAtlas', self.referenceAtlas, self.doc.get('referenceAtlas', None))
 
         self.varwrite(logfile, 'outputDir', self.outputDir, self.doc.get('outputDir', None))
         self.varwrite(logfile, 'write_selection', self.write_selection, self.doc.get('write_selection', None))
@@ -238,6 +247,7 @@ class AtlasParameters(udiagnosis.DiagnosisParameters):
 
         self.atlasFiles = self.read_parameter(parameters, 'atlasFiles', self.atlasFiles)
         self.atlasFiles = self.read_parameter(parameters, 'referenceFiles', self.atlasFiles)
+        self.referenceAtlas = self.read_parameter(parameters, 'referenceAtlas', self.referenceAtlas)
 
         self.outputDir = self.read_parameter(parameters, 'outputDir', self.outputDir)
         self.write_selection = self.read_parameter(parameters, 'write_selection', self.write_selection)
@@ -827,7 +837,6 @@ def _diagnosis_linkage(atlases, parameters):
                 if name[c] == n:
                     output_selections[keyselection][c] = 100
 
-
     monitoring.to_log_and_console("------ division with same dendrogram last values (without and with switch)")
     msg = str(len(nochanges)) + "/" + str(len(division_lastmerge_values)) + " divisions"
     monitoring.to_log_and_console("\t " + msg)
@@ -851,16 +860,6 @@ def _diagnosis_linkage(atlases, parameters):
         msg = "    - division of '" + str(s[0]) + "': " + str(s[1])
         monitoring.to_log_and_console(msg)
     monitoring.to_log_and_console("")
-
-########################################################################################
-#
-#
-#
-########################################################################################
-
-
-
-
 
 
 ########################################################################################
@@ -921,6 +920,9 @@ class Atlases(object):
 
         self.cell_contact_distance = 'l1_distance'
         self.division_contact_similarity = 'distance'
+
+        # reference atlas for time alignment
+        self._ref_atlas = None
 
         # partial copy of the read atlases, required when figures have to be generated
         self._atlases = {}
@@ -1020,6 +1022,12 @@ class Atlases(object):
             monitoring.to_log_and_console(str(proc) + ": unexpected type for 'parameters' variable: "
                                           + str(type(parameters)))
 
+        if parameters.referenceAtlas is not None:
+            name = parameters.referenceAtlas.split(os.path.sep)[-1]
+            if name.endswith(".xml") or name.endswith(".pkl"):
+                name = name[:-4]
+            self._ref_atlas = name
+
         if parameters.division_contact_similarity.lower() == 'distance' \
                 or parameters.division_contact_similarity.lower() == 'norm' \
                 or parameters.division_contact_similarity.lower() == 'l1_distance' \
@@ -1081,8 +1089,8 @@ class Atlases(object):
                 if r in neighborhoods[daughters[0]] and r in neighborhoods[daughters[1]]:
                     self._divisions[n] = self._divisions.get(n, []) + [r]
                 else:
-                    monitoring.to_log_and_console(str(proc) + ": remove atlas '" + str(r) + "' for division '" + str(n)
-                                                  + "'")
+                    msg = "    " + str(proc) + ": remove atlas '" + str(r) + "' for division '" + str(n) + "'"
+                    monitoring.to_log_and_console(msg)
 
     def build_asymmetric_divisions(self):
         """
@@ -1121,7 +1129,23 @@ class Atlases(object):
         monitoring.to_log_and_console("\t" + msg)
         return
 
+    ############################################################
+    #
+    #
+    #
+    ############################################################
 
+    def temporal_alignment(self, time_digits_for_cell_id=4):
+
+        all_atlases = self.get_atlases()
+        ref_lineage = all_atlases[self._ref_atlas]['cell_lineage']
+        for n in all_atlases:
+            if n == self._ref_atlas:
+                self._atlases[n]['temporal_alignment'] = (1.0, 0.0)
+                continue
+            lineage = all_atlases[n]['cell_lineage']
+            a, b = properties.temporal_alignment(ref_lineage, lineage, time_digits_for_cell_id=time_digits_for_cell_id)
+            self._atlases[n]['temporal_alignment'] = (a, b)
 
     ############################################################
     #
@@ -1134,7 +1158,6 @@ class Atlases(object):
 
         Parameters
         ----------
-        previous_neighborhoods: already built neighborhood atlas
         prop: embryo properties (atlas to be added)
         parameters:
         atlas_name: file or atlas name (will indexed the added neighborhoods for each cell name)
@@ -1380,6 +1403,9 @@ class Atlases(object):
             monitoring.to_log_and_console(str(proc) + ": 'cell_volume' was not in dictionary")
             return
 
+        if self._ref_atlas is None:
+            self._ref_atlas = name
+
         self._atlases[name] = {}
         self._atlases[name]['cell_lineage'] = copy.deepcopy(prop['cell_lineage'])
         self._atlases[name]['cell_name'] = copy.deepcopy(prop['cell_name'])
@@ -1412,9 +1438,6 @@ class Atlases(object):
                                           + str(type(parameters)))
             sys.exit(1)
 
-        if isinstance(parameters, ucontact.ContactSurfaceParameters):
-            self.update_from_parameters(parameters)
-
         if isinstance(atlasfiles, str):
             prop = ioproperties.read_dictionary(atlasfiles, inputpropertiesdict={})
             name = atlasfiles.split(os.path.sep)[-1]
@@ -1427,6 +1450,9 @@ class Atlases(object):
             self.add_atlas(name, prop, parameters)
             del prop
         elif isinstance(atlasfiles, list):
+            if len(atlasfiles) == 0:
+                monitoring.to_log_and_console(str(proc) + ": empty atlas file list ?!")
+                sys.exit(1)
             for f in atlasfiles:
                 prop = ioproperties.read_dictionary(f, inputpropertiesdict={})
                 name = f.split(os.path.sep)[-1]
@@ -1451,6 +1477,18 @@ class Atlases(object):
             monitoring.to_log_and_console("    done", 1)
 
         #
+        # temporal alignment
+        #
+        monitoring.to_log_and_console("... temporal alignment of lineages", 1)
+        self.temporal_alignment(time_digits_for_cell_id=time_digits_for_cell_id)
+        for n in self._atlases:
+            msg = "    - "
+            msg += "linear time warping of '" + str(n) + "' wrt '" + str(self._ref_atlas) + "' is "
+            msg += str(self._atlases[n]['temporal_alignment'])
+            monitoring.to_log_and_console(msg, 1)
+        monitoring.to_log_and_console("    done", 1)
+
+        #
         # dictionary indexed by mother cell names,
         # give list of references for which both daughter cells exist
         #
@@ -1465,7 +1503,6 @@ class Atlases(object):
         monitoring.to_log_and_console("... build asymmetric division list", 1)
         self.build_asymmetric_divisions()
         monitoring.to_log_and_console("    done", 1)
-
 
         if parameters.diagnosis_properties:
             monitoring.to_log_and_console("")

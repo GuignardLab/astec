@@ -212,6 +212,7 @@ def figures_distance_along_branch(atlases, parameters, time_digits_for_cell_id=4
     f.write("'" + " + '.png')\n")
     f.write("else:\n")
     f.write("    plt.show()\n")
+    f.write("    plt.close()\n")
     f.close()
 
 
@@ -991,6 +992,88 @@ def figures_distance_histogram(atlases, parameters):
 
     f.write("\n")
 
+    f.close()
+
+
+def figures_temporal_registration(atlases, parameters, time_digits_for_cell_id=4):
+    proc = "figures_temporal_registration"
+
+    filename = 'figures_temporal_registration'
+    file_suffix = None
+    if parameters.figurefile_suffix is not None and isinstance(parameters.figurefile_suffix, str) and \
+            len(parameters.figurefile_suffix) > 0:
+        file_suffix = '_' + parameters.figurefile_suffix
+    if file_suffix is not None:
+        filename += file_suffix
+    filename += '.py'
+
+    if parameters.outputDir is not None and isinstance(parameters.outputDir, str):
+        if not os.path.isdir(parameters.outputDir):
+            if not os.path.exists(parameters.outputDir):
+                os.makedirs(parameters.outputDir)
+            else:
+                monitoring.to_log_and_console(proc + ": '" + str(parameters.outputDir) + "' is not a directory ?!")
+        if os.path.isdir(parameters.outputDir):
+            filename = os.path.join(parameters.outputDir, filename)
+
+    ref_atlases = atlases.get_atlases()
+    atlas_names = list(ref_atlases.keys())
+
+    cells_per_time = {}
+    temporal_coefficients = {}
+    for n in atlas_names:
+        lineage = ref_atlases[n]['cell_lineage']
+        cells = list(set(lineage.keys()).union(set([v for values in list(lineage.values()) for v in values])))
+        cells = sorted(cells)
+        div = 10 ** time_digits_for_cell_id
+        cells_per_time[n] = {}
+        for c in cells:
+            t = int(c) // div
+            cells_per_time[n][t] = cells_per_time[n].get(t, 0) + 1
+        temporal_coefficients[n] = ref_atlases[n]['temporal_alignment']
+
+    f = open(filename, "w")
+
+    f.write("import numpy as np\n")
+    f.write("import matplotlib.pyplot as plt\n")
+
+    f.write("\n")
+    f.write("savefig = True\n")
+
+    f.write("\n")
+    f.write("cells_per_time = " + str(cells_per_time) + "\n")
+    f.write("temporal_coefficients = " + str(temporal_coefficients) + "\n")
+
+    f.write("\n")
+    f.write("fig, (ax1, ax2) = plt.subplots(ncols=2, sharey=True, figsize=(16, 8))\n")
+    f.write("labels = []\n")
+    f.write("for n in cells_per_time:\n")
+    f.write("    labels += [n]\n")
+    f.write("    x = list(cells_per_time[n].keys())\n")
+    f.write("    x = sorted(x)\n")
+    f.write("    y = [cells_per_time[n][i] for i in x]\n")
+    f.write("    ax1.plot(x, y)\n")
+    f.write("ax1.set_title(\"cell number (without alignment)\", fontsize=15)\n")
+    f.write("ax1.legend(labels, prop={'size': 10})\n")
+
+    f.write("for n in cells_per_time:\n")
+    f.write("    x = list(cells_per_time[n].keys())\n")
+    f.write("    x = sorted(x)\n")
+    f.write("    t = [temporal_coefficients[n][0] * i + temporal_coefficients[n][1] for i in x]\n")
+    f.write("    y = [cells_per_time[n][i] for i in x]\n")
+    f.write("    ax2.plot(t, y)\n")
+    f.write("ax2.set_title(\"cell number (with alignment)\", fontsize=15)\n")
+    f.write("ax2.legend(labels, prop={'size': 10})\n")
+
+    f.write("\n")
+    f.write("if savefig:\n")
+    f.write("    plt.savefig('temporal_alignment_cell_number")
+    if file_suffix is not None:
+        f.write(file_suffix)
+    f.write("'" + " + '.png')\n")
+    f.write("else:\n")
+    f.write("    plt.show()\n")
+    f.write("    plt.close()\n")
     f.close()
 
 
