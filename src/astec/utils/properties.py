@@ -1147,7 +1147,9 @@ def _find_t(cells_per_time, n):
         return (min(times) + max(times))/2.0
     smaller_times = [t for t in cells_per_time if cells_per_time[t] < n]
     larger_times = [t for t in cells_per_time if cells_per_time[t] > n]
-    return (max(smaller_times) + min(larger_times)) / 2.0
+    ts = max(smaller_times)
+    tl = min(larger_times)
+    return ts + (tl - ts) * (n - cells_per_time[ts]) / (cells_per_time[tl] - cells_per_time[ts])
 
 
 def _temporal_alignement(ref_cells_per_time, cells_per_time):
