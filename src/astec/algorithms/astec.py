@@ -2955,7 +2955,7 @@ def _get_last_time_from_lineage(lineage_tree_information, first_time_point, delt
         #
         # time points for 'parent cell' are marked into cellinlineage
         #
-        for c in lineage_tree_information[properties.keydictionary['lineage']['output_key']]:
+        for c in lineage_tree_information[ioproperties.keydictionary['lineage']['output_key']]:
             t = int(c)/div
             if t not in cellinlineage:
                 cellinlineage[t] = 1
@@ -2994,15 +2994,15 @@ def _clean_lineage(lineage_tree_information, first_time_point, time_digits_for_c
     mul = 10 ** time_digits_for_cell_id
     for key in lineage_tree_information:
         if key == ioproperties.keydictionary['lineage']['output_key']:
-            tmp = copy.deepcopy(lineage_tree_information[properties.keydictionary['lineage']['output_key']])
+            tmp = copy.deepcopy(lineage_tree_information[ioproperties.keydictionary['lineage']['output_key']])
             for k in tmp:
                 if int(k) > first_time_point * mul:
-                    del lineage_tree_information[properties.keydictionary['lineage']['output_key']][k]
+                    del lineage_tree_information[ioproperties.keydictionary['lineage']['output_key']][k]
         elif key == ioproperties.keydictionary['volume']['output_key']:
-            tmp = copy.deepcopy(lineage_tree_information[properties.keydictionary['volume']['output_key']])
+            tmp = copy.deepcopy(lineage_tree_information[ioproperties.keydictionary['volume']['output_key']])
             for k in tmp:
                 if int(k) > (first_time_point + 1) * mul:
-                    del lineage_tree_information[properties.keydictionary['volume']['output_key']][k]
+                    del lineage_tree_information[ioproperties.keydictionary['volume']['output_key']][k]
         else:
             monitoring.to_log_and_console(str(proc) + ": unhandled key '" + str(key) + "'")
     return
@@ -3026,7 +3026,7 @@ def _fill_volumes(lineage_tree_information, first_time_point, experiment):
     mul = 10 ** experiment.get_time_digits_for_cell_id()
     if lineage_tree_information != {}:
         if ioproperties.keydictionary['volume']['output_key'] in lineage_tree_information:
-            tmp = lineage_tree_information[properties.keydictionary['volume']['output_key']]
+            tmp = lineage_tree_information[ioproperties.keydictionary['volume']['output_key']]
             for k in tmp:
                 if k / mul == first_time_point:
                     monitoring.to_log_and_console("    .. cell volumes found for time #" + str(first_time_point), 1)
