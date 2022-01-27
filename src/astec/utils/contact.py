@@ -208,32 +208,39 @@ def _compare_cell(a, b):
     return 0
 
 
-def build_same_contact_surfaces(neighborhoods, debug=False):
+def build_same_contact_surfaces(neighborhoods, celllist, debug=False):
     """
 
     Parameters
     ----------
-    neighborhoods: dictionary of contact surface vectors
+    neighborhoods: dictionary of dictionary of contact surface vectors
+    celllist:
     debug
 
     Returns
     -------
     dictionary of contact surface vectors, with the same contact cells
     """
-
-    common_neighborhoods = copy.deepcopy(neighborhoods)
+    common_neighborhoods = {}
+    for c in celllist:
+        if c not in neighborhoods:
+            continue
+        common_neighborhoods[c] = copy.deepcopy(neighborhoods[c])
 
     #
     # get the neighbors for each atlas
     #
     neighbors_by_stage = {}
-    for r in neighborhoods:
-        for n in neighborhoods[r]:
-            if n == 'background' or n == 'other-half':
-                neighbors_by_stage[0] = neighbors_by_stage.get(0, []) + [n]
-                continue
-            stage = int(n.split('.')[0][1:])
-            neighbors_by_stage[stage] = neighbors_by_stage.get(stage, []) + [n]
+    for c in celllist:
+        if c not in neighborhoods:
+            continue
+        for r in neighborhoods[c]:
+            for n in neighborhoods[c][r]:
+                if n == 'background' or n == 'other-half':
+                    neighbors_by_stage[0] = neighbors_by_stage.get(0, []) + [n]
+                    continue
+                stage = int(n.split('.')[0][1:])
+                neighbors_by_stage[stage] = neighbors_by_stage.get(stage, []) + [n]
     # suppress duplicate
     for s in neighbors_by_stage:
         neighbors_by_stage[s] = list(sorted(set(neighbors_by_stage[s])))
@@ -281,13 +288,16 @@ def build_same_contact_surfaces(neighborhoods, debug=False):
                 # 2. add mother in the contact surfaces
                 #    add daughter contact surfaces to the mother one, and remove the daughter contact surfaces
                 #
-                for r in common_neighborhoods:
-                    if mother not in common_neighborhoods[r]:
-                        common_neighborhoods[r][mother] = 0.0
-                    for i in range(2):
-                        if d[i] in common_neighborhoods[r]:
-                            common_neighborhoods[r][mother] += common_neighborhoods[r][d[i]]
-                            del common_neighborhoods[r][d[i]]
+                for c in celllist:
+                    if c not in common_neighborhoods:
+                        continue
+                    for r in common_neighborhoods[c]:
+                        if mother not in common_neighborhoods[c][r]:
+                            common_neighborhoods[c][r][mother] = 0.0
+                        for i in range(2):
+                            if d[i] in common_neighborhoods[c][r]:
+                                common_neighborhoods[c][r][mother] += common_neighborhoods[c][r][d[i]]
+                                del common_neighborhoods[c][r][d[i]]
 
                 #
                 # 3. both daughters have been processed
@@ -302,9 +312,12 @@ def build_same_contact_surfaces(neighborhoods, debug=False):
                 if debug:
                     print("      keep neighbor " + str(neigh))
 
-                for r in common_neighborhoods:
-                    if neigh not in common_neighborhoods[r]:
-                        common_neighborhoods[r][neigh] = 0.0
+                for c in celllist:
+                    if c not in common_neighborhoods:
+                        continue
+                    for r in common_neighborhoods[c]:
+                        if neigh not in common_neighborhoods[c][r]:
+                            common_neighborhoods[c][r][neigh] = 0.0
 
         #
         # end of loop "for neigh in neighbors_by_stage[s]:
@@ -404,11 +417,15 @@ def cell_contact_distance(neigh0, neigh1, distance='l1_distance', change_contact
     """
 
     if change_contact_surfaces:
-        tmp = {0: neigh0, 1: neigh1}
-        vect = build_same_contact_surfaces(tmp)
-        score = _cell_contact_distance(vect[0], vect[1], distance=distance)
+        #
+        # build a dictionary of one element
+        # build_same_contact_surfaces() build a common reference for a list of keys of the dictionary
+        #
+        tmp = {'foo': {0: neigh0, 1: neigh1}}
+        vect = build_same_contact_surfaces(tmp, ['foo'])
+        score = _cell_contact_distance(vect['foo'][0], vect['foo'][1], distance=distance)
         if title is not None:
-            _print_common_neighborhoods(vect[0], vect[1], title=title)
+            _print_common_neighborhoods(vect['foo'][0], vect['foo'][1], title=title)
             monitoring.to_log_and_console("\t score = " + str(score) + "\n")
     else:
         score = _cell_contact_distance(neigh0, neigh1, distance=distance)
@@ -476,11 +493,11 @@ def division_contact_distance(daughter00, daughter01, daughter10, daughter11, di
     """
 
     if change_contact_surfaces:
-        tmp = {0: daughter00, 1: daughter10}
-        vect0 = build_same_contact_surfaces(tmp, debug=debug)
-        tmp = {0: daughter01, 1: daughter11}
-        vect1 = build_same_contact_surfaces(tmp, debug=debug)
-        score = _division_contact_distance(vect0[0], vect1[0], vect0[1], vect1[1], distance=distance)
+        tmp = {'foo': {0: daughter00, 1: daughter10}}
+        v0 = build_same_contact_surfaces(tmp, ['foo'], debug=debug)
+        tmp = {'foo': {0: daughter01, 1: daughter11}}
+        v1 = build_same_contact_surfaces(tmp, ['foo'], debug=debug)
+        score = _division_contact_distance(v0['foo'][0], v1['foo'][0], v0['foo'][1], v1['foo'][1], distance=distance)
     else:
         score = _division_contact_distance(daughter00, daughter01, daughter10, daughter11, distance=distance)
 

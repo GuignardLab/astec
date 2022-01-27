@@ -81,7 +81,7 @@ class DiagnosisParameters(ucontact.ContactSurfaceParameters):
         doc += "\t contact surface distance above this threshold are displayed (recall that\n"
         doc += "\t the distance is in [0, 1])."
         self.doc['maximal_contact_distance'] = doc
-        self.maximal_contact_distance = 0.1
+        self.maximal_contact_distance = 0.15
 
     def print_parameters(self):
         print("")
@@ -1014,7 +1014,9 @@ def _diagnosis_contact(prop, description, diagnosis_parameters, time_digits_for_
     #
     # report
     #
-    monitoring.to_log_and_console("  - largest contact surface distance between successive cells in time", 1)
+    msg = "  - largest contact surface distance between successive cells in time (threshold set to "
+    msg += str(diagnosis_parameters.maximal_contact_distance) + ")"
+    monitoring.to_log_and_console(msg, 1)
 
     for cell in score_along_time:
         first_time = int(cell) // div

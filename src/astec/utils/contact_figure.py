@@ -284,9 +284,14 @@ def figures_division_dendrogram(atlases, parameters):
             continue
 
         #
-        #
+        # config is a dictionary indexed par [reference][0 or 1]
+        # config[r][0] = neighborhoods[daughters[0]][r]
+        # config[r][1] = neighborhoods[daughters[1]][r]
         #
         config = atlases.extract_division_neighborhoods(n)
+        #
+        # swconfig = config + switched daughters
+        #
         swconfig = ucontacta.switched_division_neighborhoods(config, n)
 
         #
@@ -302,6 +307,8 @@ def figures_division_dendrogram(atlases, parameters):
 
         #
         # distance array for couples of atlases/references plus the switched ones
+        # daughter neighborhoods may be in a common reference, if so there is no need to change
+        # the contact surfaces
         #
         swconddist, swz, swlabels = ucontacta.call_to_scipy_linkage(atlases, swconfig,
                                                                     cluster_distance=cluster_distance,
@@ -772,6 +779,8 @@ def figures_distance_histogram(atlases, parameters):
                                                                     neighborhoods[d[1]][r1], neighborhoods[d[0]][r2],
                                                                     neighborhoods[d[1]][r2],
                                                                     similarity=similarity, change_contact_surfaces=ccs)
+                # daughter neighborhood have the same neighbors if atlases.get_use_common_neighborhood() is True
+                # there is then no need to change the contact surfaces
                 div01 = ucontacta.division_contact_generic_distance(atlases, neighborhoods[d[0]][r1],
                                                                     neighborhoods[d[1]][r1], neighborhoods[d[1]][r2],
                                                                     neighborhoods[d[0]][r2],

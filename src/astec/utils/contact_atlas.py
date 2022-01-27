@@ -476,7 +476,10 @@ def _dpp_global_generic_distance(neighbors, references, atlases, parameters, deb
     ccs = not parameters.use_common_neighborhood
     score = 0
     n = 0
+    distances = {}
     for r1 in references:
+        if debug:
+            distances[r1] = {}
         for r2 in references:
             if r2 <= r1:
                 continue
@@ -484,9 +487,18 @@ def _dpp_global_generic_distance(neighbors, references, atlases, parameters, deb
                                                      neighbors[1][r2], similarity=similarity,
                                                      change_contact_surfaces=ccs)
             if debug:
-                print("   - dist[" + str(r1) + ", " + str(r2) + "] = " + str(dist))
+                distances[r1][r2] = dist
             score += dist
             n += 1
+    if debug:
+        print("===== _dpp_global_generic_distance")
+        refs1 = distances.keys()
+        refs1 = sorted(refs1)
+        for r1 in refs1:
+            refs2 = distances[r1].keys()
+            refs2 = sorted(refs2)
+            for r2 in refs2:
+                print("   - dist[" + str(r1) + ", " + str(r2) + "] = " + str(distances[r1][r2]))
     return score / n
 
 
@@ -614,8 +626,11 @@ def division_permutation_proposal(atlases, parameters):
             if i == 0:
                 continue
 
+            # check if the reference is registered
+            # discard symmetrical neighborhood for warning
             if ref not in ref_atlases:
-                monitoring.to_log_and_console(proc + ": weird, '" + str(ref) + "' is not in reference atlases.", 4)
+                if not (ref[:4] == 'sym-' and ref[4:] in ref_atlases):
+                    monitoring.to_log_and_console(proc + ": weird, '" + str(ref) + "' is not in reference atlases.", 4)
                 continue
 
             keyscore = "morphonet_float_" + str(ref) + "_distance_average_before_permutation_proposal"
@@ -793,7 +808,8 @@ def _diagnosis_linkage(atlases, parameters):
         #
         for r in divisions[n]:
             if r not in ref_atlases:
-                monitoring.to_log_and_console(proc + ": weird, '" + str(r) + "' is not in reference atlases.", 4)
+                if not (r[:4] == 'sym-' and r[4:] in ref_atlases):
+                    monitoring.to_log_and_console(proc + ": weird, '" + str(r) + "' is not in reference atlases.", 4)
                 continue
             keyselection = "morphonet_float_" + str(r) + "_last_dendrogram_value"
             output_selections[keyselection] = output_selections.get(keyselection, {})
@@ -826,7 +842,8 @@ def _diagnosis_linkage(atlases, parameters):
     for n in mother_with_nochanges:
         for r in divisions[n]:
             if r not in ref_atlases:
-                monitoring.to_log_and_console(proc + ": weird, '" + str(r) + "' is not in reference atlases.", 4)
+                if not (r[:4] == 'sym-' and r[4:] in ref_atlases):
+                    monitoring.to_log_and_console(proc + ": weird, '" + str(r) + "' is not in reference atlases.", 4)
                 continue
             keyselection = "morphonet_selection_" + str(r) + "_dendrogram_warning"
             output_selections[keyselection] = output_selections.get(keyselection, {})
@@ -871,17 +888,35 @@ def _diagnosis_linkage(atlases, parameters):
 ########################################################################################
 
 def _build_common_neighborhoods(neighborhoods):
+    """
+    Build a new neighborhood dictionary where both a cell and its sister have
+    the same neighbors.
+    Parameters
+    ----------
+    neighborhoods: dictionary of dictionaries
+        ['cell name']['reference name']['neighboring cell']
+        first key is a cell name (daughter cell)
+        second key is the reference from which the neighborhood has been extracted
+        a neighborhood itself is a dictionary indexed by the neighboring cell names
 
-    # neighborhoods is a dictionary of dictionaries
-    # ['cell name']['reference name']['neighboring cell']
-    # first key is a cell name (daughter cell)
-    # second key is the reference from which the neighborhood has been extracted
-    # a neighborhood itself is a dictionary indexed by the neighboring cell names
+    Returns
+    -------
+
+    """
+    proc = "_build_common_neighborhoods"
 
     common_neighborhoods = {}
 
     for cell in neighborhoods:
-        common_neighborhoods[cell] = ucontact.build_same_contact_surfaces(neighborhoods[cell])
+        if cell in common_neighborhoods:
+            continue
+        sister = uname.get_sister_name(cell)
+        if sister in common_neighborhoods:
+            msg = "weird, '" + str(sister) + "' is in neighborhoods while '" + str(cell) + "' is not"
+            monitoring.to_log_and_console(proc + ": " + msg)
+        new_neighborhoods = ucontact.build_same_contact_surfaces(neighborhoods, [cell, sister])
+        for n in new_neighborhoods:
+            common_neighborhoods[n] = copy.deepcopy(new_neighborhoods[n])
     return common_neighborhoods
 
 
@@ -896,15 +931,15 @@ def switched_division_neighborhoods(config, mother_name):
         swconfig[sr] = {}
         swconfig[sr][0] = copy.deepcopy(config[r][1])
         swconfig[sr][1] = copy.deepcopy(config[r][0])
-        if daughters[1] in swconfig[sr][0]:
+        if daughters[1] in swconfig[sr][0] and swconfig[sr][0][daughters[1]] > 0:
             msg = "  weird, " + str(daughters[1]) + " was found in its neighborhood for reference " + str(r)
-            print("      " + msg)
+            monitoring.to_log_and_console("      " + msg)
         if daughters[0] in swconfig[sr][0]:
             swconfig[sr][0][daughters[1]] = swconfig[sr][0][daughters[0]]
             del swconfig[sr][0][daughters[0]]
-        if daughters[0] in swconfig[sr][1]:
+        if daughters[0] in swconfig[sr][1] and swconfig[sr][1][daughters[0]] > 0:
             msg = "  weird, " + str(daughters[0]) + " was found in its neighborhood for reference " + str(r)
-            print("      " + msg)
+            monitoring.to_log_and_console("      " + msg)
         if daughters[1] in swconfig[sr][1]:
             swconfig[sr][1][daughters[0]] = swconfig[sr][1][daughters[1]]
             del swconfig[sr][1][daughters[1]]
@@ -1156,6 +1191,21 @@ class Atlases(object):
     #
     ############################################################
 
+    def print_neighborhood(self, cellname):
+        print("============================================================")
+        print("Neighborhoods of " + str(cellname))
+        if cellname not in self._neighborhoods:
+            return
+        refs = list(self._neighborhoods[cellname].keys())
+        refs = sorted(refs)
+        for r in refs:
+            neighbors = list(self._neighborhoods[cellname][r].keys())
+            neighbors = sorted(neighbors)
+            print("    - " + str(r))
+            for n in neighbors:
+                print("        - " + str(n) + " : " + str(self._neighborhoods[cellname][r][n]))
+        print("============================================================")
+
     def add_neighborhoods(self, prop, parameters, atlas_name, time_digits_for_cell_id=4):
         """
 
@@ -1164,7 +1214,7 @@ class Atlases(object):
         prop: embryo properties (atlas to be added)
         parameters:
         atlas_name: file or atlas name (will indexed the added neighborhoods for each cell name)
-        time_digits_for_cell_id;
+        time_digits_for_cell_id:
 
         Returns
         -------
@@ -1226,11 +1276,15 @@ class Atlases(object):
         daughters = [lineage[c][0] for c in lineage if len(lineage[c]) == 2]
         daughters += [lineage[c][1] for c in lineage if len(lineage[c]) == 2]
 
+        ancestor_name = []
         missing_name = []
         missing_contact = []
         missing_neighbors = []
 
         for daugh in daughters:
+            #
+            # mother cell should be named
+            #
             if reverse_lineage[daugh] not in name:
                 continue
             #
@@ -1246,8 +1300,18 @@ class Atlases(object):
             if daugh not in contact:
                 if daugh not in missing_contact:
                     missing_contact.append(daugh)
-                    monitoring.to_log_and_console(str(proc) + ": cell #" + str(daugh)
+                    monitoring.to_log_and_console(str(proc) + ": daughter cell #" + str(daugh)
                                                   + " was not found in 'cell_contact_surface' dictionary. Skip it")
+                continue
+
+            #
+            # check whether the mother name is the right one
+            #
+            if name[reverse_lineage[daugh]] != uname.get_mother_name(name[daugh]):
+                msg = "weird, name of daughter cell #" + str(daugh) + " is " + str(name[daugh])
+                msg += " while its mother #" + str(reverse_lineage[daugh]) + " is named "
+                msg += str(name[reverse_lineage[daugh]]) + ". Skip it"
+                monitoring.to_log_and_console(str(proc) + ": " + msg)
                 continue
 
             #
@@ -1271,26 +1335,39 @@ class Atlases(object):
             #
             neighbor = {}
             neighbor_is_complete = True
+            # half_id = '*' or '_'
             half_id = prop['cell_name'][d][-1]
             for c in contact[d]:
                 n = int(c) % div
                 if n == 1 or n == 0:
                     neighbor['background'] = neighbor.get('background', 0) + contact[d][c]
-                elif c in name:
+                else:
+                    cname = c
+                    if cname not in name:
+                        while cname in reverse_lineage and cname not in name:
+                            cname = reverse_lineage[cname]
+                    if cname not in name:
+                        neighbor_is_complete = False
+                        if c not in missing_neighbors:
+                            missing_neighbors.append(c)
+                            msg = "cell #" + str(c) + " was not found in 'cell_name' dictionary."
+                            monitoring.to_log_and_console(proc + ": " + msg)
+                        continue
+                    # c in name:
+                    cell_name = prop['cell_name'][cname]
+                    if cname != c:
+                        if c not in ancestor_name:
+                            ancestor_name += [c]
+                            msg = "use name '" + str(cell_name) + "' of cell #" + str(cname) + " for cell #" + str(c)
+                            monitoring.to_log_and_console(proc + ": " + msg)
                     if parameters.differentiate_other_half:
-                        neighbor[prop['cell_name'][c]] = contact[d][c]
+                        neighbor[cell_name] = neighbor.get(cell_name, 0) + contact[d][c]
                     else:
-                        if prop['cell_name'][c][-1] == half_id:
-                            neighbor[prop['cell_name'][c]] = contact[d][c]
+                        if cell_name[-1] == half_id:
+                            neighbor[cell_name] = neighbor.get(cell_name, 0) + contact[d][c]
                         else:
                             neighbor['other-half'] = neighbor.get('other-half', 0) + contact[d][c]
-                else:
-                    neighbor_is_complete = False
-                    if c not in missing_neighbors:
-                        missing_neighbors.append(c)
-                        msg = "\t cell #" + str(c) + " was not found in 'cell_name' dictionary."
-                        monitoring.to_log_and_console(msg)
-                    continue
+
 
             if not neighbor_is_complete:
                 msg = ": neighborhood of " + str(prop['cell_name'][d]) + " is not complete. Skip it"
