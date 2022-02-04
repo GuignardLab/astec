@@ -973,92 +973,48 @@ def set_fate_from_names(d, fate=4, time_digits_for_cell_id=4):
 
     #
     # forward propagation
+    # fate[daughter] = fate[mother]
     #
-    reverse_lineage = {v: k for k, values in d['cell_lineage'].items() for v in values}
-    cells = list(set(d['cell_lineage'].keys()).union(set([v for values in list(d['cell_lineage'].values()) for v in
-                                                          values])))
+    lineage = d['cell_lineage']
+    cells = list(set(lineage.keys()).union(set([v for values in list(lineage.values()) for v in values])))
     cells = sorted(cells)
-    div = 10 ** time_digits_for_cell_id
 
-    missing_fate = {}
-    for c in cells:
-        t = int(c) // div
-        #
-        # get cells and cell names at each time point
-        #
-        if c not in d[keyfate]:
-            if t not in missing_fate:
-                missing_fate[t] = [c]
-            else:
-                missing_fate[t].append(c)
-
-    timepoints = sorted(missing_fate.keys())
-
-    for t in timepoints:
-        for c in missing_fate[t]:
+    for mother in cells:
+        if mother not in d[keyfate]:
+            continue
+        if mother not in lineage:
+            continue
+        for c in lineage[mother]:
             if c in d[keyfate]:
-                continue
-            if c not in reverse_lineage:
-                continue
-            mother = reverse_lineage[c]
-            if mother not in d[keyfate]:
                 continue
             d[keyfate][c] = d[keyfate][mother]
 
     #
     # backward propagation
+    # fate[mother] = fate[daughter(s)]
     #
     cells = sorted(cells, reverse=True)
-    for c in cells:
-        if c not in d[keyfate]:
+    for mother in cells:
+        if mother in d[keyfate]:
             continue
-        if c not in reverse_lineage:
+        if mother not in lineage:
             continue
-        mother = reverse_lineage[c]
-        if len(d['cell_lineage'][mother]) == 1:
-            if mother in d[keyfate]:
-                if d[keyfate][mother] != d[keyfate][c]:
-                    msg = ": weird, cell " + str(mother) + " has fate " + str(d[keyfate][mother])
-                    msg += ", but should have " + str(d[keyfate][c])
-                    msg += " as its single daughter"
-                    monitoring.to_log_and_console(str(proc) + msg)
+        fate = []
+        for c in lineage[mother]:
+            if c not in d[keyfate]:
+                continue
+            if isinstance(d[keyfate][c], str):
+                fate += [d[keyfate][c]]
+            elif isinstance(d[keyfate][c], list):
+                fate += d[keyfate][c]
             else:
-                d[keyfate][mother] = d[keyfate][c]
-        elif len(d['cell_lineage'][mother]) == 2:
-            if mother in d[keyfate]:
-                if isinstance(d[keyfate][mother], str) and isinstance(d[keyfate][c], str):
-                    if d[keyfate][mother] != d[keyfate][c]:
-                        f = d[keyfate][mother]
-                        del d[keyfate][mother]
-                        d[keyfate][mother] = [f, d[keyfate][c]]
-                    continue
-                elif isinstance(d[keyfate][mother], list) and isinstance(d[keyfate][c], str):
-                    if d[keyfate][c] not in d[keyfate][mother]:
-                        d[keyfate][mother].append(d[keyfate][c])
-                    continue
-                elif isinstance(d[keyfate][mother], str) and isinstance(d[keyfate][c], list):
-                    if d[keyfate][mother] not in d[keyfate][c] or len(d[keyfate][c]) > 1:
-                        f = d[keyfate][mother]
-                        del d[keyfate][mother]
-                        d[keyfate][mother] = [f] + d[keyfate][c]
-                    continue
-                elif isinstance(d[keyfate][mother], list) and isinstance(d[keyfate][c], list):
-                    d[keyfate][mother] = list(set(d[keyfate][mother]).union(set(d[keyfate][c])))
-                    continue
-                else:
-                    if not isinstance(d[keyfate][mother], str) and isinstance(d[keyfate][mother], list):
-                        msg = ":type '" + str(type(d[keyfate][mother])) + "' of d['" + str(keyfate)
-                        msg += "'][" + str(mother) + "]" + "not handled yet"
-                        monitoring.to_log_and_console(str(proc) + msg)
-                    if not isinstance(d[keyfate][c], str) and isinstance(d[keyfate][c], list):
-                        msg = ":type '" + str(type(d[keyfate][c])) + "' of d['" + str(keyfate) + "'][" + str(c) + "]"
-                        msg += "not handled yet"
-                        monitoring.to_log_and_console(str(proc) + msg)
-            else:
-                d[keyfate][mother] = d[keyfate][c]
-        else:
-            msg = ": weird, cell " + str(mother) + " has " + str(len(d['cell_lineage'][mother])) + " daughter(s)"
-            monitoring.to_log_and_console(str(proc) + msg)
+                msg = ":type '" + str(type(d[keyfate][c])) + "' of d['" + str(keyfate)
+                msg += "'][" + str(c) + "]" + "not handled yet"
+                monitoring.to_log_and_console(str(proc) + msg)
+        if len(fate) == 1:
+            d[keyfate][mother] = fate[0]
+        elif len(fate) > 1:
+            d[keyfate][mother] = fate
 
     return d
 
