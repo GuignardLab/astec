@@ -137,11 +137,9 @@ def main():
     # read input file(s) from args, write output file from args
     #
 
-    time_digits_for_cell_id = experiment.get_time_digits_for_cell_id()
-
     if args.parameterFile is None:
         prop = ioproperties.read_dictionary(args.inputFile, inputpropertiesdict={})
-        prop = properties.set_fate_from_names(prop, time_digits_for_cell_id=time_digits_for_cell_id)
+        prop = properties.set_fate_from_names(prop)
         prop = properties.set_color_from_fate(prop)
         if args.outputFile is not None:
             ioproperties.write_dictionary(args.outputFile, prop)

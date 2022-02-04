@@ -1076,7 +1076,7 @@ def naming_process(experiment, parameters):
     # naming propagation
     #
     prop = _propagate_naming(prop, atlases, parameters, time_digits_for_cell_id=time_digits_for_cell_id)
-    prop = properties.set_fate_from_names(prop, time_digits_for_cell_id=time_digits_for_cell_id)
+    prop = properties.set_fate_from_names(prop)
     prop = properties.set_color_from_fate(prop)
     #
     #

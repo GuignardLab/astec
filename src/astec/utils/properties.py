@@ -9,6 +9,7 @@ from operator import itemgetter
 
 from astec.utils import ioproperties
 from astec.utils import common
+import astec.utils.ascidian_name as uname
 from astec.wrapping import cpp_wrapping
 
 #
@@ -341,8 +342,57 @@ def _compare_barycenter(d1, d2, name1, name2, description):
     return
 
 
-# def _compare_fate(d1, d2, name1, name2, description):
-#     return
+def _are_fates_equal(fate1, fate2):
+    if isinstance(fate1, str):
+        if isinstance(fate2, str):
+            if fate1 != fate2:
+                return False
+        elif isinstance(fate2, list):
+            if fate1 not in fate2 or len(set(fate2)) > 1:
+                return False
+        else:
+            return False
+    elif isinstance(fate1, list):
+        if isinstance(fate2, str):
+            if fate2 not in fate1 or len(set(fate1)) > 1:
+                return False
+        elif isinstance(fate2, list):
+            if set(fate1) != set(fate2):
+                return False
+        else:
+            return False
+    else:
+        return False
+    return True
+
+
+def _compare_fate(d1, d2, name1, name2, description):
+
+    e1 = d1[description]
+    e2 = d2[description]
+
+    lineage1 = d1['cell_lineage']
+    reverse_lineage1 = {v: k for k, values in lineage1.items() for v in values}
+    lineage2 = d2['cell_lineage']
+    reverse_lineage2 = {v: k for k, values in lineage2.items() for v in values}
+
+    msg = "  === " + str(description) + " comparison between " + str(name1) + " and " + str(name2) + " === "
+    monitoring.to_log_and_console(msg, 1)
+
+    intersection = _intersection_cell_keys(e1, e2, name1, name2)
+    if len(intersection) == 0:
+        return
+
+    n = 0
+    for k in intersection:
+        if not _are_fates_equal(e1[k], e2[k]):
+            n += 1
+
+    if n == 0:
+        return
+    monitoring.to_log_and_console("    ... " + str(n) + " cells have different fates", 1)
+
+    return
 
 
 def _compare_all_cells(d1, d2, name1, name2, description):
@@ -812,8 +862,7 @@ def comparison(d1, d2, features, name1, name2):
                 elif outk == ioproperties.keydictionary['barycenter']['output_key']:
                     _compare_barycenter(d1, d2, name1, name2, outk)
                 elif outk == ioproperties.keydictionary['fate']['output_key']:
-                    pass
-                    # monitoring.to_log_and_console("    comparison of '" + str(outk) + "' not implemented yet", 1)
+                    _compare_fate(d1, d2, name1, name2, outk)
                 elif outk == ioproperties.keydictionary['all-cells']['output_key']:
                     _compare_all_cells(d1, d2, name1, name2, outk)
                 elif outk == ioproperties.keydictionary['principal-value']['output_key']:
@@ -833,21 +882,216 @@ def comparison(d1, d2, features, name1, name2):
 
     return
 
+########################################################################################
+#
+#
+#
+########################################################################################
 
-########################################################################################
-#
-#
-#
-########################################################################################
 
 def _find_fate(cell_fate, name):
+    for n, v in cell_fate.items():
+        if name in v[0]:
+            return n
+    return None
+
+
+def _find_fate_with_fullname(cell_fate, name):
     for n, v in cell_fate.items():
         if name[:-1] in v[0]:
             return n
     return None
 
 
-def set_fate_from_names(d, fate=4, time_digits_for_cell_id=4):
+def _build_dict_indexed_by_name(lastgeneration=9):
+    dict_name = {'a1.0001': None, 'b1.0001': None}
+    #
+    # generate names for each generation
+    #
+    for g in range(1, lastgeneration+1):
+        names = list(dict_name.keys())
+        for n in names:
+            # pick cell from generation g
+            if int(n.split('.')[0][1:]) != g:
+                continue
+            daughters = uname.get_daughter_names(n + '_')
+            for d in daughters:
+                dict_name[d[:-1]] = None
+    return dict_name
+
+
+def _build_dict_fate(cell_fate, lastgeneration=9):
+    proc = "_build_dict_fate"
+    dict_fate = _build_dict_indexed_by_name(lastgeneration=lastgeneration)
+
+    name_by_generation = {}
+    for name in dict_fate:
+        g = int(name.split('.')[0][1:])
+        name_by_generation[g] = name_by_generation.get(g, []) + [name]
+    generations = name_by_generation.keys()
+    generations = sorted(generations)
+
+    #
+    # give fate to names
+    #
+    for name in dict_fate:
+        fate = _find_fate(cell_fate, name)
+        if fate is not None:
+            dict_fate[name] = fate
+
+    #
+    # forward propagation
+    # fate[daughter] = fate[mother]
+    #
+    for g in generations:
+        for name in name_by_generation[g]:
+            if dict_fate[name] is None:
+                continue
+            daughters = uname.get_daughter_names(name + '_')
+            for d in daughters:
+                if d[:-1] not in dict_fate:
+                    continue
+                if dict_fate[d[:-1]] is not None:
+                    continue
+                dict_fate[d[:-1]] = dict_fate[name]
+
+    #
+    # backward propagation
+    # fate[mother] = fate[daughter(s)]
+    #
+    generations = sorted(generations, reverse=True)
+    for g in generations:
+        for name in name_by_generation[g]:
+            if dict_fate[name] is not None:
+                continue
+            fate = []
+            daughters = uname.get_daughter_names(name + '_')
+            for d in daughters:
+                if d[:-1] not in dict_fate:
+                    continue
+                if dict_fate[d[:-1]] is None:
+                    continue
+                if isinstance(dict_fate[d[:-1]], str):
+                    fate += [dict_fate[d[:-1]]]
+                elif isinstance(dict_fate[d[:-1]], list):
+                    fate += dict_fate[d[:-1]]
+                else:
+                    msg = ":type '" + str(type(dict_fate[d[:-1]])) + "' of '" + str(d[:-1]) + "' not handled yet"
+                    monitoring.to_log_and_console(str(proc) + msg)
+            fate = list(set(fate))
+            if len(fate) == 1:
+                dict_fate[name] = fate[0]
+            elif len(fate) > 1:
+                dict_fate[name] = fate
+
+    return dict_fate
+
+
+def _set_fate_from_names_by_propagation(d, keyfate, cell_fate):
+    """
+    Obsolete. 
+    Parameters
+    ----------
+    d
+    keyfate
+    cell_fate
+
+    Returns
+    -------
+
+    """
+    proc = "_set_fate_from_names_by_propagation"
+    #
+    # give fate to cell that have a name
+    #
+    d[keyfate] = {}
+    for c in d['cell_name']:
+        fate = _find_fate_with_fullname(cell_fate, d['cell_name'][c])
+        if fate is not None:
+            d[keyfate][c] = fate
+
+    #
+    # forward propagation
+    # fate[daughter] = fate[mother]
+    #
+    lineage = d['cell_lineage']
+    cells = list(set(lineage.keys()).union(set([v for values in list(lineage.values()) for v in values])))
+    cells = sorted(cells)
+
+    for mother in cells:
+        if mother not in d[keyfate]:
+            continue
+        if mother not in lineage:
+            continue
+        for c in lineage[mother]:
+            if c in d[keyfate]:
+                continue
+            d[keyfate][c] = d[keyfate][mother]
+
+    #
+    # backward propagation
+    # fate[mother] = fate[daughter(s)]
+    #
+    cells = sorted(cells, reverse=True)
+    for mother in cells:
+        if mother in d[keyfate]:
+            continue
+        if mother not in lineage:
+            continue
+        fate = []
+        for c in lineage[mother]:
+            if c not in d[keyfate]:
+                continue
+            if isinstance(d[keyfate][c], str):
+                fate += [d[keyfate][c]]
+            elif isinstance(d[keyfate][c], list):
+                fate += d[keyfate][c]
+            else:
+                msg = ":type '" + str(type(d[keyfate][c])) + "' of d['" + str(keyfate)
+                msg += "'][" + str(c) + "]" + "not handled yet"
+                monitoring.to_log_and_console(str(proc) + msg)
+        fate = list(set(fate))
+        if len(fate) == 1:
+            d[keyfate][mother] = fate[0]
+        elif len(fate) > 1:
+            d[keyfate][mother] = fate
+
+    return d
+
+
+def _set_fate_from_names(d, keyfate, cell_fate):
+
+    #
+    # build a dictionary of fates indexed by name
+    #
+    dict_fate = _build_dict_fate(cell_fate, lastgeneration=9)
+    d[keyfate] = {}
+    for c in d['cell_name']:
+        if dict_fate[d['cell_name'][c][:-1]] is None:
+            continue
+        d[keyfate][c] = dict_fate[d['cell_name'][c][:-1]]
+
+    #
+    # forward propagation of fates (for cells with no name)
+    #
+    lineage = d['cell_lineage']
+    cells = list(set(lineage.keys()).union(set([v for values in list(lineage.values()) for v in values])))
+    cells = sorted(cells)
+
+    for mother in cells:
+        if mother not in d[keyfate]:
+            continue
+        if mother not in lineage:
+            continue
+        for c in lineage[mother]:
+            if c in d[keyfate]:
+                continue
+            d[keyfate][c] = d[keyfate][mother]
+
+    return d
+
+
+def set_fate_from_names(d, fate=4):
     proc = "set_fate_from_names"
 
     cell_fate2 = {
@@ -962,59 +1206,8 @@ def set_fate_from_names(d, fate=4, time_digits_for_cell_id=4):
         if f in d:
             del d[f]
 
-    #
-    # give fate to cell that have a name
-    #
-    d[keyfate] = {}
-    for c in d['cell_name']:
-        fate = _find_fate(cell_fate, d['cell_name'][c])
-        if fate is not None:
-            d[keyfate][c] = fate
-
-    #
-    # forward propagation
-    # fate[daughter] = fate[mother]
-    #
-    lineage = d['cell_lineage']
-    cells = list(set(lineage.keys()).union(set([v for values in list(lineage.values()) for v in values])))
-    cells = sorted(cells)
-
-    for mother in cells:
-        if mother not in d[keyfate]:
-            continue
-        if mother not in lineage:
-            continue
-        for c in lineage[mother]:
-            if c in d[keyfate]:
-                continue
-            d[keyfate][c] = d[keyfate][mother]
-
-    #
-    # backward propagation
-    # fate[mother] = fate[daughter(s)]
-    #
-    cells = sorted(cells, reverse=True)
-    for mother in cells:
-        if mother in d[keyfate]:
-            continue
-        if mother not in lineage:
-            continue
-        fate = []
-        for c in lineage[mother]:
-            if c not in d[keyfate]:
-                continue
-            if isinstance(d[keyfate][c], str):
-                fate += [d[keyfate][c]]
-            elif isinstance(d[keyfate][c], list):
-                fate += d[keyfate][c]
-            else:
-                msg = ":type '" + str(type(d[keyfate][c])) + "' of d['" + str(keyfate)
-                msg += "'][" + str(c) + "]" + "not handled yet"
-                monitoring.to_log_and_console(str(proc) + msg)
-        if len(fate) == 1:
-            d[keyfate][mother] = fate[0]
-        elif len(fate) > 1:
-            d[keyfate][mother] = fate
+    # d = _set_fate_from_names_by_propagation(d, keyfate, cell_fate)
+    d = _set_fate_from_names(d, keyfate, cell_fate)
 
     return d
 
