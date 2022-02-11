@@ -455,13 +455,18 @@ def build_seeds(input_image, difference_image, output_seed_image, experiment, pa
     """
     Extract regional minima or maxima from an image and label them.
 
-    :param input_image:
-    :param difference_image:
-    :param output_seed_image:
+    :param input_image: input grey image
+    :param difference_image: difference_image is the difference between the reconstructed image
+        after addition of height h and the original image. This way, valley are transformed
+        into hills. Note that the resulting image has its values in [0, h]. Such an image can be
+        used as an input for further regional minima computation with *smaller* h. Note that
+        minima of the input image become maxima of the difference image.
+    :param output_seed_image: labeled seeds
     :param experiment:
     :param parameters:
     :param operation_type: 'min' for regional h-minima, 'max' for regional h-maxima
-    :param check_background_label: check whether the largest seed (assumed to be the background one) is labeled 1
+    :param check_background_label: check whether the largest seed (assumed to be the background one) is labeled 1.
+        If not, the largest seed/connected component is relabeled 1 (while the seed with label 1 is also relabeled).
     :return:
     """
 
@@ -618,13 +623,12 @@ def build_seeds(input_image, difference_image, output_seed_image, experiment, pa
     return
 
 
-def watershed(seed_image, membrane_image, result_image, experiment, parameters):
+def watershed(seed_image, membrane_image, result_image, parameters):
     """
 
     :param seed_image:
     :param membrane_image:
     :param result_image:
-    :param experiment:
     :param parameters:
     :return:
     """
@@ -634,10 +638,6 @@ def watershed(seed_image, membrane_image, result_image, experiment, parameters):
     #
     # variable checking
     #
-    if not isinstance(experiment, common.Experiment):
-        monitoring.to_log_and_console(str(proc) + ": unexpected type for 'experiment' variable: "
-                                      + str(type(experiment)))
-        sys.exit(1)
 
     if not isinstance(parameters, WatershedParameters):
         monitoring.to_log_and_console(str(proc) + ": unexpected type for 'parameters' variable: "
@@ -755,7 +755,7 @@ def _mars_watershed(template_image, input_seed_image, membrane_image, mars_image
     #
     #
     #
-    watershed(result_seed_image, membrane_image, mars_image, experiment, parameters)
+    watershed(result_seed_image, membrane_image, mars_image, parameters)
 
     return
 

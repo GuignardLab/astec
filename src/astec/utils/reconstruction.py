@@ -1,5 +1,6 @@
 import os
 import sys
+import shutil
 
 import astec.utils.common as common
 import astec.utils.ace as ace
@@ -432,7 +433,7 @@ class ReconstructionParameters(ace.AceParameters):
             if self.intensity_prenormalization.lower() == 'identity':
                 return True
             if self.prenormalization_min_percentile == p.prenormalization_min_percentile \
-                and self.prenormalization_max_percentile == p.prenormalization_max_percentile:
+                    and self.prenormalization_max_percentile == p.prenormalization_max_percentile:
                 return True
             return False
         return False
@@ -446,7 +447,7 @@ class ReconstructionParameters(ace.AceParameters):
             if self.intensity_transformation.lower() == 'normalization_to_u8' \
                     or self.intensity_transformation.lower() == 'normalization_to_u16':
                 if self.prenormalization_min_percentile == p.prenormalization_min_percentile \
-                    and self.prenormalization_max_percentile == p.prenormalization_max_percentile:
+                        and self.prenormalization_max_percentile == p.prenormalization_max_percentile:
                     return True
                 return False
             if self.intensity_transformation.lower() == 'cell_normalization_to_u8':
@@ -808,9 +809,9 @@ def build_reconstructed_image(current_time, experiment, parameters, previous_tim
             monitoring.to_log_and_console("    .. intensity global prenormalization of '"
                                           + str(input_image).split(os.path.sep)[-1] + "'", 2)
             cpp_wrapping.global_intensity_normalization(input_image, prenormalized_image,
-                                                    min_percentile=parameters.prenormalization_min_percentile,
-                                                    max_percentile=parameters.prenormalization_max_percentile,
-                                                    other_options=None, monitoring=monitoring)
+                                                        min_percentile=parameters.prenormalization_min_percentile,
+                                                        max_percentile=parameters.prenormalization_max_percentile,
+                                                        other_options=None, monitoring=monitoring)
             input_image = prenormalized_image
         elif parameters.intensity_prenormalization.lower() == 'normalization_to_u16' \
                 or parameters.intensity_prenormalization.lower() == 'global_normalization_to_u16':
@@ -842,8 +843,8 @@ def build_reconstructed_image(current_time, experiment, parameters, previous_tim
         normalized_image = input_image
     else:
         normalized_image = common.add_suffix(input_image, parameters.normalized_suffix + "_normalized",
-                                            new_dirname=experiment.working_dir.get_tmp_directory(0),
-                                            new_extension=experiment.default_image_suffix)
+                                             new_dirname=experiment.working_dir.get_tmp_directory(0),
+                                             new_extension=experiment.default_image_suffix)
         if os.path.isfile(normalized_image) and monitoring.forceResultsToBeBuilt is False:
             monitoring.to_log_and_console("    .. normalization image is '" +
                                           str(normalized_image).split(os.path.sep)[-1] + "'", 2)
@@ -885,14 +886,13 @@ def build_reconstructed_image(current_time, experiment, parameters, previous_tim
             else:
                 previous_deformed_segmentation = get_previous_deformed_segmentation(current_time, experiment,
                                                                                     parameters, previous_time)
-                cpp_wrapping.global_intensity_normalization(input_image, previous_deformed_segmentation,
-                                                            normalized_image,
-                                                            min_percentile=parameters.normalization_min_percentile,
-                                                            max_percentile=parameters.normalization_max_percentile,
-                                                            cell_normalization_min_method=parameters.cell_normalization_min_method,
-                                                            cell_normalization_max_method=parameters.cell_normalization_max_method,
-                                                            sigma=parameters.cell_normalization_sigma,
-                                                            other_options=None, monitoring=monitoring)
+                cpp_wrapping.cell_intensity_normalization(input_image, previous_deformed_segmentation, normalized_image,
+                                                          min_percentile=parameters.normalization_min_percentile,
+                                                          max_percentile=parameters.normalization_max_percentile,
+                                                          cell_normalization_min_method=parameters.cell_normalization_min_method,
+                                                          cell_normalization_max_method=parameters.cell_normalization_max_method,
+                                                          sigma=parameters.cell_normalization_sigma,
+                                                          other_options=None, monitoring=monitoring)
         #
         # global normalization on 2 bytes
         #
@@ -917,8 +917,8 @@ def build_reconstructed_image(current_time, experiment, parameters, previous_tim
         intensity_image = None
     elif parameters.intensity_sigma > 0.0:
         intensity_image = common.add_suffix(input_image, parameters.intensity_suffix + "_intensity",
-                                           new_dirname=experiment.working_dir.get_tmp_directory(0),
-                                           new_extension=experiment.default_image_suffix)
+                                            new_dirname=experiment.working_dir.get_tmp_directory(0),
+                                            new_extension=experiment.default_image_suffix)
         if os.path.isfile(intensity_image) and monitoring.forceResultsToBeBuilt is False:
             monitoring.to_log_and_console("    .. smoothed intensity transformed image is '" +
                                           str(intensity_image).split(os.path.sep)[-1]
@@ -952,7 +952,7 @@ def build_reconstructed_image(current_time, experiment, parameters, previous_tim
     if parameters.intensity_enhancement is None or parameters.intensity_enhancement.lower() == 'none':
         enhanced_image = None
     else:
-        local_suffix = parameters._enhanced_suffix + "_enhanced"
+        local_suffix = parameters.enhanced_suffix + "_enhanced"
         #
         # trick to deal with already computed images with different image extension
         #
@@ -1028,11 +1028,23 @@ def build_reconstructed_image(current_time, experiment, parameters, previous_tim
     # Fusion of intensity_image, enhanced_image, contour_image
     #
     if intensity_image is not None and enhanced_image is None and contour_image is None:
+        if parameters.keep_reconstruction:
+            experiment.working_dir.make_rec_directory()
+            shutil.copy2(intensity_image, reconstructed_image)
+            return reconstructed_image
         return intensity_image
     elif intensity_image is None and enhanced_image is not None and contour_image is None:
+        if parameters.keep_reconstruction:
+            experiment.working_dir.make_rec_directory()
+            shutil.copy2(enhanced_image, reconstructed_image)
+            return reconstructed_image
         return enhanced_image
     elif intensity_image is None and enhanced_image is None and contour_image is not None:
         monitoring.to_log_and_console("    weird, only the outer contour is used for reconstruction", 2)
+        if parameters.keep_reconstruction:
+            experiment.working_dir.make_rec_directory()
+            shutil.copy2(contour_image, reconstructed_image)
+            return reconstructed_image
         return contour_image
 
     #

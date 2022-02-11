@@ -1035,7 +1035,7 @@ def _extract_seeds(c, cell_segmentation, cell_seeds=None, bb=None, individual_se
     - number of seeds
     - a sub-image containing the labeled seeds, either 'cell_seeds' itself or 'cell_seeds[bb]' if
       'bb' is not None
-    from cell_seeds stricly included in cell c from cell_segmentation
+    from cell_seeds strictly included in cell c from cell_segmentation
     (the labels of the seeds go from 1 to 3)
     :param c: cell label
     :param cell_segmentation: sub-image with 'c' for the cell and '0' for the background
@@ -1982,7 +1982,7 @@ def _volume_decrease_correction(astec_name, previous_segmentation, segmentation_
     segmentation_from_corr_selection = common.add_suffix(astec_name, '_watershed_from_corrected_selection',
                                                          new_dirname=experiment.astec_dir.get_tmp_directory(),
                                                          new_extension=experiment.default_image_suffix)
-    mars.watershed(corr_selected_seeds, membrane_image, segmentation_from_corr_selection, experiment, parameters)
+    mars.watershed(corr_selected_seeds, membrane_image, segmentation_from_corr_selection, parameters)
 
     #
     # there are labels to be fused if there is a case where 3 seeds have been generated for a mother cell
@@ -2646,7 +2646,7 @@ def astec_process(previous_time, current_time, lineage_tree_information, experim
     # original astec: there is no smoothing of the membrane image
     #
     if not os.path.isfile(segmentation_from_previous) or monitoring.forceResultsToBeBuilt is True:
-        mars.watershed(deformed_seeds, membrane_image, segmentation_from_previous, experiment, parameters)
+        mars.watershed(deformed_seeds, membrane_image, segmentation_from_previous, parameters)
 
     #
     # if the propagation strategy is only to get seeds from the erosion of the previous cells
@@ -2795,7 +2795,7 @@ def astec_process(previous_time, current_time, lineage_tree_information, experim
                                                         new_extension=experiment.default_image_suffix)
 
     if not os.path.isfile(segmentation_from_selection) or monitoring.forceResultsToBeBuilt is True:
-        mars.watershed(selected_seeds, membrane_image, segmentation_from_selection, experiment, parameters)
+        mars.watershed(selected_seeds, membrane_image, segmentation_from_selection, parameters)
 
     #
     # if the propagation strategy is to get this segmentation without corrections
