@@ -321,6 +321,26 @@ def get_symmetric_neighborhood(neighborhood):
 #
 ########################################################################################
 
+def _write_list(listtobeprinted, firstheader="", otherheader="", maxlength=112, verboseness=0):
+    txt = ""
+    n = 0
+    for i, item in enumerate(listtobeprinted):
+        if i == 0:
+            txt = firstheader
+            n = 0
+        if len(txt) + len(str(item)) <= maxlength:
+            if n >= 1:
+                txt += ","
+            txt += " " + str(item)
+            n += 1
+        else:
+            monitoring.to_log_and_console(txt, verboseness=verboseness)
+            txt = otherheader + " " + str(item)
+            n = 1
+        if i == len(listtobeprinted) - 1:
+            monitoring.to_log_and_console(txt, verboseness=verboseness)
+
+
 def _write_summary_pairwise_switches(atlases, summary):
 
     divisions = atlases.get_divisions()
@@ -331,7 +351,11 @@ def _write_summary_pairwise_switches(atlases, summary):
         percents.append(100.0 * float(len(summary[n]['disagreement'])) / float(summary[n]['tested_couples']))
     [sorted_percents, sorted_mothers] = list(zip(*sorted(zip(percents, mother_names), reverse=True)))
 
+    majority = {}
+    equality = {}
     for n in sorted_mothers:
+        majority[n] = {}
+        equality[n] = {}
         if len(summary[n]['disagreement']) == 0:
             continue
         msg = " - " + str(n) + " cell division into "
@@ -341,14 +365,59 @@ def _write_summary_pairwise_switches(atlases, summary):
         else:
             msg += " disagreement"
         percent = 100.0 * float(len(summary[n]['disagreement'])) / float(summary[n]['tested_couples'])
-        msg += " (" + "{:2.2f}%".format(percent) + ") "
-        msg += " over " + str(summary[n]['tested_couples']) + " tested configurations "
+        msg += " (" + "{:2.2f}%".format(percent) + ")"
         monitoring.to_log_and_console(msg)
-        msg = "\t over " + str(len(divisions[n]))
-        msg += " references: " + str(sorted(divisions[n]))
+        msg = "\t over " + str(summary[n]['tested_couples']) + " tested configurations "
+        msg += "and over " + str(len(divisions[n]))
+        msg += " references: "
         monitoring.to_log_and_console(msg)
-        msg = "\t " + str(sorted(summary[n]['disagreement']))
-        monitoring.to_log_and_console(msg, 3)
+        #
+        # print references
+        #
+        _write_list(sorted(divisions[n]), firstheader="\t     ", otherheader="\t     ", maxlength=112, verboseness=0)
+        #
+        # count the cases where one atlas disagrees
+        #
+        for a in divisions[n]:
+            s = 0
+            for pair in summary[n]['disagreement']:
+                if a in pair:
+                    s += 1
+            if 2*s > len(divisions[n]):
+                majority[n][a] = s
+            elif 2*s == len(divisions[n]):
+                equality[n][a] = s
+        #
+        # print detailed disagreements
+        #
+        _write_list(sorted(summary[n]['disagreement']), firstheader="\t - disagreement list:", otherheader="\t     ",
+                    maxlength=112, verboseness=3)
+
+    nitems = 0
+    for n in sorted_mothers:
+        nitems += len(majority[n]) + len(equality[n])
+    if nitems == 0:
+        return
+    monitoring.to_log_and_console("")
+    monitoring.to_log_and_console(" --- atlases pairwise disagreements: summary ---")
+    for n in sorted(mother_names):
+        if len(majority[n]) > 0:
+            msg = " - " + str(n) + " division, atlas that mostly disagrees:"
+            akeys = sorted(list(majority[n].keys()))
+            for i, a in enumerate(akeys):
+                msg += " " + str(a) + " (" + str(majority[n][a]) + "/" + str(len(divisions[n])) + ")"
+                if i < len(akeys) - 1:
+                    msg += ","
+            monitoring.to_log_and_console(msg)
+    for n in sorted(mother_names):
+        if len(equality[n]) > 0:
+            msg = " - " + str(n) + " division, atlas that equally disagrees:"
+            akeys = sorted(list(equality[n].keys()))
+            for i, a in enumerate(akeys):
+                msg += " " + str(a) + " (" + str(equality[n][a]) + "/" + str(len(divisions[n])) + ")"
+                if i < len(akeys) - 1:
+                    msg += ","
+            monitoring.to_log_and_console(msg)
 
 
 def _diagnosis_pairwise_switches(atlases, parameters):
