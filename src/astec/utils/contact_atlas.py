@@ -270,7 +270,7 @@ class AtlasParameters(udiagnosis.DiagnosisParameters):
         self.diagnosis_properties = self.read_parameter(parameters, 'diagnosis_naming', self.diagnosis_properties)
 
         self.division_permutation_proposal = self.read_parameter(parameters, 'division_permutation_proposal',
-                                                            self.division_permutation_proposal)
+                                                                 self.division_permutation_proposal)
         self.division_permutation_proposal = self.read_parameter(parameters, 'daughter_switch_proposal',
                                                                  self.division_permutation_proposal)
 
@@ -345,9 +345,9 @@ def _write_summary_pairwise_switches(atlases, summary):
         msg += " over " + str(summary[n]['tested_couples']) + " tested configurations "
         monitoring.to_log_and_console(msg)
         msg = "\t over " + str(len(divisions[n]))
-        msg += " references: " + str(divisions[n])
+        msg += " references: " + str(sorted(divisions[n]))
         monitoring.to_log_and_console(msg)
-        msg = "\t " + str(summary[n]['disagreement'])
+        msg = "\t " + str(sorted(summary[n]['disagreement']))
         monitoring.to_log_and_console(msg, 3)
 
 
@@ -1367,7 +1367,6 @@ class Atlases(object):
                             neighbor[cell_name] = neighbor.get(cell_name, 0) + contact[d][c]
                         else:
                             neighbor['other-half'] = neighbor.get('other-half', 0) + contact[d][c]
-
 
             if not neighbor_is_complete:
                 msg = ": neighborhood of " + str(prop['cell_name'][d]) + " is not complete. Skip it"
