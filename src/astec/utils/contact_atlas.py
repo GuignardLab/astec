@@ -560,7 +560,7 @@ def _dpp_global_generic_distance(neighbors, references, atlases, parameters, deb
             score += dist
             n += 1
     if debug:
-        print("===== _dpp_global_generic_distance")
+        print("---- _dpp_global_generic_distance")
         refs1 = distances.keys()
         refs1 = sorted(refs1)
         for r1 in refs1:
@@ -593,21 +593,29 @@ def _dpp_test_one_division(atlases, mother, parameters):
     neighbors = {0: copy.deepcopy(neighborhoods[daughters[0]]), 1: copy.deepcopy(neighborhoods[daughters[1]])}
 
     # score before any changes
-    score = _dpp_global_generic_distance(neighbors, divisions[mother], atlases, parameters)
+    debug = False
+    if debug:
+        print("")
+        print("===== test division " + str(mother) + " : " + str(divisions[mother]))
+    score = _dpp_global_generic_distance(neighbors, divisions[mother], atlases, parameters, debug=debug)
 
     returned_scores = [(None, score)]
     corrections = []
     i = 1
     while True:
         newscore = {}
-        for r in divisions[mother]:
+        for r in sorted(divisions[mother]):
             #
             # switch contact surfaces for the daughters in atlas 'r'
             #
             tmp = copy.deepcopy(neighbors)
             tmp = _dpp_switch_contact_surfaces(tmp, r, daughters)
+            if debug:
+                print("===== test switch " + str(mother) + " / " + str(r))
             # compute a new score, keep it if it better than the one before any changes
-            newscore[r] = _dpp_global_generic_distance(tmp, divisions[mother], atlases, parameters)
+            newscore[r] = _dpp_global_generic_distance(tmp, divisions[mother], atlases, parameters, debug=debug)
+            if debug:
+                print("     new score = " + str(newscore[r]) + " - original score = " + str(score))
             if newscore[r] > score:
                 del newscore[r]
         # no found correction at this iteration
@@ -1849,6 +1857,23 @@ class Atlases(object):
 
 def division_contact_generic_distance(atlases, daughter00, daughter01, daughter10, daughter11, similarity='distance',
                                       change_contact_surfaces=True):
+    """
+
+    Parameters
+    ----------
+    atlases
+    daughter00: daughter #0 of ref #0
+    daughter01: daughter #1 of ref #0
+    daughter10: daughter #0 of ref #1
+    daughter11: daughter #1 of ref #1
+    similarity: 'l1_distance', 'l2_distance', or 'probability'. The two latter are kept for historical
+        reasons, but only 'l1_distance' should be used.
+    change_contact_surfaces: True or False
+
+    Returns
+    -------
+
+    """
     proc = "division_contact_generic_distance"
 
     if similarity.lower() == 'distance' or similarity.lower() == 'norm' or \
