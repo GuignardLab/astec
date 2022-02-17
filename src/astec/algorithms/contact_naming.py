@@ -432,6 +432,15 @@ def _test_asymmetric_divisions(prop, atlases):
 #
 ########################################################################################
 
+def _get_branch_length(cell, lineage):
+    l = 0
+    c = cell
+    while c in lineage and len(lineage[c]) == 1:
+        l += 1
+        c = lineage[c][0]
+    return l
+
+
 def _get_neighborhoods(mother, immediate_daughters, prop, parameters, last_time, time_digits_for_cell_id=4):
     """
 
@@ -461,7 +470,19 @@ def _get_neighborhoods(mother, immediate_daughters, prop, parameters, last_time,
     #
     # delay from division
     #
-    for i in range(parameters.delay_from_division):
+    if parameters.delay_from_division > 0:
+        delay_from_division = parameters.delay_from_division
+    elif parameters.delay_from_division < 0:
+        length0 = _get_branch_length(daughters[0], lineage)
+        length1 = _get_branch_length(daughters[1], lineage)
+        delay_from_division = min(length0, length1) + parameters.delay_from_division
+        #
+        # this is not necessary
+        #
+        if delay_from_division < 0:
+            delay_from_division = 0
+
+    for i in range(delay_from_division):
         if daughters[0] // 10 ** time_digits_for_cell_id == last_time:
             break
         if daughters[0] not in lineage:
@@ -483,7 +504,7 @@ def _get_neighborhoods(mother, immediate_daughters, prop, parameters, last_time,
             daughters[1] = lineage[daughters[1]][0]
         else:
             msg = ": build neighborhoods with a delay of " + str(i)
-            msg += " instead of " + str(parameters.delay_from_division)
+            msg += " instead of " + str(delay_from_division)
             msg += " for cells " + str(immediate_daughters)
             monitoring.to_log_and_console(str(proc) + msg, 4)
             break

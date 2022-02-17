@@ -1029,6 +1029,15 @@ def switched_division_neighborhoods(config, mother_name):
 #
 ########################################################################################
 
+def _get_branch_length(cell, lineage):
+    l = 0
+    c = cell
+    while c in lineage and len(lineage[c]) == 1:
+        l += 1
+        c = lineage[c][0]
+    return l
+
+
 class Atlases(object):
     def __init__(self, parameters=None):
 
@@ -1084,11 +1093,20 @@ class Atlases(object):
     def get_neighborhoods(self):
         return self._neighborhoods
 
+    def set_neighborhoods(self, neighborhoods):
+        self._neighborhoods = neighborhoods
+
     def get_volumes(self):
         return self._volumes
 
+    def set_volumes(self, volumes):
+        self._volumes = volumes
+
     def get_atlases(self):
         return self._atlases
+
+    def set_atlases(self, atlases):
+        self._atlases = atlases
 
     def get_use_common_neighborhood(self):
         return self._use_common_neighborhood
@@ -1182,7 +1200,7 @@ class Atlases(object):
         #
         # get all references per division/mother cells
         #
-        neighborhoods = self._neighborhoods
+        neighborhoods = self.get_neighborhoods()
         cell_names = sorted(list(neighborhoods.keys()))
         references = {}
         for cell_name in cell_names:
@@ -1256,11 +1274,12 @@ class Atlases(object):
         ref_lineage = all_atlases[self._ref_atlas]['cell_lineage']
         for n in all_atlases:
             if n == self._ref_atlas:
-                self._atlases[n]['temporal_alignment'] = (1.0, 0.0)
+                all_atlases[n]['temporal_alignment'] = (1.0, 0.0)
                 continue
             lineage = all_atlases[n]['cell_lineage']
             a, b = properties.temporal_alignment(ref_lineage, lineage, time_digits_for_cell_id=time_digits_for_cell_id)
-            self._atlases[n]['temporal_alignment'] = (a, b)
+            all_atlases[n]['temporal_alignment'] = (a, b)
+        self.set_atlases(all_atlases)
 
     ############################################################
     #
@@ -1269,18 +1288,19 @@ class Atlases(object):
     ############################################################
 
     def print_neighborhood(self, cellname):
+        neighborhoods = self.get_neighborhoods()
         print("============================================================")
         print("Neighborhoods of " + str(cellname))
-        if cellname not in self._neighborhoods:
+        if cellname not in neighborhoods:
             return
-        refs = list(self._neighborhoods[cellname].keys())
+        refs = list(neighborhoods[cellname].keys())
         refs = sorted(refs)
         for r in refs:
-            neighbors = list(self._neighborhoods[cellname][r].keys())
+            neighbors = list(neighborhoods[cellname][r].keys())
             neighbors = sorted(neighbors)
             print("    - " + str(r))
             for n in neighbors:
-                print("        - " + str(n) + " : " + str(self._neighborhoods[cellname][r][n]))
+                print("        - " + str(n) + " : " + str(neighborhoods[cellname][r][n]))
         print("============================================================")
 
     def add_neighborhoods(self, prop, parameters, atlas_name, time_digits_for_cell_id=4):
@@ -1327,6 +1347,9 @@ class Atlases(object):
         if 'cell_volume' not in prop:
             monitoring.to_log_and_console(str(proc) + ": 'cell_volume' was not in dictionary")
             return
+
+        neighborhoods = self.get_neighborhoods()
+        volumes = self.get_volumes()
 
         #
         # remove empty names
@@ -1393,9 +1416,25 @@ class Atlases(object):
 
             #
             # get the daughter cell after some additional delay
+            # positive delay: count from the division
+            # negative delay: count from the end of the shortest branch for the two sisters
             #
             d = daugh
-            for i in range(parameters.delay_from_division):
+            if parameters.delay_from_division > 0:
+                delay_from_division = parameters.delay_from_division
+            elif parameters.delay_from_division < 0:
+                length0 = _get_branch_length(d, lineage)
+                sisters = copy.deepcopy(lineage[reverse_lineage[d]])
+                sisters.remove(d)
+                length1 = _get_branch_length(sisters[0], lineage)
+                delay_from_division = min(length0, length1) + parameters.delay_from_division
+                #
+                # this is not necessary
+                #
+                if delay_from_division < 0:
+                    delay_from_division = 0
+
+            for i in range(delay_from_division):
                 if d not in lineage:
                     break
                 if len(lineage[d]) > 1:
@@ -1454,17 +1493,17 @@ class Atlases(object):
             # add neighborhood and volume
             #
             # if neighbor_is_complete:
-            if prop['cell_name'][d] not in self._neighborhoods:
-                self._neighborhoods[prop['cell_name'][d]] = {}
-            if atlas_name in self._neighborhoods[prop['cell_name'][d]]:
+            if prop['cell_name'][d] not in neighborhoods:
+                neighborhoods[prop['cell_name'][d]] = {}
+            if atlas_name in neighborhoods[prop['cell_name'][d]]:
                 msg = "weird, " + str(atlas_name) + " was already indexed for neighbors of cell " + \
                       str(prop['cell_name'][d])
                 monitoring.to_log_and_console(str(proc) + ": " + msg)
-            self._neighborhoods[prop['cell_name'][d]][atlas_name] = neighbor
+            neighborhoods[prop['cell_name'][d]][atlas_name] = neighbor
 
-            if prop['cell_name'][d] not in self._volumes:
-                self._volumes[prop['cell_name'][d]] = {}
-            if atlas_name in self._volumes[prop['cell_name'][d]]:
+            if prop['cell_name'][d] not in volumes:
+                volumes[prop['cell_name'][d]] = {}
+            if atlas_name in volumes[prop['cell_name'][d]]:
                 msg = "weird, " + str(atlas_name) + " was already indexed for volume of cell " + \
                       str(prop['cell_name'][d])
                 monitoring.to_log_and_console(str(proc) + ": " + msg)
@@ -1472,7 +1511,7 @@ class Atlases(object):
                 msg = "\t cell #" + str(d) + " was not found in 'cell_volume' dictionary."
                 monitoring.to_log_and_console(str(proc) + ": " + msg)
             else:
-                self._volumes[prop['cell_name'][d]][atlas_name] = prop['cell_volume'][d]
+                volumes[prop['cell_name'][d]][atlas_name] = prop['cell_volume'][d]
             #
             # add symmetric neighborhood if asked
             #
@@ -1480,23 +1519,26 @@ class Atlases(object):
                 sname = uname.get_symmetric_name(prop['cell_name'][d])
                 sreference = 'sym-' + atlas_name
                 sneighbor = get_symmetric_neighborhood(neighbor)
-                if sname not in self._neighborhoods:
-                    self._neighborhoods[sname] = {}
-                if sreference in self._neighborhoods[sname]:
+                if sname not in neighborhoods:
+                    neighborhoods[sname] = {}
+                if sreference in neighborhoods[sname]:
                     msg = "weird, " + str(sreference) + " was already indexed for cell " + str(sname)
                     monitoring.to_log_and_console(str(proc) + ": " + msg)
-                self._neighborhoods[sname][sreference] = sneighbor
+                neighborhoods[sname][sreference] = sneighbor
 
-                if sname not in self._volumes:
-                    self._volumes[sname] = {}
-                if sreference in self._volumes[sname]:
+                if sname not in volumes:
+                    volumes[sname] = {}
+                if sreference in volumes[sname]:
                     msg = "weird, " + str(sreference) + " was already indexed for volume of cell " + str(sname)
                     monitoring.to_log_and_console(str(proc) + ": " + msg)
                 if d not in prop['cell_volume']:
                     msg = "\t cell #" + str(d) + " was not found in 'cell_volume' dictionary."
                     monitoring.to_log_and_console(str(proc) + ": " + msg)
                 else:
-                    self._volumes[sname][sreference] = prop['cell_volume'][d]
+                    volumes[sname][sreference] = prop['cell_volume'][d]
+
+        self.set_neighborhoods(neighborhoods)
+        self.set_volumes(volumes)
 
         if len(missing_name) > 0:
             monitoring.to_log_and_console(
@@ -1562,11 +1604,13 @@ class Atlases(object):
         if self._ref_atlas is None:
             self._ref_atlas = name
 
-        self._atlases[name] = {}
-        self._atlases[name]['cell_lineage'] = copy.deepcopy(prop['cell_lineage'])
-        self._atlases[name]['cell_name'] = copy.deepcopy(prop['cell_name'])
-        self._atlases[name]['cell_contact_surface'] = copy.deepcopy(prop['cell_contact_surface'])
-        self._atlases[name]['cell_volume'] = copy.deepcopy(prop['cell_volume'])
+        atlases = self.get_atlases()
+        atlases[name] = {}
+        atlases[name]['cell_lineage'] = copy.deepcopy(prop['cell_lineage'])
+        atlases[name]['cell_name'] = copy.deepcopy(prop['cell_name'])
+        atlases[name]['cell_contact_surface'] = copy.deepcopy(prop['cell_contact_surface'])
+        atlases[name]['cell_volume'] = copy.deepcopy(prop['cell_volume'])
+        self.set_atlases(atlases)
 
         return
 
@@ -1622,13 +1666,14 @@ class Atlases(object):
                 self.add_atlas(name, prop, parameters)
                 del prop
 
-        if self._neighborhoods is None:
+        neighborhoods = self.get_neighborhoods()
+        if neighborhoods is None:
             monitoring.to_log_and_console(str(proc) + ": empty neighborhoods ...")
             sys.exit(1)
 
         if parameters.use_common_neighborhood:
             monitoring.to_log_and_console("... build common neighborhoods", 1)
-            self._neighborhoods = _build_common_neighborhoods(self._neighborhoods)
+            self.set_neighborhoods(_build_common_neighborhoods(neighborhoods))
             self._use_common_neighborhood = True
             monitoring.to_log_and_console("    done", 1)
 
@@ -1637,10 +1682,11 @@ class Atlases(object):
         #
         monitoring.to_log_and_console("... temporal alignment of lineages", 1)
         self.temporal_alignment(time_digits_for_cell_id=time_digits_for_cell_id)
-        for n in self._atlases:
+        atlases = self.get_atlases()
+        for n in atlases:
             msg = "    - "
             msg += "linear time warping of '" + str(n) + "' wrt '" + str(self._ref_atlas) + "' is "
-            msg += str(self._atlases[n]['temporal_alignment'])
+            msg += str(atlases[n]['temporal_alignment'])
             monitoring.to_log_and_console(msg, 1)
         monitoring.to_log_and_console("    done", 1)
 
