@@ -347,7 +347,7 @@ def figures_division_dendrogram(atlases, parameters):
         f.write("    " + "swlabels = " + str(swlabels) + "\n")
         f.write("\n")
         f.write("    " + "title = '" + str(n) + " (linkage=' + cluster_distance + '), ")
-        f.write("delay={:d}'\n".format(parameters.delay_from_division))
+        f.write("delay={:d}'\n".format(parameters.naming_delay_from_division))
         f.write("\n")
         f.write("    " + "Z = sch.linkage(cdist, method=cluster_distance)\n")
         f.write("    " + "fig = plt.figure(figsize=(16, 8))\n")

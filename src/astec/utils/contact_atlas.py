@@ -83,10 +83,26 @@ class AtlasParameters(udiagnosis.DiagnosisParameters):
         self.doc['use_common_neighborhood'] = doc
         self.use_common_neighborhood = True
 
-        doc = "\t Delay from the division to extract the neighborhooods.\n"
+        doc = "\t Delay from the division to extract the neighborhooods used for atlas building,\n"
+        doc += "\t and thus for naming.\n"
         doc += "\t 0 means right after the division.\n"
-        self.doc['delay_from_division'] = doc
-        self.delay_from_division = 0
+        doc += "\t negative values means that the delay is counted backwards from the end of the branch.\n"
+        self.doc['name_delay_from_division'] = doc
+        self.name_delay_from_division = 0
+
+        doc = "\t Delay from the division to extract the neighborhooods used for naming confidence.\n"
+        doc += "\t 0 means right after the division.\n"
+        doc += "\t negative values means that the delay is counted backwards from the end of the branch.\n"
+        self.doc['confidence_delay_from_division'] = doc
+        self.confidence_delay_from_division = None
+        doc = "\t Minimum number of atlases required to assess naming confidence. If there is not enough atlases\n"
+        doc += "\t in the database for the aimed division, naming is not assessed."
+        self.doc['confidence_atlases_nmin'] = doc
+        self.confidence_atlases_nmin = 2
+        doc = "\t Percentage of atlases used to assessed naming confidence. If the percentage is less than\n"
+        doc += "\t 'confidence_atlases_nmin', 'confidence_atlases_nmin' atlases are used."
+        self.doc['confidence_atlases_percentage'] = doc
+        self.confidence_atlases_percentage = 50
 
         #
         #
@@ -171,7 +187,10 @@ class AtlasParameters(udiagnosis.DiagnosisParameters):
         self.varprint('add_symmetric_neighborhood', self.add_symmetric_neighborhood)
         self.varprint('differentiate_other_half', self.differentiate_other_half)
         self.varprint('use_common_neighborhood', self.use_common_neighborhood)
-        self.varprint('delay_from_division', self.delay_from_division)
+        self.varprint('name_delay_from_division', self.name_delay_from_division)
+        self.varprint('confidence_delay_from_division', self.confidence_delay_from_division)
+        self.varprint('self.confidence_atlases_nmin', self.self.confidence_atlases_nmin)
+        self.varprint('confidence_atlases_percentage', self.confidence_atlases_percentage)
 
         self.varprint('division_contact_similarity', self.division_contact_similarity)
 
@@ -209,8 +228,14 @@ class AtlasParameters(udiagnosis.DiagnosisParameters):
                       self.doc.get('differentiate_other_half', None))
         self.varwrite(logfile, 'use_common_neighborhood', self.use_common_neighborhood,
                       self.doc.get('use_common_neighborhood', None))
-        self.varwrite(logfile, 'delay_from_division', self.delay_from_division,
-                      self.doc.get('delay_from_division', None))
+        self.varwrite(logfile, 'name_delay_from_division', self.name_delay_from_division,
+                      self.doc.get('name_delay_from_division', None))
+        self.varwrite(logfile, 'confidence_delay_from_division', self.confidence_delay_from_division,
+                      self.doc.get('confidence_delay_from_division', None))
+        self.varwrite(logfile, 'confidence_atlases_nmin', self.confidence_atlases_nmin,
+                      self.doc.get('confidence_atlases_nmin', None))
+        self.varwrite(logfile, 'confidence_atlases_percentage', self.confidence_atlases_percentage,
+                      self.doc.get('confidence_atlases_percentage', None))
 
         self.varwrite(logfile, 'division_contact_similarity', self.division_contact_similarity,
                       self.doc.get('division_contact_similarity', None))
@@ -258,7 +283,18 @@ class AtlasParameters(udiagnosis.DiagnosisParameters):
                                                             self.differentiate_other_half)
         self.use_common_neighborhood = self.read_parameter(parameters, 'use_common_neighborhood',
                                                            self.use_common_neighborhood)
-        self.delay_from_division = self.read_parameter(parameters, 'delay_from_division', self.delay_from_division)
+        self.name_delay_from_division = self.read_parameter(parameters, 'name_delay_from_division',
+                                                                  self.name_delay_from_division)
+        self.name_delay_from_division = self.read_parameter(parameters, 'delay_from_division',
+                                                                  self.name_delay_from_division)
+        self.confidence_delay_from_division = self.read_parameter(parameters, 'confidence_delay_from_division',
+                                                                  self.confidence_delay_from_division)
+        self.confidence_delay_from_division = self.read_parameter(parameters, 'delay_from_division',
+                                                                  self.confidence_delay_from_division)
+        self.confidence_atlases_nmin = self.read_parameter(parameters, 'confidence_atlases_nmin',
+                                                           self.confidence_atlases_nmin)
+        self.confidence_atlases_percentage = self.read_parameter(parameters, 'confidence_atlases_percentage',
+                                                                 self.confidence_atlases_percentage)
 
         self.division_contact_similarity = self.read_parameter(parameters, 'cell_contact_distance',
                                                                self.division_contact_similarity)
@@ -425,7 +461,7 @@ def _diagnosis_pairwise_switches(atlases, parameters):
 
     divisions = atlases.get_divisions()
     ccs = not parameters.use_common_neighborhood
-    neighborhoods = atlases.get_neighborhoods()
+    neighborhoods = atlases.get_neighborhoods(delay_from_division=parameters.name_delay_from_division)
     similarity = atlases.get_division_contact_similarity()
 
     summary = {}
@@ -589,7 +625,7 @@ def _dpp_test_one_division(atlases, mother, parameters):
         return {}, []
 
     daughters = uname.get_daughter_names(mother)
-    neighborhoods = atlases.get_neighborhoods()
+    neighborhoods = atlases.get_neighborhoods(delay_from_division=parameters.name_delay_from_division)
     neighbors = {0: copy.deepcopy(neighborhoods[daughters[0]]), 1: copy.deepcopy(neighborhoods[daughters[1]])}
 
     # score before any changes
@@ -867,7 +903,7 @@ def _diagnosis_linkage(atlases, parameters):
         #
         #
         #
-        config = atlases.extract_division_neighborhoods(n)
+        config = atlases.extract_division_neighborhoods(n, delay_from_division=parameters.name_delay_from_division)
         swconfig = switched_division_neighborhoods(config, n)
 
         #
@@ -1050,13 +1086,15 @@ class Atlases(object):
         # partial copy of the read atlases, required when figures have to be generated
         self._atlases = {}
 
-        # nested dictionary of neighborhoods, where the keys are ['cell name']['reference name']
+        self._default_delay = None
+
+        # nested dictionary of neighborhoods, where the keys are [delay_from_division]['cell name']['reference name']
         # where 'cell name' is the cell name (Conklin), and 'reference name' is the file name,
         # a neighborhood is a dictionary of contact surfaces indexed by cell names
         # it only considers the first time point after the division
         self._neighborhoods = {}
 
-        # nested dictionary of volumes, where the keys are ['cell name']['reference name']
+        # nested dictionary of volumes, where the keys are [delay_from_division]['cell name']['reference name']
         self._volumes = {}
 
         self._use_common_neighborhood = False
@@ -1064,6 +1102,10 @@ class Atlases(object):
         # dictionary indexed by 'cell name' where 'cell name' is a mother cell giving the list
         # of references/atlases available for the two daughters
         self._divisions = {}
+        # dictionary indexed by [delay_from_division]['cell name']
+        # values are the pair of daughter cells (the largest first)
+        # this is the set of divisions where the same daughter is always larger than the other
+        # (and there are at least 5 atlases)
         self._asymmetric_divisions = {}
 
         # dictionary index by atlas name
@@ -1090,17 +1132,35 @@ class Atlases(object):
     def get_division_contact_similarity(self):
         return self.division_contact_similarity
 
-    def get_neighborhoods(self):
-        return self._neighborhoods
+    def get_default_delay(self):
+        return self._default_delay
 
-    def set_neighborhoods(self, neighborhoods):
-        self._neighborhoods = neighborhoods
+    def set_default_delay(self, delay=0):
+        self._default_delay = delay
 
-    def get_volumes(self):
-        return self._volumes
+    def get_neighborhoods(self, delay_from_division=None):
+        if delay_from_division is None:
+            delay = self.get_default_delay()
+        else:
+            delay = delay_from_division
+        if delay not in self._neighborhoods:
+            self._neighborhoods[delay] = {}
+        return self._neighborhoods[delay]
 
-    def set_volumes(self, volumes):
-        self._volumes = volumes
+    def set_neighborhoods(self, neighborhoods, delay_from_division=0):
+        self._neighborhoods[delay_from_division] = neighborhoods
+
+    def get_volumes(self, delay_from_division=None):
+        if delay_from_division is None:
+            delay = self.get_default_delay()
+        else:
+            delay = delay_from_division
+        if delay not in self._volumes:
+            self._volumes[delay] = {}
+        return self._volumes[delay]
+
+    def set_volumes(self, volumes, delay_from_division=0):
+        self._volumes[delay_from_division] = volumes
 
     def get_atlases(self):
         return self._atlases
@@ -1114,8 +1174,14 @@ class Atlases(object):
     def get_divisions(self):
         return self._divisions
 
-    def get_asymmetric_divisions(self):
-        return self._asymmetric_divisions
+    def get_asymmetric_divisions(self, delay_from_division=None):
+        if delay_from_division is None:
+            delay = self.get_default_delay()
+        else:
+            delay = delay_from_division
+        if delay not in self._asymmetric_divisions:
+            self._asymmetric_divisions[delay] = {}
+        return self._asymmetric_divisions[delay]
 
     def get_output_selections(self):
         return self._output_selections
@@ -1183,7 +1249,7 @@ class Atlases(object):
     #
     ############################################################
 
-    def build_divisions(self):
+    def build_divisions(self, delay_from_division=None):
         """
         Build a dictionary index by mother cell name. Each entry contains reference names
         for which the both daughters exist
@@ -1200,7 +1266,7 @@ class Atlases(object):
         #
         # get all references per division/mother cells
         #
-        neighborhoods = self.get_neighborhoods()
+        neighborhoods = self.get_neighborhoods(delay_from_division=delay_from_division)
         cell_names = sorted(list(neighborhoods.keys()))
         references = {}
         for cell_name in cell_names:
@@ -1225,7 +1291,7 @@ class Atlases(object):
                     msg = "    " + str(proc) + ": remove atlas '" + str(r) + "' for division '" + str(n) + "'"
                     monitoring.to_log_and_console(msg)
 
-    def build_asymmetric_divisions(self):
+    def build_asymmetric_divisions(self, delay_from_division=None):
         """
         Build a dictionary index by mother cell name. Each entry contains reference names
         for which the both daughters exist
@@ -1236,12 +1302,19 @@ class Atlases(object):
         proc = "build_asymmetric_divisions"
         minimal_references = 5
 
-        if self._asymmetric_divisions is not None:
-            del self._asymmetric_divisions
+        delay = delay_from_division
+        if delay is None:
+            delay = self.get_default_delay()
+
+        if self._asymmetric_divisions is None:
             self._asymmetric_divisions = {}
+        if delay in self._asymmetric_divisions:
+            del self._asymmetric_divisions[delay]
+        self._asymmetric_divisions[delay] = {}
 
         divisions = self.get_divisions()
-        volumes = self.get_volumes()
+
+        volumes = self.get_volumes(delay_from_division=delay)
 
         for mother in divisions:
             d = uname.get_daughter_names(mother)
@@ -1253,11 +1326,12 @@ class Atlases(object):
                 elif volumes[d[0]][r] < volumes[d[1]][r]:
                     vol10 += 1
             if vol01 > minimal_references and vol10 == 0:
-                self._asymmetric_divisions[mother] = [d[0], d[1]]
+                self._asymmetric_divisions[delay][mother] = [d[0], d[1]]
             elif vol10 > minimal_references and vol01 == 0:
-                self._asymmetric_divisions[mother] = [d[1], d[0]]
+                self._asymmetric_divisions[delay][mother] = [d[1], d[0]]
 
-        msg = "found " + str(len(self._asymmetric_divisions)) + " asymmetric divisions "
+        msg = "found " + str(len(self._asymmetric_divisions[delay])) + " asymmetric divisions "
+        msg += "at delay = " + str(delay) + " "
         msg += "(more than " + str(minimal_references) + " atlases) in " + str(len(divisions)) + " divisions"
         monitoring.to_log_and_console("\t" + msg)
         return
@@ -1303,7 +1377,7 @@ class Atlases(object):
                 print("        - " + str(n) + " : " + str(neighborhoods[cellname][r][n]))
         print("============================================================")
 
-    def add_neighborhoods(self, prop, parameters, atlas_name, time_digits_for_cell_id=4):
+    def add_neighborhoods(self, prop, parameters, atlas_name, delay_from_division=0, time_digits_for_cell_id=4):
         """
 
         Parameters
@@ -1311,6 +1385,7 @@ class Atlases(object):
         prop: embryo properties (atlas to be added)
         parameters:
         atlas_name: file or atlas name (will indexed the added neighborhoods for each cell name)
+        delay_from_division:
         time_digits_for_cell_id:
 
         Returns
@@ -1348,8 +1423,8 @@ class Atlases(object):
             monitoring.to_log_and_console(str(proc) + ": 'cell_volume' was not in dictionary")
             return
 
-        neighborhoods = self.get_neighborhoods()
-        volumes = self.get_volumes()
+        neighborhoods = self.get_neighborhoods(delay_from_division=delay_from_division)
+        volumes = self.get_volumes(delay_from_division=delay_from_division)
 
         #
         # remove empty names
@@ -1420,21 +1495,21 @@ class Atlases(object):
             # negative delay: count from the end of the shortest branch for the two sisters
             #
             d = daugh
-            if parameters.delay_from_division > 0:
-                delay_from_division = parameters.delay_from_division
-            elif parameters.delay_from_division < 0:
+            if delay_from_division >= 0:
+                local_delay_from_division = delay_from_division
+            elif delay_from_division < 0:
                 length0 = _get_branch_length(d, lineage)
                 sisters = copy.deepcopy(lineage[reverse_lineage[d]])
                 sisters.remove(d)
                 length1 = _get_branch_length(sisters[0], lineage)
-                delay_from_division = min(length0, length1) + parameters.delay_from_division
+                local_delay_from_division = min(length0, length1) + delay_from_division
                 #
                 # this is not necessary
                 #
-                if delay_from_division < 0:
-                    delay_from_division = 0
+                if local_delay_from_division < 0:
+                    local_delay_from_division = 0
 
-            for i in range(delay_from_division):
+            for i in range(local_delay_from_division):
                 if d not in lineage:
                     break
                 if len(lineage[d]) > 1:
@@ -1537,8 +1612,8 @@ class Atlases(object):
                 else:
                     volumes[sname][sreference] = prop['cell_volume'][d]
 
-        self.set_neighborhoods(neighborhoods)
-        self.set_volumes(volumes)
+        self.set_neighborhoods(neighborhoods, delay_from_division=delay_from_division)
+        self.set_volumes(volumes, delay_from_division=delay_from_division)
 
         if len(missing_name) > 0:
             monitoring.to_log_and_console(
@@ -1638,6 +1713,15 @@ class Atlases(object):
                                           + str(type(parameters)))
             sys.exit(1)
 
+        #
+        # extract neighborhoods for required delays
+        #
+        delays = [parameters.name_delay_from_division]
+        if parameters.confidence_delay_from_division is not None and \
+            parameters.confidence_delay_from_division not in delays:
+            delays += [parameters.confidence_delay_from_division]
+        self.set_default_delay(parameters.name_delay_from_division)
+
         if isinstance(atlasfiles, str):
             prop = ioproperties.read_dictionary(atlasfiles, inputpropertiesdict={})
             name = atlasfiles.split(os.path.sep)[-1]
@@ -1646,7 +1730,9 @@ class Atlases(object):
             if parameters.diagnosis_properties:
                 udiagnosis.diagnosis(prop, ['name', 'contact'], parameters,
                                      time_digits_for_cell_id=time_digits_for_cell_id)
-            self.add_neighborhoods(prop, parameters, atlas_name=name, time_digits_for_cell_id=time_digits_for_cell_id)
+            for d in delays:
+                self.add_neighborhoods(prop, parameters, atlas_name=name, delay_from_division=d,
+                                       time_digits_for_cell_id=time_digits_for_cell_id)
             self.add_atlas(name, prop, parameters)
             del prop
         elif isinstance(atlasfiles, list):
@@ -1661,24 +1747,34 @@ class Atlases(object):
                 if parameters.diagnosis_properties:
                     udiagnosis.diagnosis(prop, ['name', 'contact'], parameters,
                                          time_digits_for_cell_id=time_digits_for_cell_id)
-                self.add_neighborhoods(prop, parameters, atlas_name=name,
-                                       time_digits_for_cell_id=time_digits_for_cell_id)
+                for d in delays:
+                    self.add_neighborhoods(prop, parameters, atlas_name=name, delay_from_division=d,
+                                           time_digits_for_cell_id=time_digits_for_cell_id)
                 self.add_atlas(name, prop, parameters)
                 del prop
 
-        neighborhoods = self.get_neighborhoods()
-        if neighborhoods is None:
-            monitoring.to_log_and_console(str(proc) + ": empty neighborhoods ...")
-            sys.exit(1)
+        #
+        # check neighborhood extraction
+        #
+        for d in delays:
+            neighborhoods = self.get_neighborhoods(delay_from_division=d)
+            if neighborhoods is None:
+                monitoring.to_log_and_console(str(proc) + ": empty neighborhoods for delay_from_division = " + str(d))
+                sys.exit(1)
 
+        #
+        # build common neighborhood reference if required
+        #
         if parameters.use_common_neighborhood:
             monitoring.to_log_and_console("... build common neighborhoods", 1)
-            self.set_neighborhoods(_build_common_neighborhoods(neighborhoods))
+            for d in delays:
+                neighborhoods = self.get_neighborhoods(delay_from_division=d)
+                self.set_neighborhoods(_build_common_neighborhoods(neighborhoods), delay_from_division=d)
             self._use_common_neighborhood = True
             monitoring.to_log_and_console("    done", 1)
 
         #
-        # temporal alignment
+        # temporal alignment (done from the cell number)
         #
         monitoring.to_log_and_console("... temporal alignment of lineages", 1)
         self.temporal_alignment(time_digits_for_cell_id=time_digits_for_cell_id)
@@ -1695,7 +1791,7 @@ class Atlases(object):
         # give list of references for which both daughter cells exist
         #
         monitoring.to_log_and_console("... build division list", 1)
-        self.build_divisions()
+        self.build_divisions(delay_from_division=parameters.name_delay_from_division)
         monitoring.to_log_and_console("    done", 1)
 
         #
@@ -1703,7 +1799,8 @@ class Atlases(object):
         # give list of daughter cells, the largest one being the first one
         #
         monitoring.to_log_and_console("... build asymmetric division list", 1)
-        self.build_asymmetric_divisions()
+        for d in delays:
+            self.build_asymmetric_divisions(delay_from_division=d)
         monitoring.to_log_and_console("    done", 1)
 
         if parameters.diagnosis_properties:
@@ -1774,10 +1871,14 @@ class Atlases(object):
     #
     ############################################################
 
-    def extract_division_neighborhoods(self, mother_name):
+    def extract_division_neighborhoods(self, mother_name, delay_from_division=None):
+
+        delay = delay_from_division
+        if delay is None:
+            delay = self.get_default_delay()
 
         divisions = self.get_divisions()
-        neighborhoods = self.get_neighborhoods()
+        neighborhoods = self.get_neighborhoods(delay_from_division=delay)
         daughters = uname.get_daughter_names(mother_name)
 
         config = {}

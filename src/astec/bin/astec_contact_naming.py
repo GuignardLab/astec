@@ -219,7 +219,7 @@ def main():
     if args.write_selection or parameters.write_selection:
         time_digits_for_cell_id = experiment.get_time_digits_for_cell_id()
         ioproperties.write_morphonet_selection(prop, time_digits_for_cell_id=time_digits_for_cell_id,
-                                             directory=parameters.outputDir)
+                                               directory=parameters.outputDir)
     #
     # end of execution
     # write execution time in both log and history file
