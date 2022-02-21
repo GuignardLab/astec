@@ -347,7 +347,7 @@ def figures_division_dendrogram(atlases, parameters):
         f.write("    " + "swlabels = " + str(swlabels) + "\n")
         f.write("\n")
         f.write("    " + "title = '" + str(n) + " (linkage=' + cluster_distance + '), ")
-        f.write("delay={:d}'\n".format(parameters.naming_delay_from_division))
+        f.write("delay={:d}'\n".format(parameters.name_delay_from_division))
         f.write("\n")
         f.write("    " + "Z = sch.linkage(cdist, method=cluster_distance)\n")
         f.write("    " + "fig = plt.figure(figsize=(16, 8))\n")
@@ -785,7 +785,8 @@ def figures_distance_histogram(atlases, parameters):
                                                                     neighborhoods[d[1]][r1], neighborhoods[d[1]][r2],
                                                                     neighborhoods[d[0]][r2],
                                                                     similarity=similarity, change_contact_surfaces=ccs)
-                # if n[:2] == 'a6':
+                # trace = n == "b7.0003_" or n == "b7.0008*"
+                # if trace:
                 #     print("division distance of " + n + " between " + r1 + " and " + r2 + ":")
                 #     print("\t right pairing = " + str(div00))
                 #     print("\t wrong pairing = " + str(div01))
