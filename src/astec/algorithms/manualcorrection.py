@@ -510,8 +510,8 @@ def _get_reconstructed_image(previous_time, current_time, experiment, parameters
     #
     #
     output_reconstructed_image = common.add_suffix(input_image, parameters.result_suffix,
-                                                  new_dirname=experiment.astec_dir.get_rec_directory(0),
-                                                  new_extension=experiment.default_image_suffix)
+                                                   new_dirname=experiment.astec_dir.get_rec_directory(0),
+                                                   new_extension=experiment.default_image_suffix)
     if os.path.isfile(output_reconstructed_image) and monitoring.forceResultsToBeBuilt is False:
         monitoring.to_log_and_console("    .. reconstructed image is '" +
                                       str(output_reconstructed_image).split(os.path.sep)[-1] + "'", 2)
@@ -746,9 +746,9 @@ def _two_seeds_propagation(c, experiment, tmp_prefix_name, label_width=4):
         imsave(res_image, two_seeds)
         del two_seeds
         del im_seed
-        return 2
+        return labels
 
-    return len(labels)
+    return labels
 
 
 def _two_seeds_watershed(c, experiment, parameters, tmp_prefix_name, label_width=4):
@@ -800,8 +800,10 @@ def _two_seeds_watershed(c, experiment, parameters, tmp_prefix_name, label_width
 
     return
 
+
 def _update_image_properties(im_segmentation, tmp_prefix_name, current_time, bounding_boxes, c, newlabel, properties,
-                             experiment, new_propagated_division, label_width=4, time_digits_for_cell_id=4):
+                             experiment, new_propagated_division, previous_labels=None, label_width=4,
+                             time_digits_for_cell_id=4):
     #
     # watershed has 3 labels 1, 2 and 3
     #
@@ -832,20 +834,24 @@ def _update_image_properties(im_segmentation, tmp_prefix_name, current_time, bou
     #
     # update lineage
     #
-    prec = []
-    for k in properties['cell_lineage']:
-        if cellid1 in properties['cell_lineage'][k]:
-            if len(properties['cell_lineage'][k]) > 1:
-                msg = "      .. weird, cell " + str(k) + " divides into " + str(properties['cell_lineage'][k])
-                monitoring.to_log_and_console(msg)
-                msg = "         should only divides into " + str(c)
-                monitoring.to_log_and_console(msg)
-            prec += [k]
-    if len(prec) == 1:
-        properties['cell_lineage'][prec[0]] = [cellid1, cellid2]
+    previous_time = current_time - experiment.delta_time_point
+
+    if len(previous_labels) == 1:
+        prevcell = previous_time * 10 ** time_digits_for_cell_id + previous_labels[0]
+        properties['cell_lineage'][prevcell] = [cellid1, cellid2]
+    elif len(previous_labels) == 2:
+        prevcell = previous_time * 10 ** time_digits_for_cell_id + previous_labels[0]
+        properties['cell_lineage'][prevcell] = [cellid1]
+        prevcell = previous_time * 10 ** time_digits_for_cell_id + previous_labels[1]
+        properties['cell_lineage'][prevcell] = [cellid2]
+    else:
+        msg = "      .. weird, cell(s) " + str(previous_labels) + " divides into " + str([c, newlabel])
+        monitoring.to_log_and_console(msg)
+        msg = "         lineage is not updated"
+        monitoring.to_log_and_console(msg)
+        return new_propagated_division
 
     if cellid1 in properties['cell_lineage']:
-        properties['cell_lineage'][cellid2] = properties['cell_lineage'][cellid1]
         if len(properties['cell_lineage'][cellid1]) == 1:
             t = properties['cell_lineage'][cellid1][0] // 10 ** time_digits_for_cell_id
             label = properties['cell_lineage'][cellid1][0] - t * 10 ** time_digits_for_cell_id
@@ -854,7 +860,7 @@ def _update_image_properties(im_segmentation, tmp_prefix_name, current_time, bou
             msg = "      .. weird, cell " + str(cellid1) + " divides into "
             msg += str(properties['cell_lineage'][cellid1])
             monitoring.to_log_and_console(msg)
-            msg = "         should only divides into one cell"
+            msg = "         should only divides into one cell. Will not propagate division any further."
             monitoring.to_log_and_console(msg)
 
     return new_propagated_division
@@ -962,7 +968,7 @@ def _image_cell_division(input_image, output_image, current_time, properties, ex
                 cell_memb_name = tmp_prefix_name + "_cell" + cellid + "_membrane." + experiment.default_image_suffix
                 cell_seed_name = tmp_prefix_name + "_cell" + cellid + "_seeds." + experiment.default_image_suffix
                 if not os.path.isfile(cell_seed_name):
-                     shutil.copy2(cell_memb_name, cell_seed_name)
+                    shutil.copy2(cell_memb_name, cell_seed_name)
         else:
             im_for_seeds = imread(image_for_seed)
             voxelsize = im_for_seeds.get_voxelsize()
@@ -981,8 +987,8 @@ def _image_cell_division(input_image, output_image, current_time, properties, ex
         #
         if current_time in propagated_division:
             division_image = common.add_suffix(input_image, "_division",
-                                                new_dirname=experiment.astec_dir.get_tmp_directory(0),
-                                                new_extension=experiment.default_image_suffix)
+                                               new_dirname=experiment.astec_dir.get_tmp_directory(0),
+                                               new_extension=experiment.default_image_suffix)
         else:
             division_image = output_image
 
@@ -1020,7 +1026,8 @@ def _image_cell_division(input_image, output_image, current_time, properties, ex
 
             new_propagated_division = _update_image_properties(im_segmentation, tmp_prefix_name, current_time,
                                                                bounding_boxes, c, newlabel,  properties, experiment,
-                                                               new_propagated_division, label_width=label_width,
+                                                               new_propagated_division, previous_labels=[c],
+                                                               label_width=label_width,
                                                                time_digits_for_cell_id=time_digits_for_cell_id)
 
         #
@@ -1071,8 +1078,8 @@ def _image_cell_division(input_image, output_image, current_time, properties, ex
                 monitoring.to_log_and_console("    .. " + proc + ": error when getting deformation field")
                 return False
 
-        cpp_wrapping.apply_transformation(previous_segmentation, deformed_segmentation, deformation,
-                                          interpolation_mode='nearest', monitoring=monitoring)
+            cpp_wrapping.apply_transformation(previous_segmentation, deformed_segmentation, deformation,
+                                              interpolation_mode='nearest', monitoring=monitoring)
 
         astec.build_seeds_from_previous_segmentation(deformed_segmentation, deformed_seeds, parameters)
 
@@ -1096,15 +1103,12 @@ def _image_cell_division(input_image, output_image, current_time, properties, ex
 
         for c in propagated_division[current_time]:
             newlabel += 1
-            cellid = str('{:0{width}d}'.format(c, width=label_width))
-            cell_seed_name = tmp_prefix_name + "_cell" + cellid + "_deformed_seeds." + experiment.default_image_suffix
-            if not os.path.isfile(cell_seed_name):
-                ext_for_seeds = im_for_seeds[bounding_boxes[c]]
-                imsave(cell_seed_name, SpatialImage(ext_for_seeds, voxelsize=voxelsize).astype(datatype))
-                del ext_for_seeds
 
-            nseeds = _two_seeds_propagation(c, experiment, tmp_prefix_name, label_width=label_width)
-            if nseeds != 2:
+            #
+            # previous_labels are the labels in previous image that will correspond to [2, 3]
+            #
+            previous_labels = _two_seeds_propagation(c, experiment, tmp_prefix_name, label_width=label_width)
+            if len(previous_labels) != 2:
                 msg = "    .. unable to find two seeds for cell " + str(c) + " at time " + str(current_time)
                 monitoring.to_log_and_console(msg)
                 continue
@@ -1113,7 +1117,8 @@ def _image_cell_division(input_image, output_image, current_time, properties, ex
 
             new_propagated_division = _update_image_properties(im_segmentation, tmp_prefix_name, current_time,
                                                                bounding_boxes, c, newlabel, properties, experiment,
-                                                               new_propagated_division, label_width=label_width,
+                                                               new_propagated_division, previous_labels=previous_labels,
+                                                               label_width=label_width,
                                                                time_digits_for_cell_id=time_digits_for_cell_id)
 
         imsave(output_image, im_segmentation)
@@ -1214,6 +1219,7 @@ def correction_process(current_time, properties, experiment, parameters, fusion,
     #
     # something to do
     #
+    new_propagated_division = {}
     monitoring.to_log_and_console("... correction of '" + str(input_image).split(os.path.sep)[-1] + "'", 1)
 
     time_digits_for_cell_id = experiment.get_time_digits_for_cell_id()
@@ -1313,8 +1319,16 @@ def correction_control(experiment, parameters):
     if lineage_tree_file is not None and os.path.isfile(os.path.join(mars_dir, lineage_tree_file)):
         lineage_tree_path = os.path.join(mars_dir, lineage_tree_file)
         properties = ioproperties.read_dictionary(lineage_tree_path)
+        #
+        # will only update volume and lineage
+        #
+        keylist = list(properties.keys())
+        for k in keylist:
+            if k != 'cell_lineage' and k != 'cell_volume':
+                del properties[k]
         if 'cell_lineage' in properties:
             lineage = properties['cell_lineage']
+
     #
     #
     #
@@ -1327,21 +1341,17 @@ def correction_control(experiment, parameters):
         properties, propagated_division = correction_process(current_time, properties, experiment, parameters,
                                                              fusion, division, propagated_division)
         #
+        # save lineage here (if there is a lineage to be saved)
+        #
+        if properties is not None:
+            lineage_tree_path = os.path.join(astec_dir, experiment.astec_dir.get_file_name("_lineage") + "."
+                                             + experiment.result_lineage_suffix)
+            ioproperties.write_dictionary(lineage_tree_path, properties)
+        #
         # cleaning
         #
         if monitoring.keepTemporaryFiles is False:
             experiment.astec_dir.rmtree_tmp_directory()
-    #
-    # save lineage here (if there is a lineage to be saved)
-    #
-    if properties is not None:
-        keylist = list(properties.keys())
-        for k in keylist:
-            if k != 'cell_lineage' and k != 'cell_volume':
-                del properties[k]
-        lineage_tree_path = os.path.join(astec_dir, experiment.astec_dir.get_file_name("_lineage") + "."
-                                         + experiment.result_lineage_suffix)
-        ioproperties.write_dictionary(lineage_tree_path, properties)
 
     end_time = time.time()
     monitoring.to_log_and_console('    computation time = ' + str(end_time - start_time) + ' s', 1)
