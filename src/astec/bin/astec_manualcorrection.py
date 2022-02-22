@@ -202,18 +202,20 @@ def main():
 
     parameters = manualcorrection.ManualCorrectionParameters()
 
-    parameters.first_time_point = experiment.first_time_point
-    parameters.last_time_point = experiment.first_time_point
     parameters.update_from_parameter_file(parameter_file)
+    parameters.membrane_reconstruction.set_suffixes()
+    parameters.seed_reconstruction.set_suffixes(parameters.membrane_reconstruction)
+    parameters.morphosnake_reconstruction.set_suffixes(parameters.membrane_reconstruction)
 
     parameters.write_parameters(monitoring.log_filename)
 
-    if parameters.mapping_file is not None and len(str(parameters.mapping_file)) > 0:
-        if not os.path.isfile(parameters.mapping_file):
-            monitoring.to_log_and_console("... file '"+str(parameters.mapping_file)+"' does not seem to exist")
+    if parameters.manualcorrection_file is not None and len(str(parameters.manualcorrection_file)) > 0:
+        if not os.path.isfile(parameters.manualcorrection_file):
+            monitoring.to_log_and_console("... file '" + str(parameters.manualcorrection_file) +
+                                          "' does not seem to exist")
             monitoring.to_log_and_console("\t Exiting")
             sys.exit(1)
-        experiment.copy_stamped_file(start_time, parameters.mapping_file)
+        experiment.copy_stamped_file(start_time, parameters.manualcorrection_file)
 
     #
     # processing

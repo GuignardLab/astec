@@ -283,6 +283,32 @@ def compose_trsf(the_trsfs, res_trsf, other_options=None, monitoring=None):
     return
 
 
+def copy(path_input, path_output, other_options=None, monitoring=None):
+    """
+
+    Parameters
+    ----------
+    path_input
+    path_output
+    other_options
+    monitoring
+
+    Returns
+    -------
+
+    """
+
+    path_to_exec = _find_exec('copy')
+
+    command_line = path_to_exec + ' ' + path_input + ' ' + path_output
+    if other_options is not None:
+        command_line += " " + other_options
+
+    _launch_inline_cmd(command_line, monitoring=monitoring)
+
+    return
+
+
 def ext_image(input_image, output_image, options, other_options=None, monitoring=None):
 
     path_to_exec = _find_exec('extImage')
