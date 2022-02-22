@@ -664,7 +664,7 @@ def _erode_cell(parameters):
     return eroded, i, bb
 
 
-def _build_seeds_from_previous_segmentation(label_image, output_image, parameters, nprocessors=26):
+def build_seeds_from_previous_segmentation(label_image, output_image, parameters, nprocessors=26):
     """
     Erodes all the labels in the segmented image seg
     :param label_image: image whose cells are to be eroded

@@ -355,8 +355,6 @@ def _read_correction_file(filename, lineage=None, first_time_point=1, time_digit
             labels = [c - (c // 10 ** time_digits_for_cell_id) for c in next_cell_ids]
 
     f.close()
-    print("division = " + str(division))
-    print("fusion = " + str(fusion))
     return fusion, division
 
 ########################################################################################
@@ -569,7 +567,7 @@ def _get_bounding_box(input_image, experiment, division, tmp_prefix_name, dilati
 
     Returns
     -------
-
+    A dictionary of bounding boxes indexed by cell labels.
     """
     segmentation = imread(input_image)
     voxelsize = segmentation.get_voxelsize()
@@ -720,16 +718,45 @@ def _two_seeds_extraction(first_segmentation, cellid, image_for_seed, experiment
             cpp_wrapping.mc_mask_seeds(unmasked_seed_image, first_segmentation, seed_image)
 
 
+def _two_seeds_propagation(c, experiment, tmp_prefix_name, label_width=4):
+    #
+    # try to get two seeds
+    #
+    cellid = str('{:0{width}d}'.format(c, width=label_width))
+    cell_seg_name = tmp_prefix_name + "_cell" + cellid + "_seg." + experiment.default_image_suffix
+    cell_def_seed_name = tmp_prefix_name + "_cell" + cellid + "_deformed_seeds." + experiment.default_image_suffix
+
+    #
+    #
+    #
+    imseg = imread(cell_seg_name)
+    im_seed = imread(cell_def_seed_name)
+    labels = list(np.unique(im_seed[imseg == c]))
+    if 0 in labels:
+        labels.remove(0)
+    del imseg
+
+    #
+    # two seeds? we're done
+    # create an image with 0, 2, and 3 labels
+    #
+    if len(labels) == 2:
+        two_seeds = (2 * (im_seed == labels[0]) + 3 * (im_seed == labels[1])).astype(im_seed.dtype)
+        res_image = tmp_prefix_name + "_cell" + cellid + "_seeds_two_seeds." + experiment.default_image_suffix
+        imsave(res_image, two_seeds)
+        del two_seeds
+        del im_seed
+        return 2
+
+    return len(labels)
+
+
 def _two_seeds_watershed(c, experiment, parameters, tmp_prefix_name, label_width=4):
     #
     # try to get two seeds
     #
     cellid = str('{:0{width}d}'.format(c, width=label_width))
     cell_seg_name = tmp_prefix_name + "_cell" + cellid + "_seg." + experiment.default_image_suffix
-    cell_seed_name = tmp_prefix_name + "_cell" + cellid + "_seeds." + experiment.default_image_suffix
-    nseeds = _two_seeds_extraction(cell_seg_name, c, cell_seed_name, experiment, parameters)
-    if nseeds != 2:
-        return nseeds
     #
     #
     #
@@ -738,7 +765,11 @@ def _two_seeds_watershed(c, experiment, parameters, tmp_prefix_name, label_width
     cell_new_memb_name = tmp_prefix_name + "_cell" + cellid + "_new_membrane." + experiment.default_image_suffix
     cell_new_seed_name = tmp_prefix_name + "_cell" + cellid + "_new_seeds." + experiment.default_image_suffix
     #
-    # border
+    # get cell border from cell segmentation
+    # set membrane signal to maxmembrane: it ensures that the watershed will "stay" inside the cell
+    # use also the eroded cell background as a seed
+    #
+    # seed labels are [2, 3]
     #
     imseg = imread(cell_seg_name)
     binseg = np.ones_like(imseg)
@@ -767,7 +798,66 @@ def _two_seeds_watershed(c, experiment, parameters, tmp_prefix_name, label_width
     cell_wate_name = tmp_prefix_name + "_cell" + cellid + "_watershed." + experiment.default_image_suffix
     mars.watershed(cell_new_seed_name, cell_new_memb_name, cell_wate_name, parameters)
 
-    return nseeds
+    return
+
+def _update_image_properties(im_segmentation, tmp_prefix_name, current_time, bounding_boxes, c, newlabel, properties,
+                             experiment, new_propagated_division, label_width=4, time_digits_for_cell_id=4):
+    #
+    # watershed has 3 labels 1, 2 and 3
+    #
+    cellid = str('{:0{width}d}'.format(c, width=label_width))
+    cell_wate_name = tmp_prefix_name + "_cell" + cellid + "_watershed." + experiment.default_image_suffix
+    #
+    # update segmentation
+    #
+    newseg = imread(cell_wate_name)
+    newseg[im_segmentation[bounding_boxes[c]] != c] = 0
+    im_segmentation[bounding_boxes[c]][newseg == 2] = c
+    im_segmentation[bounding_boxes[c]][newseg == 3] = newlabel
+
+    #
+    # update volumes
+    #
+    cell_label = np.unique(newseg)
+    cell_volume = nd.sum(np.ones_like(newseg), newseg, index=np.int16(cell_label))
+    newseg_volumes = dict(zip(cell_label, cell_volume))
+
+    cellid1 = current_time * 10 ** time_digits_for_cell_id + c
+    cellid2 = current_time * 10 ** time_digits_for_cell_id + newlabel
+    if cellid2 in properties['cell_volume']:
+        monitoring.to_log_and_console("    .. weird, " + str(cellid2) + " was already in volume dictionary")
+    properties['cell_volume'][cellid1] = int(newseg_volumes[2])
+    properties['cell_volume'][cellid2] = int(newseg_volumes[3])
+
+    #
+    # update lineage
+    #
+    prec = []
+    for k in properties['cell_lineage']:
+        if cellid1 in properties['cell_lineage'][k]:
+            if len(properties['cell_lineage'][k]) > 1:
+                msg = "      .. weird, cell " + str(k) + " divides into " + str(properties['cell_lineage'][k])
+                monitoring.to_log_and_console(msg)
+                msg = "         should only divides into " + str(c)
+                monitoring.to_log_and_console(msg)
+            prec += [k]
+    if len(prec) == 1:
+        properties['cell_lineage'][prec[0]] = [cellid1, cellid2]
+
+    if cellid1 in properties['cell_lineage']:
+        properties['cell_lineage'][cellid2] = properties['cell_lineage'][cellid1]
+        if len(properties['cell_lineage'][cellid1]) == 1:
+            t = properties['cell_lineage'][cellid1][0] // 10 ** time_digits_for_cell_id
+            label = properties['cell_lineage'][cellid1][0] - t * 10 ** time_digits_for_cell_id
+            new_propagated_division[t] = new_propagated_division.get(t, []) + [label]
+        else:
+            msg = "      .. weird, cell " + str(cellid1) + " divides into "
+            msg += str(properties['cell_lineage'][cellid1])
+            monitoring.to_log_and_console(msg)
+            msg = "         should only divides into one cell"
+            monitoring.to_log_and_console(msg)
+
+    return new_propagated_division
 
 
 def _image_cell_division(input_image, output_image, current_time, properties, experiment, parameters, new_division,
@@ -797,8 +887,9 @@ def _image_cell_division(input_image, output_image, current_time, properties, ex
 
     #
     # get bounding boxes of cells of interest and extract subimages
+    # => dictionary of bounding boxes indexed by cell labels.
     # tmp_prefix_name + "_cell" + cellid + "_seg." + experiment.default_image_suffix
-    # get max label in the segmentation image at the same time
+    # save also segmentation subimages
     #
     e = common.get_image_extension(input_image)
     b = os.path.basename(input_image)
@@ -826,7 +917,7 @@ def _image_cell_division(input_image, output_image, current_time, properties, ex
         return properties, new_propagated_division
 
     #
-    # extract membranes sub-images
+    # extract and save membranes sub-images
     #
     im_membrane = imread(membrane_image)
     voxelsize = im_membrane.get_voxelsize()
@@ -839,6 +930,13 @@ def _image_cell_division(input_image, output_image, current_time, properties, ex
             imsave(cell_memb_name,  SpatialImage(ext_membrane, voxelsize=voxelsize).astype(datatype))
             del ext_membrane
     del im_membrane
+
+    #
+    # at this point, sub-images of
+    # - segmentation
+    # - membrane
+    # have been saved
+    #
 
     #
     # de novo division: compute seeds
@@ -882,7 +980,7 @@ def _image_cell_division(input_image, output_image, current_time, properties, ex
         # transform input_image into division_image
         #
         if current_time in propagated_division:
-            division_image = common.add_suffix(input_image, experiment.result_image_suffix + "_division",
+            division_image = common.add_suffix(input_image, "_division",
                                                 new_dirname=experiment.astec_dir.get_tmp_directory(0),
                                                 new_extension=experiment.default_image_suffix)
         else:
@@ -909,69 +1007,26 @@ def _image_cell_division(input_image, output_image, current_time, properties, ex
             #
             # try to get two seeds + watershed
             #
-            nseeds = _two_seeds_watershed(c, experiment, parameters, tmp_prefix_name, label_width=label_width)
+            cellid = str('{:0{width}d}'.format(c, width=label_width))
+            cell_seg_name = tmp_prefix_name + "_cell" + cellid + "_seg." + experiment.default_image_suffix
+            cell_seed_name = tmp_prefix_name + "_cell" + cellid + "_seeds." + experiment.default_image_suffix
+            nseeds = _two_seeds_extraction(cell_seg_name, c, cell_seed_name, experiment, parameters)
             if nseeds != 2:
                 msg = "    .. unable to find two seeds for cell " + str(c) + " at time " + str(current_time)
                 monitoring.to_log_and_console(msg)
                 continue
-            #
-            # watershed has 3 labels 1, 2 and 3
-            #
-            cellid = str('{:0{width}d}'.format(c, width=label_width))
-            cell_wate_name = tmp_prefix_name + "_cell" + cellid + "_watershed." + experiment.default_image_suffix
-            #
-            # update segmentation
-            #
-            newseg = imread(cell_wate_name)
-            newseg[im_segmentation[bounding_boxes[c]] != c] = 0
-            im_segmentation[bounding_boxes[c]][newseg == 2] = c
-            im_segmentation[bounding_boxes[c]][newseg == 3] = newlabel
 
-            #
-            # update volumes
-            #
-            cell_label = np.unique(newseg)
-            cell_volume = nd.sum(np.ones_like(newseg), newseg, index=np.int16(cell_label))
-            newseg_volumes = dict(zip(cell_label, cell_volume))
+            _two_seeds_watershed(c, experiment, parameters, tmp_prefix_name, label_width=label_width)
 
-            cellid1 = current_time * 10 ** time_digits_for_cell_id + c
-            cellid2 = current_time * 10 ** time_digits_for_cell_id + newlabel
-            if cellid2 in properties['cell_volume']:
-                monitoring.to_log_and_console("    .. weird, " + str(cellid2) + " was already in volume dictionary")
-            volume = properties['cell_volume'][cellid1]
-            properties['cell_volume'][cellid1] = int(newseg_volumes[2])
-            properties['cell_volume'][cellid2] = int(newseg_volumes[3])
-
-            #
-            # update lineage
-            #
-            prec = []
-            for k in properties['cell_lineage']:
-                if cellid1 in properties['cell_lineage'][k]:
-                    if len(properties['cell_lineage'][k]) > 1:
-                        msg = "      .. weird, cell " + str(k) + " divides into " + str(properties['cell_lineage'][k])
-                        monitoring.to_log_and_console(msg)
-                        msg = "         should only divides into " + str(c)
-                        monitoring.to_log_and_console(msg)
-                    prec += [k]
-            if len(prec) == 1:
-                properties['cell_lineage'][prec[0]] = [cellid1, cellid2]
-
-            if cellid1 in properties['cell_lineage']:
-                properties['cell_lineage'][cellid2] = properties['cell_lineage'][cellid1]
-                if len(properties['cell_lineage'][cellid1]) == 1:
-                    t = properties['cell_lineage'][cellid1][0] // 10**time_digits_for_cell_id
-                    label = properties['cell_lineage'][cellid1][0] - t * 10**time_digits_for_cell_id
-                    new_propagated_division[t] = new_propagated_division.get(t, []) + [label]
-                else:
-                    msg = "      .. weird, cell " + str(cellid1) + " divides into "
-                    msg += str(properties['cell_lineage'][cellid1])
-                    monitoring.to_log_and_console(msg)
-                    msg = "         should only divides into one cell"
-                    monitoring.to_log_and_console(msg)
+            new_propagated_division = _update_image_properties(im_segmentation, tmp_prefix_name, current_time,
+                                                               bounding_boxes, c, newlabel,  properties, experiment,
+                                                               new_propagated_division, label_width=label_width,
+                                                               time_digits_for_cell_id=time_digits_for_cell_id)
 
         #
-        imsave(division_image, im_segmentation)
+        if current_time not in propagated_division:
+            imsave(division_image, im_segmentation)
+            return properties, new_propagated_division
         input_image = division_image
 
     #
@@ -979,12 +1034,92 @@ def _image_cell_division(input_image, output_image, current_time, properties, ex
     # retrieve seeds from previous segmentation image
     #
     if current_time in propagated_division:
-        pass
+        #
+        # build seeds by eroding previous segmentation and deforming it
+        #
+        # erosion iterations are set by default in voxel units
+        # there is also a volume defined in voxel units
+        #
+        monitoring.to_log_and_console('    build seeds from previous segmentation', 2)
+
+        previous_segmentation = experiment.get_segmentation_image(previous_time)
+        if previous_segmentation is None:
+            monitoring.to_log_and_console("    .. " + proc + ": no segmentation image was found for time "
+                                          + str(previous_time))
+            return False
+
+        #
+        # transform the previous segmentation image then erode the cells
+        # adapted from astec.py
+        #
+        deformed_seeds = common.add_suffix(input_image, '_deformed_seeds_from_previous',
+                                           new_dirname=experiment.astec_dir.get_tmp_directory(0),
+                                           new_extension=experiment.default_image_suffix)
+        #
+        # deformed_segmentation will be needed for morphosnake correction
+        # may also be used in reconstruction.py
+        #
+        deformed_segmentation = common.add_suffix(input_image, '_deformed_segmentation_from_previous',
+                                                  new_dirname=experiment.astec_dir.get_tmp_directory(0),
+                                                  new_extension=experiment.default_image_suffix)
+
+        if not os.path.isfile(deformed_segmentation) or monitoring.forceResultsToBeBuilt is True:
+            deformation = reconstruction.get_deformation_from_current_to_previous(current_time, experiment,
+                                                                                  parameters.membrane_reconstruction,
+                                                                                  previous_time)
+            if deformation is None:
+                monitoring.to_log_and_console("    .. " + proc + ": error when getting deformation field")
+                return False
+
+        cpp_wrapping.apply_transformation(previous_segmentation, deformed_segmentation, deformation,
+                                          interpolation_mode='nearest', monitoring=monitoring)
+
+        astec.build_seeds_from_previous_segmentation(deformed_segmentation, deformed_seeds, parameters)
+
+        #
+        # save sub-images of the deformed seeds
+        #
+        im_for_seeds = imread(deformed_seeds)
+        voxelsize = im_for_seeds.get_voxelsize()
+        datatype = im_for_seeds.dtype
+        for c in propagated_division[current_time]:
+            cellid = str('{:0{width}d}'.format(c, width=label_width))
+            cell_seed_name = tmp_prefix_name + "_cell" + cellid + "_deformed_seeds." + experiment.default_image_suffix
+            if not os.path.isfile(cell_seed_name):
+                ext_for_seeds = im_for_seeds[bounding_boxes[c]]
+                imsave(cell_seed_name, SpatialImage(ext_for_seeds, voxelsize=voxelsize).astype(datatype))
+                del ext_for_seeds
+        del im_for_seeds
+
+        im_segmentation = imread(input_image)
+        newlabel = int(np.max(im_segmentation))
+
+        for c in propagated_division[current_time]:
+            newlabel += 1
+            cellid = str('{:0{width}d}'.format(c, width=label_width))
+            cell_seed_name = tmp_prefix_name + "_cell" + cellid + "_deformed_seeds." + experiment.default_image_suffix
+            if not os.path.isfile(cell_seed_name):
+                ext_for_seeds = im_for_seeds[bounding_boxes[c]]
+                imsave(cell_seed_name, SpatialImage(ext_for_seeds, voxelsize=voxelsize).astype(datatype))
+                del ext_for_seeds
+
+            nseeds = _two_seeds_propagation(c, experiment, tmp_prefix_name, label_width=label_width)
+            if nseeds != 2:
+                msg = "    .. unable to find two seeds for cell " + str(c) + " at time " + str(current_time)
+                monitoring.to_log_and_console(msg)
+                continue
+
+            _two_seeds_watershed(c, experiment, parameters, tmp_prefix_name, label_width=label_width)
+
+            new_propagated_division = _update_image_properties(im_segmentation, tmp_prefix_name, current_time,
+                                                               bounding_boxes, c, newlabel, properties, experiment,
+                                                               new_propagated_division, label_width=label_width,
+                                                               time_digits_for_cell_id=time_digits_for_cell_id)
+
+        imsave(output_image, im_segmentation)
+        del im_segmentation
 
     return properties, new_propagated_division
-
-
-
 
 
 ########################################################################################
@@ -1072,7 +1207,7 @@ def correction_process(current_time, properties, experiment, parameters, fusion,
     # nothing to do, copy the image
     #
     if current_time not in fusion and current_time not in new_division and current_time not in propagated_division:
-        shutil.copy2(input_image, output_image)
+        cpp_wrapping.copy(input_image, output_image)
         monitoring.to_log_and_console("    no corrections to be done for time " + str(current_time), 2)
         return properties, {}
 
@@ -1105,8 +1240,6 @@ def correction_process(current_time, properties, experiment, parameters, fusion,
                                                                    experiment, parameters, new_division,
                                                                    propagated_division,
                                                                    time_digits_for_cell_id=time_digits_for_cell_id)
-        print("new_propagated_division = " + str(new_propagated_division))
-
 
     return properties, new_propagated_division
 
