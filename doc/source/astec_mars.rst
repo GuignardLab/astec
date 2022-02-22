@@ -13,19 +13,22 @@ The name ``mars`` comes from :cite:p:`fernandez:hal-00521491` where ``MARS`` is 
 
 This method aims at producing a segmentation of a membrane cell image (e.g.  a fused image) into a segmentation image. This segmentation image is a integer-valued image where each integer labeled an unique cell in the image. By convention, '1' is the background label, while cells have labels greater than 2. It is made of the following steps:
 
+1. Pre-processing of the input image to produce the input seed image
+   for seed computation. This is described in section
+   :ref:`cli-input-image-preprocessing`. The parameters that governed
+   the pre-processing are described in section
+   :ref:`cli-parameters-preprocessing` and prefixed by ``seed_``.
 
-1. Pre-processing of the input image to produce the input seed image for seed computation.
-This is described in section :ref:`cli-input-image-preprocessing`.
-The parameters that governed the pre-processing are described in section :ref:`cli-parameters-preprocessing` 
-and prefixed by ``seed_``.
-
-2. Seed extraction through the computation of the `h`-minima of the input seed image
-
-3. Eventually seed correction
-
-4. Pre-processing of the input image to produce the input membrane image for the seeded watershed, similarly to
-the pre-processing of the input seed image.
-The parameters that governed the pre-processing are prefixed by ``membrane_``.
+2. Seed extraction through the computation of the `h`-minima of the
+   input seed image.
+   
+3. Eventually seed correction.
+   
+4. Pre-processing of the input image to produce the input membrane
+   image for the seeded watershed, similarly to
+   the pre-processing of the input seed image.
+   The parameters that governed the pre-processing are prefixed by
+   ``membrane_``.
 
 5. A seeded watershed.
 
@@ -112,7 +115,7 @@ The seed extraction is made of the following steps:
 Step 3: seed correction
 -----------------------
 
-Several rounds of correction of the computed seeds can be done. At each round, different seeds can be assigned the same label (and this will fuse the further reconstructed cells) or new seeds (each new seed is a single voxel) can be added. See the \option{seed_edition_files} variable for details.
+Several rounds of correction of the computed seeds can be done. At each round, different seeds can be assigned the same label (and this will fuse the further reconstructed cells) or new seeds (each new seed is a single voxel) can be added. See the ``seed_edition_files`` variable for details.
 
 When correcting seeds, it is advised to launch ``astec_mars``  with the ``-k`` option. Indeed, temporary files, as the seed image, are kept in a temporary directory located in the ``SEG/SEG_'EXP_SEG'/`` directory and then re-used, and not recomputed at each ``astec_mars`` use.
 

@@ -1268,12 +1268,20 @@ class GenericSubdirectory(PrefixedParameter):
             self._directory.append(os.path.join(str(self._parent_directory), self.get_sub_directory(i)))
         return
 
+    def set_directory_prefix(self, directory_prefix):
+        self._sub_directory_prefix = directory_prefix
+        self._set_directory(force=True)
+
     def set_directory_suffix(self, directory_suffix):
         self._sub_directory_suffix = directory_suffix
         self._set_directory(force=True)
 
     def set_file_prefix(self, file_prefix):
         self._file_prefix = file_prefix
+        return
+
+    def set_file_suffix(self, file_suffix):
+        self._file_suffix = file_suffix
         return
 
     def _set_log_directory(self):
@@ -1543,12 +1551,9 @@ class MarsSubdirectory(GenericSubdirectory):
         return
 
     def update_from_parameters(self, parameters):
-        if hasattr(parameters, 'EXP_SEG'):
-            if parameters.EXP_SEG is not None:
-                self._sub_directory_suffix = parameters.EXP_SEG
-        if hasattr(parameters, 'EXP_MARS'):
-            if parameters.EXP_MARS is not None:
-                self._sub_directory_suffix = parameters.EXP_MARS
+        self._sub_directory_suffix = _read_parameter(parameters, 'EXP_SEG', self._sub_directory_suffix)
+        self._sub_directory_suffix = _read_parameter(parameters, 'EXP_MARS', self._sub_directory_suffix)
+        self._sub_directory_suffix = _read_parameter(parameters, 'EXP_SEG_FROM', self._sub_directory_suffix)
         return
 
 #
@@ -1589,9 +1594,8 @@ class AstecSubdirectory(GenericSubdirectory):
         return
 
     def update_from_parameters(self, parameters):
-        if hasattr(parameters, 'EXP_SEG'):
-            if parameters.EXP_SEG is not None:
-                self._sub_directory_suffix = parameters.EXP_SEG
+        self._sub_directory_suffix = _read_parameter(parameters, 'EXP_SEG', self._sub_directory_suffix)
+        self._sub_directory_suffix = _read_parameter(parameters, 'EXP_SEG_TO', self._sub_directory_suffix)
         return
 
 #
@@ -1703,7 +1707,7 @@ class Experiment(PrefixedParameter):
         # sub-directories
         # 1. specialized ones
         #    for automated initialisation
-        # 2. generic one
+        # 2. generic one (working_dir)
         #    copy from the targeted specialized one
         #
         self.rawdata_dir = RawdataSubdirectory()

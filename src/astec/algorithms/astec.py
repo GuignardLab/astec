@@ -664,7 +664,7 @@ def _erode_cell(parameters):
     return eroded, i, bb
 
 
-def _build_seeds_from_previous_segmentation(label_image, output_image, parameters, nprocessors=26):
+def build_seeds_from_previous_segmentation(label_image, output_image, parameters, nprocessors=26):
     """
     Erodes all the labels in the segmented image seg
     :param label_image: image whose cells are to be eroded
@@ -1035,7 +1035,7 @@ def _extract_seeds(c, cell_segmentation, cell_seeds=None, bb=None, individual_se
     - number of seeds
     - a sub-image containing the labeled seeds, either 'cell_seeds' itself or 'cell_seeds[bb]' if
       'bb' is not None
-    from cell_seeds stricly included in cell c from cell_segmentation
+    from cell_seeds strictly included in cell c from cell_segmentation
     (the labels of the seeds go from 1 to 3)
     :param c: cell label
     :param cell_segmentation: sub-image with 'c' for the cell and '0' for the background
@@ -1982,7 +1982,7 @@ def _volume_decrease_correction(astec_name, previous_segmentation, segmentation_
     segmentation_from_corr_selection = common.add_suffix(astec_name, '_watershed_from_corrected_selection',
                                                          new_dirname=experiment.astec_dir.get_tmp_directory(),
                                                          new_extension=experiment.default_image_suffix)
-    mars.watershed(corr_selected_seeds, membrane_image, segmentation_from_corr_selection, experiment, parameters)
+    mars.watershed(corr_selected_seeds, membrane_image, segmentation_from_corr_selection, parameters)
 
     #
     # there are labels to be fused if there is a case where 3 seeds have been generated for a mother cell
@@ -2646,7 +2646,7 @@ def astec_process(previous_time, current_time, lineage_tree_information, experim
     # original astec: there is no smoothing of the membrane image
     #
     if not os.path.isfile(segmentation_from_previous) or monitoring.forceResultsToBeBuilt is True:
-        mars.watershed(deformed_seeds, membrane_image, segmentation_from_previous, experiment, parameters)
+        mars.watershed(deformed_seeds, membrane_image, segmentation_from_previous, parameters)
 
     #
     # if the propagation strategy is only to get seeds from the erosion of the previous cells
@@ -2795,7 +2795,7 @@ def astec_process(previous_time, current_time, lineage_tree_information, experim
                                                         new_extension=experiment.default_image_suffix)
 
     if not os.path.isfile(segmentation_from_selection) or monitoring.forceResultsToBeBuilt is True:
-        mars.watershed(selected_seeds, membrane_image, segmentation_from_selection, experiment, parameters)
+        mars.watershed(selected_seeds, membrane_image, segmentation_from_selection, parameters)
 
     #
     # if the propagation strategy is to get this segmentation without corrections
@@ -2955,7 +2955,7 @@ def _get_last_time_from_lineage(lineage_tree_information, first_time_point, delt
         #
         # time points for 'parent cell' are marked into cellinlineage
         #
-        for c in lineage_tree_information[properties.keydictionary['lineage']['output_key']]:
+        for c in lineage_tree_information[ioproperties.keydictionary['lineage']['output_key']]:
             t = int(c)/div
             if t not in cellinlineage:
                 cellinlineage[t] = 1
@@ -2994,15 +2994,15 @@ def _clean_lineage(lineage_tree_information, first_time_point, time_digits_for_c
     mul = 10 ** time_digits_for_cell_id
     for key in lineage_tree_information:
         if key == ioproperties.keydictionary['lineage']['output_key']:
-            tmp = copy.deepcopy(lineage_tree_information[properties.keydictionary['lineage']['output_key']])
+            tmp = copy.deepcopy(lineage_tree_information[ioproperties.keydictionary['lineage']['output_key']])
             for k in tmp:
                 if int(k) > first_time_point * mul:
-                    del lineage_tree_information[properties.keydictionary['lineage']['output_key']][k]
+                    del lineage_tree_information[ioproperties.keydictionary['lineage']['output_key']][k]
         elif key == ioproperties.keydictionary['volume']['output_key']:
-            tmp = copy.deepcopy(lineage_tree_information[properties.keydictionary['volume']['output_key']])
+            tmp = copy.deepcopy(lineage_tree_information[ioproperties.keydictionary['volume']['output_key']])
             for k in tmp:
                 if int(k) > (first_time_point + 1) * mul:
-                    del lineage_tree_information[properties.keydictionary['volume']['output_key']][k]
+                    del lineage_tree_information[ioproperties.keydictionary['volume']['output_key']][k]
         else:
             monitoring.to_log_and_console(str(proc) + ": unhandled key '" + str(key) + "'")
     return
@@ -3026,7 +3026,7 @@ def _fill_volumes(lineage_tree_information, first_time_point, experiment):
     mul = 10 ** experiment.get_time_digits_for_cell_id()
     if lineage_tree_information != {}:
         if ioproperties.keydictionary['volume']['output_key'] in lineage_tree_information:
-            tmp = lineage_tree_information[properties.keydictionary['volume']['output_key']]
+            tmp = lineage_tree_information[ioproperties.keydictionary['volume']['output_key']]
             for k in tmp:
                 if k / mul == first_time_point:
                     monitoring.to_log_and_console("    .. cell volumes found for time #" + str(first_time_point), 1)

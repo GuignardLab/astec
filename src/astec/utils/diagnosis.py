@@ -62,7 +62,7 @@ class DiagnosisParameters(ucontact.ContactSurfaceParameters):
         #
         # nombre d'items a imprimer
         #
-        doc = "\t if strictly positif, numbeems (ie cells) to be displayed in diagnosis.\n"
+        doc = "\t if strictly positif, number of items (ie cells) to be displayed in diagnosis.\n"
         self.doc['items'] = doc
         self.items = 10
         
@@ -571,12 +571,12 @@ def _diagnosis_volume(prop, description, diagnosis_parameters, time_digits_for_c
     monitoring.to_log_and_console("    found " + str(len(background_with_volume)) + " background cells with volume", 1)
     monitoring.to_log_and_console("    found " + str(len(cell_with_volume)) + " cells with volume", 1)
 
-    monitoring.to_log_and_console("")
-    monitoring.to_log_and_console("  - smallest volumes", 1)
-
     d = DiagnosisParameters()
     n = int(d.items)
     v = int(d.minimal_volume)
+
+    monitoring.to_log_and_console("")
+    monitoring.to_log_and_console("  - smallest volumes", 1)
 
     if isinstance(diagnosis_parameters, DiagnosisParameters):
         n = int(diagnosis_parameters.items)
@@ -584,6 +584,20 @@ def _diagnosis_volume(prop, description, diagnosis_parameters, time_digits_for_c
 
     for i in range(len(list(prop[keyvolume].keys()))):
         if (n > 0 and i < n) or (v > 0 and int(volume[i][1]) <= v):
+            msg = _decode_cell_id(volume[i][0])
+            if keyname is not None:
+                if volume[i][0] in prop[keyname]:
+                    msg += " (" + str(prop[keyname][volume[i][0]]) + ")"
+            msg += " has volume = " + str(volume[i][1])
+            monitoring.to_log_and_console("    " + msg, 1)
+
+    volume = sorted(volume, key=itemgetter(1), reverse=True)
+
+    monitoring.to_log_and_console("")
+    monitoring.to_log_and_console("  - largest volumes", 1)
+
+    for i in range(len(list(prop[keyvolume].keys()))):
+        if n > 0 and i < n:
             msg = _decode_cell_id(volume[i][0])
             if keyname is not None:
                 if volume[i][0] in prop[keyname]:
