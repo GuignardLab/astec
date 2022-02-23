@@ -53,9 +53,17 @@ class ManualCorrectionParameters(udiagnosis.DiagnosisParameters, astec.AstecPara
         doc = "\n"
         doc += "Manual correction overview:\n"
         doc += "===========================\n"
-        doc += "Fuses labels from the 'mars' segmentation to correct\n"
-        doc += "over-segmentation errors.\n"
-        doc += "\n"
+        doc += "1. Fuses cells/labels from the segmentation to correct over-segmentation errors\n"
+        doc += "2. Splits cells/labels from the segmentation to correct under-segmentation errors.\n"
+        doc += "   Division is done by exploring a rangle of values of 'hmin' until two seeds are\n"
+        doc += "     found inside the cell to be divided.\n"
+        doc += "   Division is propagated for segmented time series as in first step of 'astec'\n"
+        doc += "   according a lineage is present in the input segmentation directory\n"
+        doc += "     a. segmentation of previous time point is deformed onto the current time point.\n"
+        doc += "     b. cells are eroded to get two seeds inside the cell to be divided\n"
+        doc += "     c. segmentation (watershed-based) from the deformed seeds\n"
+        doc += " Transform segmentation images from the SEG/SEG_'EXP_SEG_FROM' directory to "
+        doc += " segmentation images in the SEG/SEG_'EXP_SEG_TO' directory"
         self.doc['manualcorrection_overview'] = doc
 
         doc = "\t Directory containing the manual correction files\n"
@@ -63,11 +71,18 @@ class ManualCorrectionParameters(udiagnosis.DiagnosisParameters, astec.AstecPara
         self.manualcorrection_dir = None
 
         doc = "\t File containing the labels to be fused.\n"
-        doc += "\t The syntax of this file is:\n"
-        doc += "\t - 1 line per label association, eg\n"
-        doc += "\t   '8 7'\n"
-        doc += "\t - background label has value 1\n"
-        doc += "\t - the character '#' denotes commented lines \n"
+        doc += "\t Each line may either indicate a comment, a division or a fusion to be made\n"
+        doc += "\t - lines beginning by '#' are ignored (comment)\n"
+        doc += "\t - lines with only numbers concern changes for the first time point:\n"
+        doc += "\t   - one single number: label of the cell to be splitted at the first time point\n"
+        doc += "\t   - several numbers: labels of the cells to be fused\n"
+        doc += "\t - lines beginning by 'timevalue:' concern changes for the given time point\n"
+        doc += "\t   - 'timevalue:' + one single number: label of the cell to be splitted\n"
+        doc += "\t   - 'timevalue:' + several numbers: labels of the cells to be fused\n"
+        doc += "\t - lines beginning by 'timevalue-timevalue:' concern changes for the given time point range\n"
+        doc += "\t   - 'timevalue-timevalue:' + several numbers: labels of the cells to be fused\n"
+        doc += "\t      if a lineage is present, it is used to track the cell labels to be fused\n"
+        doc += "\t      else the same labels are fused at each time point of the range\n"
         self.doc['manualcorrection_file'] = doc
         self.manualcorrection_file = None
 
@@ -405,6 +420,21 @@ def _diagnosis_volume_image(output_image, parameters):
 ########################################################################################
 
 def _image_cell_fusion(input_image, output_image, current_time, properties, fusion, time_digits_for_cell_id=4):
+    """
+
+    Parameters
+    ----------
+    input_image
+    output_image
+    current_time
+    properties
+    fusion
+    time_digits_for_cell_id
+
+    Returns
+    -------
+
+    """
     proc = "_image_cell_fusion"
     im = imread(input_image)
     voxelsize = im.get_voxelsize()
@@ -1233,8 +1263,7 @@ def correction_process(current_time, properties, experiment, parameters, fusion,
                                                 new_extension=experiment.default_image_suffix)
         else:
             fusedcell_image = output_image
-
-        properties = _image_cell_fusion(input_image, fusedcell_image, properties, fusion, current_time,
+        properties = _image_cell_fusion(input_image, fusedcell_image, current_time, properties, fusion,
                                         time_digits_for_cell_id=time_digits_for_cell_id)
         input_image = fusedcell_image
 

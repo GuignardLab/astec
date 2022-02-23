@@ -920,10 +920,16 @@ These parameters are prefixed by ``mars_``.
   prefixed by ``membrane_``
 
 
-
+.. _cli-parameters-manualcorrection:
 
 ``astec_manualcorrection`` parameters
 -------------------------------------
+
+* Diagnosis parameters 
+  (see section :ref:`cli-parameters-diagnosis`)
+
+* Astec parameters
+  (see section :ref:`cli-parameters-astec`)
 
 * ``first_time_point``:
   first time point to be corrected.
@@ -936,7 +942,9 @@ These parameters are prefixed by ``mars_``.
 * ``output_image``:
   defines the output file names (to be used when correcting
   other files than the ``astec_mars`` output file.
-* ``mapping_file``:
+* ``manualcorrection_dir``:
+  path to directory where to find the mapping file.
+  * ``manualcorrection_file``:
   path to mapping file for manual correction of a segmentation (ie label)
   image. See above the syntax of this file.
   
@@ -948,17 +956,43 @@ These parameters are prefixed by ``mars_``.
 
   .. code-block:: none
 
-     # here the input label 8 will be mapped with new value 7, etc...
-     8 7
-     9 2  
-     4 64 
-     29 23
-     # ... etc ...
-     # background labels
+     # a line beginning by '#' is ignored (comment)
+
+     # lines with only numbers concern changes for the first time point of the time series
+     # or the only time point when correcting the segmentation of the first time point
+     # - one single number: label of the cell to be divided at the first time point
+     # - several numbers: labels of the cells to be fused
+     # Hence
+
+     8
+     # means that cell of label 8 have to be splitted
+
+     9 2 7
+     # means that cells of label 9, 7, and 2 have to be fused
+
      30 1 
-     89 1 
+     # means that cell of label 30 have to be fused with the background (of label 1)
+
+     # lines beginning by 'timevalue:' concern changes for the given time point
+     # - 'timevalue:' + one single number: label of the cell to be splitted
+     # - 'timevalue:' + several numbers: labels of the cells to be fused
+     # Note there is no space between the time point and ':'
+
+     8: 7
+     # means that cell of label 7 of time point 8 have to be splitted
+
+     10: 14 12 6
+     # means that cells of label 14, 12 and 6 of time point 10 have to be fused
+
+     # lines beginning by 'timevalue-timevalue:' concern changes for the given time point range
+     # - 'timevalue-timevalue:' + several numbers: labels of the cells to be fused
+
+     10-12: 14 16
+     # means that cells of label 14 and 16 of time point 10 have to be fused
+     # their offspring will be fused until time point 12
 
 
+.. _cli-parameters-astec:
 
 ``astec_astec`` parameters
 --------------------------
@@ -1139,24 +1173,53 @@ These parameters are prefixed by ``atlas_``.
 * ``atlasFiles``: list of atlas files. An atlas file is a property file that contains lineage,
   names, and contact surfaces for an embryo.
 
+* ``referenceAtlas``: reference atlas. Use for time alignment of atlases. If not provide, the first atlas of
+  ``atlasFiles`` is used as reference. Warning, the reference atlas has to be in ``atlasFiles`` list also.
+
 * ``outputDir``: output directory where to write atlas-individualized output files,
   ie morphonet selection files or figure files.
 
 * ``write_selection``: write morphonet selection file on disk.
 
-* ``add_symmetric_neighborhood``: if ``True``, add the symmetric neighborhood as additional exemplar.
+* ``add_symmetric_neighborhood``: if ``True``, add the symmetric neighborhood as additional exemplar. It means
+  that left and right embryo hemisphere are considered together.
 
-* ``differentiate_other_half``: if 'True', differentiate the cells of the symmetric half-embryo.
+* ``differentiate_other_half``: if ``True``, differentiate the cells of the symmetric half-embryo.
   If 'False', consider all the cells of the symmetric half-embryo as a single cell.
+  This option has been introduced for test purpose. Please do not consider changing 
+  its default value (``True``)
 
-* ``use_common_neighborhood``: The same cell has different neighbors from an atlas to the other.
+* ``use_common_neighborhood``: the same cell has different neighbors from an atlas to the other.
   If 'True' build and keep an unique common neighborhood (set of neighbors) for all atlases by
   keeping the closest ancestor for neighboring cells. Eg, if a division has occurred in some
-  embryos and not in others, daughter cells will be fused so that all neighborhoods only
-  exhibit the parent cell.
+  embryos and not in others, daughter cells will be somehow fused so that all neighborhoods only
+  exhibit the parent cell. 
+  Please do not consider changing its default value (``True``).
 
-* ``delay_from_division``: Delay from the division to extract the neighborhooods.
+* ``name_delay_from_division``: Delay from the division to extract the neighborhooods.
   0 means right after the division.
+
+* ``confidence_delay_from_division``: Delay from the division to compute a name confidence with
+  respect to all the atlases (the ones from ``atlasFiles``).
+  0 means right after the division.
+  The naming confidence is computed from the ``N`` closest atlases: for a given division
+  division-to-division distances are computed between the named atlas (to be assessed) and each atlas of 
+  ``atlasFiles`` and the ``N`` with the smallest distances are retained.
+  The confidence measure is the average of the differences between the division-to-division distance for 
+  the wrong choice (names are inverted) and the division-to-division distance for the right choice.
+
+  If there are less atlases for the given division than ``confidence_atlases_nmin``, the confidence is
+  not computed. Else ``N`` is the maximum of ``confidence_atlases_nmin`` and the percentage of atlases 
+  ``confidence_atlases_percentage``.
+
+* ``confidence_atlases_nmin``: minimum number of atlases to compute the naming
+  confidence.
+
+* ``confidence_atlases_percentage``: percentage of atlases (for a given division) to compute the naming
+  confidence. The actual number of atlases used is the maximum value of thsi percentage and
+  ``confidence_atlases_nmin``.
+
+* ``delay_from_division``: set both ``name_delay_from_division`` and ``confidence_delay_from_division``.
 
 * ``division_contact_similarity``: How to compare two division patterns (a division is considered here
   as the concatenation of the contact surface vectors of the 2 daughter cells). Choices are:
@@ -1166,12 +1229,12 @@ These parameters are prefixed by ``atlas_``.
     Distances are normalized between 0 (perfect match) and 1 (complete mismatch).
   * ``probability``: 1-(division probability) is used to keep the same meaning
     for the 0 and 1 extremal values. Probabilities are built with the distance
-    ``cell_contact_distance``. This is kept for test purposes and should be used with care.
+    ``cell_contact_distance``. This is kept for test purposes and should not be used.
 
 * ``diagnosis_properties``: ``True`` or ``False``. Performs some diagnosis when reading an additional 
   property file into the atlases. Incrementing the verboseness ('-v' in the command line) may give more details.
 
-* ``daughter_switch_proposal``: If True, will propose some daughters switches in the atlases. 
+* ``division_permutation_proposal``: If ``True``, will propose some daughters switches in the atlases. 
   For a given division, a global score is computed as the sum of all pairwise division similarity. 
   A switch is proposed for an atlas if it allows to decrease this global score.
 
@@ -1188,7 +1251,7 @@ These parameters are prefixed by ``atlas_``.
   * ``'median'``
   * ``'ward'``
 
-* ``generate_figure``: if ``True``, generate python files (prefixed by ``figures_``) that generate figures.
+* ``generate_figure``: if ``True``, generate python files in (prefixed by ``figures_``) that generate figures.
 
 * ``figurefile_suffix``: suffix used to named the above python files as well as the generated figures.
 
@@ -1217,9 +1280,10 @@ These parameters are prefixed by ``naming_``.
     It comes to name after the closest atlas (for this division).
   * ``sum``: same as ``mean``.
 
-* ``testFile``: input property file to be tested (must include cell names).
-   64-cells time point is searched and the embryo is renamed from 
-   this given time point. Comparison between new names and actual ones are reported.
+* ``testFile``: input property file to be tested (must include cell names), for instance for
+   leave-one-out test.
+   64-cells time point is searched, cell names at other time points are delated and the embryo 
+   is entirely renamed from this given time point. Comparison between new names and actual ones are reported.
    If given, ``inputFile`` is ignored.
 
 

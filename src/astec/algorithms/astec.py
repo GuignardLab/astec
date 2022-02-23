@@ -2608,7 +2608,7 @@ def astec_process(previous_time, current_time, lineage_tree_information, experim
         monitoring.to_log_and_console('      transform previous segmentation then erode it', 2)
 
         if not os.path.isfile(deformed_seeds) or monitoring.forceResultsToBeBuilt is True:
-            _build_seeds_from_previous_segmentation(deformed_segmentation, deformed_seeds, parameters)
+            build_seeds_from_previous_segmentation(deformed_segmentation, deformed_seeds, parameters)
 
     elif parameters.previous_seg_method.lower() == "erode_then_deform":
         monitoring.to_log_and_console('      erode previous segmentation then transform it', 2)
@@ -2616,7 +2616,7 @@ def astec_process(previous_time, current_time, lineage_tree_information, experim
                                          new_dirname=experiment.astec_dir.get_tmp_directory(),
                                          new_extension=experiment.default_image_suffix)
         if not os.path.isfile(eroded_seeds) or monitoring.forceResultsToBeBuilt is True:
-            _build_seeds_from_previous_segmentation(previous_segmentation, eroded_seeds, parameters)
+            build_seeds_from_previous_segmentation(previous_segmentation, eroded_seeds, parameters)
 
         if not os.path.isfile(deformed_seeds) or monitoring.forceResultsToBeBuilt is True:
             deformation = reconstruction.get_deformation_from_current_to_previous(current_time, experiment,

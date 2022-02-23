@@ -57,6 +57,7 @@ default value is '``RELEASE``').
    ...
 
 
+.. _cli-astec-pre-processing:
 
 Input image pre-processing
 --------------------------
@@ -80,6 +81,11 @@ intensity_enhancement = None
 \end{verbatim}
 come to choose the original image for both the seed extraction and the morphosnake stage, but its normalization on 8 bits for the seeded watershed (this corresponds to the choice of the historical version of astec).
 
+If required (if the variable ``keep_reconstruction`` is set to ``True``, see :ref:cli-parameters-preprocessing), the pre-processed
+images are kept and stored in the ``RECONSTRUCTION`` sub-directory.
+
+
+.. _cli-astec-step-1:
 
 Step 1: :math:`\tilde{S}_{t}`
 -----------------------------
@@ -103,6 +109,7 @@ If the variable ``propagation_strategy`` is set to
 the segmentation propagation stops and :math:`\tilde{S}_{t}` is the final result. 
 
 
+.. _cli-astec-step-2:
 
 Step 2: :math:`\hat{S}_{t}`
 ---------------------------

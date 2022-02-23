@@ -115,10 +115,11 @@ The seed extraction is made of the following steps:
 Step 3: seed correction
 -----------------------
 
-Several rounds of correction of the computed seeds can be done. At each round, different seeds can be assigned the same label (and this will fuse the further reconstructed cells) or new seeds (each new seed is a single voxel) can be added. See the ``seed_edition_files`` variable for details.
+Several rounds of correction of the computed seeds can be done. At each round, different seeds can be assigned the same label (and this will fuse the further reconstructed cells) or new seeds (each new seed is a single voxel) can be added. See the ``seed_edition_file`` variable for details (section :ref:`cli-parameters-seed-edition`).
 
 When correcting seeds, it is advised to launch ``astec_mars``  with the ``-k`` option. Indeed, temporary files, as the seed image, are kept in a temporary directory located in the ``SEG/SEG_'EXP_SEG'/`` directory and then re-used, and not recomputed at each ``astec_mars`` use.
 
+Alternatively, segmentation correction can be performed with ``astec_manualcorrection`` (section :ref:`cli-manual-correction`).
 
 
 

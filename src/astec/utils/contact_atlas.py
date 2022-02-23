@@ -1106,7 +1106,7 @@ class Atlases(object):
         # values are the pair of daughter cells (the largest first)
         # this is the set of divisions where the same daughter is always larger than the other
         # (and there are at least 5 atlases)
-        self._asymmetric_divisions = {}
+        self._unequal_divisions = {}
 
         # dictionary index by atlas name
         # to keep trace of some output (kept as morphonet selection)
@@ -1174,14 +1174,14 @@ class Atlases(object):
     def get_divisions(self):
         return self._divisions
 
-    def get_asymmetric_divisions(self, delay_from_division=None):
+    def get_unequal_divisions(self, delay_from_division=None):
         if delay_from_division is None:
             delay = self.get_default_delay()
         else:
             delay = delay_from_division
-        if delay not in self._asymmetric_divisions:
-            self._asymmetric_divisions[delay] = {}
-        return self._asymmetric_divisions[delay]
+        if delay not in self._unequal_divisions:
+            self._unequal_divisions[delay] = {}
+        return self._unequal_divisions[delay]
 
     def get_output_selections(self):
         return self._output_selections
@@ -1291,7 +1291,7 @@ class Atlases(object):
                     msg = "    " + str(proc) + ": remove atlas '" + str(r) + "' for division '" + str(n) + "'"
                     monitoring.to_log_and_console(msg)
 
-    def build_asymmetric_divisions(self, delay_from_division=None):
+    def build_unequal_divisions(self, delay_from_division=None):
         """
         Build a dictionary index by mother cell name. Each entry contains reference names
         for which the both daughters exist
@@ -1299,18 +1299,18 @@ class Atlases(object):
         -------
 
         """
-        proc = "build_asymmetric_divisions"
+        proc = "build_unequal_divisions"
         minimal_references = 5
 
         delay = delay_from_division
         if delay is None:
             delay = self.get_default_delay()
 
-        if self._asymmetric_divisions is None:
-            self._asymmetric_divisions = {}
-        if delay in self._asymmetric_divisions:
-            del self._asymmetric_divisions[delay]
-        self._asymmetric_divisions[delay] = {}
+        if self._unequal_divisions is None:
+            self._unequal_divisions = {}
+        if delay in self._unequal_divisions:
+            del self._unequal_divisions[delay]
+        self._unequal_divisions[delay] = {}
 
         divisions = self.get_divisions()
 
@@ -1326,11 +1326,11 @@ class Atlases(object):
                 elif volumes[d[0]][r] < volumes[d[1]][r]:
                     vol10 += 1
             if vol01 > minimal_references and vol10 == 0:
-                self._asymmetric_divisions[delay][mother] = [d[0], d[1]]
+                self._unequal_divisions[delay][mother] = [d[0], d[1]]
             elif vol10 > minimal_references and vol01 == 0:
-                self._asymmetric_divisions[delay][mother] = [d[1], d[0]]
+                self._unequal_divisions[delay][mother] = [d[1], d[0]]
 
-        msg = "found " + str(len(self._asymmetric_divisions[delay])) + " asymmetric divisions "
+        msg = "found " + str(len(self._unequal_divisions[delay])) + " unequal divisions "
         msg += "at delay = " + str(delay) + " "
         msg += "(more than " + str(minimal_references) + " atlases) in " + str(len(divisions)) + " divisions"
         monitoring.to_log_and_console("\t" + msg)
@@ -1798,9 +1798,9 @@ class Atlases(object):
         # dictionary indexed by mother cell names,
         # give list of daughter cells, the largest one being the first one
         #
-        monitoring.to_log_and_console("... build asymmetric division list", 1)
+        monitoring.to_log_and_console("... build unequal division list", 1)
         for d in delays:
-            self.build_asymmetric_divisions(delay_from_division=d)
+            self.build_unequal_divisions(delay_from_division=d)
         monitoring.to_log_and_console("    done", 1)
 
         if parameters.diagnosis_properties:

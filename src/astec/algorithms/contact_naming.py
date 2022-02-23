@@ -344,14 +344,14 @@ def _test_naming(prop, reference_prop, discrepancies):
     return prop
 
 
-def _test_asymmetric_divisions(prop, atlases):
-    proc = "_test_asymmetric_divisions"
+def _test_unequal_divisions(prop, atlases):
+    proc = "_test_unequal_divisions"
 
     lineage = prop['cell_lineage']
     name = prop['cell_name']
 
     divisions = atlases.get_divisions()
-    adivisions = atlases.get_asymmetric_divisions()
+    adivisions = atlases.get_unequal_divisions()
     volumes = atlases.get_volumes()
 
     mothercells = [c for c in lineage if len(lineage[c]) == 2]
@@ -366,7 +366,7 @@ def _test_asymmetric_divisions(prop, atlases):
         if lineage[m][0] not in name or lineage[m][1] not in name:
             continue
         #
-        # here we've got an assymmetric named division
+        # here we've got an unequal named division
         #
         if lineage[m][0] not in prop['cell_volume'] or lineage[m][1] not in prop['cell_volume']:
             msg = "weird, either " + str(lineage[m][0])
@@ -385,18 +385,18 @@ def _test_asymmetric_divisions(prop, atlases):
 
     if len(errors) > 0:
         error_names = [name[m] for m in errors]
-        keyasymmetric = 'morphonet_selection_asymmetric_division_errors'
-        prop[keyasymmetric] = {}
+        keyunequal = 'morphonet_selection_unequal_division_errors'
+        prop[keyunequal] = {}
         cells = list(set(lineage.keys()).union(set([v for values in list(lineage.values()) for v in values])))
         for c in cells:
             if c not in name:
                 continue
             if name[c] in error_names:
-                prop[keyasymmetric][c] = 255
+                prop[keyunequal][c] = 255
 
     monitoring.to_log_and_console("")
-    monitoring.to_log_and_console("----- test asymmetric divisions -------")
-    msg = "      test " + str(len(tests)) + " assymetric divisions"
+    monitoring.to_log_and_console("----- test unequal divisions -------")
+    msg = "      test " + str(len(tests)) + " unequal divisions"
     msg += " over " + str(len(adivisions)) + " found in atlases "
     monitoring.to_log_and_console(msg)
     msg = "      found " + str(len(errors)) + " potential errors"
@@ -1211,7 +1211,7 @@ def naming_process(experiment, parameters):
     #
     #
     #
-    prop = _test_asymmetric_divisions(prop, atlases)
+    prop = _test_unequal_divisions(prop, atlases)
     #
     #
     #

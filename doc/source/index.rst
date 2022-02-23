@@ -16,7 +16,7 @@ Its development has been pursued, and it was used to process 3D+t movies acquire
    cli.rst
    astec_fuse.rst
    astec_mars.rst
-   astec_manual_correction.rst
+   astec_manualcorrection.rst
    astec_astec.rst
    astec_postcorrection.rst
    astec_intraregistration.rst

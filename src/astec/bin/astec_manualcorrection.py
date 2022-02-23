@@ -75,26 +75,6 @@ def _set_options(my_parser):
                            action='store_const', dest='printParameters',
                            default=False, const=True, help=help)
 
-    #
-    # specific args
-    #
-    my_parser.add_argument('-i', '--input-image',
-                           action='store', dest='input_image', const=None,
-                           help='input image')
-    my_parser.add_argument('-o', '--output-image',
-                           action='store', dest='output_image', const=None,
-                           help='output image')
-    my_parser.add_argument('-m', '--modification',
-                           action='store', dest='mapping_file', const=None,
-                           help='text file containing the requested modifications')
-
-    my_parser.add_argument('-nsc', '--number-smallest-cells',
-                           action='store', dest='smallest_cells', default=-1,
-                           help='number of smallest cells whose volume will be displayed')
-    my_parser.add_argument('-nlc', '--number-largest-cells',
-                           action='store', dest='largest_cells', default=-1,
-                           help='number of largest cells whose volume will be displayed')
-
     return
 
 
