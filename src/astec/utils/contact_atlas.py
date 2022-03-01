@@ -160,6 +160,10 @@ class AtlasParameters(udiagnosis.DiagnosisParameters):
         doc = "\t suffix used to named the above python files as well as the generated figures."
         self.doc['figurefile_suffix'] = doc
         self.figurefile_suffix = ""
+        #
+        #
+        #
+        self.cells_to_be_traced = None
 
     ############################################################
     #
@@ -189,7 +193,7 @@ class AtlasParameters(udiagnosis.DiagnosisParameters):
         self.varprint('use_common_neighborhood', self.use_common_neighborhood)
         self.varprint('name_delay_from_division', self.name_delay_from_division)
         self.varprint('confidence_delay_from_division', self.confidence_delay_from_division)
-        self.varprint('self.confidence_atlases_nmin', self.self.confidence_atlases_nmin)
+        self.varprint('self.confidence_atlases_nmin', self.confidence_atlases_nmin)
         self.varprint('confidence_atlases_percentage', self.confidence_atlases_percentage)
 
         self.varprint('division_contact_similarity', self.division_contact_similarity)
@@ -203,6 +207,7 @@ class AtlasParameters(udiagnosis.DiagnosisParameters):
         self.varprint('generate_figure', self.generate_figure)
         self.varprint('figurefile_suffix', self.figurefile_suffix)
 
+        self.varprint('cells_to_be_traced', self.cells_to_be_traced)
         print("")
 
     def write_parameters_in_file(self, logfile):
@@ -252,6 +257,8 @@ class AtlasParameters(udiagnosis.DiagnosisParameters):
         self.varwrite(logfile, 'generate_figure', self.generate_figure, self.doc.get('generate_figure', None))
         self.varwrite(logfile, 'figurefile_suffix', self.figurefile_suffix, self.doc.get('figurefile_suffix', None))
 
+        self.varwrite(logfile, 'cells_to_be_traced', self.cells_to_be_traced, self.doc.get('cells_to_be_traced', None))
+
         logfile.write("\n")
         return
 
@@ -284,9 +291,9 @@ class AtlasParameters(udiagnosis.DiagnosisParameters):
         self.use_common_neighborhood = self.read_parameter(parameters, 'use_common_neighborhood',
                                                            self.use_common_neighborhood)
         self.name_delay_from_division = self.read_parameter(parameters, 'name_delay_from_division',
-                                                                  self.name_delay_from_division)
+                                                            self.name_delay_from_division)
         self.name_delay_from_division = self.read_parameter(parameters, 'delay_from_division',
-                                                                  self.name_delay_from_division)
+                                                            self.name_delay_from_division)
         self.confidence_delay_from_division = self.read_parameter(parameters, 'confidence_delay_from_division',
                                                                   self.confidence_delay_from_division)
         self.confidence_delay_from_division = self.read_parameter(parameters, 'delay_from_division',
@@ -315,6 +322,8 @@ class AtlasParameters(udiagnosis.DiagnosisParameters):
 
         self.generate_figure = self.read_parameter(parameters, 'generate_figure', self.generate_figure)
         self.figurefile_suffix = self.read_parameter(parameters, 'figurefile_suffix', self.figurefile_suffix)
+
+        self.cells_to_be_traced = self.read_parameter(parameters, 'cells_to_be_traced', self.cells_to_be_traced)
 
     def update_from_parameter_file(self, parameter_file):
         if parameter_file is None:
@@ -1066,12 +1075,12 @@ def switched_division_neighborhoods(config, mother_name):
 ########################################################################################
 
 def _get_branch_length(cell, lineage):
-    l = 0
+    length = 0
     c = cell
     while c in lineage and len(lineage[c]) == 1:
-        l += 1
+        length += 1
         c = lineage[c][0]
-    return l
+    return length
 
 
 class Atlases(object):
@@ -1495,6 +1504,7 @@ class Atlases(object):
             # negative delay: count from the end of the shortest branch for the two sisters
             #
             d = daugh
+            local_delay_from_division = 0
             if delay_from_division >= 0:
                 local_delay_from_division = delay_from_division
             elif delay_from_division < 0:
@@ -1503,9 +1513,6 @@ class Atlases(object):
                 sisters.remove(d)
                 length1 = _get_branch_length(sisters[0], lineage)
                 local_delay_from_division = min(length0, length1) + delay_from_division
-                #
-                # this is not necessary
-                #
                 if local_delay_from_division < 0:
                     local_delay_from_division = 0
 
@@ -1718,7 +1725,7 @@ class Atlases(object):
         #
         delays = [parameters.name_delay_from_division]
         if parameters.confidence_delay_from_division is not None and \
-            parameters.confidence_delay_from_division not in delays:
+                parameters.confidence_delay_from_division not in delays:
             delays += [parameters.confidence_delay_from_division]
         self.set_default_delay(parameters.name_delay_from_division)
 

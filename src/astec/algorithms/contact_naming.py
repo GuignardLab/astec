@@ -7,6 +7,7 @@ import random
 import statistics
 
 import astec.utils.common as common
+import astec.utils.contact as ucontact
 import astec.utils.contact_atlas as ucontacta
 import astec.utils.properties as properties
 import astec.utils.ioproperties as ioproperties
@@ -432,12 +433,12 @@ def _test_unequal_divisions(prop, atlases):
 ########################################################################################
 
 def _get_branch_length(cell, lineage):
-    l = 0
+    length = 0
     c = cell
     while c in lineage and len(lineage[c]) == 1:
-        l += 1
+        length += 1
         c = lineage[c][0]
-    return l
+    return length
 
 
 def _get_neighborhoods(mother, immediate_daughters, prop, parameters, delay_from_division=0,
@@ -471,15 +472,13 @@ def _get_neighborhoods(mother, immediate_daughters, prop, parameters, delay_from
     #
     # delay from division
     #
+    delay = 0
     if delay_from_division >= 0:
         delay = delay_from_division
     elif delay_from_division < 0:
         length0 = _get_branch_length(daughters[0], lineage)
         length1 = _get_branch_length(daughters[1], lineage)
         delay = min(length0, length1) + delay_from_division
-        #
-        # this is not necessary
-        #
         if delay < 0:
             delay = 0
 
@@ -563,7 +562,29 @@ def _get_neighborhoods(mother, immediate_daughters, prop, parameters, delay_from
     return contact
 
 
-def _compute_distances(mother, daughters, prop, atlases, parameters, delay_from_division=0, time_digits_for_cell_id=4):
+def _print_neighborhood(neighborhood, start=""):
+    neighbors = sorted(list(neighborhood.keys()))
+    n = 0
+    txt = start + "{"
+    if 'background' in neighbors:
+        txt += "'background': {:.3f}, ".format(neighborhood['background'])
+        n += 1
+        neighbors.remove('background')
+    for i, neigh in enumerate(neighbors):
+        txt += str(neigh) + ": {:.3f}".format(neighborhood[neigh])
+        n += 1
+        #  print(str(n) + " " + str(n % 4 == 0) + txt)
+        if i < len(neighbors) - 1:
+            txt += ", "
+        elif i == len(neighbors) - 1:
+            txt += "} "
+        if n % 4 == 0 or i == len(neighbors) - 1:
+            monitoring.to_log_and_console(txt)
+            txt = "      "
+
+
+def _compute_distances(mother, daughters, prop, atlases, parameters, delay_from_division=0,
+                       time_digits_for_cell_id=4, debug=False):
     """
 
     Parameters
@@ -575,6 +596,7 @@ def _compute_distances(mother, daughters, prop, atlases, parameters, delay_from_
     parameters:
     delay_from_division
     time_digits_for_cell_id
+    debug
 
     Returns
     -------
@@ -613,6 +635,24 @@ def _compute_distances(mother, daughters, prop, atlases, parameters, delay_from_
         monitoring.to_log_and_console(str(proc) + msg, 4)
         return None
 
+    daughter_neighborhoods = {0: copy.deepcopy(neighborhoods[daughter_names[0]]),
+                              1: copy.deepcopy(neighborhoods[daughter_names[1]])}
+
+    if debug:
+        monitoring.to_log_and_console("Distance computation:")
+        monitoring.to_log_and_console("- Neighborhood of cell '" + str(prop['cell_name'][daughters[0]]) +
+                                      "' in embryo to be tested is: ")
+        _print_neighborhood(contacts[0], start="   ")
+        monitoring.to_log_and_console("- Neighborhood of cell '" + str(prop['cell_name'][daughters[1]]) +
+                                      "' in embryo to be tested is: ")
+        _print_neighborhood(contacts[1], start="   ")
+        monitoring.to_log_and_console("- Neighborhoods of cell '" + str(daughter_names[0]) + "' in atlases are: ")
+        for r in sorted(daughter_neighborhoods[0].keys()):
+            _print_neighborhood(daughter_neighborhoods[0][r], start="   " + str(r) + ": ")
+        monitoring.to_log_and_console("- Neighborhoods of cell '" + str(daughter_names[1]) + "' in atlases are: ")
+        for r in sorted(daughter_neighborhoods[1].keys()):
+            _print_neighborhood(daughter_neighborhoods[1][r], start="   " + str(r) + ": ")
+
     scores = {0: {}, 1: {}}
     for i in range(2):
         #
@@ -643,11 +683,25 @@ def _compute_distances(mother, daughters, prop, atlases, parameters, delay_from_
             else:
                 ic0 = 1
                 ic1 = 0
-            scores[i][ref] = ucontacta.division_contact_generic_distance(atlases, neighborhoods[daughter_names[0]][ref],
-                                                                         neighborhoods[daughter_names[1]][ref],
+            scores[i][ref] = ucontacta.division_contact_generic_distance(atlases, daughter_neighborhoods[0][ref],
+                                                                         daughter_neighborhoods[1][ref],
                                                                          contacts[ic0], contacts[ic1],
                                                                          similarity=atlases.division_contact_similarity,
                                                                          change_contact_surfaces=True)
+
+    if debug:
+        for i in scores:
+            if i == 0:
+                msg = "- distance of (" + str(prop['cell_name'][daughters[0]]) + ", "
+                msg += str(prop['cell_name'][daughters[1]]) + ") <-> (" + str(daughter_names[0])
+                msg += ", " + str(daughter_names[1]) + ")"
+            elif i == 1:
+                msg = "- distance of (" + str(prop['cell_name'][daughters[1]]) + ", "
+                msg += str(prop['cell_name'][daughters[0]]) + ") <-> (" + str(daughter_names[0])
+                msg += ", " + str(daughter_names[1]) + ")"
+            monitoring.to_log_and_console(msg)
+            for r in sorted(scores[i].keys()):
+                monitoring.to_log_and_console("   - atlas " + str(r) + ": " + str(scores[i][r]))
     return scores
 
 
@@ -1105,20 +1159,32 @@ def _evaluate_naming(prop, atlases, parameters, time_digits_for_cell_id=4):
             #
             # certainty are probabilities (in [0, 1])
             #
-            distance = _compute_distances(mother, daughters, prop, atlases, parameters,
-                                          delay_from_division=parameters.confidence_delay_from_division,
-                                          time_digits_for_cell_id=time_digits_for_cell_id)
+            debug = isinstance(parameters.cells_to_be_traced, list) and \
+                    prop['cell_name'][mother] in parameters.cells_to_be_traced
+
             daughter_names = uname.get_daughter_names(prop['cell_name'][mother])
             given_names = [names[daughters[0]], names[daughters[1]]]
-            debug = prop['cell_name'][mother] == "a8.0008_" or prop['cell_name'][mother] == "a8.0007*"
+
+            if debug:
+                msg = "===== un-homogenized neighborhood for division of " + str(prop['cell_name'][mother])
+                monitoring.to_log_and_console(msg)
+            distance = _compute_distances(mother, daughters, prop, atlases, parameters,
+                                          delay_from_division=parameters.confidence_delay_from_division,
+                                          time_digits_for_cell_id=time_digits_for_cell_id, debug=debug)
+            if distance is None:
+                continue
             difference = _get_evaluation(given_names, daughter_names, distance, parameters, debug=debug)
+
             if difference is None:
                 continue
             for d in daughters:
                 prop[keydifference][d] = difference
+            if debug:
+                msg = "----- naming assessment with un-homogenized neighborhood for division of "
+                msg += str(prop['cell_name'][mother]) + " = " + str(difference)
+                monitoring.to_log_and_console(msg)
 
     return prop
-
 
 
 ########################################################################################
