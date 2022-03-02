@@ -154,7 +154,30 @@ class AtlasParameters(udiagnosis.DiagnosisParameters):
         #
         #
         #
-        doc = "\t if True, generate python files (prefixed by 'figures_') that generate figures."
+        doc = "\t if True, generate python files (prefixed by 'figures_') that generate figures.\n"
+        doc += "\t Those files will be saved into the 'outputDir' directory.\n"
+        doc += "\t 'generate_figure' can be\n"
+        doc += "\t - a boolean value: if True, all figure files are generated; if False, none of them\n"
+        doc += "\t - a string: if 'all', all figure files are generated; else, only the specified\n"
+        doc += "\t   figure file is generated (see below for the list)\n"
+        doc += "\t - a list of strings: if 'all' is in the list, all figure files are generated;\n"
+        doc += "\t   else, only the specified figure files are generated (see below for the list)\n"
+        doc += "\t List of figures:\n"
+        doc += "\t 'cell-distance-along-branch': plot the cell-to-cell distance between successive\n"
+        doc += "\t    along a branch (a cell without division) wrt the distance to the first cell.\n"
+        doc += "\t    Cell neighborhoods are expressed with the neighbors of the first cell of the branch\n"
+        doc += "\t    (thus it ignores divisions occurring in the cell neighborhood during the cell life).\n"
+        doc += "\t 'cell-number-wrt-time': plot the number of cells wrt time point (ie image indices)\n"
+        doc += "\t    without and with temporal registration (allows to assess the temporal registration)\n"
+        doc += "\t 'neighbors-wrt-cell-number': plot the cell number in the cell neighborhood wrt\n"
+        doc += "\t    the total cell number in the embryo\n"
+        doc += "\t 'distance-histograms': plot cell-to-cell distance histograms, \n"
+        doc += "\t    as well as division-to-division distance histograms.\n"
+        doc += "\t    warning: it may be long.\n"
+        doc += "\t 'division-dendrograms': draw a dendrogram per division where atlases are grouped with\n"
+        doc += "\t    distance between divisions\n"
+        doc += "\t 'embryo-volume': plot the embryo volume (in voxel)\n"
+        doc += "\t    without and with temporal registration (computed from cell number)\n"
         self.doc['generate_figure'] = doc
         self.generate_figure = False
         doc = "\t suffix used to named the above python files as well as the generated figures."
