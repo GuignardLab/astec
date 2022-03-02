@@ -441,6 +441,14 @@ def figures_neighbor_histogram(atlasfiles, parameters, time_digits_for_cell_id=4
         filename += file_suffix
     filename += '.py'
 
+    if parameters.outputDir is not None and isinstance(parameters.outputDir, str):
+        if not os.path.isdir(parameters.outputDir):
+            if not os.path.exists(parameters.outputDir):
+                os.makedirs(parameters.outputDir)
+            else:
+                monitoring.to_log_and_console(proc + ": '" + str(parameters.outputDir) + "' is not a directory ?!")
+        if os.path.isdir(parameters.outputDir):
+            filename = os.path.join(parameters.outputDir, filename)
     #
     #
     #
@@ -759,11 +767,45 @@ def figures_distance_histogram(atlases, parameters):
 
     f.close()
 
+
 ################################################################################
 #
 # cell neighbors number wrt total number of cells in the embryo
 #
 ################################################################################
+
+def _linkage_balance(z, nlabels):
+    """
+
+    Parameters
+    ----------
+    z: the hierarchical clustering encoded as a linkage matrix
+       (see https://docs.scipy.org/doc/scipy/reference/generated/scipy.cluster.hierarchy.linkage.html)
+    nlabels
+
+    Returns
+    -------
+    balance: min( #elements of the two last clusters) / max( #elements of the two last clusters)
+        1.0 means the two last clusters are balanced
+    """
+    #
+    # z[-1, 0] and z[-1, 1] are the labels of the two last clusters to be fused
+    # if label < nlabels, it means the label is the one of an single element (one original observation)
+    # else the cluster was made/described at line 'round(z[-1, 0]) - nlabels' of z, and the 3rd
+    # element gives the number of original observations of this cluster
+    #
+    if z[-1, 0] < nlabels:
+        ncluster0 = 1
+    else:
+        ncluster0 = z[round(z[-1, 0]) - nlabels, 3]
+    if z[-1, 1] < nlabels:
+        ncluster1 = 1
+    else:
+        ncluster1 = z[round(z[-1, 1]) - nlabels, 3]
+    balance = min(ncluster0, ncluster1) / max(ncluster0, ncluster1)
+    return balance
+
+
 def figures_division_dendrogram(atlases, parameters):
     """
     Parameters
@@ -849,8 +891,11 @@ def figures_division_dendrogram(atlases, parameters):
                                                               change_contact_surfaces=ccs)
 
         merge_values[stage] = merge_values.get(stage, []) + list(z[:, 2])
+        # lastmerge_value is the distance between the two last clusters
         lastmerge_value = z[:, 2][-1]
-        balance = ucontacta.linkage_balance(z, len(labels))
+        # balance in [0, 1] reflects the balance between the two last cluster. 1.0 means the two last clusters
+        # have the same number of original observations
+        balance = _linkage_balance(z, len(labels))
         dendro_values[stage] = dendro_values.get(stage, []) + [(lastmerge_value, balance, len(labels))]
 
         #

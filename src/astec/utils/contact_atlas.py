@@ -859,6 +859,11 @@ def call_to_scipy_linkage(atlases, config, cluster_distance='single', change_con
 
     Returns
     -------
+    conddist: the squareform vector built from the distance matrice
+       (see https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.distance.squareform.html)
+    z: the hierarchical clustering encoded as a linkage matrix
+       (see https://docs.scipy.org/doc/scipy/reference/generated/scipy.cluster.hierarchy.linkage.html)
+    labels: the list of atlas names
 
     """
     similarity = atlases.get_division_contact_similarity()
@@ -887,19 +892,6 @@ def call_to_scipy_linkage(atlases, config, cluster_distance='single', change_con
     z = sch.linkage(conddist, method=cluster_distance)
 
     return conddist, z, labels
-
-
-def linkage_balance(z, nlabels):
-    if z[-1, 0] < nlabels:
-        ncluster0 = 1
-    else:
-        ncluster0 = z[round(z[-1, 0]) - nlabels, 3]
-    if z[-1, 1] < nlabels:
-        ncluster1 = 1
-    else:
-        ncluster1 = z[round(z[-1, 1]) - nlabels, 3]
-    balance = min(ncluster0, ncluster1) / max(ncluster0, ncluster1)
-    return balance
 
 
 def _diagnosis_linkage(atlases, parameters):
