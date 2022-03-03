@@ -112,10 +112,6 @@ class AtlasParameters(udiagnosis.DiagnosisParameters):
         doc += "\t cells). Choices are:\n"
         doc += "\t - 'distance': the distance type is given by 'cell_contact_distance'\n"
         doc += "\t   distances are normalized between 0 (perfect match) and 1 (complete mismatch)\n"
-        doc += "\t - 'probability': 1-(division probability) is used to keep the same meaning\n"
-        doc += "\t   for the 0 and 1 extremal values. Probabilities are built with the distance\n"
-        doc += "\t   'cell_contact_distance'. This is kept for test purposes and should be used\n"
-        doc += "\t   with care.\n"
         self.doc['division_contact_similarity'] = doc
         self.division_contact_similarity = 'distance'
 
@@ -1127,11 +1123,6 @@ class Atlases(object):
         # to keep trace of some output (kept as morphonet selection)
         self._output_selections = {}
 
-        # probability stuff
-        self._probability_step = 0.01
-        self._probability = None
-        self._gaussian_kde = None
-
         if parameters is not None:
             self.update_from_parameters(parameters)
 
@@ -1201,9 +1192,6 @@ class Atlases(object):
     def get_output_selections(self):
         return self._output_selections
 
-    def get_probability_step(self):
-        return self._probability_step
-
     ############################################################
     #
     # update
@@ -1252,8 +1240,6 @@ class Atlases(object):
                 or parameters.division_contact_similarity.lower() == 'l2_norm' \
                 or parameters.division_contact_similarity.lower() == 'l2-norm':
             self.division_contact_similarity = 'distance'
-        elif parameters.division_contact_similarity.lower() == 'probability':
-            self.division_contact_similarity = 'probability'
         else:
             monitoring.to_log_and_console(str(proc) + ": unhandled division contact similarity: '" +
                                           str(parameters.division_contact_similarity) + "'")
@@ -1828,58 +1814,6 @@ class Atlases(object):
             monitoring.to_log_and_console("============================================================")
             monitoring.to_log_and_console("")
 
-    def build_probabilities(self):
-
-        monitoring.to_log_and_console("... build probabilities", 1)
-        divisions = self.get_divisions()
-        css = not self._use_common_neighborhood
-
-        #
-        # compute all score couples
-        #
-        cscores = []
-        sscores = []
-
-        for n in divisions:
-            d = uname.get_daughter_names(n)
-            for r1 in divisions[n]:
-                for r2 in divisions[n]:
-                    if r2 <= r1:
-                        continue
-                    d00 = self.get_cell_distance(d[0], r1, d[0], r2, change_contact_surfaces=css)
-                    d11 = self.get_cell_distance(d[1], r1, d[1], r2, change_contact_surfaces=css)
-                    cscores += [d00, d11]
-                    sscores += [d11, d00]
-        values = np.array([cscores, sscores])
-        #
-        # compute the kde from the training set
-        #
-        self._gaussian_kde = stats.gaussian_kde(values)
-
-        #
-        # compute the kde value of a discrete grid
-        #
-        step = self.get_probability_step()
-        x, y = np.mgrid[0:1:step, 0:1:step]
-        positions = np.vstack([x.ravel(), y.ravel()])
-        z = np.reshape(self._gaussian_kde(positions).T, x.shape)
-        # monitoring.to_log_and_console("          z.sum() = " + str(z.sum()), 1)
-        # monitoring.to_log_and_console("          z.max() = " + str(z.max()), 1)
-
-        #
-        # rescale the discrete value
-        #
-        if True:
-            scale = 100.0 / z.sum()
-            self._probability = np.reshape([[(z[z <= z[j][i]].sum()) * scale for i in range(z.shape[1])]
-                                            for j in range(z.shape[0])], z.shape)
-        else:
-            scale = 100.0 / z.max()
-            scale = 1.0
-            self._probability = np.reshape(z * scale, z.shape)
-
-        monitoring.to_log_and_console("    done", 1)
-
     ############################################################
     #
     #
@@ -1908,31 +1842,6 @@ class Atlases(object):
     #
     #
     ############################################################
-
-    def get_probability(self, a, b):
-        proc = "get_probability"
-
-        if self._probability is None or self._gaussian_kde is None:
-            self.build_probabilities()
-
-        i = int(b // self.get_probability_step())
-        j = int(a // self.get_probability_step())
-        if i >= self._probability.shape[0] or i >= self._probability.shape[1]:
-            monitoring.to_log_and_console(str(proc) + ": too large second value in (" + str(a) + ", " + str(b) + "")
-            return -1.0
-        if j >= self._probability.shape[0] or j >= self._probability.shape[1]:
-            monitoring.to_log_and_console(str(proc) + ": too large first value in (" + str(a) + ", " + str(b) + "")
-            return -1.0
-
-        #
-        # probability should be symmetrical but is not
-        #
-        p = (self._probability[j][i] + self._probability[i][j]) / 2.0
-        if p >= 100.0:
-            return 100.0
-        if p <= 0.0:
-            return 0.0
-        return p
 
     def get_cell_distance(self, cell_name1, ref1, cell_name2, ref2, change_contact_surfaces=True):
         """
@@ -2028,7 +1937,7 @@ def division_contact_generic_distance(atlases, daughter00, daughter01, daughter1
     daughter01: daughter #1 of ref #0
     daughter10: daughter #0 of ref #1
     daughter11: daughter #1 of ref #1
-    similarity: 'l1_distance', 'l2_distance', or 'probability'. The two latter are kept for historical
+    similarity: 'l1_distance', 'l2_distance'. The latter is kept for historical
         reasons, but only 'l1_distance' should be used.
     change_contact_surfaces: True or False
 
@@ -2046,12 +1955,6 @@ def division_contact_generic_distance(atlases, daughter00, daughter01, daughter1
         return ucontact.division_contact_distance(daughter00, daughter01, daughter10, daughter11,
                                                   distance=atlases.cell_contact_distance,
                                                   change_contact_surfaces=change_contact_surfaces)
-    elif similarity.lower() == 'probability':
-        d0 = ucontact.cell_contact_distance(daughter00, daughter10, distance=atlases.cell_contact_distance,
-                                            change_contact_surfaces=change_contact_surfaces)
-        d1 = ucontact.cell_contact_distance(daughter01, daughter11, distance=atlases.cell_contact_distance,
-                                            change_contact_surfaces=change_contact_surfaces)
-        return 1.0 - atlases.get_probability(d0, d1)/100.0
 
     msg = proc + ": unhandled similarity '" + str(similarity) + "'"
     monitoring.to_log_and_console(msg, 1)

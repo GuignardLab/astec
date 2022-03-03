@@ -359,20 +359,20 @@ def _neighbor_histogram(neighbors, prop, filename, threshold=0.05, time_digits_f
         #
         # frac: array of surface fraction (without the background)
         #
-        l = len([x for x in frac if x >= threshold])
+        ncells = len([x for x in frac if x >= threshold])
         #
         # print a message for large neighbor number
         #
-        if l > cell_number_threshold:
+        if ncells > cell_number_threshold:
             msg = "cell " + str(n)
             if 'cell_name' in prop:
                 if n in prop['cell_name']:
                     msg += " (" + str(prop['cell_name'][n]) + ")"
-            msg += " of properties '" + str(filename) + "' has " + str(l) + " neighbors"
+            msg += " of properties '" + str(filename) + "' has " + str(ncells) + " neighbors"
             msg += " (above " + str(threshold*100) + "%)"
             monitoring.to_log_and_console("\t " + msg)
         t = n // div
-        neighbors[nodespertime[t]] = neighbors.get(nodespertime[t], []) + [l]
+        neighbors[nodespertime[t]] = neighbors.get(nodespertime[t], []) + [ncells]
     return neighbors
 
 
@@ -1012,13 +1012,16 @@ def figures_division_dendrogram(atlases, parameters):
         if i < len(generations) - 1:
             f.write(", ")
     f.write("]\n")
-    dendro_values[stage] = dendro_values.get(stage, []) + [(lastmerge_value, balance, len(labels))]
+    f.write("\n")
+
     f.write("dendro_values = [")
     for i, g in enumerate(generations):
         f.write(str(list(dendro_values[g])))
         if i < len(generations) - 1:
             f.write(", ")
     f.write("]\n")
+    f.write("\n")
+
     f.write("merge_labels = [")
     for i, g in enumerate(generations):
         f.write("'generation " + str(g) + "'")
@@ -1168,6 +1171,7 @@ def figures_embryo_volume(atlases, parameters, time_digits_for_cell_id=4):
 
     f.write("import numpy as np\n")
     f.write("import matplotlib.pyplot as plt\n")
+    f.write("import sklearn.linear_model as sklm\n")
 
     f.write("\n")
     f.write("savefig = True\n")
@@ -1184,10 +1188,26 @@ def figures_embryo_volume(atlases, parameters, time_digits_for_cell_id=4):
     f.write("    x = list(volume_along_time[n].keys())\n")
     f.write("    x = sorted(x)\n")
     f.write("    y = [volume_along_time[n][i] for i in x]\n")
-    f.write("    ax1.plot(x, y)\n")
+    f.write("\n")
+    f.write("    xnp = np.array(x)[:, np.newaxis]\n")
+    f.write("    ynp = np.array(y)[:, np.newaxis]\n")
+    f.write("    ransac = sklm.RANSACRegressor()\n")
+    f.write("    ransac.fit(xnp, ynp)\n")
+    f.write("\n")
+    f.write("    y2 = ransac.estimator_.coef_[0][0] * xnp + ransac.estimator_.intercept_[0] \n")
+    f.write("    p = ax1.plot(x, y, label=n)\n")
+    f.write("    ax1.plot(x, y2, color=p[0].get_color())  \n")
+    f.write("\n")
+    f.write("    ploss = (y[-1] - y[0])/y[0]\n")
+    f.write("    ploss2 = (y2[-1] - y2[0])/y2[0]\n")
+    f.write("    print(str(n) + ' volume percentage loss from first time point')\n")
+    f.write("    print('\\t to the last one, from measures = ' + str(100.0 * (y[-1] - y[0])/y[0]))\n")
+    f.write("    print('\\t \\t from linear estimation = ' + str(100.0 * ((y2[-1] - y2[0])/y2[0])[0]))\n")
+    f.write("    print('\\t to the 50th one, from linear estimation = ' + str(100.0 * ((y2[50] - y2[0])/y2[0])[0]))\n")
     f.write("ax1.set_title(\"embryo volume (without alignment)\", fontsize=15)\n")
-    f.write("ax1.legend(labels, prop={'size': 10})\n")
+    f.write("ax1.legend(prop={'size': 10})\n")
 
+    f.write("\n")
     f.write("for n in volume_along_time:\n")
     f.write("    x = list(volume_along_time[n].keys())\n")
     f.write("    x = sorted(x)\n")
