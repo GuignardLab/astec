@@ -208,13 +208,15 @@ def _compare_cell(a, b):
     return 0
 
 
-def build_same_contact_surfaces(neighborhoods, celllist, debug=False):
+def build_same_contact_surfaces(neighborhoods, celllist, celltobeexcluded=None, maximal_generation=None, debug=False):
     """
 
     Parameters
     ----------
     neighborhoods: dictionary of dictionary of contact surface vectors
-    celllist:
+    celllist: build same set of contact surfaces for all neighborhoods of cell from the list
+    celltobeexcluded
+    maximal_generation: if not None, it is the maximal generation that has to be found in the neighborhood
     debug
 
     Returns
@@ -267,8 +269,11 @@ def build_same_contact_surfaces(neighborhoods, celllist, debug=False):
                 continue
             #
             # should the neighbor be replaced by its mother?
+            # - if there is an
             #
-            if _is_ancestor_in_stages(neigh, neighbors_by_stage):
+            max_test = (isinstance(celltobeexcluded, list) and neigh not in celltobeexcluded) and s > 0 and \
+                isinstance(maximal_generation, int) and int(neigh.split('.')[0][1:]) > maximal_generation
+            if _is_ancestor_in_stages(neigh, neighbors_by_stage) or max_test:
                 #
                 # replace the neighbor by its mother
                 #

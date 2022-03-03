@@ -584,7 +584,7 @@ def _print_neighborhood(neighborhood, start=""):
 
 
 def _compute_distances(mother, daughters, prop, atlases, parameters, delay_from_division=0,
-                       time_digits_for_cell_id=4, debug=False):
+                       homogenize_neighborhood=False, time_digits_for_cell_id=4, debug=False):
     """
 
     Parameters
@@ -595,6 +595,7 @@ def _compute_distances(mother, daughters, prop, atlases, parameters, delay_from_
     atlases:
     parameters:
     delay_from_division
+    homogenize_neighborhood
     time_digits_for_cell_id
     debug
 
@@ -635,8 +636,15 @@ def _compute_distances(mother, daughters, prop, atlases, parameters, delay_from_
         monitoring.to_log_and_console(str(proc) + msg, 4)
         return None
 
+    mother_generation = int(prop['cell_name'][mother].split('.')[0][1:])
     daughter_neighborhoods = {0: copy.deepcopy(neighborhoods[daughter_names[0]]),
                               1: copy.deepcopy(neighborhoods[daughter_names[1]])}
+    if homogenize_neighborhood:
+        new_neighborhoods = ucontact.build_same_contact_surfaces(daughter_neighborhoods, [0, 1],
+                                                                 celltobeexcluded=daughter_names,
+                                                                 maximal_generation=mother_generation)
+        for n in new_neighborhoods:
+            daughter_neighborhoods[n] = copy.deepcopy(new_neighborhoods[n])
 
     if debug:
         monitoring.to_log_and_console("Distance computation:")
@@ -1042,7 +1050,7 @@ def _get_evaluation(given_names, daughter_names, distance, parameters, debug=Fal
     else:
         msg = ": weird, names are not switched or non-switched ?!"
         monitoring.to_log_and_console(str(proc) + msg)
-        return None
+        return None, None
 
     sorted_dist = sorted(dist, key=lambda v: v[0])
 
@@ -1050,7 +1058,7 @@ def _get_evaluation(given_names, daughter_names, distance, parameters, debug=Fal
     if parameters.confidence_atlases_nmin > 0:
         natlas = max(parameters.confidence_atlases_nmin, natlas)
     if natlas <= 0 or len(sorted_dist) < natlas:
-        return None
+        return None, None
 
     mean0 = 0.0
     mean1 = 0.0
@@ -1059,7 +1067,7 @@ def _get_evaluation(given_names, daughter_names, distance, parameters, debug=Fal
         mean1 += sorted_dist[i][1]
     mean0 /= natlas
     mean1 /= natlas
-    return mean1 - mean0
+    return mean0, mean1 - mean0
 
 
 def _evaluate_naming(prop, atlases, parameters, time_digits_for_cell_id=4):
@@ -1086,7 +1094,13 @@ def _evaluate_naming(prop, atlases, parameters, time_digits_for_cell_id=4):
     # initialize 'morphonet_float_name_choice_certainty'
     #
     keydifference = 'morphonet_float_name_choice_difference'
+    hkeydifference = 'morphonet_float_name_choice_difference_homogeneize'
+    keymindistance = 'morphonet_float_name_choice_min_distance'
+    hkeymindistance = 'morphonet_float_name_choice_min_distance_homogeneize'
     prop[keydifference] = {}
+    prop[hkeydifference] = {}
+    prop[keymindistance] = {}
+    prop[hkeymindistance] = {}
 
     #
     #
@@ -1136,6 +1150,15 @@ def _evaluate_naming(prop, atlases, parameters, time_digits_for_cell_id=4):
                 if mother not in prop[keydifference]:
                     continue
                 prop[keydifference][c] = prop[keydifference][mother]
+                if mother not in prop[hkeydifference]:
+                    continue
+                prop[hkeydifference][c] = prop[hkeydifference][mother]
+                if mother not in prop[keymindistance]:
+                    continue
+                prop[keymindistance][c] = prop[keymindistance][mother]
+                if mother not in prop[hkeymindistance]:
+                    continue
+                prop[hkeymindistance][c] = prop[hkeymindistance][mother]
                 continue
 
             if len(lineage[mother]) > 2:
@@ -1173,15 +1196,36 @@ def _evaluate_naming(prop, atlases, parameters, time_digits_for_cell_id=4):
                                           time_digits_for_cell_id=time_digits_for_cell_id, debug=debug)
             if distance is None:
                 continue
-            difference = _get_evaluation(given_names, daughter_names, distance, parameters, debug=debug)
+            mindist, difference = _get_evaluation(given_names, daughter_names, distance, parameters, debug=debug)
 
             if difference is None:
                 continue
             for d in daughters:
                 prop[keydifference][d] = difference
+                prop[keymindistance][d] = mindist
             if debug:
                 msg = "----- naming assessment with un-homogenized neighborhood for division of "
                 msg += str(prop['cell_name'][mother]) + " = " + str(difference)
+                monitoring.to_log_and_console(msg)
+
+            if debug:
+                msg = "===== homogenized neighborhood for division of " + str(prop['cell_name'][mother])
+                monitoring.to_log_and_console(msg)
+            hdistance = _compute_distances(mother, daughters, prop, atlases, parameters,
+                                           delay_from_division=parameters.confidence_delay_from_division,
+                                           homogenize_neighborhood=True,
+                                           time_digits_for_cell_id=time_digits_for_cell_id, debug=debug)
+
+            hmindist, hdifference = _get_evaluation(given_names, daughter_names, hdistance, parameters, debug=debug)
+
+            if hdifference is None:
+                continue
+            for d in daughters:
+                prop[hkeydifference][d] = hdifference
+                prop[hkeymindistance][d] = hmindist
+            if debug:
+                msg = "----- naming assessment with homogenized neighborhood for division of "
+                msg += str(prop['cell_name'][mother]) + " = " + str(hdifference)
                 monitoring.to_log_and_console(msg)
 
     return prop
