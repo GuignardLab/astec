@@ -46,64 +46,89 @@ def contact_atlas_process(experiment, parameters):
     atlases = ucontacta.Atlases(parameters=parameters)
     atlases.build_neighborhoods(parameters.atlasFiles, parameters, time_digits_for_cell_id=time_digits_for_cell_id)
 
-    if parameters.generate_figure:
+    ################################################################################
+    #
+    # figure file building
+    #
+    # all figures may have to be generated or only some of them
+    #
+    generate_figure = (isinstance(parameters.generate_figure, bool) and parameters.generate_figure) or \
+                      (isinstance(parameters.generate_figure, str) and parameters.generate_figure == 'all') or \
+                      (isinstance(parameters.generate_figure, list) and 'all' in parameters.generate_figure)
 
-        #
-        #
-        #
-        if True:
-            monitoring.to_log_and_console("... generate cell number plot file", 1)
-            ucontactf.figures_temporal_registration(atlases, parameters, time_digits_for_cell_id=time_digits_for_cell_id)
-            monitoring.to_log_and_console("... done", 1)
+    #
+    # cell-to-cell distance between successive cells in a branch with respect to distance from first cell
+    # (from first time point/division to last time point/division)
+    #
+    if (isinstance(parameters.generate_figure, str) and parameters.generate_figure == 'cell-distance-along-branch') \
+            or (isinstance(parameters.generate_figure, list) and 'cell-distance-along-branch' in parameters.generate_figure) \
+            or generate_figure:
+        monitoring.to_log_and_console("... generate cell distance along branch file", 1)
+        ucontactf.figures_distance_along_branch(atlases, parameters,
+                                                time_digits_for_cell_id=time_digits_for_cell_id)
+        monitoring.to_log_and_console("... done", 1)
 
-        #
-        # draw cell neighbor number with respect to number of cells in embryo
-        #
-        if True:
-            monitoring.to_log_and_console("... generate neighbors histogram file", 1)
-            ucontactf.figures_neighbor_histogram(parameters.atlasFiles, parameters,
-                                                 time_digits_for_cell_id=time_digits_for_cell_id)
-            monitoring.to_log_and_console("... done", 1)
+    #
+    # plot cell number wrt time without and with temporal registration
+    #
+    if (isinstance(parameters.generate_figure, str) and parameters.generate_figure == 'cell-number-wrt-time') \
+            or (isinstance(parameters.generate_figure, list) and 'cell-number-wrt-time' in parameters.generate_figure) \
+            or generate_figure:
+        monitoring.to_log_and_console("... generate cell number wrt time file", 1)
+        ucontactf.figures_temporal_registration(atlases, parameters, time_digits_for_cell_id=time_digits_for_cell_id)
+        monitoring.to_log_and_console("... done", 1)
 
-        #
-        # draw neighborhood-to-neighborhood distance with respect to distance from division
-        #
-        if True:
-            monitoring.to_log_and_console("... generate distance along branch file", 1)
-            ucontactf.figures_distance_along_branch(atlases, parameters, time_digits_for_cell_id=time_digits_for_cell_id)
-            monitoring.to_log_and_console("... done", 1)
+    #
+    # cell neighbors number wrt total number of cells in the embryo
+    #
+    if (isinstance(parameters.generate_figure, str) and parameters.generate_figure == 'neighbors-wrt-cell-number') \
+            or (isinstance(parameters.generate_figure, list) and 'neighbors-wrt-cell-number' in parameters.generate_figure) \
+            or generate_figure:
+        monitoring.to_log_and_console("... generate neighbors histogram file", 1)
+        ucontactf.figures_neighbor_histogram(parameters.atlasFiles, parameters,
+                                             time_digits_for_cell_id=time_digits_for_cell_id)
+        monitoring.to_log_and_console("... done", 1)
 
-        #
-        # draw a graph of reference/atlas embryos per division where edge are valued by the sum of scores
-        # (do the right pairing between reference/atlas embryos)
-        #
-        if False:
-            monitoring.to_log_and_console("... generate division graph figure file", 1)
-            ucontactf.figures_division_graph(atlases, parameters)
-            monitoring.to_log_and_console("... done", 1)
+    #
+    # draw histograms of both right pairing and wrong pairing
+    # 2D histograms are at division level
+    # 1D histograms are at cell (daughter) level
+    #
+    if (isinstance(parameters.generate_figure, str) and parameters.generate_figure == 'distance-histograms') \
+            or (isinstance(parameters.generate_figure, list) and 'distance-histograms' in parameters.generate_figure) \
+            or generate_figure:
+        monitoring.to_log_and_console("... generate division distance histogram file", 1)
+        ucontactf.figures_distance_histogram(atlases, parameters)
+        monitoring.to_log_and_console("... done", 1)
 
-        #
-        # draw histograms of both right pairing and wrong pairing
-        # 2D histograms are at division level
-        # 1D histograms are at cell (daughter) level
-        #
-        if True:
-            monitoring.to_log_and_console("... generate division distance histogram file", 1)
-            ucontactf.figures_distance_histogram(atlases, parameters)
-            monitoring.to_log_and_console("... done", 1)
+    #
+    # draw a dendrogram per division where atlases are grouped with similarity between division
+    #
+    if (isinstance(parameters.generate_figure, str) and parameters.generate_figure == 'division-dendrograms') \
+            or (isinstance(parameters.generate_figure, list) and 'division-dendrograms' in parameters.generate_figure) \
+            or generate_figure:
+        monitoring.to_log_and_console("... generate division dendrogram figure file", 1)
+        ucontactf.figures_division_dendrogram(atlases, parameters)
+        monitoring.to_log_and_console("... done", 1)
 
-        #
-        # draw a graph per division where edges are valued with similarity between division
-        #
-        if True:
-            monitoring.to_log_and_console("... generate division dendrogram figure file", 1)
-            ucontactf.figures_division_dendrogram(atlases, parameters)
-            monitoring.to_log_and_console("... done", 1)
+    #
+    # plot embryo volume wrt time without and with temporal registration
+    #
+    if (isinstance(parameters.generate_figure, str) and parameters.generate_figure == 'embryo-volume') \
+            or (isinstance(parameters.generate_figure, list) and 'embryo-volume' in parameters.generate_figure) \
+            or generate_figure:
+        monitoring.to_log_and_console("... generate embryo volume figure file", 1)
+        ucontactf.figures_embryo_volume(atlases, parameters)
+        monitoring.to_log_and_console("... done", 1)
+
+    # end of figures
+    #
+    ################################################################################
 
     #
     # look for daughter that may improve a global score
     # report it in the console/log file
-    # as well as in morphonet selection filea
+    # as well as in morphonet selection file
     #
     if parameters.division_permutation_proposal:
         ucontacta.division_permutation_proposal(atlases, parameters)
