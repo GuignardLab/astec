@@ -1205,7 +1205,11 @@ def _evaluate_naming(prop, atlases, parameters, time_digits_for_cell_id=4):
                 prop[keymindistance][d] = mindist
             if debug:
                 msg = "----- naming assessment with un-homogenized neighborhood for division of "
-                msg += str(prop['cell_name'][mother]) + " = " + str(difference)
+                msg += str(prop['cell_name'][mother])
+                monitoring.to_log_and_console(msg)
+                msg = "      difference = " + str(difference)
+                monitoring.to_log_and_console(msg)
+                msg = "      distance   = " + str(mindist)
                 monitoring.to_log_and_console(msg)
 
             if debug:
@@ -1225,7 +1229,11 @@ def _evaluate_naming(prop, atlases, parameters, time_digits_for_cell_id=4):
                 prop[hkeymindistance][d] = hmindist
             if debug:
                 msg = "----- naming assessment with homogenized neighborhood for division of "
-                msg += str(prop['cell_name'][mother]) + " = " + str(hdifference)
+                msg += str(prop['cell_name'][mother])
+                monitoring.to_log_and_console(msg)
+                msg = "      difference = " + str(hdifference)
+                monitoring.to_log_and_console(msg)
+                msg = "      distance   = " + str(hmindist)
                 monitoring.to_log_and_console(msg)
 
     return prop

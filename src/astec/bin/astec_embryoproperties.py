@@ -395,13 +395,15 @@ def main():
             for feature in args.outputFeatures:
 
                 # print("search feature '" + str(feature) + "'")
-                target_key = ioproperties.keydictionary[feature]
-
-                for searchedkey in target_key['input_keys']:
-                    if searchedkey in inputdict:
-                        # print("found feature '" + str(ok) + "'")
-                        outputdict[target_key['output_key']] = inputdict[searchedkey]
-                        break
+                if feature in ioproperties.keydictionary:
+                    target_key = ioproperties.keydictionary[feature]
+                    for searchedkey in target_key['input_keys']:
+                        if searchedkey in inputdict:
+                            # print("found feature '" + str(ok) + "'")
+                            outputdict[target_key['output_key']] = inputdict[searchedkey]
+                            break
+                elif feature in inputdict:
+                        outputdict[feature] = inputdict[feature]
                 else:
                     print("error: feature '" + str(feature) + "' not found in dictionary")
 

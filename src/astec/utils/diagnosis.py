@@ -608,6 +608,9 @@ def _diagnosis_volume(prop, description, diagnosis_parameters, time_digits_for_c
     #
     # volume variation
     #
+    if keylineage is None:
+        return prop
+
     lineage = prop[keylineage]
     div = 10 ** time_digits_for_cell_id
     first_time, last_time = _get_time_interval_from_lineage(lineage, time_digits_for_cell_id=time_digits_for_cell_id)

@@ -13,15 +13,32 @@ import astec.utils.ioproperties as ioproperties
 monitoring = common.Monitoring()
 
 
-def _write_array(f, name, a, length=4):
+def _write_raw_array(f, a, length=4):
     form = "{:1." + str(length) + "f}"
     last = len(a) - 1
-    f.write(str(name) + " = [")
+    f.write("[")
     for i, v in enumerate(a):
         f.write(form.format(v))
         if i < last:
             f.write(", ")
-    f.write("]\n")
+    f.write("]")
+
+
+def _write_array(f, name, a, length=4):
+    f.write(str(name) + " = ")
+    _write_raw_array(f, a, length=length)
+    f.write("\n")
+
+
+def _write_dict_of_arrays(f, name, a, length=4):
+    last = len(a) - 1
+    f.write(str(name) + " = {")
+    for i, v in enumerate(a):
+        f.write(str(v) + ": ")
+        _write_raw_array(f, a[v], length=length)
+        if i < last:
+            f.write(", ")
+    f.write("}\n")
 
 
 ################################################################################
@@ -575,14 +592,30 @@ def figures_distance_histogram(atlases, parameters):
     neighborhoods = atlases.get_neighborhoods()
     similarity = atlases.get_division_contact_similarity()
 
-    right_cscores = []
-    wrong_cscores = []
+    #
+    # make generation-dependant calculation
+    #
+    division_per_generation = {}
+    for n in divisions:
+        generation = n.split('.')[0][1:]
+        division_per_generation[generation] = division_per_generation.get(generation, []) + [n]
+    for g in division_per_generation:
+        print("    - generation " + str(g) + ": " + str(len(division_per_generation[g])) + " divisions")
 
-    other_scores = []
+    ndivision = 0
+    for g in division_per_generation:
+        # if int(g) > generationmax:
+        #    continue
+        ndivision += len(division_per_generation[g])
 
-    right_dscores = []
-    wrong_dscores = []
-    diff_dscores = []
+    right_cscores_per_generation = {}
+    wrong_cscores_per_generation = {}
+
+    other_scores_per_generation = {}
+
+    right_dscores_per_generation = {}
+    wrong_dscores_per_generation = {}
+    diff_dscores_per_generation = {}
 
     #
     # compute cell-to-cell distances for
@@ -590,63 +623,51 @@ def figures_distance_histogram(atlases, parameters):
     # - sister cells (only across embryos)
     # and division-to-division distances
     #
-    for n in divisions:
-        d = uname.get_daughter_names(n)
-        #
-        # if int(n.split('.')[0][1:]) > 6:
-        #     continue
-        for r1 in divisions[n]:
-            for r2 in divisions[n]:
-                if r2 <= r1:
-                    continue
-                d00 = atlases.get_cell_distance(d[0], r1, d[0], r2, change_contact_surfaces=ccs)
-                d11 = atlases.get_cell_distance(d[1], r1, d[1], r2, change_contact_surfaces=ccs)
-                d01 = atlases.get_cell_distance(d[0], r1, d[1], r2, change_contact_surfaces=True)
-                d10 = atlases.get_cell_distance(d[1], r1, d[0], r2, change_contact_surfaces=True)
-                right_cscores += [d00, d11]
-                wrong_cscores += [d01, d10]
+    for g in division_per_generation:
+        for n in division_per_generation[g]:
+            d = uname.get_daughter_names(n)
+            #
+            # if int(n.split('.')[0][1:]) > 6:
+            #     continue
+            for r1 in divisions[n]:
+                for r2 in divisions[n]:
+                    if r2 <= r1:
+                        continue
+                    d00 = atlases.get_cell_distance(d[0], r1, d[0], r2, change_contact_surfaces=ccs)
+                    d11 = atlases.get_cell_distance(d[1], r1, d[1], r2, change_contact_surfaces=ccs)
+                    d01 = atlases.get_cell_distance(d[0], r1, d[1], r2, change_contact_surfaces=True)
+                    d10 = atlases.get_cell_distance(d[1], r1, d[0], r2, change_contact_surfaces=True)
+                    right_cscores_per_generation[g] = right_cscores_per_generation.get(g, []) + [d00, d11]
+                    wrong_cscores_per_generation[g] = wrong_cscores_per_generation.get(g, []) + [d01, d10]
 
-                div00 = ucontacta.division_contact_generic_distance(atlases, neighborhoods[d[0]][r1],
-                                                                    neighborhoods[d[1]][r1], neighborhoods[d[0]][r2],
-                                                                    neighborhoods[d[1]][r2],
-                                                                    similarity=similarity, change_contact_surfaces=ccs)
-                # daughter neighborhood have the same neighbors if atlases.get_use_common_neighborhood() is True
-                # there is then no need to change the contact surfaces
-                div01 = ucontacta.division_contact_generic_distance(atlases, neighborhoods[d[0]][r1],
-                                                                    neighborhoods[d[1]][r1], neighborhoods[d[1]][r2],
-                                                                    neighborhoods[d[0]][r2],
-                                                                    similarity=similarity, change_contact_surfaces=ccs)
-                # trace = n == "b7.0003_" or n == "b7.0008*"
-                # if trace:
-                #     print("division distance of " + n + " between " + r1 + " and " + r2 + ":")
-                #     print("\t right pairing = " + str(div00))
-                #     print("\t wrong pairing = " + str(div01))
-                right_dscores += [div00]
-                wrong_dscores += [div01]
-                diff_dscores += [div01-div00]
+                    div00 = ucontacta.division_contact_generic_distance(atlases, neighborhoods[d[0]][r1],
+                                                                        neighborhoods[d[1]][r1],
+                                                                        neighborhoods[d[0]][r2],
+                                                                        neighborhoods[d[1]][r2],
+                                                                        similarity=similarity,
+                                                                        change_contact_surfaces=ccs)
+                    # daughter neighborhood have the same neighbors if atlases.get_use_common_neighborhood() is True
+                    # there is then no need to change the contact surfaces
+                    div01 = ucontacta.division_contact_generic_distance(atlases, neighborhoods[d[0]][r1],
+                                                                        neighborhoods[d[1]][r1],
+                                                                        neighborhoods[d[1]][r2],
+                                                                        neighborhoods[d[0]][r2],
+                                                                        similarity=similarity,
+                                                                        change_contact_surfaces=ccs)
+                    # trace = n == "b7.0003_" or n == "b7.0008*"
+                    # if trace:
+                    #     print("division distance of " + n + " between " + r1 + " and " + r2 + ":")
+                    #     print("\t right pairing = " + str(div00))
+                    #     print("\t wrong pairing = " + str(div01))
+                    right_dscores_per_generation[g] = right_dscores_per_generation.get(g, []) + [div00]
+                    wrong_dscores_per_generation[g] = wrong_dscores_per_generation.get(g, []) + [div01]
+                    diff_dscores_per_generation[g] = diff_dscores_per_generation.get(g, []) + [div01-div00]
 
     #
     # compute cell-to-cell distance for cells of the same generation
     # but not the same cell nor its sister
     #
-
     if compute_other_scores:
-
-        # generationmax = 7
-
-        division_per_generation = {}
-        for n in divisions:
-            generation = n.split('.')[0][1:]
-            division_per_generation[generation] = division_per_generation.get(generation, []) + [n]
-        for g in division_per_generation:
-            print("    - generation " + str(g) + ": " + str(len(division_per_generation[g])) + " divisions")
-
-        ndivision = 0
-        for g in division_per_generation:
-            # if int(g) > generationmax:
-            #    continue
-            ndivision += len(division_per_generation[g])
-
         i = 0
         for n in divisions:
             d = uname.get_daughter_names(n)
@@ -655,6 +676,7 @@ def figures_distance_histogram(atlases, parameters):
             #     continue
             if i % 10 == 0:
                 print("      " + str(i) + "/" + str(ndivision))
+            other_scores = []
             for m in division_per_generation[generation]:
                 if m <= n:
                     continue
@@ -669,6 +691,7 @@ def figures_distance_histogram(atlases, parameters):
                         d10 = atlases.get_cell_distance(d[1], r1, f[0], r2, change_contact_surfaces=True)
                         other_scores += [d00, d11, d01, d10]
             i += 1
+            other_scores_per_generation[generation] = other_scores_per_generation.get(generation, []) + other_scores
 
     f = open(filename, "w")
 
@@ -680,10 +703,16 @@ def figures_distance_histogram(atlases, parameters):
     f.write("savefig = True\n")
 
     f.write("\n")
-    _write_array(f, "right_cscores", right_cscores, length=4)
+    _write_dict_of_arrays(f, "right_cscores_per_generation", right_cscores_per_generation, length=4)
+    f.write("right_cscores = []\n")
+    f.write("for g in right_cscores_per_generation:\n")
+    f.write("    right_cscores += right_cscores_per_generation[g]\n")
 
     f.write("\n")
-    _write_array(f, "wrong_cscores", wrong_cscores, length=4)
+    _write_dict_of_arrays(f, "wrong_cscores_per_generation", wrong_cscores_per_generation, length=4)
+    f.write("wrong_cscores = []\n")
+    f.write("for g in wrong_cscores_per_generation:\n")
+    f.write("    wrong_cscores += wrong_cscores_per_generation[g]\n")
 
     f.write("\n")
     f.write("fig, ax = plt.subplots(figsize=(7.5, 7.5))\n")
@@ -705,7 +734,11 @@ def figures_distance_histogram(atlases, parameters):
 
     if compute_other_scores:
         f.write("\n")
-        _write_array(f, "other_scores", other_scores, length=4)
+        _write_dict_of_arrays(f, "other_scores_per_generation", other_scores_per_generation, length=4)
+        f.write("other_scores = []\n")
+        f.write("for g in other_scores_per_generation:\n")
+        f.write("    other_scores += other_scores_per_generation[g]\n")
+
         f.write("\n")
         f.write("fig, ax = plt.subplots(figsize=(7.5, 7.5))\n")
         f.write("labels = ['same cell', 'sister cell', 'other cell']\n")
@@ -725,8 +758,22 @@ def figures_distance_histogram(atlases, parameters):
         f.write("    plt.close()\n")
 
     f.write("\n")
-    _write_array(f, "right_dscores", right_dscores, length=4)
-    _write_array(f, "wrong_dscores", wrong_dscores, length=4)
+    _write_dict_of_arrays(f, "right_dscores_per_generation", right_dscores_per_generation, length=4)
+    f.write("right_dscores = []\n")
+    f.write("for g in right_dscores_per_generation:\n")
+    f.write("    right_dscores += right_dscores_per_generation[g]\n")
+
+    f.write("\n")
+    _write_dict_of_arrays(f, "wrong_dscores_per_generation", wrong_dscores_per_generation, length=4)
+    f.write("wrong_dscores = []\n")
+    f.write("for g in wrong_dscores_per_generation:\n")
+    f.write("    wrong_dscores += wrong_dscores_per_generation[g]\n")
+
+    f.write("\n")
+    f.write("gens = set(right_dscores_per_generation.keys())\n")
+    f.write("gens.intersection(set(wrong_dscores_per_generation.keys()))\n")
+    f.write("gens = sorted(list(gens))\n")
+
     f.write("\n")
     f.write("fig, ax = plt.subplots(figsize=(7.5, 7.5))\n")
     f.write("labels = ['right pairing', 'wrong pairing']\n")
@@ -746,7 +793,54 @@ def figures_distance_histogram(atlases, parameters):
     f.write("    plt.close()\n")
 
     f.write("\n")
-    _write_array(f, "diff_dscores", diff_dscores, length=4)
+    f.write("fig, axs = plt.subplots(2, 2, figsize=(7.5, 7.5), sharex=True, sharey=True)\n")
+    f.write("labels = ['right pairing', 'wrong pairing']\n")
+    f.write("if len(gens) >= 1:\n")
+    f.write("    axs[0, 0].hist([right_dscores_per_generation[gens[0]], wrong_dscores_per_generation[gens[0]]]")
+    f.write(", 100, histtype='bar', label=labels)\n")
+    f.write("    axs[0, 0].legend(prop={'size': 10})\n")
+    f.write("    title = 'generation = ' + str(gens[0])\n")
+    f.write("    axs[0, 0].set_title(title, fontsize=10)\n")
+    f.write("    axs[0, 0].tick_params(labelsize=10)\n")
+    f.write("if len(gens) >= 2:\n")
+    f.write("    axs[0, 1].hist([right_dscores_per_generation[gens[1]], wrong_dscores_per_generation[gens[1]]]")
+    f.write(", 100, histtype='bar', label=labels)\n")
+    f.write("    axs[0, 1].legend(prop={'size': 10})\n")
+    f.write("    title = 'generation = ' + str(gens[1])\n")
+    f.write("    axs[0, 1].set_title(title, fontsize=10)\n")
+    f.write("    axs[0, 1].tick_params(labelsize=10)\n")
+    f.write("if len(gens) >= 3:\n")
+    f.write("    axs[1, 0].hist([right_dscores_per_generation[gens[2]], wrong_dscores_per_generation[gens[2]]]")
+    f.write(", 100, histtype='bar', label=labels)\n")
+    f.write("    axs[1, 0].legend(prop={'size': 10})\n")
+    f.write("    title = 'generation = ' + str(gens[2])\n")
+    f.write("    axs[1, 0].set_title(title, fontsize=10)\n")
+    f.write("    axs[1, 0].tick_params(labelsize=10)\n")
+    f.write("if len(gens) >= 4:\n")
+    f.write("    axs[1, 1].hist([right_dscores_per_generation[gens[3]], wrong_dscores_per_generation[gens[3]]]")
+    f.write(", 100, histtype='bar', label=labels)\n")
+    f.write("    axs[1, 1].legend(prop={'size': 10})\n")
+    f.write("    title = 'generation = ' + str(gens[3])\n")
+    f.write("    axs[1, 1].set_title(title, fontsize=10)\n")
+    f.write("    axs[1, 1].tick_params(labelsize=10)\n")
+    f.write("fig.suptitle('atlas-to-atlas division distances', fontsize=12)\n")
+
+    f.write("\n")
+    f.write("if savefig:\n")
+    f.write("    plt.savefig('histogram1D_division_generation")
+    if file_suffix is not None:
+        f.write(file_suffix)
+    f.write("'" + " + '.png')\n")
+    f.write("else:\n")
+    f.write("    plt.show()\n")
+    f.write("    plt.close()\n")
+
+    f.write("\n")
+    _write_dict_of_arrays(f, "diff_dscores_per_generation", diff_dscores_per_generation, length=4)
+    f.write("diff_dscores = []\n")
+    f.write("for g in diff_dscores_per_generation:\n")
+    f.write("    diff_dscores += diff_dscores_per_generation[g]\n")
+
     f.write("\n")
     f.write("fig, ax = plt.subplots(figsize=(7.5, 7.5))\n")
     f.write("ax.hist(diff_dscores, 100, histtype='bar')\n")
@@ -858,6 +952,7 @@ def figures_division_dendrogram(atlases, parameters):
 
     f = open(filename, "w")
 
+    f.write("import sys\n")
     f.write("import numpy as np\n")
     f.write("import matplotlib.pyplot as plt\n")
     f.write("import scipy.cluster.hierarchy as sch\n")
@@ -924,7 +1019,7 @@ def figures_division_dendrogram(atlases, parameters):
         fileidentifier = 'HC{:03d}_'.format(int(lastmerge_value)) + cellname
         cellidentifier = cellname + '_HC{:03d}'.format(int(lastmerge_value))
         cellidentifier += '_BAL{:03d}'.format(round(100.0 * balance))
-        cellidentifierlist.append(cellidentifier)
+        cellidentifierlist.append((cellidentifier, n))
 
         f.write("\n")
         f.write("savefig = True\n")
@@ -989,19 +1084,26 @@ def figures_division_dendrogram(atlases, parameters):
 
     f.write("\n")
     f.write("\n")
-    f.write("def draw_all(savefig=False):\n")
-    for cellidentifier in cellidentifierlist:
-        f.write("    draw_" + cellidentifier + "(savefig=savefig)\n")
+    f.write("def draw_all(celllist=[], savefig=True):\n")
+    for cellid in cellidentifierlist:
+        f.write("    if celllist == [] or '" + cellid[1] + "' in celllist:\n")
+        f.write("        draw_" + cellid[0] + "(savefig=savefig)\n")
 
     f.write("\n")
     f.write("\n")
-    for cellidentifier in cellidentifierlist:
-        f.write("if False:\n")
-        f.write("    draw_" + cellidentifier + "(savefig=False)\n")
+
+    f.write("celllist = []\n")
+    f.write("if len(sys.argv) > 1:\n")
+    f.write("    for i in range(1, len(sys.argv)):\n")
+    f.write("        celllist += [sys.argv[i]]\n")
     f.write("\n")
-    f.write("if True:\n")
-    f.write("    draw_all(savefig=savefig)\n")
+    f.write("# print(\"celllist=\"+str(celllist))\n")
+    f.write("draw_all(celllist=celllist, savefig=savefig)\n")
     f.write("\n")
+
+    #
+    # Statistics from the dendrograms
+    #
 
     generations = list(merge_values.keys())
     generations = sorted(generations)
