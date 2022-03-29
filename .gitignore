@@ -71,6 +71,7 @@ Thumbs.db
 .idea/
 .svn/
 build/
+dist/
 build*/
 binaries/
 external/*/doc

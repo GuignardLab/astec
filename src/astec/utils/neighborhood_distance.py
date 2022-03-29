@@ -85,8 +85,10 @@ def build_same_contact_surfaces(neighborhoods, celllist, celltobeexcluded=None, 
     ----------
     neighborhoods: dictionary of dictionary of contact surface vectors
     celllist: build same set of contact surfaces for all neighborhoods of cell from the list
-    celltobeexcluded
-    maximal_generation: if not None, it is the maximal generation that has to be found in the neighborhood
+    celltobeexcluded: cells that will not forced to be replaced by an ancestor
+        typically, the two daughter cells when the outer cells are homogenized at their mother generation
+    maximal_generation: if not None, it is the maximal generation that has to be found in the neighborhood,
+        except for the cells listed in celltobeexcluded
     debug
 
     Returns
@@ -138,8 +140,9 @@ def build_same_contact_surfaces(neighborhoods, celllist, celltobeexcluded=None, 
                     print("   --- already processed ")
                 continue
             #
-            # should the neighbor be replaced by its mother?
-            # - if there is an
+            # should the neighbor be forced to be replaced by its mother?
+            # - not if the cells are to be excluded
+            # - not in case of generic name (eg 'background')
             #
             max_test = (isinstance(celltobeexcluded, list) and neigh not in celltobeexcluded) and s > 0 and \
                 isinstance(maximal_generation, int) and int(neigh.split('.')[0][1:]) > maximal_generation

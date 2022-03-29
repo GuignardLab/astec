@@ -13,6 +13,6 @@ dependencies:
   - tifffile
   - matplotlib
   - networkx
-  - sklearn
+  - scikit-learn
   - ipython
   - astec

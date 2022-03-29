@@ -43,9 +43,12 @@ def atlas_embryo_process(experiment, parameters):
     #
     # read atlas/properties files
     #
-    # atlases = uatlase.Atlases(parameters=parameters)
-    # atlases = uatlasc.Atlases(parameters=parameters)
     atlases = uatlasd.DivisionAtlases(parameters=parameters)
+
+    #
+    # copy from files the properties of interest
+    # and temporally register the atlases
+    #
     atlases.add_atlases(parameters.atlasFiles, parameters, time_digits_for_cell_id=time_digits_for_cell_id)
 
     #
