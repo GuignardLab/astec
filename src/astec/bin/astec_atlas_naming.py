@@ -11,8 +11,11 @@ import sys
 #
 
 import astec.utils.common as common
-import astec.algorithms.contact_naming as acontactn
-import astec.utils.contact_atlas as ucontacta
+import astec.algorithms.atlas_embryo as aatlase
+import astec.utils.atlas_embryo as uatlase
+import astec.utils.atlas_cell as uatlasc
+import astec.utils.atlas_division as uatlasd
+import astec.algorithms.atlas_naming as aatlasn
 import astec.utils.properties as properties
 import astec.utils.ioproperties as ioproperties
 import astec.utils.diagnosis as diagnosis
@@ -125,24 +128,12 @@ def main():
     experiment.update_from_args(args)
 
     if args.printParameters:
-        parameters = acontactn.NamingParameters()
+        parameters = aatlasn.NamingParameters()
         if args.parameterFile is not None and os.path.isfile(args.parameterFile):
             experiment.update_from_parameter_file(args.parameterFile)
             parameters.update_from_parameter_file(args.parameterFile)
         experiment.print_parameters(directories=[])
         parameters.print_parameters()
-        sys.exit(0)
-
-    #
-    # read input file(s) from args, write output file from args
-    #
-
-    if args.parameterFile is None:
-        prop = ioproperties.read_dictionary(args.inputFile, inputpropertiesdict={})
-        prop = properties.set_fate_from_names(prop)
-        prop = properties.set_color_from_fate(prop)
-        if args.outputFile is not None:
-            ioproperties.write_dictionary(args.outputFile, prop)
         sys.exit(0)
 
     #
@@ -193,11 +184,14 @@ def main():
     # copy monitoring information into other "files"
     # so the log filename is known
     #
-    acontactn.monitoring.copy(monitoring)
+    aatlase.monitoring.copy(monitoring)
+    uatlase.monitoring.copy(monitoring)
+    uatlasc.monitoring.copy(monitoring)
+    uatlasd.monitoring.copy(monitoring)
+    aatlasn.monitoring.copy(monitoring)
     properties.monitoring.copy(monitoring)
     ioproperties.monitoring.copy(monitoring)
     diagnosis.monitoring.copy(monitoring)
-    ucontacta.monitoring.copy(monitoring)
 
     #
     # manage parameters
@@ -206,7 +200,7 @@ def main():
     # 3. write parameters into the logfile
     #
 
-    parameters = acontactn.NamingParameters()
+    parameters = aatlasn.NamingParameters()
     parameters.update_from_parameter_file(parameter_file)
     parameters.write_parameters(monitoring.log_filename)
 
@@ -214,7 +208,7 @@ def main():
     # processing
     #
 
-    prop = acontactn.naming_process(experiment, parameters)
+    prop = aatlasn.naming_process(experiment, parameters)
 
     if args.write_selection or parameters.write_selection:
         time_digits_for_cell_id = experiment.get_time_digits_for_cell_id()

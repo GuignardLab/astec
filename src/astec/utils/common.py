@@ -95,6 +95,19 @@ def _read_parameter(parameters, parameter_description, default_value):
 #
 ##################################################
 
+def _flat_list(input_list):
+    output_list = []
+    # iterating over the data
+    for element in input_list:
+        # checking for list
+        if type(element) == list:
+            # calling the same function with current element as new argument
+            output_list += element
+        else:
+            output_list += [element]
+    return output_list
+
+
 class PrefixedParameter(object):
     def __init__(self, prefix=None):
         if prefix is None:
@@ -104,8 +117,9 @@ class PrefixedParameter(object):
             self._prefix = prefix
             self._full_prefix = ''.join(self._prefix)
         elif type(prefix) is list:
+            output_list = _flat_list(prefix)
             self._prefix = []
-            for p in prefix:
+            for p in output_list:
                 if type(p) is str:
                     self._prefix.append(p)
                 elif type(p) is list:

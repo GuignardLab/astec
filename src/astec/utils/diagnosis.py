@@ -9,7 +9,7 @@ import sys
 
 from astec.utils import common
 import astec.utils.ascidian_name as uname
-import astec.utils.contact as ucontact
+import astec.utils.neighborhood_distance as uneighborhood
 import astec.utils.ioproperties as ioproperties
 
 
@@ -28,14 +28,14 @@ monitoring = common.Monitoring()
 ########################################################################################
 
 
-class DiagnosisParameters(ucontact.ContactSurfaceParameters):
+class DiagnosisParameters(common.PrefixedParameter):
 
-    def __init__(self, prefix='diagnosis_'):
+    def __init__(self, prefix=None):
+
+        common.PrefixedParameter.__init__(self, prefix=prefix)
 
         if "doc" not in self.__dict__:
             self.doc = {}
-
-        ucontact.ContactSurfaceParameters.__init__(self, prefix=prefix)
 
         #
         # parametres pour le diagnostic sur le volume
@@ -92,8 +92,6 @@ class DiagnosisParameters(ucontact.ContactSurfaceParameters):
 
         common.PrefixedParameter.print_parameters(self)
 
-        ucontact.ContactSurfaceParameters.print_parameters(self)
-
         self.varprint('minimal_volume', self.minimal_volume, self.doc.get('minimal_volume', None))
         self.varprint('maximal_volume_variation', self.maximal_volume_variation,
                       self.doc.get('maximal_volume_variation', None))
@@ -118,8 +116,6 @@ class DiagnosisParameters(ucontact.ContactSurfaceParameters):
 
         common.PrefixedParameter.write_parameters_in_file(self, logfile)
 
-        ucontact.ContactSurfaceParameters.write_parameters_in_file(self, logfile)
-
         self.varwrite(logfile, 'minimal_volume', self.minimal_volume, self.doc.get('minimal_volume', None))
         self.varwrite(logfile, 'maximal_volume_variation', self.maximal_volume_variation,
                       self.doc.get('maximal_volume_variation', None))
@@ -143,8 +139,6 @@ class DiagnosisParameters(ucontact.ContactSurfaceParameters):
 
     def update_from_parameters(self, parameters):
 
-        ucontact.ContactSurfaceParameters.update_from_parameters(self, parameters)
-
         self.minimal_volume = self.read_parameter(parameters, 'minimal_volume', self.minimal_volume)
         self.maximal_volume_variation = self.read_parameter(parameters, 'maximal_volume_variation',
                                                             self.maximal_volume_variation)
@@ -156,7 +150,7 @@ class DiagnosisParameters(ucontact.ContactSurfaceParameters):
         self.minimal_length = self.read_parameter(parameters, 'minimal_length', self.minimal_length)
 
         self.maximal_contact_distance = self.read_parameter(parameters, 'maximal_contact_distance',
-                                                              self.maximal_contact_distance)
+                                                            self.maximal_contact_distance)
 
     def update_from_parameter_file(self, parameter_file):
         if parameter_file is None:
@@ -648,7 +642,7 @@ def _diagnosis_volume(prop, description, diagnosis_parameters, time_digits_for_c
             monitoring.to_log_and_console(msg, 1)
             continue
         volume_variation[cell] = (max(volume_along_time[cell]) - min(volume_along_time[cell])) / \
-                                 statistics.median(volume_along_time[cell])
+                                  statistics.median(volume_along_time[cell])
         if max(volume_derivative[cell]) > 0:
             volume_max_derivative[cell] = max(volume_derivative[cell])
         if min(volume_derivative[cell]) < 0:
@@ -1019,8 +1013,7 @@ def _diagnosis_contact(prop, description, diagnosis_parameters, time_digits_for_
             #
             #
             #
-            score = ucontact.cell_contact_distance(pneigh, nneigh, distance=diagnosis_parameters.cell_contact_distance,
-                                                   change_contact_surfaces=False)
+            score = uneighborhood.cell_distance(pneigh, nneigh, change_contact_surfaces=False)
             score_along_time[cell] = score_along_time.get(cell, []) + [score]
             #
             #

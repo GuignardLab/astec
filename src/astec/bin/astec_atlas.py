@@ -11,10 +11,12 @@ import sys
 #
 
 import astec.utils.common as common
-import astec.algorithms.contact_atlas as acontacta
-import astec.utils.contact_atlas as ucontacta
-import astec.utils.contact_figure as ucontactf
-import astec.utils.properties as properties
+import astec.algorithms.atlas_embryo as aatlase
+import astec.utils.atlas_embryo as uatlase
+import astec.utils.atlas_cell as uatlasc
+import astec.utils.atlas_division as uatlasd
+# import astec.utils.contact_figure as ucontactf
+# import astec.utils.properties as properties
 import astec.utils.ioproperties as ioproperties
 import astec.utils.diagnosis as diagnosis
 from astec.wrapping.cpp_wrapping import path_to_vt
@@ -124,7 +126,7 @@ def main():
     experiment.update_from_args(args)
 
     if args.printParameters:
-        parameters = ucontacta.AtlasParameters()
+        parameters = uatlase.AtlasParameters()
         if args.parameterFile is not None and os.path.isfile(args.parameterFile):
             experiment.update_from_parameter_file(args.parameterFile)
             parameters.update_from_parameter_file(args.parameterFile)
@@ -180,10 +182,12 @@ def main():
     # copy monitoring information into other "files"
     # so the log filename is known
     #
-    acontacta.monitoring.copy(monitoring)
-    ucontacta.monitoring.copy(monitoring)
-    ucontactf.monitoring.copy(monitoring)
-    properties.monitoring.copy(monitoring)
+    aatlase.monitoring.copy(monitoring)
+    uatlase.monitoring.copy(monitoring)
+    uatlasc.monitoring.copy(monitoring)
+    uatlasd.monitoring.copy(monitoring)
+    # ucontactf.monitoring.copy(monitoring)
+    # properties.monitoring.copy(monitoring)
     ioproperties.monitoring.copy(monitoring)
     diagnosis.monitoring.copy(monitoring)
 
@@ -194,21 +198,15 @@ def main():
     # 3. write parameters into the logfile
     #
 
-    parameters = ucontacta.AtlasParameters()
+    parameters = uatlasd.DivisionParameters()
     parameters.update_from_parameter_file(parameter_file)
     parameters.write_parameters(monitoring.log_filename)
 
     #
     # processing
     #
+    atlases = aatlase.atlas_embryo_process(experiment, parameters)
 
-    atlases = acontacta.contact_atlas_process(experiment, parameters)
-
-    if args.write_selection or parameters.write_selection:
-        time_digits_for_cell_id = experiment.get_time_digits_for_cell_id()
-        ioproperties.write_morphonet_selection(atlases.get_output_selections(),
-                                             time_digits_for_cell_id=time_digits_for_cell_id,
-                                             directory=parameters.outputDir)
     #
     # end of execution
     # write execution time in both log and history file

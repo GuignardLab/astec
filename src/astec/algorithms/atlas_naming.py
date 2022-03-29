@@ -7,8 +7,10 @@ import random
 import statistics
 
 import astec.utils.common as common
-import astec.utils.contact as ucontact
-import astec.utils.contact_atlas as ucontacta
+import astec.utils.atlas_division as uatlasd
+import astec.utils.atlas_cell as uatlasc
+import astec.utils.atlas_embryo as uatlase
+import astec.utils.neighborhood_distance as uneighborhood
 import astec.utils.properties as properties
 import astec.utils.ioproperties as ioproperties
 import astec.utils.ascidian_name as uname
@@ -32,7 +34,7 @@ _instrumented_ = False
 ########################################################################################
 
 
-class NamingParameters(ucontacta.AtlasParameters):
+class NamingParameters(uatlasd.DivisionParameters):
 
     ############################################################
     #
@@ -45,7 +47,7 @@ class NamingParameters(ucontacta.AtlasParameters):
         if "doc" not in self.__dict__:
             self.doc = {}
 
-        ucontacta.AtlasParameters.__init__(self, prefix=[prefix, "atlas_"])
+        uatlasd.DivisionParameters.__init__(self, prefix=[prefix, "atlas_"])
 
         doc = "\t Input property file to be named. Must contain lineage and contact surfaces"
         doc += "\t as well as some input names (one time point should be entirely named)."
@@ -73,6 +75,15 @@ class NamingParameters(ucontacta.AtlasParameters):
         doc += "\t   the switched one, and choose the name couple with majority choices."
         self.doc['selection_method'] = doc
         self.selection_method = 'mean'
+
+        doc = "\t Minimum number of atlases required to assess naming confidence. If there is not enough atlases\n"
+        doc += "\t in the database for the aimed division, naming is not assessed."
+        self.doc['confidence_atlases_nmin'] = doc
+        self.confidence_atlases_nmin = 2
+        doc = "\t Percentage of atlases used to assessed naming confidence. If the percentage is less than\n"
+        doc += "\t 'confidence_atlases_nmin', 'confidence_atlases_nmin' atlases are used."
+        self.doc['confidence_atlases_percentage'] = doc
+        self.confidence_atlases_percentage = 50
 
         #
         # for test:
@@ -102,12 +113,15 @@ class NamingParameters(ucontacta.AtlasParameters):
         print('#')
         print("")
 
-        ucontacta.AtlasParameters.print_parameters(self)
+        uatlasd.DivisionParameters.print_parameters(self)
 
         self.varprint('inputFile', self.inputFile, self.doc.get('inputFile', None))
         self.varprint('outputFile', self.outputFile, self.doc.get('outputFile', None))
 
         self.varprint('selection_method', self.selection_method, self.doc.get('selection_method', None))
+
+        self.varprint('confidence_atlases_nmin', self.confidence_atlases_nmin)
+        self.varprint('confidence_atlases_percentage', self.confidence_atlases_percentage)
 
         self.varprint('testFile', self.testFile, self.doc.get('testFile', None))
         self.varprint('test_diagnosis', self.test_diagnosis, self.doc.get('test_diagnosis', None))
@@ -120,12 +134,17 @@ class NamingParameters(ucontacta.AtlasParameters):
         logfile.write("# \n")
         logfile.write("\n")
 
-        ucontacta.AtlasParameters.write_parameters_in_file(self, logfile)
+        uatlasd.DivisionParameters.write_parameters_in_file(self, logfile)
 
         self.varwrite(logfile, 'inputFile', self.inputFile, self.doc.get('inputFile', None))
         self.varwrite(logfile, 'outputFile', self.outputFile, self.doc.get('outputFile', None))
 
         self.varwrite(logfile, 'selection_method', self.selection_method, self.doc.get('selection_method', None))
+
+        self.varwrite(logfile, 'confidence_atlases_nmin', self.confidence_atlases_nmin,
+                      self.doc.get('confidence_atlases_nmin', None))
+        self.varwrite(logfile, 'confidence_atlases_percentage', self.confidence_atlases_percentage,
+                      self.doc.get('confidence_atlases_percentage', None))
 
         self.varwrite(logfile, 'testFile', self.testFile, self.doc.get('testFile', None))
         self.varwrite(logfile, 'test_diagnosis', self.test_diagnosis, self.doc.get('test_diagnosis', None))
@@ -144,11 +163,16 @@ class NamingParameters(ucontacta.AtlasParameters):
     ############################################################
 
     def update_from_parameters(self, parameters):
-        ucontacta.AtlasParameters.update_from_parameters(self, parameters)
+        uatlasd.DivisionParameters.update_from_parameters(self, parameters)
         self.inputFile = self.read_parameter(parameters, 'inputFile', self.inputFile)
         self.outputFile = self.read_parameter(parameters, 'outputFile', self.outputFile)
 
         self.selection_method = self.read_parameter(parameters, 'selection_method', self.selection_method)
+
+        self.confidence_atlases_nmin = self.read_parameter(parameters, 'confidence_atlases_nmin',
+                                                           self.confidence_atlases_nmin)
+        self.confidence_atlases_percentage = self.read_parameter(parameters, 'confidence_atlases_percentage',
+                                                                 self.confidence_atlases_percentage)
 
         self.testFile = self.read_parameter(parameters, 'testFile', self.testFile)
         self.test_diagnosis = self.read_parameter(parameters, 'test_diagnosis', self.test_diagnosis)
@@ -445,7 +469,7 @@ def _get_branch_length(cell, lineage):
     return length
 
 
-def _get_neighborhoods(mother, immediate_daughters, prop, parameters, delay_from_division=0,
+def _get_neighborhoods(mother, immediate_daughters, prop, embryo, parameters, delay_from_division=0,
                        time_digits_for_cell_id=4):
     """
 
@@ -454,7 +478,9 @@ def _get_neighborhoods(mother, immediate_daughters, prop, parameters, delay_from
     mother: cell id of the mother cell
     immediate_daughters: cell ids of the daughter cells
     prop: property dictionary of the embryo to be named
+    embryo
     parameters:
+    delay_from_division
     time_digits_for_cell_id:
 
     Returns
@@ -563,6 +589,13 @@ def _get_neighborhoods(mother, immediate_daughters, prop, parameters, delay_from
                     msg += ". Skip naming of cells " + str(immediate_daughters)
                     monitoring.to_log_and_console(str(proc) + msg)
                     return None
+
+    #
+    # normalize the neighborhoods
+    #
+    for i in contact:
+        contact[i] = uatlasc.neighborhood_normalization(contact[i], embryo, int(daughters[0]) // div,
+                                                        cell_normalization=parameters.cell_normalization)
     return contact
 
 
@@ -587,7 +620,7 @@ def _print_neighborhood(neighborhood, start=""):
             txt = "      "
 
 
-def _compute_distances(mother, daughters, prop, atlases, parameters, delay_from_division=0,
+def _compute_distances(mother, daughters, prop, embryo, atlases, parameters, delay_from_division=0,
                        homogenize_neighborhood=False, time_digits_for_cell_id=4, debug=False):
     """
 
@@ -596,6 +629,7 @@ def _compute_distances(mother, daughters, prop, atlases, parameters, delay_from_
     mother: cell id of the mother cell
     daughters: cell ids of the daughter cells
     prop: property dictionary of the embryo to be named
+    embryo
     atlases:
     parameters:
     delay_from_division
@@ -623,10 +657,13 @@ def _compute_distances(mother, daughters, prop, atlases, parameters, delay_from_
         monitoring.to_log_and_console(str(proc) + msg, 4)
         return None
 
-    neighborhoods = atlases.get_neighborhoods(delay_from_division=delay_from_division)
+    neighborhoods = atlases.get_cell_neighborhood(delay_from_division=delay_from_division)
     daughter_names = uname.get_daughter_names(prop['cell_name'][mother])
 
-    contacts = _get_neighborhoods(mother, daughters, prop, parameters, delay_from_division=delay_from_division,
+    #
+    # returned the normalized neighborhood
+    #
+    contacts = _get_neighborhoods(mother, daughters, prop, embryo, parameters, delay_from_division=delay_from_division,
                                   time_digits_for_cell_id=time_digits_for_cell_id)
     #
     # contacts[0] = contact vector for daughters[0]
@@ -644,9 +681,9 @@ def _compute_distances(mother, daughters, prop, atlases, parameters, delay_from_
     daughter_neighborhoods = {0: copy.deepcopy(neighborhoods[daughter_names[0]]),
                               1: copy.deepcopy(neighborhoods[daughter_names[1]])}
     if homogenize_neighborhood:
-        new_neighborhoods = ucontact.build_same_contact_surfaces(daughter_neighborhoods, [0, 1],
-                                                                 celltobeexcluded=daughter_names,
-                                                                 maximal_generation=mother_generation)
+        new_neighborhoods = uneighborhood.build_same_contact_surfaces(daughter_neighborhoods, [0, 1],
+                                                                      celltobeexcluded=daughter_names,
+                                                                      maximal_generation=mother_generation)
         for n in new_neighborhoods:
             daughter_neighborhoods[n] = copy.deepcopy(new_neighborhoods[n])
 
@@ -673,6 +710,10 @@ def _compute_distances(mother, daughters, prop, atlases, parameters, delay_from_
         monitoring.to_log_and_console("- Neighborhoods of cell '" + str(daughter_names[1]) + "' in atlases are: ")
         for r in sorted(daughter_neighborhoods[1].keys()):
             _print_neighborhood(daughter_neighborhoods[1][r], start="   " + str(r) + ": ")
+
+    innersurfaces = []
+    if parameters.exclude_inner_surfaces:
+        innersurfaces = daughter_names
 
     scores = {0: {}, 1: {}}
     for i in range(2):
@@ -704,11 +745,9 @@ def _compute_distances(mother, daughters, prop, atlases, parameters, delay_from_
             else:
                 ic0 = 1
                 ic1 = 0
-            scores[i][ref] = ucontacta.division_contact_generic_distance(atlases, daughter_neighborhoods[0][ref],
-                                                                         daughter_neighborhoods[1][ref],
-                                                                         contacts[ic0], contacts[ic1],
-                                                                         similarity=atlases.division_contact_similarity,
-                                                                         change_contact_surfaces=True)
+            scores[i][ref] = uatlasd.division_distance(daughter_neighborhoods[0][ref], daughter_neighborhoods[1][ref],
+                                                       contacts[ic0], contacts[ic1], change_contact_surfaces=True,
+                                                       innersurfaces=innersurfaces)
 
     if debug:
         for i in scores:
@@ -807,9 +846,6 @@ def _get_name(daughters, daughter_names, distance, parameters, debug=False):
     count0less1 = sum([1 for i in zip(mean0, mean1) if i[0] <= i[1]])
     count1less0 = len(mean1) - count0less1
 
-    # if 0 < count0less1 < len(distance[0]):
-    #     print("WARNING: choice (" + daughter_names[0] + ", " + daughter_names[1] + ") = " + str(count0less1) + " / " + str(len(distance[0])))
-
     if debug:
         msg = "\t - " + str(count0less1) + " naming choices (" + str(daughters[0]) + ", " + str(daughters[1]) + ") = ("
         msg += daughter_names[0] + ", " + daughter_names[1] + ") = ["
@@ -904,13 +940,8 @@ def _propagate_name_along_branch(prop, cell, keylist):
     return
 
 
-def _propagate_naming(prop, atlases, parameters, time_digits_for_cell_id=4):
+def _propagate_naming(prop, embryo, atlases, parameters, time_digits_for_cell_id=4):
     proc = "_propagate_naming"
-
-    if not isinstance(atlases, ucontacta.Atlases):
-        monitoring.to_log_and_console(str(proc) + ": unexpected type for 'atlases' variable: "
-                                      + str(type(atlases)))
-        sys.exit(1)
 
     if 'cell_lineage' not in prop:
         monitoring.to_log_and_console(str(proc) + ": 'cell_lineage' was not in dictionary")
@@ -1095,6 +1126,8 @@ def _propagate_naming(prop, atlases, parameters, time_digits_for_cell_id=4):
         #
         for mother, daughters in division_to_be_named.items():
             debug = False
+            if parameters.cells_to_be_traced is not None and prop['cell_name'][mother] in parameters.cells_to_be_traced:
+                debug = True
             #
             # distance is a dictionary of dictionary
             # distance[d in 0,1][ref name]
@@ -1102,11 +1135,11 @@ def _propagate_naming(prop, atlases, parameters, time_digits_for_cell_id=4):
             # d = 1: test (contacts[1], contacts[0]) <-> (daughter_names[0], daughter_names[1])
             # ref name in embryos
             #
-            distance = _compute_distances(mother, daughters, prop, atlases, parameters,
+            distance = _compute_distances(mother, daughters, prop, embryo, atlases, parameters,
                                           delay_from_division=parameters.name_delay_from_division,
                                           time_digits_for_cell_id=time_digits_for_cell_id, debug=debug)
             if debug:
-                monitoring.to_log_and_console("distance = " + str(distance))
+                monitoring.to_log_and_console("Naming distance = " + str(distance))
             if distance is None:
                 for c in daughters:
                     if c not in cell_not_named:
@@ -1178,13 +1211,8 @@ def _get_evaluation(given_names, daughter_names, distance, parameters, debug=Fal
     return mean0, mean1 - mean0
 
 
-def _evaluate_naming(prop, atlases, parameters, time_digits_for_cell_id=4):
+def _evaluate_naming(prop, embryo, atlases, parameters, time_digits_for_cell_id=4):
     proc = "_evaluate_naming"
-
-    if not isinstance(atlases, ucontacta.Atlases):
-        monitoring.to_log_and_console(str(proc) + ": unexpected type for 'atlases' variable: "
-                                      + str(type(atlases)))
-        sys.exit(1)
 
     if 'cell_lineage' not in prop:
         monitoring.to_log_and_console(str(proc) + ": 'cell_lineage' was not in dictionary")
@@ -1293,7 +1321,7 @@ def _evaluate_naming(prop, atlases, parameters, time_digits_for_cell_id=4):
             if debug:
                 msg = "===== un-homogenized neighborhood for division of " + str(prop['cell_name'][mother])
                 monitoring.to_log_and_console(msg)
-            distance = _compute_distances(mother, daughters, prop, atlases, parameters,
+            distance = _compute_distances(mother, daughters, prop, embryo, atlases, parameters,
                                           delay_from_division=parameters.confidence_delay_from_division,
                                           time_digits_for_cell_id=time_digits_for_cell_id, debug=debug)
             if distance is None:
@@ -1302,9 +1330,15 @@ def _evaluate_naming(prop, atlases, parameters, time_digits_for_cell_id=4):
 
             mean0, mean1 = _get_ordered_means(distance)
             count0less1 = sum([1 for i in zip(mean0, mean1) if i[0] <= i[1]])
-            # if 0 < count0less1 < len(distance[0]):
-            #     print("EVAL WARNING UNHOM: choice (" + daughter_names[0] + ", " + daughter_names[1] + ") = " + str(
-            #         count0less1) + " / " + str(len(mean0)))
+            if 0 < count0less1 < len(distance[0]):
+                if given_names[0] == daughter_names[0]:
+                    natlas = count0less1
+                else:
+                    natlas = len(distance[0]) - count0less1
+                msg = "partial agreement to evaluate division of cell " + str(prop['cell_name'][mother])
+                msg += ": " + str(natlas) + " over " + str(len(distance[0])) + " means of ordered distances"
+                msg += " (with un-homogenized neighborhood)"
+                monitoring.to_log_and_console(str(proc) + ": " + msg)
 
             if difference is None:
                 continue
@@ -1322,7 +1356,7 @@ def _evaluate_naming(prop, atlases, parameters, time_digits_for_cell_id=4):
             if debug:
                 msg = "===== homogenized neighborhood for division of " + str(prop['cell_name'][mother])
                 monitoring.to_log_and_console(msg)
-            hdistance = _compute_distances(mother, daughters, prop, atlases, parameters,
+            hdistance = _compute_distances(mother, daughters, prop, embryo, atlases, parameters,
                                            delay_from_division=parameters.confidence_delay_from_division,
                                            homogenize_neighborhood=True,
                                            time_digits_for_cell_id=time_digits_for_cell_id, debug=debug)
@@ -1331,11 +1365,17 @@ def _evaluate_naming(prop, atlases, parameters, time_digits_for_cell_id=4):
                 continue
             hmindist, hdifference = _get_evaluation(given_names, daughter_names, hdistance, parameters, debug=debug)
 
-            mean0, mean1 = _get_ordered_means(distance)
+            mean0, mean1 = _get_ordered_means(hdistance)
             count0less1 = sum([1 for i in zip(mean0, mean1) if i[0] <= i[1]])
-            # if 0 < count0less1 < len(distance[0]):
-            #     print("EVAL WARNING HOM: choice (" + daughter_names[0] + ", " + daughter_names[1] + ") = " + str(
-            #         count0less1) + " / " + str(len(mean0)))
+            if 0 < count0less1 < len(distance[0]):
+                if given_names[0] == daughter_names[0]:
+                    natlas = count0less1
+                else:
+                    natlas = len(distance[0]) - count0less1
+                msg = "partial agreement to evaluate division of cell " + str(prop['cell_name'][mother])
+                msg += ": " + str(natlas) + " over " + str(len(distance[0])) + " means of ordered distances"
+                msg += " (with homogenized neighborhood)"
+                monitoring.to_log_and_console(str(proc) + ": " + msg)
 
             if hdifference is None:
                 continue
@@ -1386,17 +1426,15 @@ def naming_process(experiment, parameters):
 
     time_digits_for_cell_id = experiment.get_time_digits_for_cell_id()
 
-    ucontacta.monitoring.copy(monitoring)
+    uatlasd.monitoring.copy(monitoring)
+    uatlasc.monitoring.copy(monitoring)
 
     #
     # should we clean reference here?
     #
-    atlases = ucontacta.Atlases(parameters=parameters)
-    atlases.build_neighborhoods(parameters.atlasFiles, parameters, time_digits_for_cell_id=time_digits_for_cell_id)
-
-    if atlases.get_neighborhoods() is None or atlases.get_neighborhoods() == {}:
-        monitoring.to_log_and_console(str(proc) + ": empty neighborhood atlas?! ... Exiting ")
-        sys.exit(1)
+    atlases = uatlasd.DivisionAtlases(parameters=parameters)
+    atlases.add_atlases(parameters.atlasFiles, parameters, time_digits_for_cell_id=time_digits_for_cell_id)
+    atlases.build_division_atlases(parameters)
 
     #
     # read input properties to be named
@@ -1434,10 +1472,19 @@ def naming_process(experiment, parameters):
             del prop['cell_name'][c]
 
     #
+    # build an atlas from the embryo to be named,
+    # temporally align it with the reference embryo
+    #
+    embryo = uatlase.Atlas(prop)
+    ref_atlases = atlases.get_atlases()
+    ref_atlas = atlases.get_reference_atlas()
+    embryo.temporally_align_with(ref_atlases[ref_atlas], time_digits_for_cell_id=time_digits_for_cell_id)
+
+    #
     # naming propagation
     #
-    prop = _propagate_naming(prop, atlases, parameters, time_digits_for_cell_id=time_digits_for_cell_id)
-    prop = _evaluate_naming(prop, atlases, parameters, time_digits_for_cell_id=4)
+    prop = _propagate_naming(prop, embryo, atlases, parameters, time_digits_for_cell_id=time_digits_for_cell_id)
+    prop = _evaluate_naming(prop, embryo, atlases, parameters, time_digits_for_cell_id=4)
     prop = properties.set_fate_from_names(prop)
     prop = properties.set_color_from_fate(prop)
     #
