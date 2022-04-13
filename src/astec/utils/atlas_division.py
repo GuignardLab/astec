@@ -403,7 +403,8 @@ def _diagnosis_pairwise_switches(atlases, parameters):
 ############################################################
 
 
-def call_to_scipy_linkage(config, cluster_distance='single', change_contact_surfaces=True, innersurfaces=[]):
+def division_scipy_linkage(config, cluster_distance='single', change_contact_surfaces=True, innersurfaces=[],
+                           distance='distance'):
     """
 
     Parameters
@@ -439,9 +440,15 @@ def call_to_scipy_linkage(config, cluster_distance='single', change_contact_surf
                 continue
             # if r == 'switched-' + str(s) or s == 'switched-' + str(r):
             #    continue
-            dist[i][j] = 100.0 * division_distance(config[r][0], config[r][1], config[s][0], config[s][1],
-                                                   change_contact_surfaces=change_contact_surfaces,
-                                                   innersurfaces=innersurfaces)
+            dist[i][j] = 0.0
+            if distance == 'signature':
+                dist[i][j] = 100.0 * division_signature(config[r][0], config[r][1], config[s][0], config[s][1],
+                                                        change_contact_surfaces=change_contact_surfaces,
+                                                        innersurfaces=innersurfaces)
+            else:
+                dist[i][j] = 100.0 * division_distance(config[r][0], config[r][1], config[s][0], config[s][1],
+                                                       change_contact_surfaces=change_contact_surfaces,
+                                                       innersurfaces=innersurfaces)
             dist[j][i] = dist[i][j]
 
     conddist = sp.spatial.distance.squareform(dist)
@@ -516,7 +523,7 @@ def _diagnosis_linkage(atlases, parameters):
         #
         # distance array for couples of atlases/references
         #
-        conddist, z, labels = call_to_scipy_linkage(config, change_contact_surfaces=ccs, innersurfaces=innersurfaces)
+        conddist, z, labels = division_scipy_linkage(config, change_contact_surfaces=ccs, innersurfaces=innersurfaces)
 
         merge_values[stage] = merge_values.get(stage, []) + list(z[:, 2])
         lastmerge_value = z[:, 2][-1]
@@ -544,7 +551,7 @@ def _diagnosis_linkage(atlases, parameters):
         #
         # distance array for couples of atlases/references plus the switched ones
         #
-        swconddist, swz, swlabels = call_to_scipy_linkage(swconfig, change_contact_surfaces=ccs,
+        swconddist, swz, swlabels = division_scipy_linkage(swconfig, change_contact_surfaces=ccs,
                                                           innersurfaces=innersurfaces)
 
         swmerge_values[stage] = swmerge_values.get(stage, []) + list(swz[:, 2])
@@ -986,6 +993,74 @@ def division_distance(daughter00, daughter01, daughter10, daughter11, change_con
     return score
 
 
+def _division_signature(daughter00, daughter01, daughter10, daughter11, innersurfaces=[]):
+    neighbors = set(daughter00.keys()).union(set(daughter01.keys()), set(daughter10.keys()), set(daughter11.keys()))
+    den = 0.0
+    num = 0.0
+    for k in neighbors:
+        if k in innersurfaces:
+            continue
+        if k in daughter00 and k in daughter10:
+            num += abs(daughter00[k] - daughter10[k])
+        elif k in daughter00 and k not in daughter10:
+            num += abs(daughter00[k])
+        elif k not in daughter00 and k in daughter10:
+            num += abs(daughter10[k])
+        if k in daughter01 and k in daughter11:
+            num += abs(daughter01[k] - daughter11[k])
+        elif k in daughter01 and k not in daughter11:
+            num += abs(daughter01[k])
+        elif k not in daughter01 and k in daughter11:
+            num += abs(daughter11[k])
+        mnum0 = 0.0
+        if k in daughter00:
+            mnum0 += daughter00[k]
+        if k in daughter01:
+            mnum0 += daughter01[k]
+        mnum1 = 0.0
+        if k in daughter10:
+            mnum1 += daughter10[k]
+        if k in daughter11:
+            mnum1 += daughter11[k]
+        num -= abs(mnum0 - mnum1)
+        den += mnum0 + mnum1
+    score = num / den
+    if score < 0.0:
+        return 0.0
+    return score
+
+
+def division_signature(daughter00, daughter01, daughter10, daughter11, change_contact_surfaces=True, innersurfaces=[],
+                       debug=False):
+    """
+
+    Parameters
+    ----------
+    daughter00: dictionary depicting the neighborhood of daughter #0 of ref #0.
+        Each key is a named neighbor, and the associated dictionary value give the contact surface.
+    daughter01: dictionary depicting the neighborhood of daughter daughter #1 of ref #0
+    daughter10: dictionary depicting the neighborhood of daughter daughter #0 of ref #1
+    daughter11: dictionary depicting the neighborhood of daughter daughter #1 of ref #1
+    change_contact_surfaces: True or False
+    innersurfaces
+    debug
+
+    Returns
+    -------
+
+    """
+
+    if change_contact_surfaces:
+        tmp = {'foo': {0: daughter00, 1: daughter10}}
+        v0 = uneighborhood.build_same_contact_surfaces(tmp, ['foo'], debug=debug)
+        tmp = {'foo': {0: daughter01, 1: daughter11}}
+        v1 = uneighborhood.build_same_contact_surfaces(tmp, ['foo'], debug=debug)
+        score = _division_signature(v0['foo'][0], v1['foo'][0], v0['foo'][1], v1['foo'][1], innersurfaces=innersurfaces)
+    else:
+        score = _division_signature(daughter00, daughter01, daughter10, daughter11, innersurfaces=innersurfaces)
+
+    return score
+
 ###########################################################
 #
 #
@@ -1283,6 +1358,8 @@ class DivisionAtlases(uatlasc.CellAtlases):
                 or generate_figure:
             monitoring.to_log_and_console("... generate division dendrogram figure file", 1)
             _figures_division_dendrogram(self, parameters)
+            monitoring.to_log_and_console("...", 1)
+            _figures_signature_dendrogram(self, parameters)
             monitoring.to_log_and_console("... done", 1)
 
 
@@ -1846,7 +1923,7 @@ def _figures_division_dendrogram(atlases, parameters):
         d = uname.get_daughter_names(n)
         if parameters.exclude_inner_surfaces:
             innersurfaces = [d[0], d[1]]
-        conddist, z, labels = call_to_scipy_linkage(config, cluster_distance=cluster_distance,
+        conddist, z, labels = division_scipy_linkage(config, cluster_distance=cluster_distance,
                                                     change_contact_surfaces=ccs, innersurfaces=innersurfaces)
 
         merge_values[stage] = merge_values.get(stage, []) + list(z[:, 2])
@@ -1862,7 +1939,7 @@ def _figures_division_dendrogram(atlases, parameters):
         # daughter neighborhoods may be in a common reference, if so there is no need to change
         # the contact surfaces
         #
-        swconddist, swz, swlabels = call_to_scipy_linkage(swconfig, cluster_distance=cluster_distance,
+        swconddist, swz, swlabels = division_scipy_linkage(swconfig, cluster_distance=cluster_distance,
                                                           change_contact_surfaces=ccs, innersurfaces=innersurfaces)
 
         swmerge_values[stage] = swmerge_values.get(stage, []) + list(swz[:, 2])
@@ -2063,6 +2140,277 @@ def _figures_division_dendrogram(atlases, parameters):
     f.write("\n")
     f.write("if savefig:\n")
     f.write("    plt.savefig('dendrogram_balance_merge_scatter_' + cluster_distance +'")
+    if file_suffix is not None:
+        f.write(file_suffix)
+    f.write("'" + " + '.png')\n")
+    f.write("else:\n")
+    f.write("    plt.show()\n")
+    f.write("    plt.close()\n")
+
+    f.write("\n")
+
+    f.close()
+
+
+def _figures_signature_dendrogram(atlases, parameters):
+    """
+    Parameters
+    ----------
+    atlases: nested dictionary of neighborhood, where the keys are ['cell name']['reference name']
+        where 'reference name' is the name of the reference lineage, and neighborhood a dictionary of contact surfaces
+        indexed by cell names (only for the first time point after the division)
+    parameters
+
+    Returns
+    -------
+
+    """
+    proc = "figures_signature_dendrogram"
+
+    filename = 'figures_signature_dendrogram'
+    file_suffix = None
+    if parameters.figurefile_suffix is not None and isinstance(parameters.figurefile_suffix, str) and \
+            len(parameters.figurefile_suffix) > 0:
+        file_suffix = '_' + parameters.figurefile_suffix
+    if file_suffix is not None:
+        filename += file_suffix
+    filename += '.py'
+
+    if parameters.outputDir is not None and isinstance(parameters.outputDir, str):
+        if not os.path.isdir(parameters.outputDir):
+            if not os.path.exists(parameters.outputDir):
+                os.makedirs(parameters.outputDir)
+            else:
+                monitoring.to_log_and_console(proc + ": '" + str(parameters.outputDir) + "' is not a directory ?!")
+        if os.path.isdir(parameters.outputDir):
+            filename = os.path.join(parameters.outputDir, filename)
+
+    #
+    # get the references per mother_name
+    #
+    divisions = atlases.get_divisions()
+    ccs = not parameters.use_common_neighborhood
+    cluster_distance = parameters.dendrogram_cluster_distance
+
+    #
+    #
+    #
+
+    dendro_values = {}
+    merge_values = {}
+
+    f = open(filename, "w")
+
+    f.write("import sys\n")
+    f.write("import numpy as np\n")
+    f.write("import matplotlib.pyplot as plt\n")
+    f.write("import scipy.cluster.hierarchy as sch\n")
+
+    f.write("\n")
+    f.write("cluster_distance = '" + str(cluster_distance) + "'\n")
+    f.write("\n")
+
+    cellidentifierlist = []
+    innersurfaces = []
+
+    for n in divisions:
+        stage = n.split('.')[0][1:]
+        if len(divisions[n]) <= 2:
+            continue
+
+        #
+        # config is a dictionary indexed par [reference][0 or 1]
+        # config[r][0] = neighborhoods[daughters[0]][r]
+        # config[r][1] = neighborhoods[daughters[1]][r]
+        #
+        config = atlases.extract_division_neighborhoods(n)
+
+        #
+        # distance array for couples of atlases/references
+        #
+        d = uname.get_daughter_names(n)
+        if parameters.exclude_inner_surfaces:
+            innersurfaces = [d[0], d[1]]
+        conddist, z, labels = division_scipy_linkage(config, cluster_distance=cluster_distance,
+                                                     change_contact_surfaces=ccs, innersurfaces=innersurfaces,
+                                                     distance='signature')
+
+        merge_values[stage] = merge_values.get(stage, []) + list(z[:, 2])
+        # lastmerge_value is the distance between the two last clusters
+        lastmerge_value = z[:, 2][-1]
+        # balance in [0, 1] reflects the balance between the two last cluster. 1.0 means the two last clusters
+        # have the same number of original observations
+        balance = _linkage_balance(z, len(labels))
+        dendro_values[stage] = dendro_values.get(stage, []) + [(lastmerge_value, balance, len(labels))]
+
+        #
+        # identifier for mother cell
+        #
+        cellname = n.split('.')[0] + "_" + n.split('.')[1][0:4]
+        if n.split('.')[1][4] == '_':
+            cellname += 'U'
+        elif n.split('.')[1][4] == '*':
+            cellname += 'S'
+        else:
+            cellname += 'S'
+        fileidentifier = 'HC{:03d}_'.format(int(lastmerge_value)) + cellname
+        cellidentifier = cellname + '_HC{:03d}'.format(int(lastmerge_value))
+        cellidentifier += '_BAL{:03d}'.format(round(100.0 * balance))
+        cellidentifierlist.append((cellidentifier, n))
+
+        f.write("\n")
+        f.write("savefig = True\n")
+
+        f.write("\n")
+        f.write("\n")
+        f.write("def draw_" + cellidentifier + "(savefig=False):\n")
+        f.write("    " + "\n")
+        f.write("    " + "cdist = " + str(list(conddist)) + "\n")
+        f.write("    " + "labels = " + str(labels) + "\n")
+        f.write("\n")
+        f.write("    " + "title = '" + str(n) + " (linkage=' + cluster_distance + '), ")
+        f.write("delay={:d}'\n".format(parameters.name_delay_from_division))
+        f.write("\n")
+        f.write("    " + "Z = sch.linkage(cdist, method=cluster_distance)\n")
+        f.write("    " + "fig = plt.figure(figsize=(16, 8))\n")
+        f.write("    " + "dn = sch.dendrogram(Z, labels=labels, orientation='right')\n")
+        f.write("    " + "plt.title(title, fontsize=24)\n")
+        f.write("    " + "plt.xticks(fontsize=16)\n")
+        f.write("    " + "plt.yticks(fontsize=14)\n")
+        f.write("    " + "plt.xlim([0, 100])\n")
+
+        f.write("    if savefig:\n")
+        f.write("        plt.savefig('SIG_" + str(fileidentifier) + "_' + cluster_distance +'")
+        if file_suffix is not None:
+            f.write(file_suffix)
+        f.write("'" + " + '.png')\n")
+        f.write("        plt.savefig('SIG_" + str(cellidentifier) + "_' + cluster_distance +'")
+        if file_suffix is not None:
+            f.write(file_suffix)
+        f.write("'" + " + '.png')\n")
+        f.write("    else:\n")
+        f.write("        plt.show()\n")
+        f.write("    plt.close()\n")
+        f.write("\n")
+
+    f.write("\n")
+    f.write("\n")
+    f.write("def draw_all(celllist=[], savefig=True):\n")
+    for cellid in cellidentifierlist:
+        f.write("    if celllist == [] or '" + cellid[1] + "' in celllist:\n")
+        f.write("        draw_" + cellid[0] + "(savefig=savefig)\n")
+
+    f.write("\n")
+    f.write("\n")
+
+    f.write("celllist = []\n")
+    f.write("if len(sys.argv) > 1 and sys.argv[1][:2] == '-h':\n")
+    f.write("    print('Usage: ' + str(sys.argv[0]) + ' list of cell names (between quotes)')\n")
+    f.write("if len(sys.argv) > 1:\n")
+    f.write("    for i in range(1, len(sys.argv)):\n")
+    f.write("        celllist += [sys.argv[i]]\n")
+    f.write("\n")
+    f.write("# print(\"celllist=\"+str(celllist))\n")
+    f.write("draw_all(celllist=celllist, savefig=savefig)\n")
+    f.write("\n")
+
+    #
+    # Statistics from the dendrograms
+    #
+
+    generations = list(merge_values.keys())
+    generations = sorted(generations)
+    f.write("generations = " + str(generations) + "\n")
+    f.write("merge_values = [")
+    for i, g in enumerate(generations):
+        f.write(str(list(merge_values[g])))
+        if i < len(generations) - 1:
+            f.write(", ")
+    f.write("]\n")
+    f.write("\n")
+
+    f.write("dendro_values = [")
+    for i, g in enumerate(generations):
+        f.write(str(list(dendro_values[g])))
+        if i < len(generations) - 1:
+            f.write(", ")
+    f.write("]\n")
+    f.write("\n")
+
+    f.write("merge_labels = [")
+    for i, g in enumerate(generations):
+        f.write("'generation " + str(g) + "'")
+        if i < len(generations) - 1:
+            f.write(", ")
+    f.write("]\n")
+
+    f.write("\n")
+    f.write("lastmerge_values = [[v[0] for v in dv] for dv in dendro_values]\n")
+    f.write("balance_values = [[v[1] for v in dv] for dv in dendro_values]\n")
+
+    f.write("\n")
+    f.write("fig, (ax1, ax2) = plt.subplots(ncols=2, figsize=(16, 6.5))\n")
+
+    f.write("ax1.hist(merge_values, bins=list(range(0, 101, 2)), histtype='bar', stacked=True, label=merge_labels)\n")
+    f.write("ax1.set_title('dendrogram merge values', fontsize=12)\n")
+    f.write("ax1.legend(prop={'size': 10})\n")
+    f.write("ax1.tick_params(labelsize=10)\n")
+
+    f.write("ax2.hist(lastmerge_values, bins=list(range(0, 101, 2)), histtype='bar', stacked=True, label=merge_labels)\n")
+    f.write("ax2.set_title('dendrogram last merge values', fontsize=12)\n")
+    f.write("ax2.legend(prop={'size': 10})\n")
+    f.write("ax2.tick_params(labelsize=10)\n")
+
+    f.write("\n")
+    f.write("if savefig:\n")
+    f.write("    plt.savefig('SIG_dendrogram_merge_histogram_' + cluster_distance +'")
+    if file_suffix is not None:
+        f.write(file_suffix)
+    f.write("'" + " + '.png')\n")
+    f.write("else:\n")
+    f.write("    plt.show()\n")
+    f.write("    plt.close()\n")
+
+    f.write("\n")
+    f.write("fig, ax = plt.subplots(figsize=(8, 8))\n")
+
+    f.write("ax.hist(balance_values, bins=50, range=(0, 1), histtype='bar', stacked=True, label=merge_labels)\n")
+    f.write("ax.set_title('dendrogram balance values', fontsize=12)\n")
+    f.write("ax.legend(prop={'size': 10})\n")
+    f.write("ax.tick_params(labelsize=10)\n")
+
+    f.write("\n")
+    f.write("if savefig:\n")
+    f.write("    plt.savefig('SIG_dendrogram_balance_histogram_' + cluster_distance +'")
+    if file_suffix is not None:
+        f.write(file_suffix)
+    f.write("'" + " + '.png')\n")
+    f.write("else:\n")
+    f.write("    plt.show()\n")
+    f.write("    plt.close()\n")
+
+    f.write("\n")
+    f.write("x = [lv for lvg in lastmerge_values for lv in lvg]\n")
+    f.write("y = [bv for bvg in balance_values for bv in bvg]\n")
+    f.write("c_values = [[int(generations[i])] * len(lvg) for i, lvg in enumerate(lastmerge_values)]\n")
+    f.write("c = [cv for cvg in c_values for cv in cvg]\n")
+    f.write("s_values = [[v[2] for v in dv] for dv in dendro_values]\n")
+    f.write("s = [10 * sv for svg in s_values for sv in svg]\n")
+
+    f.write("\n")
+    f.write("fig, ax = plt.subplots(figsize=(8, 8))\n")
+    f.write("scatter = ax.scatter(x, y, c=c, s=s, alpha=0.5)\n")
+    f.write("ax.set_xlabel('Last merge value (cluster distance * 100)')\n")
+    f.write("ax.set_ylabel('Linkage balance')\n")
+    f.write("legend1 = ax.legend(*scatter.legend_elements(alpha=0.8), loc='upper left', title='Generations')\n")
+    f.write("ax.add_artist(legend1)\n")
+    f.write("handles, labels = scatter.legend_elements(prop='sizes', alpha=0.6)\n")
+    f.write("labels = [l.replace('0}', '}') for l in labels]\n")
+    f.write("legend2 = ax.legend(handles, labels, loc='upper right', title='Sizes')\n")
+
+    f.write("\n")
+    f.write("if savefig:\n")
+    f.write("    plt.savefig('SIG_dendrogram_balance_merge_scatter_' + cluster_distance +'")
     if file_suffix is not None:
         f.write(file_suffix)
     f.write("'" + " + '.png')\n")
