@@ -852,7 +852,7 @@ def _cell_based_h_minima(first_segmentation, cells, bounding_boxes, image_for_se
 
     checking = True
 
-    while checking:
+    while (h_min >= parameters.watershed_seed_hmin_min_value) and checking:
 
         #
         # for each cell,
@@ -903,15 +903,16 @@ def _cell_based_h_minima(first_segmentation, cells, bounding_boxes, image_for_se
         # - h has not reach the minimum value
         # and
         # - there is at least one cell with a number of seeds in [1, 2]
-        # it stops then if all cells have more than 2 seeds
+        # it stops then if all cells have more than 2 seeds\
+        #            or if no cell has a seed (np.array(returned_n_seeds) != 0 is False everywhere)
+        # The latter can occur when h is too large
+        # => keep only the (np.array(returned_n_seeds) <= 2).any() test
         #
         # Note: I did not catch the utility of 'or returned_n_seeds == []'
         #
-        checking = (h_min >= parameters.watershed_seed_hmin_min_value) and \
-                   (((np.array(returned_n_seeds) <= 2) & (np.array(returned_n_seeds) != 0)).any()
-                    or returned_n_seeds == [])
+        checking = (np.array(returned_n_seeds) <= 2).any()
 
-        if checking:
+        if (h_min >= parameters.watershed_seed_hmin_min_value) and checking:
 
             #
             # compute seeds fot this new value of h
