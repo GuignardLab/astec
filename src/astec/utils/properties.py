@@ -192,7 +192,7 @@ def property_computation(experiment, parameters):
 #
 ########################################################################################
 
-def _intersection_cell_keys(e1, e2, name1, name2):
+def _intersection_lists(l1, l2, name1, name2):
     """
 
     :param e1:
@@ -201,25 +201,29 @@ def _intersection_cell_keys(e1, e2, name1, name2):
     :param name2:
     :return:
     """
-    intersection = sorted(list(set(e1.keys()).intersection(set(e2.keys()))))
-    difference1 = sorted(list(set(e1.keys()).difference(set(e2.keys()))))
-    difference2 = sorted(list(set(e2.keys()).difference(set(e1.keys()))))
+    intersection = sorted(list(set(l1).intersection(set(l2))))
+    difference1 = sorted(list(set(l1).difference(set(l2))))
+    difference2 = sorted(list(set(l2).difference(set(l1))))
 
-    monitoring.to_log_and_console("    ... " + str(len(list(e1.keys()))) + " key cells are in '" + str(name1) + "'")
-    monitoring.to_log_and_console("    ... " + str(len(list(e2.keys()))) + " key cells are in '" + str(name2) + "'")
+    monitoring.to_log_and_console("    ... " + str(len(list(l1))) + " key cells are in '" + str(name1) + "'")
+    monitoring.to_log_and_console("    ... " + str(len(list(l2))) + " key cells are in '" + str(name2) + "'")
     if len(difference1) > 0:
-        monitoring.to_log_and_console("    ... " + str(len(difference1)) + " cells are in '" + str(name1)
+        monitoring.to_log_and_console("    ... " + str(len(difference1)) + " key cells are in '" + str(name1)
                                       + "' and are not in '" + str(name2) + "'", 1)
         s = repr(difference1)
         monitoring.to_log_and_console("        " + s, 1)
 
     if len(difference2) > 0:
-        monitoring.to_log_and_console("    ... " + str(len(difference2)) + " cells are not in '" + str(name1)
+        monitoring.to_log_and_console("    ... " + str(len(difference2)) + " key cells are not in '" + str(name1)
                                       + "' but are in '" + str(name2) + "'", 1)
         s = repr(difference2)
         monitoring.to_log_and_console("        " + s, 1)
 
     return intersection
+
+
+def _intersection_cell_keys(e1, e2, name1, name2):
+    return _intersection_lists(list(e1.keys()), list(e2.keys()), name1, name2)
 
 
 def _compare_lineage(d1, d2, name1, name2, description):
@@ -234,19 +238,61 @@ def _compare_lineage(d1, d2, name1, name2, description):
     if len(intersection) > 0:
         n = 0
         for k in intersection:
-            if e1[k] != e2[k]:
+            if sorted(e1[k]) != sorted(e2[k]):
                 n += 1
 
         if n > 0:
             monitoring.to_log_and_console("    ... " + str(n) + " cells have different lineages", 1)
             for k in intersection:
-                if e1[k] != e2[k]:
+                if sorted(e1[k]) != sorted(e2[k]):
                     s = "cell " + str(k) + " has different lineages: "
                     monitoring.to_log_and_console("        " + s, 1)
                     s = str(e1[k]) + " in '" + str(name1) + "'"
                     monitoring.to_log_and_console("          " + s, 1)
                     s = str(e2[k]) + " in '" + str(name2) + "'"
                     monitoring.to_log_and_console("          " + s, 1)
+
+    monitoring.to_log_and_console("", 1)
+    msg = "    = " + str(description) + " comparison between daughter cells in " + str(name1) + " and " + str(name2)
+    monitoring.to_log_and_console(msg, 1)
+    #
+    # reverse lineage
+    #
+    reverse_e1 = {}
+    for k, values in e1.items():
+        for v in values:
+            reverse_e1[v] = reverse_e1.get(v, []) + [k]
+
+    reverse_e2 = {}
+    for k, values in e2.items():
+        for v in values:
+            reverse_e2[v] = reverse_e2.get(v, []) + [k]
+
+    intersection = _intersection_cell_keys(reverse_e1, reverse_e2, "reversed " + name1, "reversed " + name2)
+    if len(intersection) > 0:
+        n = 0
+        for k in intersection:
+            if reverse_e1[k] != reverse_e2[k]:
+                n += 1
+
+        if n > 0:
+            monitoring.to_log_and_console("    ... " + str(n) + " cells have different mother cell", 1)
+            for k in intersection:
+                if reverse_e1[k] != reverse_e2[k]:
+                    s = "cell " + str(k) + " has different mother cell: "
+                    monitoring.to_log_and_console("        " + s, 1)
+                    s = str(reverse_e1[k]) + " in '" + str(name1) + "'"
+                    monitoring.to_log_and_console("          " + s, 1)
+                    s = str(reverse_e2[k]) + " in '" + str(name2) + "'"
+                    monitoring.to_log_and_console("          " + s, 1)
+
+    monitoring.to_log_and_console("", 1)
+    msg = "    = " + str(description) + " comparison between all cells in " + str(name1) + " and " + str(name2)
+    monitoring.to_log_and_console(msg, 1)
+    l1 = list(set(e1.keys()).union(set([v for values in list(e1.values()) for v in values])))
+    l2 = list(set(e2.keys()).union(set([v for values in list(e2.values()) for v in values])))
+    _intersection_lists(l1, l2, name1, name2)
+
     return
 
 

@@ -164,9 +164,9 @@ class DiagnosisParameters(common.PrefixedParameter):
 
     def update_from_args(self, args):
         if args.diagnosis_minimal_volume is not None:
-            self.minimal_volume = args.diagnosis_minimal_volume
+            self.minimal_volume = int(args.diagnosis_minimal_volume)
         if args.diagnosis_items is not None:
-            self.items = args.diagnosis_items
+            self.items = int(args.diagnosis_items)
 
 
 ########################################################################################
@@ -397,15 +397,13 @@ def _diagnosis_lineage(prop, description, diagnosis_parameters, time_digits_for_
     reverse_lineage = {}
     for k, values in direct_lineage.items():
         for v in values:
-            if v not in reverse_lineage:
-                reverse_lineage[v] = [k]
-            else:
-                reverse_lineage[v].append(k)
+            reverse_lineage[v] = reverse_lineage.get(v, []) + [k]
 
     #
     # branch lengths
     #
     length = {}
+    lastleave = {}
     daughters = []
     for c in direct_lineage:
         if len(direct_lineage[c]) <= 1:
@@ -413,14 +411,17 @@ def _diagnosis_lineage(prop, description, diagnosis_parameters, time_digits_for_
         daughters += direct_lineage[c]
     for d in daughters:
         length[d] = 0
+        lastleave[d] = d
         c = d
         while c in direct_lineage and len(direct_lineage[c]) == 1:
             length[d] += 1
             c = direct_lineage[c][0]
+            lastleave[d] = c
         if int(c) // div == last_time:
             del length[d]
+            del lastleave[d]
 
-    short_length = [[c, length[c]] for c in length if length[c] <= diagnosis_parameters.minimal_length]
+    short_length = [[c, length[c], lastleave[c]] for c in length if length[c] <= diagnosis_parameters.minimal_length]
     if len(short_length) > 0:
         short_length = sorted(short_length, key=itemgetter(1))
 
@@ -505,6 +506,7 @@ def _diagnosis_lineage(prop, description, diagnosis_parameters, time_digits_for_
                 if short_length[i][0] in prop[keyname]:
                     msg += " (" + str(prop[keyname][short_length[i][0]]) + ")"
             msg += " has a branch/life length of " + str(short_length[i][1])
+            msg += " (ended at " + str(short_length[i][2]) + ")"
             monitoring.to_log_and_console(msg, 1)
         if nitems < len(short_length):
             msg = "    ... "
@@ -941,7 +943,9 @@ def _diagnosis_contact(prop, description, diagnosis_parameters, time_digits_for_
     monitoring.to_log_and_console("  === " + str(description) + " diagnosis === ", 1)
 
     lineage = prop[keylineage]
-    name = prop[keyname]
+    name = {}
+    if keyname is not None:
+        name = prop[keyname]
     contact = prop[keycontact]
 
     #
@@ -1209,10 +1213,10 @@ def diagnosis(prop, features=None, parameters=None, time_digits_for_cell_id=4):
         msg = "  - " + str(len(diff))
         msg += " cells (excluding 1s and 0s) are not in all features"
         monitoring.to_log_and_console(msg, 1)
-        if len(diff) <= diagnosis_parameters.items:
+        if len(diff) <= int(diagnosis_parameters.items):
             length = len(diff)
         else:
-            length = diagnosis_parameters.items
+            length = int(diagnosis_parameters.items)
 
         for i in range(length):
             msg = "    - " + str(diff[i])

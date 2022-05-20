@@ -452,14 +452,23 @@ class Atlas(object):
         div = 10 ** time_digits_for_cell_id
         volume = self.cell_volume
         volume_along_time = {}
+        #
+        # compute embryo volume for each timepoint 't'
+        #
         for c in volume:
             t = int(c) // div
             volume_along_time[t] = volume_along_time.get(t, 0) + volume[c]
 
+        #
+        # get array of time point (x) and array of volunes (y)
+        #
         x = list(volume_along_time.keys())
         x = sorted(x)
         y = [volume_along_time[i] for i in x]
 
+        #
+        # robust regression via ransac
+        #
         xnp = np.array(x)[:, np.newaxis]
         ynp = np.array(y)[:, np.newaxis]
         ransac = sklm.RANSACRegressor()
