@@ -25,7 +25,7 @@ Only works for Linux or MacOs systems.
 Requires `conda`.
 
 1. Create a conda environment (here the environment is named
-`astec-test`)
+`astec`)
 
 	```bash
 	conda create -n astec -c morpheme -c conda-forge astec
@@ -35,6 +35,12 @@ Requires `conda`.
 
 	```bash
 	conda activate astec
+	```
+
+Update of packages can be done with
+
+	```bash
+	conda update -c morpheme -c conda-forge astec
 	```
 
 ### II - User installation (with git)

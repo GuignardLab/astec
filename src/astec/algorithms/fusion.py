@@ -176,8 +176,16 @@ class FusionParameters(common.PrefixedParameter):
         doc += "\t   'acquisition_cropping_margin_x_0' and 'acquisition_cropping_margin_x_1',\n"
         doc += "\t - 'acquisition_cropping_margin_y' allow to set the two margin values along Y, i.e.\n"
         doc += "\t   'acquisition_cropping_margin_y_0' and 'acquisition_cropping_margin_y_1',\n"
+        doc += "\t - 'acquisition_cropping_margin_z' allow to set the two margin values along Z, i.e.\n"
+        doc += "\t   'acquisition_cropping_margin_z_0' and 'acquisition_cropping_margin_z_1',\n"
         self.doc['acquisition_cropping'] = doc
         self.acquisition_cropping = True
+
+        doc = "\t Possible values are True or False\n"
+        doc += "\t If True, the acquisition images are also cropped along the Z directions.\n"
+        doc += "\t Margins are then added to the bounding box\n"
+        self.doc['acquisition_z_cropping'] = doc
+        self.acquisition_z_cropping = False
 
         doc = "\t Added margin of the bounding box computed for the cropping of the raw\n"
         doc += "\t acquisition image in 'left' X direction.\n"
@@ -195,6 +203,14 @@ class FusionParameters(common.PrefixedParameter):
         doc += "\t acquisition image in 'right' Y direction.\n"
         self.doc['acquisition_cropping_margin_y_1'] = doc
         self.acquisition_cropping_margin_y_1 = 40
+        doc = "\t Added margin of the bounding box computed for the cropping of the raw\n"
+        doc += "\t acquisition image in 'left' Z direction.\n"
+        self.doc['acquisition_cropping_margin_z_0'] = doc
+        self.acquisition_cropping_margin_z_0 = 40
+        doc = "\t Added margin of the bounding box computed for the cropping of the raw\n"
+        doc += "\t acquisition image in 'right' Z direction.\n"
+        self.doc['acquisition_cropping_margin_z_1'] = doc
+        self.acquisition_cropping_margin_z_1 = 40
 
         #
         # Registration parameters
@@ -239,15 +255,24 @@ class FusionParameters(common.PrefixedParameter):
         doc += "\t Maximum Intensity Projection (MIP) images are automatically thresholded\n"
         doc += "\t (Otsu algorithm) to determine the bounding box of the object of interest.\n"
         doc += "\t Margins are then added to the bounding box\n"
-        doc += "\t - 'fusion_cropping_margin' allow to set the four margin values, i.e.\n"
+        doc += "\t - 'fusion_cropping_margin' allow to set the six margin values, i.e.\n"
         doc += "\t   'fusion_cropping_margin_x_0', 'fusion_cropping_margin_x_1',\n"
-        doc += "\t   'fusion_cropping_margin_y_0', and 'fusion_cropping_margin_y_1' \n"
+        doc += "\t   'fusion_cropping_margin_y_0', and 'fusion_cropping_margin_y_1', \n"
+        doc += "\t   'fusion_cropping_margin_z_0', and 'fusion_cropping_margin_z_1' \n"
         doc += "\t - 'fusion_cropping_margin_x' allow to set the two margin values along X, i.e.\n"
         doc += "\t   'fusion_cropping_margin_x_0' and 'fusion_cropping_margin_x_1',\n"
         doc += "\t - 'fusion_cropping_margin_y' allow to set the two margin values along Y, i.e.\n"
         doc += "\t   'fusion_cropping_margin_y_0' and 'fusion_cropping_margin_y_1',\n"
+        doc += "\t - 'fusion_cropping_margin_z' allow to set the two margin values along Z, i.e.\n"
+        doc += "\t   'fusion_cropping_margin_z_0' and 'fusion_cropping_margin_z_1',\n"
         self.doc['fusion_cropping'] = doc
         self.fusion_cropping = True
+
+        doc = "\t Possible values are True or False\n"
+        doc += "\t If True, the fusion image is also cropped along the Z direction.\n"
+        doc += "\t Margins are then added to the bounding box\n"
+        self.doc['fusion_z_cropping'] = doc
+        self.fusion_z_cropping = True
 
         doc = "\t Added margin of the bounding box computed for the cropping of the fusion\n"
         doc += "\t image in 'left' X direction.\n"
@@ -265,6 +290,14 @@ class FusionParameters(common.PrefixedParameter):
         doc += "\t image in 'right' Y direction.\n"
         self.doc['fusion_cropping_margin_y_1'] = doc
         self.fusion_cropping_margin_y_1 = 40
+        doc = "\t Added margin of the bounding box computed for the cropping of the fusion\n"
+        doc += "\t image in 'left' Z direction.\n"
+        self.doc['fusion_cropping_margin_z_0'] = doc
+        self.fusion_cropping_margin_z_0 = 40
+        doc = "\t Added margin of the bounding box computed for the cropping of the fusion\n"
+        doc += "\t image in 'right' Z direction.\n"
+        self.doc['fusion_cropping_margin_z_1'] = doc
+        self.fusion_cropping_margin_z_1 = 40
 
     ############################################################
     #
@@ -301,6 +334,7 @@ class FusionParameters(common.PrefixedParameter):
         self.varprint('fusion_strategy', self.fusion_strategy, self.doc['fusion_strategy'])
 
         self.varprint('acquisition_cropping', self.acquisition_cropping, self.doc['acquisition_cropping'])
+        self.varprint('acquisition_z_cropping', self.acquisition_z_cropping, self.doc['acquisition_z_cropping'])
         self.varprint('acquisition_cropping_margin_x_0', self.acquisition_cropping_margin_x_0,
                       self.doc['acquisition_cropping_margin_x_0'])
         self.varprint('acquisition_cropping_margin_x_1', self.acquisition_cropping_margin_x_1,
@@ -309,6 +343,10 @@ class FusionParameters(common.PrefixedParameter):
                       self.doc['acquisition_cropping_margin_y_0'])
         self.varprint('acquisition_cropping_margin_y_1', self.acquisition_cropping_margin_y_1,
                       self.doc['acquisition_cropping_margin_y_1'])
+        self.varprint('acquisition_cropping_margin_z_0', self.acquisition_cropping_margin_z_0,
+                      self.doc['acquisition_cropping_margin_z_0'])
+        self.varprint('acquisition_cropping_margin_z_1', self.acquisition_cropping_margin_z_1,
+                      self.doc['acquisition_cropping_margin_z_1'])
 
         for p in self.acquisition_registration:
             p.print_parameters()
@@ -318,6 +356,7 @@ class FusionParameters(common.PrefixedParameter):
         self.varprint('xzsection_extraction', self.xzsection_extraction, self.doc['xzsection_extraction'])
 
         self.varprint('fusion_cropping', self.fusion_cropping, self.doc['fusion_cropping'])
+        self.varprint('fusion_z_cropping', self.fusion_z_cropping, self.doc['fusion_z_cropping'])
         self.varprint('fusion_cropping_margin_x_0', self.fusion_cropping_margin_x_0,
                       self.doc['fusion_cropping_margin_x_0'])
         self.varprint('fusion_cropping_margin_x_1', self.fusion_cropping_margin_x_1,
@@ -326,6 +365,10 @@ class FusionParameters(common.PrefixedParameter):
                       self.doc['fusion_cropping_margin_y_0'])
         self.varprint('fusion_cropping_margin_y_1', self.fusion_cropping_margin_y_1,
                       self.doc['fusion_cropping_margin_y_1'])
+        self.varprint('fusion_cropping_margin_z_0', self.fusion_cropping_margin_z_0,
+                      self.doc['fusion_cropping_margin_z_0'])
+        self.varprint('fusion_cropping_margin_z_1', self.fusion_cropping_margin_z_1,
+                      self.doc['fusion_cropping_margin_z_1'])
         print("")
 
     def write_parameters_in_file(self, logfile):
@@ -361,6 +404,8 @@ class FusionParameters(common.PrefixedParameter):
         self.varwrite(logfile, 'fusion_strategy', self.fusion_strategy, self.doc['fusion_strategy'])
 
         self.varwrite(logfile, 'acquisition_cropping', self.acquisition_cropping, self.doc['acquisition_cropping'])
+        self.varwrite(logfile, 'acquisition_z_cropping', self.acquisition_z_cropping,
+                      self.doc['acquisition_z_cropping'])
         self.varwrite(logfile, 'acquisition_cropping_margin_x_0', self.acquisition_cropping_margin_x_0,
                       self.doc['acquisition_cropping_margin_x_0'])
         self.varwrite(logfile, 'acquisition_cropping_margin_x_1', self.acquisition_cropping_margin_x_1,
@@ -369,6 +414,10 @@ class FusionParameters(common.PrefixedParameter):
                       self.doc['acquisition_cropping_margin_y_0'])
         self.varwrite(logfile, 'acquisition_cropping_margin_y_1', self.acquisition_cropping_margin_y_1,
                       self.doc['acquisition_cropping_margin_y_1'])
+        self.varwrite(logfile, 'acquisition_cropping_margin_z_0', self.acquisition_cropping_margin_z_0,
+                      self.doc['acquisition_cropping_margin_z_0'])
+        self.varwrite(logfile, 'acquisition_cropping_margin_z_1', self.acquisition_cropping_margin_z_1,
+                      self.doc['acquisition_cropping_margin_z_1'])
 
         for p in self.acquisition_registration:
             p.write_parameters_in_file(logfile)
@@ -378,6 +427,7 @@ class FusionParameters(common.PrefixedParameter):
         self.varwrite(logfile, 'xzsection_extraction', self.xzsection_extraction, self.doc['xzsection_extraction'])
 
         self.varwrite(logfile, 'fusion_cropping', self.fusion_cropping, self.doc['fusion_cropping'])
+        self.varwrite(logfile, 'fusion_z_cropping', self.fusion_z_cropping, self.doc['fusion_z_cropping'])
         self.varwrite(logfile, 'fusion_cropping_margin_x_0', self.fusion_cropping_margin_x_0,
                       self.doc['fusion_cropping_margin_x_0'])
         self.varwrite(logfile, 'fusion_cropping_margin_x_1', self.fusion_cropping_margin_x_1,
@@ -386,6 +436,10 @@ class FusionParameters(common.PrefixedParameter):
                       self.doc['fusion_cropping_margin_y_0'])
         self.varwrite(logfile, 'fusion_cropping_margin_y_1', self.fusion_cropping_margin_y_1,
                       self.doc['fusion_cropping_margin_y_1'])
+        self.varwrite(logfile, 'fusion_cropping_margin_z_0', self.fusion_cropping_margin_z_0,
+                      self.doc['fusion_cropping_margin_z_0'])
+        self.varwrite(logfile, 'fusion_cropping_margin_z_1', self.fusion_cropping_margin_z_1,
+                      self.doc['fusion_cropping_margin_z_1'])
         return
 
     def write_parameters(self, log_file_name):
@@ -492,7 +546,10 @@ class FusionParameters(common.PrefixedParameter):
         # Cropping of acquisition images (before fusion)
         #
         self.acquisition_cropping = self.read_parameter(parameters, 'acquisition_cropping', self.acquisition_cropping)
+        self.acquisition_z_cropping = self.read_parameter(parameters, 'acquisition_z_cropping',
+                                                          self.acquisition_z_cropping)
         self.acquisition_cropping = self.read_parameter(parameters, 'raw_crop', self.acquisition_cropping)
+        self.acquisition_z_cropping = self.read_parameter(parameters, 'raw_z_crop', self.acquisition_z_cropping)
 
         self.acquisition_cropping_margin_x_0 = self.read_parameter(parameters, 'acquisition_cropping_margin',
                                                                    self.acquisition_cropping_margin_x_0)
@@ -530,6 +587,24 @@ class FusionParameters(common.PrefixedParameter):
         self.acquisition_cropping_margin_y_1 = self.read_parameter(parameters, 'raw_margin_y_1',
                                                                    self.acquisition_cropping_margin_y_1)
 
+        self.acquisition_cropping_margin_z_0 = self.read_parameter(parameters, 'acquisition_cropping_margin',
+                                                                   self.acquisition_cropping_margin_z_0)
+        self.acquisition_cropping_margin_z_0 = self.read_parameter(parameters, 'acquisition_cropping_margin_z',
+                                                                   self.acquisition_cropping_margin_z_0)
+        self.acquisition_cropping_margin_z_0 = self.read_parameter(parameters, 'acquisition_cropping_margin_z_0',
+                                                                   self.acquisition_cropping_margin_z_0)
+        self.acquisition_cropping_margin_z_0 = self.read_parameter(parameters, 'raw_margin_z_0',
+                                                                   self.acquisition_cropping_margin_z_0)
+
+        self.acquisition_cropping_margin_z_1 = self.read_parameter(parameters, 'acquisition_cropping_margin',
+                                                                   self.acquisition_cropping_margin_z_1)
+        self.acquisition_cropping_margin_z_1 = self.read_parameter(parameters, 'acquisition_cropping_margin_z',
+                                                                   self.acquisition_cropping_margin_z_1)
+        self.acquisition_cropping_margin_z_1 = self.read_parameter(parameters, 'acquisition_cropping_margin_z_1',
+                                                                   self.acquisition_cropping_margin_z_1)
+        self.acquisition_cropping_margin_z_1 = self.read_parameter(parameters, 'raw_margin_z_1',
+                                                                   self.acquisition_cropping_margin_z_1)
+
         #
         # registration parameters
         #
@@ -549,7 +624,9 @@ class FusionParameters(common.PrefixedParameter):
         # Cropping of fused image (after fusion)
         #
         self.fusion_cropping = self.read_parameter(parameters, 'fusion_cropping', self.fusion_cropping)
+        self.fusion_z_cropping = self.read_parameter(parameters, 'fusion_z_cropping', self.fusion_z_cropping)
         self.fusion_cropping = self.read_parameter(parameters, 'fusion_crop', self.fusion_cropping)
+        self.fusion_z_cropping = self.read_parameter(parameters, 'fusion_z_crop', self.fusion_z_cropping)
 
         self.fusion_cropping_margin_x_0 = self.read_parameter(parameters, 'fusion_cropping_margin',
                                                               self.fusion_cropping_margin_x_0)
@@ -586,6 +663,24 @@ class FusionParameters(common.PrefixedParameter):
                                                               self.fusion_cropping_margin_y_1)
         self.fusion_cropping_margin_y_1 = self.read_parameter(parameters, 'fusion_margin_y_1',
                                                               self.fusion_cropping_margin_y_1)
+
+        self.fusion_cropping_margin_z_0 = self.read_parameter(parameters, 'fusion_cropping_margin',
+                                                              self.fusion_cropping_margin_z_0)
+        self.fusion_cropping_margin_z_0 = self.read_parameter(parameters, 'fusion_cropping_margin_z',
+                                                              self.fusion_cropping_margin_z_0)
+        self.fusion_cropping_margin_z_0 = self.read_parameter(parameters, 'fusion_cropping_margin_z_0',
+                                                              self.fusion_cropping_margin_z_0)
+        self.fusion_cropping_margin_z_0 = self.read_parameter(parameters, 'fusion_margin_z_0',
+                                                              self.fusion_cropping_margin_z_0)
+
+        self.fusion_cropping_margin_z_1 = self.read_parameter(parameters, 'fusion_cropping_margin',
+                                                              self.fusion_cropping_margin_z_1)
+        self.fusion_cropping_margin_z_1 = self.read_parameter(parameters, 'fusion_cropping_margin_z',
+                                                              self.fusion_cropping_margin_z_1)
+        self.fusion_cropping_margin_z_1 = self.read_parameter(parameters, 'fusion_cropping_margin_z_1',
+                                                              self.fusion_cropping_margin_z_1)
+        self.fusion_cropping_margin_z_1 = self.read_parameter(parameters, 'fusion_margin_z_1',
+                                                              self.fusion_cropping_margin_z_1)
 
     def update_from_parameter_file(self, parameter_file):
         if parameter_file is None:
@@ -888,10 +983,11 @@ def _analyze_data_directory(data_dir):
 ########################################################################################
 
 
-def _crop_bounding_box(the_image):
+def _crop_bounding_box(the_image, z_crop=False):
     """
     Compute a bounding box to crop an image (ie extract a subimage)
     :param the_image:
+    :param z_crop: True or False
     :return:
     """
 
@@ -899,19 +995,27 @@ def _crop_bounding_box(the_image):
     # build a 2D binary image from the MIP projection
     #
 
-    the_selection = common.add_suffix(the_image, "_cropselection")
-    cpp_wrapping.mip_projection_for_crop(the_image, the_selection, None, monitoring)
+    the_xy_selection = common.add_suffix(the_image, "_xy_cropselection")
+    if z_crop:
+        the_xz_selection = common.add_suffix(the_image, "_xz_cropselection")
+        the_zy_selection = common.add_suffix(the_image, "_zy_cropselection")
+    else:
+        the_xz_selection = None
+        the_zy_selection = None
+    cpp_wrapping.mip_projection_for_crop(the_image, the_xy_selection, the_xz_selection, the_zy_selection, None,
+                                         monitoring)
 
     #
     # read input image
     #
-    selection = imread(the_selection)
+    selection = imread(the_xy_selection)
 
     #
     # the get the connected component (4-connectivity)
     # there should have only two components: the background and the selected component
     #
     cc_image, cc_n = nd.label(selection)
+    del selection
 
     #
     # compute the volumes of each connected component
@@ -936,14 +1040,49 @@ def _crop_bounding_box(the_image):
     # maxBox = boundingBoxes[int(maxLabel)-1]
     #
     max_box = nd.find_objects(cc_image, max_label=max_label)[int(max_label)-1]
-
     del cc_image
 
-    return max_box
+    zmin = 0
+    zmax = 1
+    if z_crop:
+        selection = imread(the_xz_selection)
+        cc_image, cc_n = nd.label(selection)
+        del selection
+        labels = np.unique(cc_image)
+        volumes = nd.sum(np.ones_like(cc_image), cc_image, index=np.int16(labels))
+        dict_volumes = dict(list(zip(labels, volumes)))
+        dict_volumes.pop(0)
+        max_label = list(dict_volumes.keys())[np.argmax(list(dict_volumes.values()))]
+        the_box = nd.find_objects(cc_image, max_label=max_label)[int(max_label) - 1]
+        del cc_image
+        zmin = the_box[1].start
+        zmax = the_box[1].stop
+
+        #
+        # compare with zy MIP view and update the bounding box along the Z direction
+        # It could also have been done for the X and Y directions, but to keep
+        # historical behavior, I prefer not
+        #
+        selection = imread(the_zy_selection)
+        cc_image, cc_n = nd.label(selection)
+        del selection
+        labels = np.unique(cc_image)
+        volumes = nd.sum(np.ones_like(cc_image), cc_image, index=np.int16(labels))
+        dict_volumes = dict(list(zip(labels, volumes)))
+        dict_volumes.pop(0)
+        max_label = list(dict_volumes.keys())[np.argmax(list(dict_volumes.values()))]
+        the_box = nd.find_objects(cc_image, max_label=max_label)[int(max_label) - 1]
+        del cc_image
+        if zmin > the_box[0].start:
+            zmin = the_box[0].start
+        if zmax < the_box[0].stop:
+            zmax = the_box[0].stop
+
+    return [max_box[0], max_box[1], slice(zmin, zmax)]
 
 
-def _crop_disk_image(the_image, res_image, the_max_box=None,
-                     margin_x_0=40, margin_x_1=40, margin_y_0=40, margin_y_1=40):
+def _crop_disk_image(the_image, res_image, the_max_box=None, z_crop=False,
+                     margin_x_0=40, margin_x_1=40, margin_y_0=40, margin_y_1=40, margin_z_0=40, margin_z_1=40):
     """
     Crop an image on disk in XY plane
     :param the_image:
@@ -960,7 +1099,7 @@ def _crop_disk_image(the_image, res_image, the_max_box=None,
     # 2D bounding box
     #
     if the_max_box is None:
-        max_box = _crop_bounding_box(the_image)
+        max_box = _crop_bounding_box(the_image, z_crop=z_crop)
     else:
         max_box = the_max_box
 
@@ -973,19 +1112,24 @@ def _crop_disk_image(the_image, res_image, the_max_box=None,
     xmax = min(image.shape[0], max_box[0].stop + margin_x_1)
     ymin = max(max_box[1].start - margin_y_0, 0)
     ymax = min(image.shape[1], max_box[1].stop + margin_y_1)
+    zmin = 0
+    zmax = image.shape[2]
+    if z_crop:
+        zmin = max(max_box[2].start - margin_z_0, 0)
+        zmax = min(image.shape[2], max_box[2].stop + margin_z_1)
 
     new_box = (slice(xmin, xmax, None),
                slice(ymin, ymax, None),
-               slice(0, image.shape[2]))
+               slice(zmin, zmax))
 
     new_image = SpatialImage(image[new_box])
     new_image.voxelsize = image.voxelsize
 
     imsave(res_image, new_image)
 
-    monitoring.to_log_and_console("       crop from [0," + str(image.shape[0]) + "]x[0,"
-                                  + str(image.shape[1]) + "] to [" + str(xmin) + ","
-                                  + str(xmax) + "]x[" + str(ymin) + "," + str(ymax) + "]", 2)
+    monitoring.to_log_and_console("       crop from [0," + str(image.shape[0]) + "]x[0," + str(image.shape[1]) + "]x[0,"
+                                  + str(image.shape[2]) + "] to [" + str(xmin) + "," + str(xmax) + "]x[" + str(ymin)
+                                  + "," + str(ymax) + "]x[" + str(zmin) + "," + str(zmax) + "]", 2)
 
     return
 
@@ -1847,15 +1991,17 @@ def _direct_fusion_process(input_image_list, the_image_list, fused_image, experi
         if parameters.fusion_cropping is True:
 
             if c == 0:
-                fusion_box = _crop_bounding_box(tmp_fused_image)
+                fusion_box = _crop_bounding_box(tmp_fused_image, z_crop=parameters.fusion_z_cropping)
 
             monitoring.to_log_and_console("    .. cropping '" + fused_image.split(os.path.sep)[-1], 2)
             _crop_disk_image(tmp_fused_image, os.path.join(experiment.fusion_dir.get_directory(c), fused_image),
-                             fusion_box,
-                             parameters.fusion_cropping_margin_x_0,
-                             parameters.fusion_cropping_margin_x_1,
-                             parameters.fusion_cropping_margin_y_0,
-                             parameters.fusion_cropping_margin_y_1)
+                             the_max_box=fusion_box, z_crop=parameters.fusion_z_cropping,
+                             margin_x_0=parameters.fusion_cropping_margin_x_0,
+                             margin_x_1=parameters.fusion_cropping_margin_x_1,
+                             margin_y_0=parameters.fusion_cropping_margin_y_0,
+                             margin_y_1=parameters.fusion_cropping_margin_y_1,
+                             margin_z_0=parameters.fusion_cropping_margin_z_0,
+                             margin_z_1=parameters.fusion_cropping_margin_z_1)
     return
 
 
@@ -2321,14 +2467,17 @@ def _hierarchical_fusion_process(input_image_list, the_image_list, fused_image, 
     #
     if parameters.fusion_cropping is True:
 
-        fusion_box = _crop_bounding_box(tmp_fused_image)
+        fusion_box = _crop_bounding_box(tmp_fused_image, z_crop=parameters.fusion_z_cropping)
 
         monitoring.to_log_and_console("    .. cropping '" + fused_image.split(os.path.sep)[-1], 2)
-        _crop_disk_image(tmp_fused_image, os.path.join(experiment.fusion_dir.get_directory(0), fused_image), fusion_box,
-                         parameters.fusion_cropping_margin_x_0,
-                         parameters.fusion_cropping_margin_x_1,
-                         parameters.fusion_cropping_margin_y_0,
-                         parameters.fusion_cropping_margin_y_1)
+        _crop_disk_image(tmp_fused_image, os.path.join(experiment.fusion_dir.get_directory(0), fused_image),
+                         the_max_box=fusion_box, z_crop=parameters.fusion_z_cropping,
+                         margin_x_0=parameters.fusion_cropping_margin_x_0,
+                         margin_x_1=parameters.fusion_cropping_margin_x_1,
+                         margin_y_0=parameters.fusion_cropping_margin_y_0,
+                         margin_y_1=parameters.fusion_cropping_margin_y_1,
+                         margin_z_0=parameters.fusion_cropping_margin_z_0,
+                         margin_z_1=parameters.fusion_cropping_margin_z_1)
 
     #
     # other channels
@@ -2466,8 +2615,13 @@ def _hierarchical_fusion_process(input_image_list, the_image_list, fused_image, 
 
             monitoring.to_log_and_console("    .. cropping '" + fused_image.split(os.path.sep)[-1], 2)
             _crop_disk_image(tmp_fused_image, os.path.join(experiment.fusion_dir.get_directory(c), fused_image),
-                             fusion_box, parameters.fusion_cropping_margin_x_0, parameters.fusion_cropping_margin_x_1,
-                             parameters.fusion_cropping_margin_y_0, parameters.fusion_cropping_margin_y_1)
+                             the_max_box=fusion_box, z_crop=parameters.fusion_z_cropping,
+                             margin_x_0=parameters.fusion_cropping_margin_x_0,
+                             margin_x_1=parameters.fusion_cropping_margin_x_1,
+                             margin_y_0=parameters.fusion_cropping_margin_y_0,
+                             margin_y_1=parameters.fusion_cropping_margin_y_1,
+                             margin_z_0=parameters.fusion_cropping_margin_z_0,
+                             margin_z_1=parameters.fusion_cropping_margin_z_1)
 
     return
 
@@ -2774,17 +2928,20 @@ def _fusion_process(input_image_list, fused_image, experiment, parameters):
                     continue
 
                 if c == 0:
-                    box = _crop_bounding_box(the_images[i])
+                    box = _crop_bounding_box(the_images[i], z_crop=parameters.acquisition_z_cropping)
                     box_list.append(box)
                 else:
                     box = box_list[i]
 
                 if not os.path.isfile(res_images[i]) or monitoring.forceResultsToBeBuilt is True:
-                    _crop_disk_image(the_images[i], res_images[i], box,
-                                     parameters.acquisition_cropping_margin_x_0,
-                                     parameters.acquisition_cropping_margin_x_1,
-                                     parameters.acquisition_cropping_margin_y_0,
-                                     parameters.acquisition_cropping_margin_y_1)
+                    _crop_disk_image(the_images[i], res_images[i], the_max_box=box,
+                                     z_crop=parameters.acquisition_z_cropping,
+                                     margin_x_0=parameters.acquisition_cropping_margin_x_0,
+                                     margin_x_1=parameters.acquisition_cropping_margin_x_1,
+                                     margin_y_0=parameters.acquisition_cropping_margin_y_0,
+                                     margin_y_1=parameters.acquisition_cropping_margin_y_1,
+                                     margin_z_0=parameters.acquisition_cropping_margin_z_0,
+                                     margin_z_1=parameters.acquisition_cropping_margin_z_1)
                 else:
                     monitoring.to_log_and_console("       already existing", 2)
 

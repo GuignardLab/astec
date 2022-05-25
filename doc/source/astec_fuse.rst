@@ -473,10 +473,17 @@ To desactivate this cropping, the line
 
 .. code-block:: python
 	
-   raw_crop = False
+   acquisition_cropping = False
 
 has to be added in the parameter file.
 
+An additional crop along the Z direction can be done by adding
+
+.. code-block:: python
+	
+   acquisition_z_cropping = True
+
+in the parameter file.
 
 .. _cli-fuse-image-registration:
 

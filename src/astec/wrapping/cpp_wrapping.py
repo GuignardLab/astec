@@ -517,11 +517,14 @@ def slitline_correction(the_image, res_image,
     return
 
 
-def mip_projection_for_crop(the_image, res_image, other_options=None, monitoring=None):
+def mip_projection_for_crop(the_image, res_xy_image, res_xz_image=None, res_zy_image=None, other_options=None,
+                            monitoring=None):
     """
 
     :param the_image:
-    :param res_image:
+    :param res_xy_image:
+    :param res_xz_image:
+    :param res_zy_image:
     :param other_options:
     :param monitoring:
     :return:
@@ -529,7 +532,15 @@ def mip_projection_for_crop(the_image, res_image, other_options=None, monitoring
 
     path_to_exec = _find_exec('mc-extractMIPembryo')
 
-    command_line = path_to_exec + " " + the_image + " " + res_image
+    if res_xy_image is None and res_xz_image is None and res_zy_image is None:
+        return
+    command_line = path_to_exec + " " + the_image
+    if res_xy_image is not None:
+        command_line += " -xy " + res_xy_image
+    if res_xz_image is not None:
+        command_line += " -xz " + res_xz_image
+    if res_zy_image is not None:
+        command_line += " -zy " + res_zy_image
 
     if other_options is not None:
         command_line += " " + other_options
