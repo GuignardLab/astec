@@ -688,8 +688,12 @@ Watershed parameters
 
 * ``acquisition_cropping``:
   ``True`` or ``False``. If set to ``True``, 
-  the acquisitions stacks are cropped before fusion.
+  the acquisitions stacks are cropped before fusion along the X and Y directions.
   See section :ref:`cli-fuse-raw-data-cropping`.
+* ``acquisition_z_cropping``:
+  ``True`` or ``False``. If set to ``True``, 
+  the acquisitions stacks are cropped before fusion along the Z direction.
+
 * ``acquisition_cropping_margin_x_0``:
   extra margin for the left side of the X direction.
 * ``acquisition_cropping_margin_x_1``:
@@ -698,15 +702,24 @@ Watershed parameters
   extra margin for the left side of the Y direction.
 * ``acquisition_cropping_margin_y_1``:
   extra margin for the right side of the Y direction.
+* ``acquisition_cropping_margin_z_0``:
+  extra margin for the left side of the Z direction.
+* ``acquisition_cropping_margin_z_1``:
+  extra margin for the right side of the Z direction.
 * ``acquisition_cropping_margin_x``: 
   allows to set both ``acquisition_cropping_margin_x_0`` and
   ``acquisition_cropping_margin_x_1``
 * ``acquisition_cropping_margin_y``: 
   allows to set both ``acquisition_cropping_margin_y_0`` and
   ``acquisition_cropping_margin_y_1``
+* ``acquisition_cropping_margin_z``: 
+  allows to set both ``acquisition_cropping_margin_z_0`` and
+  ``acquisition_cropping_margin_z_1``
 * ``acquisition_cropping_margin``: 
-  allows to set the four margin variables.
-  
+  allows to set the six margin variables.
+
+* ``raw_crop`` same as ``acquisition_cropping``
+
 * Registration parameters
   (see section :ref:`cli-fuse-image-registration`) prefixed 
   by ``fusion_preregistration_``
@@ -731,20 +744,29 @@ Watershed parameters
   
 * ``fusion_cropping``:
   ``True`` or ``False``. If set to ``True``, 
-  the fusion result is cropped.
+  the fusion result is cropped along X and Y directions.
   see section :ref:`cli-fuse-fused-data-cropping`
+* ``fusion_z_cropping``:
+  ``True`` or ``False``. If set to ``True``, 
+  the fusion result is cropped along the Z direction.
+
 * ``fusion_cropping_margin_x_0``
 * ``fusion_cropping_margin_x_1``
 * ``fusion_cropping_margin_y_0``
 * ``fusion_cropping_margin_y_1``
+* ``fusion_cropping_margin_z_0``
+* ``fusion_cropping_margin_z_1``
 * ``fusion_cropping_margin_x``:
   allows to set both ``fusion_cropping_margin_x_0``
   and ``fusion_cropping_margin_x_1``
 * ``fusion_cropping_margin_y``:
   allows to set both ``fusion_cropping_margin_y_0``
   and ``fusion_cropping_margin_y_1``
+* ``fusion_cropping_margin_z``:
+  allows to set both ``fusion_cropping_margin_z_0``
+  and ``fusion_cropping_margin_z_1``
 * ``fusion_cropping_margin``:
-  allows to set the four margin variables.
+  allows to set the six margin variables.
   
 * ``acquisition_leftcamera_z_stacking``:
   allows to set both ``acquisition_stack0_leftcamera_z_stacking`` 
