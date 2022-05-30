@@ -1959,6 +1959,8 @@ class Experiment(PrefixedParameter):
                 _write_git_information(os.path.dirname(cli_name), logfile, "# ASTEC")
             if path_to_vt is not None:
                 _write_git_information(path_to_vt, logfile, "# VT")
+            if cpp_wrapping.path_to_cli('conda') is not None:
+                _write_conda_information(logfile, "# CONDA")
             logfile.write("# \n")
         return
 
@@ -2649,7 +2651,7 @@ def get_parameter_file(parameter_file):
 def _write_git_information(path, logfile, desc):
     """
 
-    :param path:
+    :param path: path to command line interfaces (eg astec or vt)
     :param logfile:
     :param desc:
     :return:
@@ -2678,11 +2680,11 @@ def _write_git_information(path, logfile, desc):
 
     if len(stderrData) > 6:
         if stderrData[0:6] == "fatal:":
-            logfile.write("no a git repository\n")
+            logfile.write("not a git repository\n")
         else:
-            logfile.write("no a git repository?\n")
+            logfile.write("not a git repository?\n")
     elif len(stderrData) > 0:
-        logfile.write("no a git repository?!\n")
+        logfile.write("not a git repository?!\n")
     else:
         v = (stdoutData.decode('utf8')).split('\n')
         logfile.write(str(v[0] + "\n"))
@@ -2705,6 +2707,39 @@ def _write_git_information(path, logfile, desc):
 
     return
 
+
+def _write_conda_information(logfile, desc):
+    """
+
+    :param logfile:
+    :param desc:
+    :return:
+    """
+
+    # if not os.path.exists(path + os.path.sep + '.git'):
+    #     logfile.write("not found\n")
+    #     return
+    packagelist = ['astec', 'vt']
+    packageversion = {}
+
+    pipe = subprocess.Popen("conda list", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    (stdoutData, stderrData) = pipe.communicate()
+
+    lines = (stdoutData.decode('utf8')).split('\n')
+    for l in lines:
+        v = re.split(r'\s{1,}', l)
+        # v = Name Version Build Channel
+        if v[0] in packagelist:
+            packageversion[v[0]] = v
+
+    for p in packagelist:
+        if p not in packageversion:
+            logfile.write(str(desc) + " package " + str(p) + " not found ?!" + "\n")
+        else:
+            logfile.write(str(desc) + " version of package " + str(p) + " is " + str(packageversion[p][1]) +
+                          " issued from channel " + str(packageversion[p][3]) + "\n")
+
+    return
 
 ########################################################################################
 #
