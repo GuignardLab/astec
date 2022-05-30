@@ -1,5 +1,8 @@
 # Change Log
 
+## version 1.4.0
+
+- get the package version number from conda, and write it in the history log
 
 ## version 1.3.0
 
