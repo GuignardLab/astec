@@ -21,6 +21,13 @@ Requires conda.
 
    conda activate astec-test
 
+Update of packages can be done with
+
+.. code-block:: bash
+
+   conda update -n astec-test -c morpheme -c conda-forge astec
+
+
 User installation (with git)
 ================================
 

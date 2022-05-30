@@ -66,13 +66,19 @@ def _find_exec(executable_file, monitoring=None):
     return path_to_exec
 
 
+def path_to_cli(cli_name=None):
+    if cli_name is None:
+        return None
+    if not isinstance(cli_name, str):
+        return None
+    path_to_exec = __find_exec(cli_name)
+    return os.path.dirname(path_to_exec)
+
+
 def path_to_vt():
     """
     """
-    path_to_exec = __find_exec('blockmatching')
-    if path_to_exec is None:
-        return None
-    return os.path.dirname(path_to_exec)
+    return path_to_cli('blockmatching')
 
 
 ############################################################

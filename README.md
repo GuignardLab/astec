@@ -39,9 +39,9 @@ Requires `conda`.
 
 Update of packages can be done with
 
-	```bash
-	conda update -c morpheme -c conda-forge astec
-	```
+```bash
+conda update -n astec -c morpheme -c conda-forge astec
+```
 
 ### II - User installation (with git)
 
