@@ -11,6 +11,9 @@ conda_build:
   artifacts:
     paths:
       - conda-bld
+  tags:
+    - ci.inria.fr
+    - medium
   only:
     - master
     - /release/
@@ -30,6 +33,9 @@ anaconda_master :
     when: runner_system_failure
   dependencies:
     - conda_build
+  tags:
+    - ci.inria.fr
+    - medium
   only:
   - master
 
@@ -51,6 +57,9 @@ pages:
     paths:
     - public
   dependencies: []
+  tags:
+    - ci.inria.fr
+    - medium
   rules:
       - if: $CI_COMMIT_BRANCH =~ /^feature/
         when: manual
