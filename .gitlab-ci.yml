@@ -21,8 +21,10 @@ anaconda_master :
   - conda update --all
   - conda install conda-build anaconda-client
   - conda convert -p osx-64 conda-bld/linux-64/astec-* --output-dir conda-bld/
+  - conda convert -p osx-arm64 conda-bld/linux-64/astec-* --output-dir conda-bld/
   - anaconda --token=$ANACONDA_TOKEN upload conda-bld/linux-64/astec-* --force --user morpheme
   - anaconda --token=$ANACONDA_TOKEN upload conda-bld/osx-64/astec-* --force --user morpheme
+  - anaconda --token=$ANACONDA_TOKEN upload conda-bld/osx-arm64/astec-* --force --user morpheme
   retry:
     max: 2
     when: runner_system_failure
@@ -50,7 +52,7 @@ pages:
     - public
   dependencies: []
   rules:
-      - if: '$CI_COMMIT_BRANCH == "feature*"'
+      - if: $CI_COMMIT_BRANCH =~ /^feature/
         when: manual
       - if: '$CI_COMMIT_BRANCH == "develop"'
         when: manual
