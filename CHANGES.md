@@ -1,5 +1,10 @@
 # Change Log
 
+## version 1.5.0
+
+- allows .h5.gz images as camera acquisition images (used in fusion step)
+- uses threads to recompress the images after reading
+
 ## version 1.4.0
 
 - get the package version number from conda, and write it in the history log
