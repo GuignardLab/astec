@@ -1,12 +1,15 @@
 from os.path import exists, splitext, split as psplit, expanduser as expusr
 import os
+import subprocess
 
 from astec.components.spatial_image import SpatialImage
+from astec.components.threading import CompressFile
 from astec.io.format.h5 import read_h5
 from astec.io.format.inrimage import read_inrimage, write_inrimage
 from astec.io.format.metaimage import read_metaimage, write_metaimage
 from astec.io.format.nii import read_nii, write_nii
 from astec.io.format.tif import read_tif, write_tif
+
 
 def imread(filename):
     """Reads an image file completely into memory.
@@ -38,9 +41,12 @@ def imread(filename):
     if not exists(filename):
         raise IOError("The requested file do not exist: %s" % filename)
 
+    compressed = False
+    compressTasks = {}
     root, ext = splitext(filename)
     ext = ext.lower()
     if ext == ".gz":
+        compressed = True
         root, ext = splitext(root)
         ext = ext.lower()
     if ext == ".inr":
@@ -50,7 +56,17 @@ def imread(filename):
     elif ext in [".tif", ".tiff"]:
         return read_tif(filename)
     elif ext in [".h5", ".hdf5"]:
-        return read_h5(filename)
+        uncompressedfilename = filename
+        if compressed:
+            uncompressedfilename = filename[:-3]
+            print("       .. uncompressing '" + os.path.basename(filename) + "'")
+            command_line = "gzip -d " + str(filename)
+            subprocess.call(command_line, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        image = read_h5(uncompressedfilename)
+        if compressed:
+            compressTasks[filename] = CompressFile(uncompressedfilename)
+            compressTasks[filename].start()
+        return image
     elif ext in [".nii"]:
         return read_nii(filename)
     else:

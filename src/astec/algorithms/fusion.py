@@ -7,6 +7,7 @@ import platform
 import subprocess
 import numpy as np
 from scipy import ndimage as nd
+from astec.components.threading import waitForRunningThreadToStop
 
 from astec.utils import common
 from astec.components.spatial_image import SpatialImage
@@ -700,7 +701,7 @@ class FusionParameters(common.PrefixedParameter):
 ########################################################################################
 
 
-__extension_to_be_converted__ = ['.h5', '.tif', '.tiff', '.TIF', '.TIFF']
+__extension_to_be_converted__ = ['.h5', '.h5.gz', '.tif', '.tiff', '.TIF', '.TIFF']
 __extension_with_resolution__ = ['.inr', '.inr.gz', '.mha', '.mha.gz']
 
 
@@ -3250,6 +3251,13 @@ def _fusion_preprocess(input_images, fused_image, time_point, experiment, parame
 
     end_time = time.time()
     monitoring.to_log_and_console('    computation time = ' + str(end_time - start_time) + ' s', 1)
+
+    #
+    # there might be 4 threads (compressing of h5 images) launched for one fusion
+    # do not fuse next time point if there is more living threads
+    #
+    waitForRunningThreadToStop(maxthread=5)
+
     monitoring.to_log_and_console('', 1)
 
     return
@@ -3558,5 +3566,7 @@ def fusion_control(experiment, parameters):
             #
 
             _fusion_preprocess(images, fused_image, acquisition_time, experiment, parameters)
+
+    waitForRunningThreadToStop(maxthread=1)
 
     return

@@ -2800,7 +2800,7 @@ def _get_extension(filename, recognized_extensions):
     return None
 
 
-recognized_image_extensions = ['.zip', '.h5', '.tif', '.tiff', '.TIF', '.TIFF', '.inr', '.inr.gz', '.mha', '.mha.gz',
+recognized_image_extensions = ['.zip', '.h5', '.h5.gz', '.tif', '.tiff', '.TIF', '.TIFF', '.inr', '.inr.gz', '.mha', '.mha.gz',
                                '.nii', '.nii.gz']
 
 
