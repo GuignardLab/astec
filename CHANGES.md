@@ -1,5 +1,9 @@
 # Change Log
 
+## version 1.5.1
+
+- add missing package in pkg/recipe/meta.yaml
+
 ## version 1.5.0
 
 - allows .h5.gz images as camera acquisition images (used in fusion step)
