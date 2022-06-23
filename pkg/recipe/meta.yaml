@@ -30,6 +30,7 @@ requirements:
     - matplotlib
     - networkx
     - ipython
+    - scikit-learn
 
 test:
   imports:
