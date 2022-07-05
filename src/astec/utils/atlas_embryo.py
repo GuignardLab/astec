@@ -144,7 +144,7 @@ class AtlasParameters(udiagnosis.DiagnosisParameters):
         doc += "\t - 'global': normalization by embryo volume\n"
         doc += "\t   The normalization factor is the same from cell to cell within a embryo.\n"
         self.doc['cell_normalization'] = doc
-        self.cell_normalization = 'local'
+        self.cell_normalization = 'global'
 
     ############################################################
     #
@@ -283,7 +283,7 @@ class AtlasParameters(udiagnosis.DiagnosisParameters):
 ############################################################
 
 class Atlas(object):
-    def __init__(self, atlas_properties=None, time_digits_for_cell_id=4):
+    def __init__(self, atlas_properties=None, time_digits_for_cell_id=4, verbose=False):
         proc = "Atlas.init"
 
         self._properties = {'temporal_alignment': (1.0, 0.0), 'volume_local_estimation': (0.0, 1.0),
@@ -292,20 +292,24 @@ class Atlas(object):
         if isinstance(atlas_properties, dict):
             if 'cell_lineage' in atlas_properties:
                 self.lineage = atlas_properties['cell_lineage']
-            else:
+            elif verbose:
                 monitoring.to_log_and_console(str(proc) + ": 'cell_lineage' was not in dictionary")
             if 'cell_name' in atlas_properties:
                 self.cell_name = atlas_properties['cell_name']
-            else:
+            elif verbose:
                 monitoring.to_log_and_console(str(proc) + ": 'cell_name' was not in dictionary")
             if 'cell_contact_surface' in atlas_properties:
                 self.cell_contact_surface = atlas_properties['cell_contact_surface']
-            else:
+            elif verbose:
                 monitoring.to_log_and_console(str(proc) + ": 'cell_contact_surface' was not in dictionary")
+            if 'cell_barycenter' in atlas_properties:
+                self.cell_barycenter = atlas_properties['cell_barycenter']
+            elif verbose:
+                monitoring.to_log_and_console(str(proc) + ": 'cell_barycenter' was not in dictionary")
             if 'cell_volume' in atlas_properties:
                 self.cell_volume = atlas_properties['cell_volume']
                 self.volume_local_fitting(time_digits_for_cell_id=time_digits_for_cell_id)
-            else:
+            elif verbose:
                 monitoring.to_log_and_console(str(proc) + ": 'cell_volume' was not in dictionary")
 
     ############################################################
@@ -313,6 +317,9 @@ class Atlas(object):
     # Properties issued from the property files
     #
     ############################################################
+
+    def property_list(self):
+        return self._properties.keys()
 
     @property
     def lineage(self):
@@ -399,6 +406,23 @@ class Atlas(object):
         self._properties['cell_contact_surface'] = copy.deepcopy(atlas_properties)
         return
 
+    @property
+    def cell_barycenter(self):
+        """
+        The cell contact surfaces, as in the property file
+        Returns
+        -------
+
+        """
+        if 'cell_barycenter' in self._properties:
+            return self._properties['cell_barycenter']
+        return None
+
+    @cell_barycenter.setter
+    def cell_barycenter(self, atlas_properties):
+        self._properties['cell_barycenter'] = copy.deepcopy(atlas_properties)
+        return
+
     #
     # other properties
     #
@@ -425,6 +449,13 @@ class Atlas(object):
         self._properties['target_volume'] = volume
         return
 
+    def get_property(self):
+        return self._properties
+
+    def del_cell_name(self):
+        if 'cell_name' in self._properties:
+            del self._properties['cell_name']
+
     ############################################################
     #
     # Properties (end)
@@ -432,7 +463,10 @@ class Atlas(object):
     ############################################################
 
     #
-    # temporal alignment
+    # temporal alignment of an atlas/embryo with the reference atlas/embryo
+    # it consists at finding the time lineage warping based on the cell number
+    # so that the cell number at (a * t + b) of the atlas is equal at the one
+    # of the reference number at (t)
     #
     def temporally_align_with(self, reference, time_digits_for_cell_id=4):
         proc = "Atlas.temporally_align_with"
@@ -523,7 +557,7 @@ class Atlases(object):
                 monitoring.to_log_and_console(proc + ": no reference atlas nor registered atlases")
                 return None
             names = sorted(list(atlases.keys()))
-            monitoring.to_log_and_console(proc + ": set reference to " + str(names[0]))
+            monitoring.to_log_and_console("   ... set reference to '" + str(names[0]) + "'")
             self.set_reference_atlas(names[0])
         return self._ref_atlas
 
@@ -590,10 +624,8 @@ class Atlases(object):
 
         Returns
         -------
-        a nested dictionary of neighborhoods, where the keys are ['cell name']['reference name']
-        where 'cell name' is the cell name (Conklin), and 'reference name' is the file name,
-        a neighborhood is a dictionary of contact surfaces indexed by cell names
-        it only considers the first time point after the division
+        Keeps a copy of 'cell_lineage', 'cell_name', 'cell_contact_surface' and 'cell_contact_surface'
+        of each atlas/embryo of the list
 
         """
         proc = "add_atlases"
@@ -635,11 +667,10 @@ class Atlases(object):
         self.temporal_alignment(time_digits_for_cell_id=time_digits_for_cell_id)
         atlases = self.get_atlases()
         for n in atlases:
-            msg = "    - "
+            msg = "   ... "
             msg += "linear time warping of '" + str(n) + "' wrt '" + str(self._ref_atlas) + "' is "
-            msg += str(atlases[n].temporal_alignment)
+            msg += "({:.3f}, {:.3f})".format(atlases[n].temporal_alignment[0], atlases[n].temporal_alignment[1])
             monitoring.to_log_and_console(msg, 1)
-        monitoring.to_log_and_console("    done", 1)
 
     ############################################################
     #
@@ -1157,5 +1188,3 @@ def _figures_neighbor_histogram(atlases, parameters, time_digits_for_cell_id=4):
     f.write("'" + " + '.png')\n")
     f.write("else:\n")
     f.write("    plt.show()\n")
-
-    f.close()
