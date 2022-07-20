@@ -49,7 +49,7 @@ class NamingParameters(uatlasd.DivisionParameters):
 
         uatlasd.DivisionParameters.__init__(self, prefix=[prefix, "atlas_"])
 
-        doc = "\t Input property file to be named. Must contain lineage and contact surfaces"
+        doc = "\t Input property file to be named. Must contain lineage, volumes and contact surfaces\n"
         doc += "\t as well as some input names (one time point should be entirely named)."
         self.doc['inputFile'] = doc
         self.inputFile = []

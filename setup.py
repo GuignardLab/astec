@@ -12,7 +12,7 @@ pkgs = find_packages('src')
 
 setup_kwds = dict(
     name='astec',
-    version="1.5.0",
+    version="1.5.2",
     description=short_descr,
     long_description=readme,
     author="Gregoire Malandain",
@@ -38,6 +38,7 @@ setup_kwds = dict(
             'astec_embryoproperties=astec.bin.astec_embryoproperties:main',
             'astec_atlas=astec.bin.astec_atlas:main',
             'astec_atlas_naming=astec.bin.astec_atlas_naming:main',
+            'astec_atlas_init_naming=astec.bin.astec_atlas_init_naming:main',
         ],
     },
     keywords='',
