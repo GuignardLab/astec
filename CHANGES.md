@@ -1,5 +1,10 @@
 # Change Log
 
+## version 1.5.2
+
+- add utility to name one time point of an unnamed embryo from
+  a set of named atlases (astec_atlas_init_naming)
+
 ## version 1.5.1
 
 - add missing package in pkg/recipe/meta.yaml
