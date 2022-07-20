@@ -1388,7 +1388,7 @@ def _temporal_alignement(ref_cells_per_time, cells_per_time):
     return a, b
 
 
-def temporal_alignment(ref_lineage, lineage, time_digits_for_cell_id=4):
+def temporal_alignment(ref_lineage, lineage, ref_time_digits_for_cell_id=4, time_digits_for_cell_id=4):
     """
 
     Parameters
@@ -1403,13 +1403,14 @@ def temporal_alignment(ref_lineage, lineage, time_digits_for_cell_id=4):
         made comparable to the number of cells at time 'a * t + b' of the reference lineage.
 
     """
+    ref_div = 10 ** ref_time_digits_for_cell_id
     div = 10 ** time_digits_for_cell_id
 
     cells = list(set(ref_lineage.keys()).union(set([v for values in list(ref_lineage.values()) for v in values])))
     cells = sorted(cells)
     ref_cells_per_time = {}
     for c in cells:
-        t = int(c) // div
+        t = int(c) // ref_div
         ref_cells_per_time[t] = ref_cells_per_time.get(t, 0) + 1
 
     cells = list(set(lineage.keys()).union(set([v for values in list(lineage.values()) for v in values])))

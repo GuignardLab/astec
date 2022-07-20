@@ -6,12 +6,15 @@ import numpy as np
 import math
 import multiprocessing
 import itertools
+import pickle as pkl
 from sklearn.neighbors import NearestNeighbors
+
 
 import astec.utils.common as common
 import astec.utils.atlas_division as uatlasd
 import astec.utils.atlas_cell as uatlasc
 import astec.utils.atlas_embryo as uatlase
+import astec.utils.icp as icp
 import astec.utils.ioproperties as ioproperties
 
 #
@@ -24,13 +27,63 @@ monitoring = common.Monitoring()
 
 _instrumented_ = False
 
+
+########################################################################################
+#
+# transformations
+#
+########################################################################################
+
+def _rotation_matrix_from_rotation_vector(rot):
+    # Euler-Rodrigues formula
+    # R = I + f(theta) X(r) + g(theta) [X(r) * X(r)]
+    # theta: rotation angle (modulus of rotation vector),
+    # g(theta) = (1 - cos(theta)) / (theta * theta)
+    # f(theta) = sin(theta) / theta
+    # X(r): matrix of the cross product by r
+    mat = np.zeros((3, 3))
+
+    t2 = rot[0] * rot[0] + rot[1] * rot[1] + rot[2] * rot[2]
+    theta = math.sqrt(t2)
+
+    if theta > 1e-8:
+        f = math.sin(theta) / theta
+        g = (1.0 - math.cos(theta)) / t2
+
+        mat[0, 0] = 1.0 - g * (rot[1] * rot[1] + rot[2] * rot[2])
+        mat[1, 1] = 1.0 - g * (rot[2] * rot[2] + rot[0] * rot[0])
+        mat[2, 2] = 1.0 - g * (rot[0] * rot[0] + rot[1] * rot[1])
+
+        mat[0, 1] = g * rot[0] * rot[1]
+        mat[0, 2] = g * rot[0] * rot[2]
+        mat[1, 2] = g * rot[2] * rot[1]
+
+        mat[1, 0] = mat[0, 1]
+        mat[2, 0] = mat[0, 2]
+        mat[2, 1] = mat[1, 2]
+
+        mat[0, 1] -= f * rot[2]
+        mat[0, 2] += f * rot[1]
+        mat[1, 2] -= f * rot[0]
+
+        mat[1, 0] += f * rot[2]
+        mat[2, 0] -= f * rot[1]
+        mat[2, 1] += f * rot[0]
+
+    else:
+        mat[0, 0] = 1.0
+        mat[1, 1] = 1.0
+        mat[2, 2] = 1.0
+
+    return mat
+
+
 ########################################################################################
 #
 # classes
 # - computation parameters
 #
 ########################################################################################
-
 
 class EmbryoRegistrationParameters(common.PrefixedParameter):
     def __init__(self, prefix=None):
@@ -40,21 +93,60 @@ class EmbryoRegistrationParameters(common.PrefixedParameter):
         if "doc" not in self.__dict__:
             self.doc = {}
 
+        #
+        # initialization of the 3D rigid transformation
+        #
+        doc = "\t To coregister two embryos, a first 3D rotation is done that align vectors issued from\n"
+        doc += "\t the floating embryo (the embryo to be named) onto vectors issued from the reference\n"
+        doc += "\t embryo (an already named embryo)\n"
+        doc += "\t - 'sphere_wrt_z': an uniform sampling of 3D directions is done for the floating\n"
+        doc += "\t    embryo (parameter 'direction_sphere_radius') while the 'z' direction is used\n"
+        doc += "\t    for the reference embryo\n"
+        doc += "\t - 'sphere_wrt_symaxis': an uniform sampling of 3D directions is done for the floating\n"
+        doc += "\t    embryo (parameter 'direction_sphere_radius') while one (out of two) vector\n"
+        doc += "\t    defining the symmetry axis is used for the reference embryo\n"
+        doc += "\t    (to be used for test purposes)\n"
+        doc += "\t - 'symaxis_wrt_symaxis': symmetry direction candidates are used for the floating \n"
+        doc += "\t    embryo (parameters 'distribution_sphere_radius' and 'distribution_sigma') while\n"
+        doc += "\t    the two opposite vectors defining the symmetry axis is used for the reference embryo\n"
+        self.doc['rotation_initialization'] = doc
+        self.rotation_initialization = 'sphere_wrt_z'
+
         doc = "\t To get an uniform sampling of the 3d directions in space, a discrete sphere is build\n"
         doc += "\t and each point of the outer surface gives a sample. The larger the radius, the more\n"
         doc += "\t vectors and the higher computational time\n"
-        doc += "\t radius = 2: 26 vectors\n"
-        doc += "\t radius = 2.5: 54 vectors\n"
-        doc += "\t radius = 2.9: 66 vectors\n"
-        doc += "\t radius = 3: 90 vectors\n"
+        doc += "\t radius = 2.0: 26 vectors, angle between neighboring vectors in [36.26, 60.0] degrees\n"
+        doc += "\t radius = 2.3: 38 vectors, angle between neighboring vectors in [26.57, 54.74] degrees\n"
+        doc += "\t radius = 2.5: 54 vectors, angle between neighboring vectors in [24.09, 43.09] degrees\n"
+        doc += "\t radius = 2.9: 66 vectors, angle between neighboring vectors in [18.43, 43.09] degrees\n"
+        doc += "\t radius = 3.0: 90 vectors, angle between neighboring vectors in [17.72, 43.09] degrees\n"
+        doc += "\t radius = 3.5: 98 vectors, angle between neighboring vectors in [15.79, 32.51] degrees\n"
+        doc += "\t radius = 3.7: 110 vectors, angle between neighboring vectors in [15.26, 32.51] degrees\n"
+        doc += "\t radius = 3.8: 134 vectors, angle between neighboring vectors in [14.76, 29.50] degrees\n"
+        doc += "\t radius = 4.0: 222 vectors, angle between neighboring vectors in [10.31, 22.57] degrees\n"
+        doc += "\t radius = 5.0: 222 vectors, angle between neighboring vectors in [10.31, 22.57] degrees\n"
         self.doc['direction_sphere_radius'] = doc
         self.direction_sphere_radius = 2.5
 
+        #
+        # 2D rotation
+        #
         doc = "\t Increment (in degrees) between two successive angles when enumerating\n"
         doc += "\t rotation along the z axe\n"
         self.doc['z_rotation_angle_increment'] = doc
         self.z_rotation_angle_increment = 15
 
+        #
+        # save transformations into a file
+        #
+        doc = "\t File name to save or to read the transformations between the embryos.\n"
+        doc += "\t Useful when parsing name choice parameters (for test purposes then).\n"
+        self.doc['transformation_filename'] = doc
+        self.transformation_filename = None
+
+        #
+        #
+        #
         doc = "\t The residual value of a transformation is the sum of the smallest\n"
         doc += "\t distances between paired points. This parameter gives the ratio of\n"
         doc += "\t points to be retained\n"
@@ -76,10 +168,18 @@ class EmbryoRegistrationParameters(common.PrefixedParameter):
 
         common.PrefixedParameter.print_parameters(self)
 
+        self.varprint('rotation_initialization', self.rotation_initialization,
+                      self.doc.get('rotation_initialization', None))
+
         self.varprint('direction_sphere_radius', self.direction_sphere_radius,
                       self.doc.get('direction_sphere_radius', None))
+
         self.varprint('z_rotation_angle_increment', self.z_rotation_angle_increment,
                       self.doc.get('z_rotation_angle_increment', None))
+
+        self.varprint('transformation_filename', self.transformation_filename,
+                      self.doc.get('transformation_filename', None))
+
         self.varprint('pair_ratio_for_residual', self.pair_ratio_for_residual,
                       self.doc.get('pair_ratio_for_residual', None))
 
@@ -88,16 +188,24 @@ class EmbryoRegistrationParameters(common.PrefixedParameter):
     def write_parameters_in_file(self, logfile):
         logfile.write("\n")
         logfile.write("# \n")
-        logfile.write("# InitNamingParameters\n")
+        logfile.write("# EmbryoRegistrationParameters\n")
         logfile.write("# \n")
         logfile.write("\n")
 
         common.PrefixedParameter.write_parameters_in_file(self, logfile)
 
+        self.varwrite(logfile, 'rotation_initialization', self.rotation_initialization,
+                      self.doc.get('rotation_initialization', None))
+
         self.varwrite(logfile, 'direction_sphere_radius', self.direction_sphere_radius,
                       self.doc.get('direction_sphere_radius', None))
+
         self.varwrite(logfile, 'z_rotation_angle_increment', self.z_rotation_angle_increment,
                       self.doc.get('z_rotation_angle_increment', None))
+
+        self.varwrite(logfile, 'transformation_filename', self.transformation_filename,
+                      self.doc.get('transformation_filename', None))
+
         self.varwrite(logfile, 'pair_ratio_for_residual', self.pair_ratio_for_residual,
                       self.doc.get('pair_ratio_for_residual', None))
 
@@ -116,10 +224,18 @@ class EmbryoRegistrationParameters(common.PrefixedParameter):
 
     def update_from_parameters(self, parameters):
 
+        self.rotation_initialization = self.read_parameter(parameters, 'rotation_initialization',
+                                                           self.rotation_initialization)
+
         self.direction_sphere_radius = self.read_parameter(parameters, 'direction_sphere_radius',
                                                            self.direction_sphere_radius)
+
         self.z_rotation_angle_increment = self.read_parameter(parameters, 'z_rotation_angle_increment',
                                                               self.z_rotation_angle_increment)
+
+        self.transformation_filename = self.read_parameter(parameters, 'transformation_filename',
+                                                           self.transformation_filename)
+
         self.pair_ratio_for_residual = self.read_parameter(parameters, 'pair_ratio_for_residual',
                                                            self.pair_ratio_for_residual)
 
@@ -142,7 +258,7 @@ class InitNamingParameters(EmbryoRegistrationParameters, uatlase.AtlasParameters
     #
     ############################################################
 
-    def __init__(self, prefix='init_naming_'):
+    def __init__(self, prefix=None):
 
         if "doc" not in self.__dict__:
             self.doc = {}
@@ -150,10 +266,26 @@ class InitNamingParameters(EmbryoRegistrationParameters, uatlase.AtlasParameters
         EmbryoRegistrationParameters.__init__(self, prefix=prefix)
         uatlase.AtlasParameters.__init__(self, prefix=prefix)
 
+        doc = "\t if True, generate python files (prefixed by 'figures_') that generate figures.\n"
+        doc += "\t Those files will be saved into the 'outputDir' directory.\n"
+        doc += "\t 'generate_figure' can be\n"
+        doc += "\t - a boolean value: if True, all figure files are generated; if False, none of them\n"
+        doc += "\t - a string: if 'all', all figure files are generated; else, only the specified\n"
+        doc += "\t   figure file is generated (see below for the list)\n"
+        doc += "\t - a list of strings: if 'all' is in the list, all figure files are generated;\n"
+        doc += "\t   else, only the specified figure files are generated (see below for the list)\n"
+        doc += "\t List of figures:\n"
+        doc += "\t 'success-wrt-atlasnumber':\n"
+        doc += "\t    bla bla bla\n"
+        doc += "\t 'symmetry-axis':\n"
+        doc += "\t    bla bla bla\n"
+        self.doc['generate_figure'] = doc
+        self.generate_figure = False
+
         doc = "\t Input property file to be named. Must contain lineage, volumes and contact surfaces\n"
         doc += "\t as well as some input names (one time point should be entirely named).\n"
         self.doc['inputFile'] = doc
-        self.inputFile = []
+        self.inputFile = None
         doc = "\t Output property file."
         self.doc['outputFile'] = doc
         self.outputFile = None
@@ -325,6 +457,7 @@ def _build_vector_sphere(r=3):
     xv = []
     yv = []
     zv = []
+    angles = []
     for i in range(m.shape[0]):
         for j in range(m.shape[1]):
             for k in range(m.shape[2]):
@@ -334,398 +467,32 @@ def _build_vector_sphere(r=3):
                 dj = float(j) - float(c)
                 dk = float(k) - float(c)
                 norm = math.sqrt(di * di + dj * dj + dk * dk)
-                xv += [di / norm]
-                yv += [dj / norm]
-                zv += [dk / norm]
+                u = np.array([di / norm, dj / norm, dk / norm])
+                xv += [u[0]]
+                yv += [u[1]]
+                zv += [u[2]]
+                for di in range(-1, 2):
+                    for dj in range(-1, 2):
+                        for dk in range(-1, 2):
+                            if di == 0 and dj == 0 and dk == 0:
+                                continue
+                            if m[i+di][j+dj][k+dk] == 0:
+                                continue
+                            v = np.array([(i + di - c), (j + dj - c), (k + dk - c)])
+                            angles += [math.acos(np.dot(u, v / np.linalg.norm(v)))]
     v = np.zeros((3, len(xv)))
     v[0, :] = xv
     v[1, :] = yv
     v[2, :] = zv
+
+    monitoring.to_log_and_console("      ... direction distribution build with r = " + str(r), 2)
+    monitoring.to_log_and_console("          vectors = " + str(len(xv)), 2)
+    min_angles = min(angles)*180.0/np.pi
+    max_angles = max(angles) * 180.0 / np.pi
+    msg = "          angles between adjacent vectors in [{:.2f}, {:.2f}]".format(min_angles, max_angles)
+    monitoring.to_log_and_console(msg, 2)
+
     return v
-
-
-########################################################################################
-#
-# transformations
-#
-########################################################################################
-
-def _rotation_matrix_from_rotation_vector(rot):
-    # Euler-Rodrigues formula
-    # R = I + f(theta) X(r) + g(theta) [X(r) * X(r)]
-    # theta: rotation angle (modulus of rotation vector),
-    # g(theta) = (1 - cos(theta)) / (theta * theta)
-    # f(theta) = sin(theta) / theta
-    # X(r): matrix of the cross product by r
-    mat = np.zeros((3, 3))
-
-    t2 = rot[0] * rot[0] + rot[1] * rot[1] + rot[2] * rot[2]
-    theta = math.sqrt(t2)
-
-    if theta > 1e-8:
-        f = math.sin(theta) / theta
-        g = (1.0 - math.cos(theta)) / t2
-
-        mat[0, 0] = 1.0 - g * (rot[1] * rot[1] + rot[2] * rot[2])
-        mat[1, 1] = 1.0 - g * (rot[2] * rot[2] + rot[0] * rot[0])
-        mat[2, 2] = 1.0 - g * (rot[0] * rot[0] + rot[1] * rot[1])
-
-        mat[0, 1] = g * rot[0] * rot[1]
-        mat[0, 2] = g * rot[0] * rot[2]
-        mat[1, 2] = g * rot[2] * rot[1]
-
-        mat[1, 0] = mat[0, 1]
-        mat[2, 0] = mat[0, 2]
-        mat[2, 1] = mat[1, 2]
-
-        mat[0, 1] -= f * rot[2]
-        mat[0, 2] += f * rot[1]
-        mat[1, 2] -= f * rot[0]
-
-        mat[1, 0] += f * rot[2]
-        mat[2, 0] -= f * rot[1]
-        mat[2, 1] += f * rot[0]
-
-    else:
-        mat[0, 0] = 1.0
-        mat[1, 1] = 1.0
-        mat[2, 2] = 1.0
-
-    return mat
-
-
-def _rotation_matrix_from_quaternion(qr):
-    rot = np.zeros((3, 3))
-    n = qr[3] * qr[3] + qr[2] * qr[2] + qr[1] * qr[1] + qr[0] * qr[0]
-    rot[0, 0] = qr[0] * qr[0] + qr[1] * qr[1] - qr[2] * qr[2] - qr[3] * qr[3]
-    rot[1, 1] = qr[0] * qr[0] - qr[1] * qr[1] + qr[2] * qr[2] - qr[3] * qr[3]
-    rot[2, 2] = qr[0] * qr[0] - qr[1] * qr[1] - qr[2] * qr[2] + qr[3] * qr[3]
-    rot[0, 1] = (qr[1] * qr[2] - qr[0] * qr[3]) * 2.0
-    rot[0, 2] = (qr[1] * qr[3] + qr[0] * qr[2]) * 2.0
-    rot[1, 0] = (qr[1] * qr[2] + qr[0] * qr[3]) * 2.0
-    rot[1, 2] = (qr[2] * qr[3] - qr[0] * qr[1]) * 2.0
-    rot[2, 0] = (qr[1] * qr[3] - qr[0] * qr[2]) * 2.0
-    rot[2, 1] = (qr[2] * qr[3] + qr[0] * qr[1]) * 2.0
-    rot /= n
-    return rot
-
-
-########################################################################################
-#
-# least-square estimation
-#
-########################################################################################
-
-def _ls_rigid_transformation(ref=None, flo=None):
-    # compute the transformation that brings floating points onto the reference ones
-    proc = "_ls_rigid_transformation"
-    if ref.shape[0] != 4 or flo.shape[0] != 4:
-        monitoring.to_log_and_console(str(proc) + ": input matrices should be of shape[0]==4 (array of 4D points)")
-        return None
-    if ref.shape[1] != flo.shape[1]:
-        monitoring.to_log_and_console(str(proc) + ": input matrices should have equal shape[1]")
-        return None
-
-    # barycenters
-    ref_barycenter = np.average(ref, axis=1)
-    flo_barycenter = np.average(flo, axis=1)
-
-    # centered point clouds
-    cref = copy.deepcopy(ref)
-    for i in range(ref.shape[1]):
-        cref[:, i] = ref[:, i] - ref_barycenter
-    cflo = copy.deepcopy(flo)
-    for i in range(flo.shape[1]):
-        cflo[:, i] = flo[:, i] - flo_barycenter
-
-    #
-    # looking for the best rotation (expressed as a quaternion)
-    #
-    sum_ata = np.zeros((4, 4))
-    a = np.zeros((4, 4))
-    for i in range(ref.shape[1]):
-        a[0, 1:] = cflo[:3, i] - cref[:3, i]
-        a[1, 2] = - (cflo[2, i] + cref[2, i])
-        a[1, 3] = cflo[1, i] + cref[1, i]
-        a[2, 3] = - (cflo[0, i] + cref[0, i])
-        a[1:, 0] = - a[0, 1:]
-        a[2, 1] = - a[1, 2]
-        a[3, 1] = - a[1, 3]
-        a[3, 2] = - a[2, 3]
-        sum_ata += np.matmul(a.T, a)
-
-    # eigen values and vectors
-    # get the eigenvector corresponding to the smallest eigenvalue
-    evalues, evectors = np.linalg.eig(sum_ata)
-    i_min = np.argmin(evalues)
-
-    mat = np.zeros((4, 4))
-    mat[:3, :3] = _rotation_matrix_from_quaternion(evectors[:, i_min])
-    mat[3, 3] = 1
-    # translation part
-    rog = np.matmul(mat, flo_barycenter)
-    mat[:3, 3] = ref_barycenter[:3] - rog[:3]
-
-    return mat
-
-
-def _ls_similitude_transformation(ref=None, flo=None):
-    # compute the transformation that brings floating points onto the reference ones
-    proc = "_ls_rigid_transformation"
-    if ref.shape[0] != 4 or flo.shape[0] != 4:
-        monitoring.to_log_and_console(str(proc) + ": input matrices should be of shape[0]==4 (array of 4D points)")
-        return None
-    if ref.shape[1] != flo.shape[1]:
-        monitoring.to_log_and_console(str(proc) + ": input matrices should have equal shape[1]")
-        return None
-
-    # barycenters
-    ref_barycenter = np.average(ref, axis=1)
-    flo_barycenter = np.average(flo, axis=1)
-
-    # centered point clouds
-    cref = copy.deepcopy(ref)
-    for i in range(ref.shape[1]):
-        cref[:, i] = ref[:, i] - ref_barycenter
-    cflo = copy.deepcopy(flo)
-    for i in range(flo.shape[1]):
-        cflo[:, i] = flo[:, i] - flo_barycenter
-
-    #
-    # sum of squared modulus
-    #
-    sum_cref = np.sum(cref[:3, :] * cref[:3, :])
-    sum_cflo = np.sum(cflo[:3, :] * cflo[:3, :])
-
-    #
-    # looking for the best rotation (expressed as a quaternion)
-    #
-    sum_ata = np.zeros((4, 4))
-    a = np.zeros((4, 4))
-    for i in range(ref.shape[1]):
-        a[0, 1:] = cflo[:3, i] - cref[:3, i]
-        a[1, 2] = - (cflo[2, i] + cref[2, i])
-        a[1, 3] = cflo[1, i] + cref[1, i]
-        a[2, 3] = - (cflo[0, i] + cref[0, i])
-        a[1:, 0] = - a[0, 1:]
-        a[2, 1] = - a[1, 2]
-        a[3, 1] = - a[1, 3]
-        a[3, 2] = - a[2, 3]
-        sum_ata += np.matmul(a.T, a)
-
-    # eigen values and vectors
-    # get the eigenvector corresponding to the smallest eigenvalue
-    evalues, evectors = np.linalg.eig(sum_ata)
-    i_min = np.argmin(evalues)
-
-    mat = np.zeros((4, 4))
-    mat[:3, :3] = _rotation_matrix_from_quaternion(evectors[:, i_min])
-    mat[3, 3] = 1
-
-    #
-    # scaling
-    #
-    diff = cref - np.matmul(mat, cflo)
-    sum_diff = np.sum(diff[:3, :] * diff[:3, :])
-    scale = (sum_cflo + sum_cref - sum_diff) / (2 * sum_cflo)
-
-    # translation part
-    rog = np.matmul(mat, flo_barycenter)
-    mat[:3, :3] *= scale
-    mat[:3, 3] = ref_barycenter[:3] - scale * rog[:3]
-
-    return mat
-
-
-def _ls_affine_transformation(ref=None, flo=None):
-    # compute the transformation that brings floating points onto the reference ones
-    proc = "_ls_rigid_transformation"
-    if ref.shape[0] != 4 or flo.shape[0] != 4:
-        monitoring.to_log_and_console(str(proc) + ": input matrices should be of shape[0]==4 (array of 4D points)")
-        return None
-    if ref.shape[1] != flo.shape[1]:
-        monitoring.to_log_and_console(str(proc) + ": input matrices should have equal shape[1]")
-        return None
-
-    # barycenters
-    ref_barycenter = np.average(ref, axis=1)
-    flo_barycenter = np.average(flo, axis=1)
-
-    # centered point clouds
-    cref = copy.deepcopy(ref)
-    for i in range(ref.shape[1]):
-        cref[:, i] = ref[:, i] - ref_barycenter
-    cflo = copy.deepcopy(flo)
-    for i in range(flo.shape[1]):
-        cflo[:, i] = flo[:, i] - flo_barycenter
-
-    #
-    # covariance matrices
-    #
-    cov = np.zeros((3, 3))
-    cov_flo = np.zeros((3, 3))
-    for i in range(ref.shape[1]):
-        cov[0, :] += cref[0, i] * cflo[:3, i]
-        cov[1, :] += cref[1, i] * cflo[:3, i]
-        cov[2, :] += cref[2, i] * cflo[:3, i]
-        cov_flo[0, :] += cflo[0, i] * cflo[:3, i]
-        cov_flo[1, :] += cflo[1, i] * cflo[:3, i]
-        cov_flo[2, :] += cflo[2, i] * cflo[:3, i]
-
-    mat = np.zeros((4, 4))
-    mat[:3, :3] = np.matmul(cov, np.linalg.inv(cov_flo))
-    mat[3, 3] = 1
-
-    # translation part
-    rog = np.matmul(mat, flo_barycenter)
-    mat[:3, 3] = ref_barycenter[:3] - rog[:3]
-
-    return mat
-
-
-def _ls_transformation(ref=None, flo=None, transformation_type="affine"):
-    proc = "_ls_transformation"
-
-    if ref.shape[0] != 4 or flo.shape[0] != 4:
-        monitoring.to_log_and_console(str(proc) + ": input matrices should be of shape[0]==4 (array of 4D points)")
-        return None
-    if ref.shape[1] != flo.shape[1]:
-        monitoring.to_log_and_console(str(proc) + ": input matrices should have equal shape[1]")
-        return None
-
-    if transformation_type == "rigid":
-        return _ls_rigid_transformation(ref=ref, flo=flo)
-    elif transformation_type == "similitude":
-        return _ls_similitude_transformation(ref=ref, flo=flo)
-    elif transformation_type == "affine":
-        return _ls_affine_transformation(ref=ref, flo=flo)
-    monitoring.to_log_and_console(str(proc) + ": unknown transformation type '" + str(transformation_type) + "'")
-    return None
-
-
-def _lts_transformation(ref=None, flo=None, transformation_type="affine", retained_fraction=0.75, verbose=False):
-
-    proc = "_lts_transformation"
-    tol_r = 1e-4
-    tol_t = 1e-4
-    max_iterations = 100
-    iteration = 0
-
-    if ref.shape[0] != 4 or flo.shape[0] != 4:
-        monitoring.to_log_and_console(str(proc) + ": input matrices should be of shape[0]==4 (array of 4D points)")
-        return None
-    if ref.shape[1] != flo.shape[1]:
-        monitoring.to_log_and_console(str(proc) + ": input matrices should have equal shape[1]")
-        return None
-
-    mat = _ls_transformation(ref=ref, flo=flo, transformation_type=transformation_type)
-
-    while True:
-        pmat = copy.deepcopy(mat)
-        # residuals
-        diff = ref - np.matmul(mat, flo)
-        residuals = np.linalg.norm(diff, axis=0)
-        # print("residuals = " + str(residuals))
-        sort_index = np.argsort(residuals)
-        # print("sort_index = " + str(sort_index))
-        #
-        retained_points = int(retained_fraction * ref.shape[1])
-
-        # transformation on selected points
-        nref = np.zeros((4, retained_points))
-        nflo = np.zeros((4, retained_points))
-        for i in range(retained_points):
-            nref[:, i] = ref[:, sort_index[i]]
-            nflo[:, i] = flo[:, sort_index[i]]
-        mat = _ls_transformation(ref=nref, flo=nflo, transformation_type=transformation_type)
-        del nref
-        del nflo
-
-        # end condition
-        dmat = (pmat - mat) * (pmat - mat)
-        eps_r = math.sqrt(np.sum(dmat[:3, :3]))
-        eps_t = math.sqrt(np.sum(dmat[:3, 3]))
-        if verbose:
-            msg = "   lts #" + str(iteration) + ": " + "eps_r = " + str(eps_r) + " - " + "eps_t = " + str(eps_t)
-            monitoring.to_log_and_console(msg, 2)
-        if (eps_r < tol_r and eps_t < tol_t) or iteration >= max_iterations:
-            return mat
-        iteration += 1
-
-    # should not occur
-    return None
-
-
-########################################################################################
-#
-# icp
-#
-########################################################################################
-
-def icp(ref=None, flo=None, transformation_type="affine", estimation="lts", verbose=False):
-    proc = "icp"
-    tol_r = 1e-4
-    tol_t = 1e-4
-    max_iterations = 100
-    iteration = 0
-
-    if ref.shape[0] != 3 or flo.shape[0] != 3:
-        print(proc + ": input matrices should be of shape[0]==3 (array of 3D points)")
-        return None
-
-    mat = np.identity(4)
-
-    # transform to 4D points
-    lref = np.ones((4, ref.shape[1]))
-    lref[:3, :] = ref
-    lflo = np.ones((4, flo.shape[1]))
-    lflo[:3, :] = flo
-
-    #
-    nbrs = NearestNeighbors(n_neighbors=1, algorithm='kd_tree').fit(lref.T)
-
-    while True:
-        pmat = copy.deepcopy(mat)
-        # update floating points
-        tflo = np.matmul(mat, lflo)
-        # get closest ref point for each floating point
-        # closest = _pairing(lref, tflo)
-        distances, indices = nbrs.kneighbors(tflo.T)
-        closest = indices.flatten()
-
-        # in case for the future
-        # anticipate that None can be a pairing
-        # get indices of flo that are paired
-        i_flo = [i for i, c in enumerate(closest) if c is not None]
-        npairings = len(i_flo)
-
-        # build pairs
-        sref = np.ones((4, npairings))
-        sflo = np.ones((4, npairings))
-        for i, j in enumerate(i_flo):
-            sflo[:, i] = tflo[:, j]
-            sref[:, i] = lref[:, closest[j]]
-
-        # compute incremental transformation and compose it with previous one
-        if estimation == "ls":
-            imat = _ls_transformation(sref, sflo, transformation_type=transformation_type)
-        elif estimation == "lts":
-            imat = _lts_transformation(sref, sflo, transformation_type=transformation_type, verbose=False)
-        else:
-            print(proc + ": unknown transformation type '" + str(transformation_type) + "'")
-            return None
-        mat = np.matmul(imat, pmat)
-
-        # end condition
-        dmat = (pmat - mat) * (pmat - mat)
-        eps_r = math.sqrt(np.sum(dmat[:3, :3]))
-        eps_t = math.sqrt(np.sum(dmat[:3, 3]))
-        if verbose:
-            print(" icp #" + str(iteration) + ": " + "eps_r = " + str(eps_r) + " - " + "eps_t = " + str(eps_t))
-        if (eps_r < tol_r and eps_t < tol_t) or iteration >= max_iterations:
-            return mat
-        iteration += 1
-    return None
 
 
 ########################################################################################
@@ -734,7 +501,15 @@ def icp(ref=None, flo=None, transformation_type="affine", estimation="lts", verb
 #
 ########################################################################################
 
-def _get_times(prop, n_cells=64, time_digits_for_cell_id=4):
+def _get_times(prop, n_cells=64, time_digits_for_cell_id=4, mode='floor'):
+    #
+    # get the time range with the specified number of cells
+    # if it does not exist, get the time range with the immediate upper ('ceil') or lower ('floor') number of cells
+    #
+    proc = "_get_times"
+    #
+    # count the cells per time
+    #
     cells = list(prop.keys())
     cells = sorted(cells)
     cells_per_time = {}
@@ -742,45 +517,53 @@ def _get_times(prop, n_cells=64, time_digits_for_cell_id=4):
     for c in cells:
         t = int(c) // div
         cells_per_time[t] = cells_per_time.get(t, 0) + 1
+    #
+    # sort the cells_per_time dictionary by time
+    # assume that cell number will also be in increasing order
+    #
+    cells_per_time = dict(sorted(cells_per_time.items(), key=lambda item: item[0]))
+
+    #
+    # if there are times with the specified number of cells, return them
+    #
     times = [t for t in cells_per_time if cells_per_time[t] == n_cells]
-    return times
+    if len(times) > 0:
+        return times, n_cells
+
+    #
+    # if not, find times with immediate lower and upper number of cells
+    #
+
+    mincells = [cells_per_time[t] for t in cells_per_time if cells_per_time[t] < n_cells]
+    maxcells = [cells_per_time[t] for t in cells_per_time if cells_per_time[t] > n_cells]
+
+    if mode == 'floor':
+        if len(mincells) > 0:
+            n_cells = max(mincells)
+            times = [t for t in cells_per_time if cells_per_time[t] == n_cells]
+            return times, n_cells
+        if len(maxcells) > 0:
+            n_cells = min(maxcells)
+            times = [t for t in cells_per_time if cells_per_time[t] == n_cells]
+            return times, n_cells
+    elif mode == 'ceil':
+        if len(maxcells) > 0:
+            n_cells = min(maxcells)
+            times = [t for t in cells_per_time if cells_per_time[t] == n_cells]
+            return times, n_cells
+        if len(mincells) > 0:
+            n_cells = max(mincells)
+            times = [t for t in cells_per_time if cells_per_time[t] == n_cells]
+            return times, n_cells
+
+    msg = "unknown estimation mode '" + str(mode) + "'"
+    monitoring.to_log_and_console(proc + ": " + msg)
+    return None, None
 
 
-def _embryo_barycenter(embryo, t, time_digits_for_cell_id=4):
-    b = np.zeros(3)
-    s = 0.0
-    volumes = embryo.cell_volume
+def _get_barycenters(embryo, t, transformation=None):
     barycenters = embryo.cell_barycenter
-    div = 10 ** time_digits_for_cell_id
-    for c in volumes:
-        if int(c) // div != t:
-            continue
-        if int(c) % div == 1 or int(c) % div == 0:
-            continue
-        if c not in barycenters:
-            continue
-        b += volumes[c] * barycenters[c]
-        s += volumes[c]
-    b /= s
-    return b
-
-
-def _embryo_volume(embryo, t, time_digits_for_cell_id=4):
-    s = 0.0
-    volumes = embryo.cell_volume
-    div = 10 ** time_digits_for_cell_id
-    for c in volumes:
-        if int(c) // div != t:
-            continue
-        if int(c) % div == 1 or int(c) % (10 ** 4) == 0:
-            continue
-        s += volumes[c]
-    return s
-
-
-def _get_barycenters(embryo, t, transformation=None, time_digits_for_cell_id=4):
-    barycenters = embryo.cell_barycenter
-    div = 10 ** time_digits_for_cell_id
+    div = 10 ** embryo.time_digits_for_cell_id
     lc = [c for c in barycenters if (int(c) // div == t) and int(c) % div != 1]
     b = np.zeros((3, len(lc)))
     if transformation is None:
@@ -796,35 +579,56 @@ def _get_barycenters(embryo, t, transformation=None, time_digits_for_cell_id=4):
 
 ########################################################################################
 #
+# direction distribution
+#
+########################################################################################
+
+########################################################################################
+#
 #
 #
 ########################################################################################
 
 def _coregister_embryos_one_direction(parameters):
-    n, i, ni, scale_mat, flo_embryo_bar, ref_embryo_bar, flo_bars, ref_bars, registration_par, verbose = parameters
+    n, vz, i, ni, scale_mat, flo_embryo_bar, ref_embryo_bar, flo_bars, ref_bars, registration_par, verbose = parameters
 
     if verbose:
-        msg = "processing direction[" + str(i) + "/" + str(ni) + "] = " + str(n)
+        msg = "processing registration[{:3d}/{:3d}] = ".format(i, ni)
+        msg += "({:5.2f} {:5.2f} {:5.2f})".format(n[0], n[1], n[2]) + " vs "
+        msg += "({:5.2f} {:5.2f} {:5.2f})".format(vz[0], vz[1], vz[2])
         monitoring.to_log_and_console("      ... " + msg)
+
+    # vz normalisation
+    vz /= np.linalg.norm(vz)
+
     #
     rotz = np.identity(4)
     rotxy = np.identity(4)
-    sp = np.dot(n, np.array([0, 0, 1]))
+    sp = np.dot(n, vz)
 
+    #
+    # rotation that put n along vz
+    #
     if sp > 0.999:
-        # n is aligned with z
+        # n is aligned with vz
         # do nothing
         pass
     elif sp < -0.999:
-        # n is aligned with -z
-        # rotation of pi wrt x
-        rotz[:3, :3] = _rotation_matrix_from_rotation_vector(np.array([np.pi, 0, 0]))
+        # n is aligned with -vz
+        # rotation of pi wrt x x vz (if x has the smallest coordinate)
+        if abs(vz[0]) <= abs(vz[1]) and abs(vz[0]) <= abs(vz[2]):
+            vrot = np.cross(vz, np.array([1, 0, 0]))
+        elif abs(vz[1]) <= abs(vz[0]) and abs(vz[1]) <= abs(vz[2]):
+            vrot = np.cross(vz, np.array([0, 1, 0]))
+        else:
+            vrot = np.cross(vz, np.array([0, 0, 1]))
+        vrot *= np.pi / np.linalg.norm(vrot)
+        rotz[:3, :3] = _rotation_matrix_from_rotation_vector(vrot)
     else:
         # rotation of math.acos(n.z) wrt vector n x z
         # that puts n along z
-        vrot = np.cross(n, np.array([0, 0, 1]))
-        vnor = np.linalg.norm(vrot * vrot)
-        vrot *= math.acos(sp) / vnor
+        vrot = np.cross(n, vz)
+        vrot *= math.acos(sp) / np.linalg.norm(vrot)
         rotz[:3, :3] = _rotation_matrix_from_rotation_vector(vrot)
 
     # for 64 cells, the smallest angle (from the barycenter) between 2 adjacent cells
@@ -835,7 +639,7 @@ def _coregister_embryos_one_direction(parameters):
     angles = np.linspace(0, 2 * np.pi, int(360 / registration_par.z_rotation_angle_increment), endpoint=False)
     for a in angles:
         # compute initial transformation
-        rotxy[:3, :3] = _rotation_matrix_from_rotation_vector(a * np.array([0, 0, 1]))
+        rotxy[:3, :3] = _rotation_matrix_from_rotation_vector(a * vz)
         init_mat = np.matmul(rotxy, np.matmul(rotz, scale_mat))
         trs = ref_embryo_bar - np.matmul(init_mat, flo_embryo_bar)
         init_mat[:3, 3] = trs[:3]
@@ -847,14 +651,14 @@ def _coregister_embryos_one_direction(parameters):
         for j in range(flo_bars.shape[1]):
             v[:3] = flo_bars[:, j]
             flo[:, j] = (np.matmul(init_mat, v))[:3]
-        rigid_mat = icp(ref=ref_bars, flo=flo, transformation_type="rigid")
+        rigid_mat = icp.icp(ref=ref_bars, flo=flo, transformation_type="rigid")
         res_rigid_mat = np.matmul(rigid_mat, init_mat)
         # compute an affine transformation
         v = np.ones(4)
         for j in range(flo_bars.shape[1]):
             v[:3] = flo_bars[:, j]
             flo[:, j] = (np.matmul(res_rigid_mat, v))[:3]
-        affine_mat = icp(ref=ref_bars, flo=flo, transformation_type="affine")
+        affine_mat = icp.icp(ref=ref_bars, flo=flo, transformation_type="affine")
         res_affine_mat = np.matmul(affine_mat, res_rigid_mat)
 
         # compute residuals
@@ -880,9 +684,7 @@ def _coregister_embryos_one_direction(parameters):
     return rigid_matrice, affine_matrice, average_residual
 
 
-def _coregister_embryos_one_timepoint(embryo, atlas, parameters, floating_time, reference_time,
-                                      time_digits_for_cell_id=4, verbose=True):
-    proc = "_coregister_embryos_one_timepoint"
+def _coregister_embryos_one_timepoint(embryo, info_embryo, atlas, info_atlas, parameters, verbose=True):
 
     # reference embryo
     # ref_barycenter is the barycenter in homogeneous coordinates
@@ -890,15 +692,13 @@ def _coregister_embryos_one_timepoint(embryo, atlas, parameters, floating_time, 
     # ref_barycenters is an np.array of shape (3, n) of the n cell barycenters at time reference_time
     # ref_barycenters[0][i] is the the x coordinate of the ith barycenter
 
-    ref_embryo_barycenter = np.ones(4)
-    ref_embryo_barycenter[:3] = _embryo_barycenter(atlas, reference_time,
-                                                   time_digits_for_cell_id=time_digits_for_cell_id)
-    ref_barycenters = _get_barycenters(atlas, reference_time, time_digits_for_cell_id=time_digits_for_cell_id)
-
     flo_embryo_barycenter = np.ones(4)
-    flo_embryo_barycenter[:3] = _embryo_barycenter(embryo, floating_time,
-                                                   time_digits_for_cell_id=time_digits_for_cell_id)
-    flo_barycenters = _get_barycenters(embryo, floating_time, time_digits_for_cell_id=time_digits_for_cell_id)
+    flo_embryo_barycenter[:3] = info_embryo['barycenter']
+    flo_barycenters = _get_barycenters(embryo, info_embryo['first_time'])
+
+    ref_embryo_barycenter = np.ones(4)
+    ref_embryo_barycenter[:3] = info_atlas['barycenter']
+    ref_barycenters = _get_barycenters(atlas, info_atlas['first_time'])
 
     # scale to correct for volume differences
     # a voxel size correction of scale = np.cbrt(volref / volflo), applied to the floating points
@@ -908,20 +708,10 @@ def _coregister_embryos_one_timepoint(embryo, atlas, parameters, floating_time, 
     # volref * (ref.get_voxelsize_correction())^3 = volflo * (flo.get_voxelsize_correction())^3
     # it somes that scale = flo.get_voxelsize_correction() / ref.get_voxelsize_correction()
 
-    scale = embryo.get_voxelsize_correction(floating_time) / atlas.get_voxelsize_correction(reference_time)
+    scale = embryo.get_voxelsize_correction(info_atlas['first_time']) / \
+            atlas.get_voxelsize_correction(info_embryo['first_time'])
     scale_mat = scale * np.identity(4)
     scale_mat[3, 3] = 1.0
-    if False:
-        ref_volume = _embryo_volume(atlas, reference_time, time_digits_for_cell_id=time_digits_for_cell_id)
-        flo_volume = _embryo_volume(embryo, floating_time, time_digits_for_cell_id=time_digits_for_cell_id)
-        monitoring.to_log_and_console("ref volume = " + str(ref_volume) + " - flo volume = " + str(flo_volume))
-        monitoring.to_log_and_console("\t corrected flo volume = " + str(flo_volume * scale * scale * scale))
-
-    #
-    # get a set of vectors
-    #
-    vectors = _build_vector_sphere(parameters.direction_sphere_radius)
-
 
     #
     # we could improve the computational time by parallelising the calculation
@@ -930,17 +720,44 @@ def _coregister_embryos_one_timepoint(embryo, atlas, parameters, floating_time, 
     pool = multiprocessing.Pool(processes=7)
     mapping = []
 
-    for i in range(vectors.shape[1]):
-        n = vectors[:, i]
-        mapping.append((vectors[:, i], i+1, vectors.shape[1], scale_mat, flo_embryo_barycenter, ref_embryo_barycenter,
-                        flo_barycenters, ref_barycenters, parameters, verbose))
-    outputs = pool.map(_coregister_embryos_one_direction, mapping)
-    pool.close()
-    pool.terminate()
+    #
+    # 2D registrations that put info_atlas['vectors'][:, j] on  info_embryo['vectors'][:, i]
+    #
+    if True:
+        #
+        # parallel
+        #
+        for j in range(info_atlas['vectors'].shape[1]):
+            for i in range(info_embryo['vectors'].shape[1]):
+                mapping.append((info_embryo['vectors'][:, i], info_atlas['vectors'][:, j],
+                                j*info_embryo['vectors'].shape[1]+i+1,
+                                info_atlas['vectors'].shape[1]*info_embryo['vectors'].shape[1], scale_mat,
+                                flo_embryo_barycenter, ref_embryo_barycenter, flo_barycenters, ref_barycenters,
+                                parameters, verbose))
+
+        outputs = pool.map(_coregister_embryos_one_direction, mapping)
+        pool.close()
+        pool.terminate()
+    else:
+        #
+        # sequential
+        #
+        outputs = []
+        for j in range(info_atlas['vectors'].shape[1]):
+            for i in range(info_embryo['vectors'].shape[1]):
+                par = (info_embryo['vectors'][:, i], info_atlas['vectors'][:, j],
+                       j*info_embryo['vectors'].shape[1]+i+1,
+                       info_atlas['vectors'].shape[1]*info_embryo['vectors'].shape[1], scale_mat,
+                       flo_embryo_barycenter, ref_embryo_barycenter, flo_barycenters, ref_barycenters,
+                       parameters, verbose)
+                outputs += [_coregister_embryos_one_direction(par)]
 
     rigid_matrice = []
     affine_matrice = []
     average_residual = []
+    #
+    # outputs is a list of tuples
+    #
     for rig_mat, aff_mat, lr in outputs:
         rigid_matrice += rig_mat
         affine_matrice += aff_mat
@@ -956,46 +773,29 @@ def _coregister_embryos_one_timepoint(embryo, atlas, parameters, floating_time, 
         msg += " - average = {:5.2f}".format(ave_residual)
         msg += " (+/- stddev = {:5.2f}".format(stddev_residual) + ")"
         monitoring.to_log_and_console("   ... " + msg)
-
     return rigid_matrice[index_min], affine_matrice[index_min]
 
 
-def _coregister_embryos(transformations, embryo, atlas, atlas_name, parameters, time_digits_for_cell_id=4,
-                        verbose=True):
+def _coregister_embryos(transformations, embryo, info_embryo, atlas, info_atlas, atlas_name, parameters,
+                        time_digits_for_cell_id=4, verbose=True):
     proc = "_coregister_embryos"
 
-    flotimes = _get_times(embryo.cell_contact_surface, parameters.cell_number,
-                          time_digits_for_cell_id=time_digits_for_cell_id)
-    if len(flotimes) == 0:
-        msg = "there is no time points with " + str(parameters.cell_number) + " in the embryo to be named\n"
-        msg += "\t skip registration with atlas '" + str(atlas_name) + "'"
-        monitoring.to_log_and_console("   ... " + msg)
-        return transformations
-    first_flotime = statistics.median_low(flotimes)
-    reftimes = _get_times(atlas.cell_contact_surface, parameters.cell_number,
-                          time_digits_for_cell_id=time_digits_for_cell_id)
-    if len(reftimes) == 0:
-        msg = "there is no time points with " + str(parameters.cell_number) + " in the atlas\n"
-        msg += "\t skip registration with atlas '" + str(atlas_name) + "'"
-        monitoring.to_log_and_console("   ... " + msg)
-        return transformations
-    first_reftime = statistics.median_low(reftimes)
+    first_flotime = info_embryo['first_time']
+    first_reftime = info_atlas['first_time']
 
     if verbose:
         msg = "co-registration of time #" + str(first_flotime) + " of embryo to be named"
         msg += " with time #" + str(first_reftime) + " of atlas '" + str(atlas_name) + "'"
         monitoring.to_log_and_console("   ... " + msg)
+
     #
-    # the rigid transformation can be used to initialize rigid transformations when
-    # registering other times of embryo to be named to other times of atlas
     #
-    rigid_mat, affine_mat = _coregister_embryos_one_timepoint(embryo, atlas, parameters, first_flotime, first_reftime,
-                                                              time_digits_for_cell_id=time_digits_for_cell_id,
-                                                              verbose=verbose)
+    #
     if first_flotime not in transformations:
         transformations[first_flotime] = {}
     if atlas_name not in transformations[first_flotime]:
         transformations[first_flotime][atlas_name] = {}
+
     if first_reftime in transformations[first_flotime][atlas_name]:
         if verbose:
             msg = "transformation time #" + str(first_flotime) + " of embryo to be named"
@@ -1003,196 +803,140 @@ def _coregister_embryos(transformations, embryo, atlas, atlas_name, parameters, 
             msg += " already exists"
             monitoring.to_log_and_console(proc + ": " + msg)
     else:
+        #
+        # the rigid transformation can be used to initialize rigid transformations when
+        # registering other times of embryo to be named to other times of atlas
+        #
+        rigid_mat, affine_mat = _coregister_embryos_one_timepoint(embryo, info_embryo, atlas, info_atlas, parameters,
+                                                                  verbose=verbose)
         transformations[first_flotime][atlas_name][first_reftime] = affine_mat
 
     return transformations
 
 
-########################################################################################
 #
+# register one embryo with respect to several named embryos
 #
-#
-########################################################################################
-
-def _get_success(atlases, parameters, time_digits_for_cell_id=4, verbose=True):
-    monitoring.to_log_and_console(" - compute transformations ")
-    #
-    # compute transformations
-    #
-    all_atlases = atlases.get_atlases()
-    transformations = {}
-    for a in all_atlases:
-        #
-        # compute transformations with a as the floating embryo
-        #
-        transformations[a] = {}
-        for b in all_atlases:
-            if b == a:
-                continue
-            monitoring.to_log_and_console("   - compute transformation of '" + str(a) + "' versus '" + str(b) + "'")
-            transformations[a] = _coregister_embryos(transformations[a], all_atlases[a], all_atlases[b], b, parameters,
-                                                     time_digits_for_cell_id=time_digits_for_cell_id, verbose=verbose)
+def _register_embryos(transformations, embryo, atlases, parameters, time_digits_for_cell_id=4, verbose=True):
+    proc = "_register_embryos"
 
     #
-    # set names
+    # get the time range of the floating embryo with the specified number of cells
     #
-    right_naming = {}
-    wrong_naming = {}
-    for a in all_atlases:
-        # atlas to be tested
-        ref_test_atlas = copy.deepcopy(all_atlases[a])
-        test_atlas = copy.deepcopy(ref_test_atlas)
-        test_atlas.del_cell_name()
-        # reference atlas list
-        ref_atlas_list = list(all_atlases.keys())
-        ref_atlas_list.remove(a)
+    lowerflotimerange, lowerncells = _get_times(embryo.cell_contact_surface, parameters.cell_number,
+                                                time_digits_for_cell_id=time_digits_for_cell_id, mode='floor')
+    upperflotimerange, upperncells = _get_times(embryo.cell_contact_surface, parameters.cell_number,
+                                                time_digits_for_cell_id=time_digits_for_cell_id, mode='ceil')
+    if lowerncells <= parameters.cell_number <= upperncells:
+        cell_number = parameters.cell_number
+        if cell_number - lowerncells <= upperncells - cell_number:
+            flotimerange = lowerflotimerange
+        else:
+            flotimerange = upperflotimerange
+    elif lowerncells == upperncells:
+        cell_number = lowerncells
+        flotimerange = lowerflotimerange
+        msg = "will register embryos at " + str(cell_number) + " instead of " + str(parameters.cell_number) + " cells"
+        monitoring.to_log_and_console(proc + ": " + msg)
+    else:
+        msg = "weird, requested cell number was " + str(parameters.cell_number) + ". "
+        msg += "Found cell range was [" + str(lowerncells) + ", " + str(upperncells) + "]"
+        monitoring.to_log_and_console(proc + ": " + msg)
+        return transformations
 
-        #
-        # pick combinations of reference atlas
-        #
-        monitoring.to_log_and_console(" - compare " + str(a) + " versus " + str(ref_atlas_list))
-        for i in range(1, len(ref_atlas_list) + 1):
-            subset_atlas = list(itertools.combinations(ref_atlas_list, i))
-            monitoring.to_log_and_console("      " + str(len(subset_atlas)) + " combinations of " + str(i) + " atlases")
-            for s in subset_atlas:
-                monitoring.to_log_and_console("     - compare " + str(a) + " versus " + str(s))
-                #
-                # build references atlases
-                #
-                tmp_atlases = uatlasd.DivisionAtlases(parameters=parameters)
-                tmp = {}
-                for b in s:
-                    tmp[b] = all_atlases[b]
-                tmp_atlases.set_atlases(tmp)
-                #
-                # collect names from each co-registration
-                #
-                name_both, name_flo, name_ref = _get_floating_names(transformations[a], test_atlas, tmp_atlases,
-                                                                    parameters,
-                                                                    time_digits_for_cell_id=time_digits_for_cell_id,
-                                                                    verbose=verbose)
+    flo_embryo = {'time_range': flotimerange, 'cell_number': cell_number}
+    flo_embryo['first_time'] = statistics.median_low(flo_embryo['time_range'])
+    flo_embryo['barycenter'] = embryo.get_embryo_barycenter(flo_embryo['first_time'])
 
-                #
-                # get consensual names
-                #
-                prop = _iterate_unanimity_names(name_both, parameters, verbose=verbose)
+    msg = "   ... embryo to be named: "
+    msg += "chosen time is " + str(flo_embryo['first_time']) + " out of "
+    msg += str(flo_embryo['time_range']) + "\n"
+    msg += "                    number of cells is " + str(flo_embryo['cell_number'])
+    monitoring.to_log_and_console(msg)
 
-                #
-                #
-                #
-                right, wrong, not_in = _test_naming(prop, ref_test_atlas.get_property(),
-                                                    time_digits_for_cell_id=time_digits_for_cell_id, verbose=False)
-                right_naming[i] = right_naming.get(i, []) + [right]
-                wrong_naming[i] = wrong_naming.get(i, []) + [wrong]
-
-    # print("right_naming = " + str(right_naming))
-    # print("wrong_naming = " + str(wrong_naming))
-    return right_naming, wrong_naming
-
-
-def _figure_success_wrt_atlasnumber(atlases, parameters, time_digits_for_cell_id=4):
-    right_naming, wrong_naming = _get_success(atlases, parameters, time_digits_for_cell_id=time_digits_for_cell_id,
-                                              verbose=False)
-    proc = "_figure_success_wrt_atlasnumber"
-
-    filename = 'figure_success_wrt_atlasnumber'
-    file_suffix = None
-    if parameters.figurefile_suffix is not None and isinstance(parameters.figurefile_suffix, str) and \
-            len(parameters.figurefile_suffix) > 0:
-        file_suffix = '_' + parameters.figurefile_suffix
-    if file_suffix is not None:
-        filename += file_suffix
-    filename += '.py'
-
-    if parameters.outputDir is not None and isinstance(parameters.outputDir, str):
-        if not os.path.isdir(parameters.outputDir):
-            if not os.path.exists(parameters.outputDir):
-                os.makedirs(parameters.outputDir)
+    #
+    # get the time range of the reference embryos with the specified number of cells
+    #
+    ref_atlases = {}
+    for a in atlases.keys():
+        lowerreftimerange, lowerncells = _get_times(atlases[a].cell_contact_surface, cell_number,
+                                                    time_digits_for_cell_id=time_digits_for_cell_id, mode='floor')
+        upperreftimerange, upperncells = _get_times(atlases[a].cell_contact_surface, cell_number,
+                                                    time_digits_for_cell_id=time_digits_for_cell_id, mode='ceil')
+        if lowerncells <= cell_number <= upperncells:
+            if cell_number - lowerncells <= upperncells - cell_number:
+                ref_atlases[a] = {'time_range': lowerreftimerange, 'cell_number': lowerncells}
             else:
-                monitoring.to_log_and_console(proc + ": '" + str(parameters.outputDir) + "' is not a directory ?!")
-        if os.path.isdir(parameters.outputDir):
-            filename = os.path.join(parameters.outputDir, filename)
+                ref_atlases[a] = {'time_range': upperreftimerange, 'cell_number': upperncells}
+            ref_atlases[a]['first_time'] = statistics.median_low(ref_atlases[a]['time_range'])
+            ref_atlases[a]['barycenter'] = atlases[a].get_embryo_barycenter(ref_atlases[a]['first_time'])
+            msg = "   ... reference embryo '" + str(a) + "': "
+            msg += "chosen time is " + str(ref_atlases[a]['first_time']) + " out of "
+            msg += str(ref_atlases[a]['time_range']) + "\n"
+            msg += "                    number of cells is " + str(ref_atlases[a]['cell_number'])
+            monitoring.to_log_and_console(msg)
+            continue
+        msg = "requested cell number of " + str(parameters.cell_number) + " is not in the found "
+        msg += "cell range of atlas '" + str(a) + "' which is [" + str(lowerncells) + ", " + str(upperncells) + "].\n"
+        msg += "\t skip atlas '" + str(a) + "'"
+        monitoring.to_log_and_console(proc + ": " + msg)
+
     #
     #
     #
-    f = open(filename, "w")
+    if parameters.rotation_initialization == 'sphere_wrt_z' or \
+            parameters.rotation_initialization == 'sphere_wrt_symaxis':
+        flo_embryo['vectors'] = _build_vector_sphere(parameters.direction_sphere_radius)
+    elif parameters.rotation_initialization == 'symaxis_wrt_symaxis':
+        candidates = embryo.get_direction_distribution_candidates(flo_embryo['first_time'], parameters)
+        nvectors = len(candidates)
+        if isinstance(parameters.maxima_number, int) and 0 < parameters.maxima_number < nvectors:
+            nvectors = parameters.maxima_number
+        flo_embryo['vectors'] = np.zeros((3, nvectors))
+        for i, p in enumerate(candidates):
+            if i >= nvectors:
+                break
+            flo_embryo['vectors'][:, i] = p['vector']
+    else:
+        msg = "unknown rotation initialization '" + str(parameters.rotation_initialization) + "'"
+        monitoring.to_log_and_console(proc + ": " + msg)
+        return transformations
 
-    f.write("import numpy as np\n")
-    f.write("import matplotlib.pyplot as plt\n")
+    if parameters.rotation_initialization == 'sphere_wrt_z':
+        for a in ref_atlases:
+            ref_atlases[a]['vectors'] = np.zeros((3, 1))
+            ref_atlases[a]['vectors'][2, 0] = 1
+    elif parameters.rotation_initialization == 'sphere_wrt_symaxis' or \
+            parameters.rotation_initialization == 'symaxis_wrt_symaxis':
+        for a in ref_atlases:
+            ref_atlases[a]['vectors'] = np.zeros((3, 1))
+            ref_atlases[a]['vectors'][:, 0] = atlases[a].get_symmetry_axis_from_names(ref_atlases[a]['first_time'])
+    else:
+        msg = "unknown rotation initialization '" + str(parameters.rotation_initialization) + "'"
+        monitoring.to_log_and_console(proc + ": " + msg)
+        return transformations
 
-    f.write("\n")
-    f.write("savefig = True\n")
+    for a in ref_atlases:
+        transformations = _coregister_embryos(transformations, embryo, flo_embryo, atlases[a], ref_atlases[a], a,
+                                              parameters, time_digits_for_cell_id=time_digits_for_cell_id,
+                                              verbose=verbose)
 
-    f.write("\n")
-    f.write("right_naming = " + str(right_naming) + "\n")
-    f.write("wrong_naming = " + str(wrong_naming) + "\n")
-    f.write("labels = sorted(list(right_naming.keys()))\n")
-
-    f.write("\n")
-    f.write("right_list = []\n")
-    f.write("wrong_list = []\n")
-    f.write("for i, l in enumerate(labels):\n")
-    f.write("    right_list += [right_naming[l]]\n")
-    f.write("    wrong_list += [wrong_naming[l]]\n")
-
-    f.write("\n")
-    f.write("fig, ax = plt.subplots(figsize=(16, 6.5))\n")
-    f.write("rbox = ax.boxplot(right_list, patch_artist=False)\n")
-    f.write("wbox = ax.boxplot(wrong_list, patch_artist=False)\n")
-
-    f.write("\n")
-    f.write("rmed = [b.get_ydata()[0] for b in rbox['medians']]\n")
-    f.write("wmed = [b.get_ydata()[0] for b in wbox['medians']]\n")
-    f.write("ax.plot(labels, rmed, color='blue', label='right names')\n")
-    f.write("ax.plot(labels, wmed, color='cyan', label='wrong names')\n")
-
-    f.write("\n")
-    f.write("ax.yaxis.grid(True)\n")
-    f.write("ax.set_xticks([y + 1 for y in range(len(right_naming))])\n")
-    f.write("ax.set_xlabel('Number of atlases')\n")
-    f.write("ax.set_ylabel('#cells')\n")
-    f.write("ax.legend()\n")
-
-    f.write("\n")
-    f.write("if savefig:\n")
-    f.write("    plt.savefig('success_wrt_atlasnumber")
-    if file_suffix is not None:
-        f.write(file_suffix)
-    f.write("'" + " + '.png')\n")
-    f.write("else:\n")
-    f.write("    plt.show()\n")
-
-    f.close()
+    return transformations, flo_embryo['time_range']
 
 
-def _generate_figure(atlases, parameters, time_digits_for_cell_id=4):
-
-    generate_figure = (isinstance(parameters.generate_figure, bool) and parameters.generate_figure) or \
-                      (isinstance(parameters.generate_figure, str) and parameters.generate_figure == 'all') or \
-                      (isinstance(parameters.generate_figure, list) and 'all' in parameters.generate_figure)
-
-    if (isinstance(parameters.generate_figure, str) and parameters.generate_figure == 'success-wrt-atlasnumber') \
-            or (isinstance(parameters.generate_figure, list) and 'success-wrt-atlasnumber' in parameters.generate_figure) \
-            or generate_figure:
-        monitoring.to_log_and_console("... generate figure success versus atlas number", 1)
-        _figure_success_wrt_atlasnumber(atlases, parameters, time_digits_for_cell_id=time_digits_for_cell_id)
-        monitoring.to_log_and_console("... done", 1)
-
-
-########################################################################################
+#########################################################################################
 #
-#
+# assessment wrt ground-truth
 #
 ########################################################################################
 
 def _test_naming(prop, reference_prop, time_digits_for_cell_id=4, verbose=True):
-    proc = "_test_naming"
     #
     #
     #
-    cells = list(prop['cell_name'].keys())
+    cells = set(list(prop['cell_name'].keys()))
     div = 10 ** time_digits_for_cell_id
-    times = set([int(c) // div for c in cells])
+    times = list(set([int(c) // div for c in cells]))
     if len(times) == 0:
         if verbose:
             msg = "no names were set"
@@ -1202,30 +946,37 @@ def _test_naming(prop, reference_prop, time_digits_for_cell_id=4, verbose=True):
             msg = "weird, names were set on several time points " + str(times)
             monitoring.to_log_and_console("... " + msg)
 
-    refcells = [int(c) // div for c in reference_prop['cell_name'] if int(c) // div in times]
-    right_naming = 0
-    wrong_naming = 0
-    not_in_reference = 0
-    for c in cells:
-        if c not in reference_prop['cell_name']:
-            not_in_reference += 1
-            continue
+    refcells = set([c for c in reference_prop['cell_name'] if int(c) // div in times])
+
+    unnamed_cells = refcells.difference(cells)
+    unnamed_names = [reference_prop['cell_name'][c] for c in unnamed_cells]
+    not_in_reference_cells = cells.difference(refcells)
+
+    common_cells = refcells.intersection(cells)
+    right_cells = []
+    wrong_cells = []
+    for c in common_cells:
         if prop['cell_name'][c] != reference_prop['cell_name'][c]:
-            wrong_naming += 1
+            wrong_cells += [c]
             continue
-        right_naming += 1
+        right_cells += [c]
+    wrong_names = [reference_prop['cell_name'][c] for c in wrong_cells]
 
     if verbose:
         msg = "ground-truth cells = " + str(len(refcells)) + " for times " + str(times) + "\n"
         msg += "\t tested cells = " + str(len(cells)) + "\n"
-        msg += "\t retrieved names = {:d}/{:d}\n".format(right_naming, len(cells))
-        if wrong_naming > 0:
-            msg += "\t ... error in naming = {:d}/{:d}\n".format(wrong_naming, len(cells))
-        if not_in_reference > 0:
-            msg += "\t ... names not in reference = {:d}/{:d}\n".format(not_in_reference, len(cells))
+        msg += "\t right retrieved names = {:d}/{:d}\n".format(len(right_cells), len(refcells))
+        if len(wrong_cells) > 0:
+            msg += "\t ... error in naming = {:d}/{:d}\n".format(len(wrong_cells), len(refcells))
+            msg += "\t     reference cells wrongly named: " + str(wrong_names) + "\n"
+        if len(unnamed_cells) > 0:
+            msg += "\t ... unnamed cells = {:d}/{:d}\n".format(len(unnamed_cells), len(refcells))
+            msg += "\t     reference cells unnamed: " + str(unnamed_names) + "\n"
+        if len(not_in_reference_cells) > 0:
+            msg += "\t ... names not in reference = {:d}/{:d}\n".format(len(not_in_reference_cells), len(refcells))
         monitoring.to_log_and_console("summary" + ": " + msg)
 
-    return right_naming, wrong_naming, not_in_reference
+    return len(right_cells), len(wrong_cells), len(unnamed_cells), len(not_in_reference_cells)
 
 
 ########################################################################################
@@ -1234,26 +985,20 @@ def _test_naming(prop, reference_prop, time_digits_for_cell_id=4, verbose=True):
 #
 ########################################################################################
 
-def _get_correspondence(embryo, parameters, time_digits_for_cell_id=4, verbose=True):
+def _get_correspondence(flo_time_range, embryo):
     #
     # for the cells of each time where the number of cells is equal to parameters.cell_number
     # gives the cell of the first time where the number of cells is equal to parameters.cell_number
     # it will allows to name only this first time while names can be issued from any time
     #
     correspondence = {}
-    flotimes = _get_times(embryo.cell_contact_surface, parameters.cell_number,
-                          time_digits_for_cell_id=time_digits_for_cell_id)
-    if len(flotimes) == 0:
-        msg = "   ... there is no time points with 64 in the embryo to be named"
-        monitoring.to_log_and_console(msg)
-        return correspondence
-    flotimesmin = min(flotimes)
-    lineage = embryo.lineage
+    flotimesmin = min(flo_time_range)
+    lineage = embryo.cell_lineage
     reverse_lineage = {v: k for k, values in lineage.items() for v in values}
     cells = list(set(lineage.keys()).union(set([v for values in list(lineage.values()) for v in values])))
-    div = 10 ** time_digits_for_cell_id
+    div = 10 ** embryo.time_digits_for_cell_id
     for c in cells:
-        if (int(c) // div) not in flotimes or int(c) % div == 1:
+        if (int(c) // div) not in flo_time_range or int(c) % div == 1:
             continue
         if int(c) // div == flotimesmin:
             correspondence[c] = c
@@ -1325,12 +1070,12 @@ def _set_candidate_name(name_from_both, name_from_flo, name_from_ref, correspond
     return name_from_both, name_from_flo, name_from_ref, reciprocal_n
 
 
-def _get_floating_names(transformations, embryo, atlases, parameters, time_digits_for_cell_id=4, verbose=True):
+def _get_floating_names(transformations, flo_time_range, embryo, atlases, parameters, time_digits_for_cell_id=4,
+                        verbose=True):
     #
     # correspondences
     #
-    correspondence = _get_correspondence(embryo, parameters, time_digits_for_cell_id=time_digits_for_cell_id,
-                                         verbose=verbose)
+    correspondence = _get_correspondence(flo_time_range, embryo)
 
     name_both = {}
     name_flo = {}
@@ -1368,13 +1113,13 @@ def _get_unanimity_names(prop, name):
         if len(set(name[c])) == 1:
             prop['cell_name'][c] = name[c][0]
             del name[c]
-            n +=1
+            n += 1
     return prop, name, n
 
 
 def _iterate_unanimity_names(name_both, parameters, verbose=False):
     iteration = 0
-    prop = {'cell_name':{}}
+    prop = {'cell_name': {}}
     while True:
         prop, name_both, n = _get_unanimity_names(prop, name_both)
         if n == 0:
@@ -1390,6 +1135,243 @@ def _iterate_unanimity_names(name_both, parameters, verbose=False):
             break
 
     return prop
+
+
+########################################################################################
+#
+#
+#
+########################################################################################
+
+def _get_transformation_filename(parameters):
+    if parameters.transformation_filename is None:
+        return None
+    if isinstance(parameters.transformation_filename, str):
+        if parameters.transformation_filename.endswith(".pkl") is True:
+            return parameters.transformation_filename
+        return parameters.transformation_filename + '.pkl'
+    return None
+
+
+#######################################################################################
+#
+# leave-one-out tests
+#
+########################################################################################
+
+def _get_success(atlases, parameters, time_digits_for_cell_id=4, verbose=True):
+    monitoring.to_log_and_console(" - compute transformations ")
+    #
+    # compute transformations
+    #
+    all_atlases = atlases.get_atlases()
+    transformations = {}
+    flo_time_range = {}
+    transformation_filename = _get_transformation_filename(parameters)
+    if isinstance(transformation_filename, str) and os.path.isfile(transformation_filename):
+        inputfile = open(transformation_filename, 'rb')
+        transformations = pkl.load(inputfile)
+        inputfile.close()
+    for a in all_atlases:
+        #
+        # compute transformations with a as the floating embryo
+        #
+        tmp_atlases = copy.deepcopy(all_atlases)
+        del tmp_atlases[a]
+        if a not in transformations:
+            transformations[a] = {}
+        transformations[a], flo_time_range[a] = _register_embryos(transformations[a], all_atlases[a], tmp_atlases,
+                                                                  parameters,
+                                                                  time_digits_for_cell_id=time_digits_for_cell_id,
+                                                                  verbose=verbose)
+        if isinstance(transformation_filename, str):
+            outputfile = open(transformation_filename, 'wb')
+            pkl.dump(transformations, outputfile)
+            outputfile.close()
+
+    #
+    # set names
+    #
+    right_naming = {}
+    wrong_naming = {}
+    unnamed_naming = {}
+    for a in all_atlases:
+        # atlas to be tested
+        ref_test_atlas = copy.deepcopy(all_atlases[a])
+        test_atlas = copy.deepcopy(ref_test_atlas)
+        test_atlas.del_property('cell_name')
+        # reference atlas list
+        ref_atlas_list = list(all_atlases.keys())
+        ref_atlas_list.remove(a)
+
+        #
+        # pick combinations of reference atlas
+        #
+        monitoring.to_log_and_console(" - compare " + str(a) + " versus " + str(ref_atlas_list))
+        for i in range(1, len(ref_atlas_list) + 1):
+            subset_atlas = list(itertools.combinations(ref_atlas_list, i))
+            monitoring.to_log_and_console("      " + str(len(subset_atlas)) + " combinations of " + str(i) + " atlases")
+            for s in subset_atlas:
+                monitoring.to_log_and_console("     - compare " + str(a) + " versus " + str(s))
+                #
+                # build references atlases
+                #
+                tmp_atlases = uatlasd.DivisionAtlases(parameters=parameters)
+                tmp = {}
+                for b in s:
+                    tmp[b] = all_atlases[b]
+                tmp_atlases.set_atlases(tmp)
+                #
+                # collect names from each co-registration
+                #
+                name_both, name_flo, name_ref = _get_floating_names(transformations[a], flo_time_range[a], test_atlas,
+                                                                    tmp_atlases, parameters,
+                                                                    time_digits_for_cell_id=time_digits_for_cell_id,
+                                                                    verbose=verbose)
+
+                #
+                # get consensual names
+                #
+                prop = _iterate_unanimity_names(name_both, parameters, verbose=verbose)
+
+                #
+                #
+                #
+                right, wrong, unnamed, not_in = _test_naming(prop, ref_test_atlas.get_property(),
+                                                             time_digits_for_cell_id=time_digits_for_cell_id,
+                                                             verbose=False)
+                right_naming[i] = right_naming.get(i, []) + [right]
+                wrong_naming[i] = wrong_naming.get(i, []) + [wrong]
+                unnamed_naming[i] = unnamed_naming.get(i, []) + [unnamed]
+
+    # print("right_naming = " + str(right_naming))
+    # print("wrong_naming = " + str(wrong_naming))
+    return right_naming, wrong_naming, unnamed_naming
+
+
+def _figure_atlas_initnaming(atlases, parameters, time_digits_for_cell_id=4):
+    right_naming, wrong_naming, unnamed_naming = _get_success(atlases, parameters,
+                                                              time_digits_for_cell_id=time_digits_for_cell_id,
+                                                              verbose=False)
+    proc = "_figure_atlas_initnaming"
+
+    filename = 'figure_atlas_initnaming'
+    file_suffix = None
+    if parameters.figurefile_suffix is not None and isinstance(parameters.figurefile_suffix, str) and \
+            len(parameters.figurefile_suffix) > 0:
+        file_suffix = '_' + parameters.figurefile_suffix
+    if file_suffix is not None:
+        filename += file_suffix
+    filename += '.py'
+
+    if parameters.outputDir is not None and isinstance(parameters.outputDir, str):
+        if not os.path.isdir(parameters.outputDir):
+            if not os.path.exists(parameters.outputDir):
+                os.makedirs(parameters.outputDir)
+            else:
+                monitoring.to_log_and_console(proc + ": '" + str(parameters.outputDir) + "' is not a directory ?!")
+        if os.path.isdir(parameters.outputDir):
+            filename = os.path.join(parameters.outputDir, filename)
+    #
+    #
+    #
+    f = open(filename, "w")
+
+    f.write("import numpy as np\n")
+    f.write("import matplotlib.pyplot as plt\n")
+
+    f.write("\n")
+    f.write("savefig = True\n")
+
+    f.write("\n")
+    f.write("right_naming = " + str(right_naming) + "\n")
+    f.write("wrong_naming = " + str(wrong_naming) + "\n")
+    f.write("unnamed_naming = " + str(unnamed_naming) + "\n")
+    f.write("labels = sorted(list(right_naming.keys()))\n")
+
+    f.write("\n")
+    f.write("right_list = []\n")
+    f.write("wrong_list = []\n")
+    f.write("unnamed_list = []\n")
+    f.write("for i, l in enumerate(labels):\n")
+    f.write("    right_list += [right_naming[l]]\n")
+    f.write("    wrong_list += [wrong_naming[l]]\n")
+    f.write("    unnamed_list += [unnamed_naming.get(l, [])]\n")
+
+    f.write("\n")
+    f.write("fig, ax = plt.subplots(figsize=(16, 6.5))\n")
+    f.write("rbox = ax.boxplot(right_list, patch_artist=False)\n")
+    f.write("wbox = ax.boxplot(wrong_list, patch_artist=False)\n")
+
+    f.write("\n")
+    f.write("rmed = [b.get_ydata()[0] for b in rbox['medians']]\n")
+    f.write("wmed = [b.get_ydata()[0] for b in wbox['medians']]\n")
+    f.write("ax.plot(labels, rmed, color='blue', label='right names')\n")
+    f.write("ax.plot(labels, wmed, color='cyan', label='wrong names')\n")
+
+    f.write("\n")
+    f.write("ax.yaxis.grid(True)\n")
+    f.write("ax.set_xticks([y + 1 for y in range(len(right_naming))])\n")
+    f.write("ax.set_xlabel('Number of atlases')\n")
+    f.write("ax.set_ylabel('#cells')\n")
+    f.write("ax.legend()\n")
+
+    f.write("\n")
+    f.write("if savefig:\n")
+    f.write("    plt.savefig('right_wrong_wrt_atlasnumber")
+    if file_suffix is not None:
+        f.write(file_suffix)
+    f.write("'" + " + '.png')\n")
+    f.write("else:\n")
+    f.write("    plt.show()\n")
+    f.write("\n")
+
+    f.write("fig, ax = plt.subplots(figsize=(16, 6.5))\n")
+    f.write("rbox = ax.boxplot(right_list, patch_artist=False)\n")
+    f.write("ubox = ax.boxplot(unnamed_list, patch_artist=False)\n")
+
+    f.write("\n")
+    f.write("rmed = [b.get_ydata()[0] for b in rbox['medians']]\n")
+    f.write("umed = [b.get_ydata()[0] for b in ubox['medians']]\n")
+    f.write("ax.plot(labels, rmed, color='blue', label='right names')\n")
+    f.write("ax.plot(labels, umed, color='cyan', label='no set names')\n")
+
+    f.write("\n")
+    f.write("ax.yaxis.grid(True)\n")
+    f.write("ax.set_xticks([y + 1 for y in range(len(right_naming))])\n")
+    f.write("ax.set_xlabel('Number of atlases')\n")
+    f.write("ax.set_ylabel('#cells')\n")
+    f.write("ax.legend()\n")
+
+    f.write("\n")
+    f.write("if savefig:\n")
+    f.write("    plt.savefig('right_unamed_wrt_atlasnumber")
+    if file_suffix is not None:
+        f.write(file_suffix)
+    f.write("'" + " + '.png')\n")
+    f.write("else:\n")
+    f.write("    plt.show()\n")
+    f.close()
+
+
+def generate_figure(atlases, parameters, time_digits_for_cell_id=4):
+    generate_figure = (isinstance(parameters.generate_figure, bool) and parameters.generate_figure) or \
+                      (isinstance(parameters.generate_figure, str) and parameters.generate_figure == 'all') or \
+                      (isinstance(parameters.generate_figure, list) and 'all' in parameters.generate_figure)
+
+    #
+    # plot cell number wrt time without and with temporal registration
+    #
+    if (isinstance(parameters.generate_figure, str) and
+        parameters.generate_figure == 'atlas-init-naming-leave-one-out') \
+            or (isinstance(parameters.generate_figure, list)
+                and 'atlas-init-naming-leave-one-out' in parameters.generate_figure) \
+            or generate_figure:
+        monitoring.to_log_and_console("... generate atlas init naming leave one out figure", 1)
+        _figure_atlas_initnaming(atlases, parameters, time_digits_for_cell_id=time_digits_for_cell_id)
+        monitoring.to_log_and_console("... done", 1)
+
+
 ########################################################################################
 #
 #
@@ -1421,14 +1403,28 @@ def _initial_naming(embryo, atlases, parameters, time_digits_for_cell_id=4, verb
     # transformations[t_flo][atlas][t_ref] is the affine transformation that maps the floating frame
     # (at t_flo) into the reference one (at t_ref)
     #
-    msg = "setting names"
     if verbose:
         monitoring.to_log_and_console("... co-registrations")
-    transformations = {}
+
     ref_atlases = atlases.get_atlases()
-    for a in ref_atlases:
-        transformations = _coregister_embryos(transformations, embryo, ref_atlases[a], a, parameters,
-                                              time_digits_for_cell_id=time_digits_for_cell_id, verbose=verbose)
+    transformations = {}
+
+    transformation_filename = _get_transformation_filename(parameters)
+    if isinstance(transformation_filename, str) and os.path.isfile(transformation_filename):
+        inputfile = open(transformation_filename, 'rb')
+        transformations = pkl.load(inputfile)
+        inputfile.close()
+
+    transformations, flo_time_range = _register_embryos(transformations, embryo, ref_atlases, parameters,
+                                                        time_digits_for_cell_id=time_digits_for_cell_id,
+                                                        verbose=verbose)
+
+    if isinstance(transformation_filename, str):
+        outputfile = open(transformation_filename, 'wb')
+        pkl.dump(transformations, outputfile)
+        outputfile.close()
+
+
     if verbose:
         monitoring.to_log_and_console("... setting names")
 
@@ -1436,7 +1432,7 @@ def _initial_naming(embryo, atlases, parameters, time_digits_for_cell_id=4, verb
     # collect names from each co-registration
     # name_both, name_flo, name_ref are dictionaries indexed by cell ids
     # name_both
-    name_both, name_flo, name_ref = _get_floating_names(transformations, embryo, atlases, parameters,
+    name_both, name_flo, name_ref = _get_floating_names(transformations, flo_time_range, embryo, atlases, parameters,
                                                         time_digits_for_cell_id=time_digits_for_cell_id,
                                                         verbose=verbose)
 
@@ -1475,19 +1471,19 @@ def init_naming_process(experiment, parameters):
 
     uatlasd.monitoring.copy(monitoring)
     uatlasc.monitoring.copy(monitoring)
+    icp.monitoring.copy(monitoring)
 
     #
     # should we clean reference here?
     #
     atlases = uatlasd.DivisionAtlases(parameters=parameters)
     atlases.add_atlases(parameters.atlasFiles, parameters, time_digits_for_cell_id=time_digits_for_cell_id)
+    generate_figure(atlases, parameters, time_digits_for_cell_id=time_digits_for_cell_id)
 
-    if parameters.generate_figure is not None and parameters.generate_figure is not False:
-        _generate_figure(atlases, parameters, time_digits_for_cell_id=time_digits_for_cell_id)
-        sys.exit()
     #
     # read input properties to be named
     #
+    inputFile = None
     prop = {}
     reference_prop = {}
 
@@ -1496,11 +1492,20 @@ def init_naming_process(experiment, parameters):
         if 'cell_name' not in reference_prop:
             monitoring.to_log_and_console(str(proc) + ": 'cell_name' is not in '" + str(parameters.testFile) + "'")
             sys.exit(1)
-        else:
-            prop = copy.deepcopy(reference_prop)
-            del prop['cell_name']
+        inputFile = parameters.testFile
+        prop = copy.deepcopy(reference_prop)
+        del prop['cell_name']
+
     elif parameters.inputFile is not None:
+        inputFile = parameters.inputFile
         prop = ioproperties.read_dictionary(parameters.inputFile, inputpropertiesdict={})
+
+    if inputFile is None:
+        return prop
+
+    name = inputFile.split(os.path.sep)[-1]
+    if name.endswith(".xml") or name.endswith(".pkl"):
+        name = name[:-4]
 
     if prop == {}:
         monitoring.to_log_and_console(str(proc) + ": no properties?!")
@@ -1510,10 +1515,14 @@ def init_naming_process(experiment, parameters):
     # build an atlas from the embryo to be named,
     # temporally align it with the reference embryo
     #
-    embryo = uatlase.Atlas(prop)
+    embryo = uatlase.Atlas(prop, time_digits_for_cell_id=time_digits_for_cell_id)
     ref_atlases = atlases.get_atlases()
     ref_atlas = atlases.get_reference_atlas()
-    embryo.temporally_align_with(ref_atlases[ref_atlas], time_digits_for_cell_id=time_digits_for_cell_id)
+    embryo.temporally_align_with(ref_atlases[ref_atlas])
+    msg = "   ... "
+    msg += "linear time warping of '" + str(name) + "' wrt '" + str(ref_atlas) + "' is "
+    msg += "({:.3f}, {:.3f})".format(embryo.temporal_alignment[0], embryo.temporal_alignment[1])
+    monitoring.to_log_and_console(msg, 1)
 
     prop = _initial_naming(embryo, atlases, parameters, time_digits_for_cell_id=time_digits_for_cell_id)
     #
@@ -1521,8 +1530,8 @@ def init_naming_process(experiment, parameters):
     #
 
     if parameters.testFile is not None:
-        right_naming, wrong_naming, not_in_reference = _test_naming(prop, reference_prop,
-                                                                    time_digits_for_cell_id=time_digits_for_cell_id)
+        output = _test_naming(prop, reference_prop, time_digits_for_cell_id=time_digits_for_cell_id)
+        right_naming, wrong_naming,  unnamed_cells, not_in_reference = output
 
     if isinstance(parameters.outputFile, str):
         ioproperties.write_dictionary(parameters.outputFile, prop)

@@ -60,6 +60,6 @@ def atlas_embryo_process(experiment, parameters):
     #
     # figures (if required)
     #
-    atlases.generate_figure(parameters, time_digits_for_cell_id=experiment.get_time_digits_for_cell_id())
+    atlases.generate_figure(parameters)
 
     return atlases
