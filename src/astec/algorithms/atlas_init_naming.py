@@ -8,6 +8,8 @@ import multiprocessing
 import itertools
 import pickle as pkl
 from sklearn.neighbors import NearestNeighbors
+from operator import itemgetter
+
 
 
 import astec.utils.common as common
@@ -153,6 +155,13 @@ class EmbryoRegistrationParameters(common.PrefixedParameter):
         self.doc['pair_ratio_for_residual'] = doc
         self.pair_ratio_for_residual = 0.8
 
+        #
+        #
+        #
+        doc = "\t Number of processors for parallelization\n"
+        self.doc['processors'] = doc
+        self.processors = 10
+
     ############################################################
     #
     # print / write
@@ -183,6 +192,7 @@ class EmbryoRegistrationParameters(common.PrefixedParameter):
         self.varprint('pair_ratio_for_residual', self.pair_ratio_for_residual,
                       self.doc.get('pair_ratio_for_residual', None))
 
+        self.varprint('processors', self.processors, self.doc['processors'])
         print("")
 
     def write_parameters_in_file(self, logfile):
@@ -209,6 +219,7 @@ class EmbryoRegistrationParameters(common.PrefixedParameter):
         self.varwrite(logfile, 'pair_ratio_for_residual', self.pair_ratio_for_residual,
                       self.doc.get('pair_ratio_for_residual', None))
 
+        self.varwrite(logfile, 'processors', self.processors, self.doc['processors'])
         logfile.write("\n")
 
     def write_parameters(self, log_file_name):
@@ -238,6 +249,8 @@ class EmbryoRegistrationParameters(common.PrefixedParameter):
 
         self.pair_ratio_for_residual = self.read_parameter(parameters, 'pair_ratio_for_residual',
                                                            self.pair_ratio_for_residual)
+
+        self.processors = self.read_parameter(parameters, 'processors', self.processors)
 
     def update_from_parameter_file(self, parameter_file):
         if parameter_file is None:
@@ -717,7 +730,7 @@ def _coregister_embryos_one_timepoint(embryo, info_embryo, atlas, info_atlas, pa
     # we could improve the computational time by parallelising the calculation
     # with multiprocessing
     #
-    pool = multiprocessing.Pool(processes=7)
+    pool = multiprocessing.Pool(processes=parameters.processors)
     mapping = []
 
     #
@@ -882,6 +895,25 @@ def _register_embryos(transformations, embryo, atlases, parameters, time_digits_
         monitoring.to_log_and_console(proc + ": " + msg)
 
     #
+    # is there something to do ?
+    #
+    are_transformations_already_computed = True
+    if flo_embryo['first_time'] not in transformations:
+        are_transformations_already_computed = False
+    else:
+        for a in ref_atlases:
+            if a not in transformations[flo_embryo['first_time']]:
+                are_transformations_already_computed = False
+                break
+            if ref_atlases[a]['first_time'] not in transformations[flo_embryo['first_time']][a]:
+                are_transformations_already_computed = False
+                break
+    if are_transformations_already_computed:
+        msg = "   ... co-registrations of embryo to be named already done"
+        monitoring.to_log_and_console(msg)
+        return transformations, flo_embryo['time_range']
+
+    #
     #
     #
     if parameters.rotation_initialization == 'sphere_wrt_z' or \
@@ -949,7 +981,7 @@ def _test_naming(prop, reference_prop, time_digits_for_cell_id=4, verbose=True):
     refcells = set([c for c in reference_prop['cell_name'] if int(c) // div in times])
 
     unnamed_cells = refcells.difference(cells)
-    unnamed_names = [reference_prop['cell_name'][c] for c in unnamed_cells]
+    unnamed_names = sorted([reference_prop['cell_name'][c] for c in unnamed_cells])
     not_in_reference_cells = cells.difference(refcells)
 
     common_cells = refcells.intersection(cells)
@@ -960,7 +992,8 @@ def _test_naming(prop, reference_prop, time_digits_for_cell_id=4, verbose=True):
             wrong_cells += [c]
             continue
         right_cells += [c]
-    wrong_names = [reference_prop['cell_name'][c] for c in wrong_cells]
+    wrong_names = [(reference_prop['cell_name'][c], prop['cell_name'][c]) for c in wrong_cells]
+    wrong_names = sorted(wrong_names, key=itemgetter(1))
 
     if verbose:
         msg = "ground-truth cells = " + str(len(refcells)) + " for times " + str(times) + "\n"
@@ -968,7 +1001,7 @@ def _test_naming(prop, reference_prop, time_digits_for_cell_id=4, verbose=True):
         msg += "\t right retrieved names = {:d}/{:d}\n".format(len(right_cells), len(refcells))
         if len(wrong_cells) > 0:
             msg += "\t ... error in naming = {:d}/{:d}\n".format(len(wrong_cells), len(refcells))
-            msg += "\t     reference cells wrongly named: " + str(wrong_names) + "\n"
+            msg += "\t     reference cells wrongly named (right name, given name): " + str(wrong_names) + "\n"
         if len(unnamed_cells) > 0:
             msg += "\t ... unnamed cells = {:d}/{:d}\n".format(len(unnamed_cells), len(refcells))
             msg += "\t     reference cells unnamed: " + str(unnamed_names) + "\n"
@@ -1053,6 +1086,8 @@ def _set_candidate_name(name_from_both, name_from_flo, name_from_ref, correspond
     for i, cf in enumerate(cell_tflo):
         j = i_flo_to_ref[i]
         cr = cell_tref[j]
+        if cr not in ref_name:
+            continue
         if i_ref_to_flo[j] == i:
             name_from_both[correspondence[cf]] = name_from_both.get(correspondence[cf], []) + [ref_name[cr]]
             reciprocal_n += 1
@@ -1062,6 +1097,8 @@ def _set_candidate_name(name_from_both, name_from_flo, name_from_ref, correspond
     for j, cr in enumerate(cell_tref):
         i = i_ref_to_flo[j]
         cf = cell_tflo[i]
+        if cr not in ref_name:
+            continue
         if i_flo_to_ref[i] == j:
             pass
         else:
@@ -1094,10 +1131,10 @@ def _get_floating_names(transformations, flo_time_range, embryo, atlases, parame
                 monitoring.to_log_and_console("      ... " + msg, 2)
                 continue
             for tref in transformations[tflo][a]:
-                name_both, name_flo, name_ref, n = _set_candidate_name(name_both, name_flo, name_ref, correspondence,
-                                                                       embryo, ref_atlases[a], tflo, tref,
-                                                                       transformations[tflo][a][tref],
-                                                                       time_digits_for_cell_id=time_digits_for_cell_id)
+                output = _set_candidate_name(name_both, name_flo, name_ref, correspondence, embryo, ref_atlases[a],
+                                             tflo, tref, transformations[tflo][a][tref],
+                                             time_digits_for_cell_id=time_digits_for_cell_id)
+                name_both, name_flo, name_ref, n = output
                 if verbose:
                     msg = "set " + str(n) + " names from time #" + str(tref) + " of '" + str(a) + "'"
                     msg += " on time #" + str(tflo)
@@ -1224,10 +1261,10 @@ def _get_success(atlases, parameters, time_digits_for_cell_id=4, verbose=True):
                 #
                 # collect names from each co-registration
                 #
-                name_both, name_flo, name_ref = _get_floating_names(transformations[a], flo_time_range[a], test_atlas,
-                                                                    tmp_atlases, parameters,
-                                                                    time_digits_for_cell_id=time_digits_for_cell_id,
-                                                                    verbose=verbose)
+                output = _get_floating_names(transformations[a], flo_time_range[a], test_atlas, tmp_atlases,
+                                             parameters, time_digits_for_cell_id=time_digits_for_cell_id,
+                                             verbose=verbose)
+                name_both, name_flo, name_ref = output
 
                 #
                 # get consensual names
@@ -1432,9 +1469,9 @@ def _initial_naming(embryo, atlases, parameters, time_digits_for_cell_id=4, verb
     # collect names from each co-registration
     # name_both, name_flo, name_ref are dictionaries indexed by cell ids
     # name_both
-    name_both, name_flo, name_ref = _get_floating_names(transformations, flo_time_range, embryo, atlases, parameters,
-                                                        time_digits_for_cell_id=time_digits_for_cell_id,
-                                                        verbose=verbose)
+    output = _get_floating_names(transformations, flo_time_range, embryo, atlases, parameters,
+                                 time_digits_for_cell_id=time_digits_for_cell_id, verbose=verbose)
+    name_both, name_flo, name_ref = output
 
     #
     # get consensual names

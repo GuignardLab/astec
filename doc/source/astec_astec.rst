@@ -73,15 +73,17 @@ The pre-processing can be different for the
 
 Pre-processing parameters, described in section :ref:`cli-parameters-preprocessing`, and prefixed respectively by ``seed_``, ``membrane_`` and ``morphosnake_`` allow to tune these pre-processings.
 Hence, the lines
-\begin{verbatim}
+
+.. code-block:: none
+
 seed_intensity_transformation = 'Identity'
 membrane_intensity_transformation = 'normalization_to_u8'
 morphosnake_intensity_transformation = 'Identity'
 intensity_enhancement = None
-\end{verbatim}
+
 come to choose the original image for both the seed extraction and the morphosnake stage, but its normalization on 8 bits for the seeded watershed (this corresponds to the choice of the historical version of astec).
 
-If required (if the variable ``keep_reconstruction`` is set to ``True``, see :ref:cli-parameters-preprocessing), the pre-processed
+If required (if the variable ``keep_reconstruction`` is set to ``True``, see :ref:`cli-parameters-preprocessing`), the pre-processed
 images are kept and stored in the ``RECONSTRUCTION`` sub-directory.
 
 
