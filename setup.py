@@ -12,7 +12,7 @@ pkgs = find_packages('src')
 
 setup_kwds = dict(
     name='astec',
-    version="1.5.2",
+    version="1.5.3",
     description=short_descr,
     long_description=readme,
     author="Gregoire Malandain",
