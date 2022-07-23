@@ -1,5 +1,10 @@
 # Change Log
 
+## version 1.5.3
+
+- astec_atlas_init_naming: enrich outputs
+- astec_fusion: allows to fuse with only a subset of acquisition images
+  
 ## version 1.5.2
 
 - add utility to name one time point of an unnamed embryo from

@@ -1229,6 +1229,20 @@ def _init_rotation_matrix(axis, angle, ref_center=None, flo_center=None):
     return mat
 
 
+def _is_transformation_identity(mat):
+    is_identity = True
+    err = 0.000001
+    for i in range(mat.shape[0]):
+        for j in range(mat.shape[1]):
+            if i == j:
+                if mat[i,j] < 1 - err or  1 + err < mat[i,j]:
+                    is_identity = False
+            else:
+                if mat[i, j] < (- err) or err < mat[i, j]:
+                    is_identity = False
+    return is_identity
+
+
 ########################################################################################
 #
 # function for the ad hoc computation of weights
@@ -1548,39 +1562,70 @@ def _extract_xzsection(weight_images, res_images, tmp_fused_image, channel_id, e
     """
 
     d = experiment.fusion_dir.get_xzsection_directory(channel_id)
-    shape = _get_image_shape(res_images[0])
-    options = "-xz " + str(int(shape[1]/2))
 
-    name = experiment.get_embryo_name() + "_xy" + format(int(shape[1]/2), '0>4')
+    if isinstance(weight_images, list) and isinstance(res_images, list):
 
-    xzsection = os.path.join(d, name + "_stack0_lc_reg." + experiment.result_image_suffix)
-    cpp_wrapping.ext_image(res_images[0], xzsection, options, monitoring=monitoring)
+        shape = _get_image_shape(res_images[0])
+        options = "-xz " + str(int(shape[1] / 2))
+        name = experiment.get_embryo_name() + "_xy" + format(int(shape[1] / 2), '0>4')
 
-    xzsection = os.path.join(d, name + "_stack0_rc_reg." + experiment.result_image_suffix)
-    cpp_wrapping.ext_image(res_images[1], xzsection, options, monitoring=monitoring)
+        xzsection = os.path.join(d, name + "_stack0_lc_reg." + experiment.result_image_suffix)
+        cpp_wrapping.ext_image(res_images[0], xzsection, options, monitoring=monitoring)
 
-    if len(res_images) == 4:
-        xzsection = os.path.join(d, name + "_stack1_lc_reg." + experiment.result_image_suffix)
-        cpp_wrapping.ext_image(res_images[2], xzsection, options, monitoring=monitoring)
+        xzsection = os.path.join(d, name + "_stack0_rc_reg." + experiment.result_image_suffix)
+        cpp_wrapping.ext_image(res_images[1], xzsection, options, monitoring=monitoring)
 
-        xzsection = os.path.join(d, name + "_stack1_rc_reg." + experiment.result_image_suffix)
-        cpp_wrapping.ext_image(res_images[3], xzsection, options, monitoring=monitoring)
+        if len(res_images) == 4:
+            xzsection = os.path.join(d, name + "_stack1_lc_reg." + experiment.result_image_suffix)
+            cpp_wrapping.ext_image(res_images[2], xzsection, options, monitoring=monitoring)
 
-    xzsection = os.path.join(d, name + "_stack0_lc_weight." + experiment.result_image_suffix)
-    cpp_wrapping.ext_image(weight_images[0], xzsection, options, monitoring=monitoring)
+            xzsection = os.path.join(d, name + "_stack1_rc_reg." + experiment.result_image_suffix)
+            cpp_wrapping.ext_image(res_images[3], xzsection, options, monitoring=monitoring)
 
-    xzsection = os.path.join(d, name + "_stack0_rc_weight." + experiment.result_image_suffix)
-    cpp_wrapping.ext_image(weight_images[1], xzsection, options, monitoring=monitoring)
+        xzsection = os.path.join(d, name + "_stack0_lc_weight." + experiment.result_image_suffix)
+        cpp_wrapping.ext_image(weight_images[0], xzsection, options, monitoring=monitoring)
 
-    if len(weight_images) == 4:
-        xzsection = os.path.join(d, name + "_stack1_lc_weight." + experiment.result_image_suffix)
-        cpp_wrapping.ext_image(weight_images[2], xzsection, options, monitoring=monitoring)
+        xzsection = os.path.join(d, name + "_stack0_rc_weight." + experiment.result_image_suffix)
+        cpp_wrapping.ext_image(weight_images[1], xzsection, options, monitoring=monitoring)
 
-        xzsection = os.path.join(d, name + "_stack1_rc_weight." + experiment.result_image_suffix)
-        cpp_wrapping.ext_image(weight_images[3], xzsection, options, monitoring=monitoring)
+        if len(weight_images) == 4:
+            xzsection = os.path.join(d, name + "_stack1_lc_weight." + experiment.result_image_suffix)
+            cpp_wrapping.ext_image(weight_images[2], xzsection, options, monitoring=monitoring)
 
-    xzsection = os.path.join(d, name + "_fuse." + experiment.result_image_suffix)
-    cpp_wrapping.ext_image(tmp_fused_image, xzsection, options, monitoring=monitoring)
+            xzsection = os.path.join(d, name + "_stack1_rc_weight." + experiment.result_image_suffix)
+            cpp_wrapping.ext_image(weight_images[3], xzsection, options, monitoring=monitoring)
+
+        xzsection = os.path.join(d, name + "_fuse." + experiment.result_image_suffix)
+        cpp_wrapping.ext_image(tmp_fused_image, xzsection, options, monitoring=monitoring)
+
+    elif isinstance(weight_images, dict) and isinstance(res_images, dict):
+
+        keylist = list(res_images.keys())
+        shape = _get_image_shape(res_images[keylist[0]])
+        options = "-xz " + str(int(shape[1] / 2))
+        name = experiment.get_embryo_name() + "_xy" + format(int(shape[1] / 2), '0>4')
+
+        for i in res_images:
+            if i == 0:
+                xzsection = os.path.join(d, name + "_stack0_lc_reg." + experiment.result_image_suffix)
+            elif i == 1:
+                xzsection = os.path.join(d, name + "_stack0_rc_reg." + experiment.result_image_suffix)
+            elif i == 2:
+                xzsection = os.path.join(d, name + "_stack1_lc_reg." + experiment.result_image_suffix)
+            elif i == 3:
+                xzsection = os.path.join(d, name + "_stack1_rc_reg." + experiment.result_image_suffix)
+            cpp_wrapping.ext_image(res_images[i], xzsection, options, monitoring=monitoring)
+
+        for i in res_images:
+            if i == 0:
+                xzsection = os.path.join(d, name + "_stack0_lc_weight." + experiment.result_image_suffix)
+            elif i == 1:
+                xzsection = os.path.join(d, name + "_stack0_rc_weight." + experiment.result_image_suffix)
+            elif i == 2:
+                xzsection = os.path.join(d, name + "_stack1_lc_weight." + experiment.result_image_suffix)
+            elif i == 3:
+                xzsection = os.path.join(d, name + "_stack1_rc_weight." + experiment.result_image_suffix)
+            cpp_wrapping.ext_image(weight_images[i], xzsection, options, monitoring=monitoring)
 
     return
 
@@ -1599,13 +1644,17 @@ def _extract_xzsection(weight_images, res_images, tmp_fused_image, channel_id, e
 def _direct_fusion_process(input_image_list, the_image_list, fused_image, experiment, parameters):
     """
 
-    :param input_image_list:
-    :param the_image_list: list of list of preprocessed images (in the temporary directory), ie after
+    :param input_image_list: a list of dictionaries of images to be fused. One list per channel
+           a dictionary of images to be fused contains up to 4 images, with keys
+           0: the left camera of stack #0
+           1: the right camera of stack #0
+           2: the left camera of stack #1
+           3: the right camera of stack #1
+    :param the_image_list: list of dictionaries of preprocessed images (in the temporary directory), ie after
         1. (optional) slit line correction
         2. resolution change (only in X and Y directions)
         3. (optional) 2D crop
         4. mirroring of the right camera images (parameter dependent)
-
     :param fused_image:
     :param experiment:
     :param parameters:
@@ -1617,14 +1666,15 @@ def _direct_fusion_process(input_image_list, the_image_list, fused_image, experi
     n_channels = experiment.rawdata_dir.get_number_channels()
 
     if monitoring.debug > 1:
-        print("")
-        print(proc + " was called with:")
-        print("- input_image_list = " + str(input_image_list))
-        print("- the_image_list = " + str(the_image_list))
-        print("- fused_image = " + str(fused_image))
-        for c in range(n_channels):
-            experiment.rawdata_dir.channel[c].print_parameters('channel #' + str(c))
-        print("")
+        monitoring.to_log_and_console("")
+        monitoring.to_log_and_console(proc + " was called with:")
+        monitoring.to_log_and_console("- input_image_list = " + str(input_image_list))
+        monitoring.to_log_and_console("- the_image_list = " + str(the_image_list))
+        monitoring.to_log_and_console("- fused_image = " + str(fused_image))
+        if monitoring.debug > 3:
+            for c in range(n_channels):
+                experiment.rawdata_dir.channel[c].print_parameters()
+        monitoring.to_log_and_console("")
 
     #
     # parameter type checking
@@ -1641,19 +1691,21 @@ def _direct_fusion_process(input_image_list, the_image_list, fused_image, experi
         sys.exit(1)
 
     #
-    # list of registered images 
+    # list of registered images
+    # list of list of image names have been changed to list of dictionaries,
+    # to manage the possibilities to fuse with only a subset of images
     #
 
     res_image_list = list()
     for c in range(n_channels):
 
         the_images = the_image_list[c]
-        res_images = []
+        res_images = {}
 
-        for i in range(0, len(the_images)):
-            res_images.append(common.add_suffix(input_image_list[c][i], "_reg",
+        for i in the_images:
+            res_images[i] = common.add_suffix(input_image_list[c][i], "_reg",
                                                 new_dirname=experiment.rawdata_dir.get_tmp_directory(i, c),
-                                                new_extension=experiment.default_image_suffix))
+                                                new_extension=experiment.default_image_suffix)
         res_image_list.append(res_images)
 
     #
@@ -1663,7 +1715,9 @@ def _direct_fusion_process(input_image_list, the_image_list, fused_image, experi
     # - if the fusion image exists, check whether the registered images exists
     #
 
-    do_something = [False] * len(input_image_list[0])
+    do_something = {}
+    for i in the_image_list[0]:
+        do_something[i] = False
 
     for c in range(n_channels):
 
@@ -1671,67 +1725,72 @@ def _direct_fusion_process(input_image_list, the_image_list, fused_image, experi
         res_images = res_image_list[c]
 
         if not os.path.isfile(os.path.join(experiment.fusion_dir.get_directory(c), fused_image)):
-            do_something = [True] * len(input_image_list[0])
+            for i in do_something:
+                do_something[i] = True
             break
 
-        for i in range(0, len(the_images)):
+        for i in the_images:
             if os.path.isfile(res_images[i]):
                 if monitoring.forceResultsToBeBuilt is True:
                     do_something[i] = True
             else:
                 do_something[i] = True
 
-    for i in range(1, len(input_image_list[0])):
+    for i in the_image_list[0]:
         if do_something[i] is True:
             do_something[0] = True
 
     #
-    # additional file names for channel #0
+    # additional transformation file names for channel #0
     #
 
-    init_trsfs = []
-    prereg_trsfs = []
-    res_trsfs = []
-    unreg_weight_images_list = []
-    weight_images_list = []
+    init_trsfs = {}
+    prereg_trsfs = {}
+    res_trsfs = {}
 
     #
     # build the file names after the input file names
     #
-    the_images = the_image_list[0]
-    for i in range(0, len(the_images)):
-        init_trsfs.append(common.add_suffix(input_image_list[0][i], "_init",
+    for i in the_image_list[0]:
+        init_trsfs[i] = common.add_suffix(input_image_list[0][i], "_init",
+                                          new_dirname=experiment.rawdata_dir.get_tmp_directory(i, 0),
+                                          new_extension="trsf")
+        prereg_trsfs[i] = common.add_suffix(input_image_list[0][i], "_prereg",
                                             new_dirname=experiment.rawdata_dir.get_tmp_directory(i, 0),
-                                            new_extension="trsf"))
-        prereg_trsfs.append(common.add_suffix(input_image_list[0][i], "_prereg",
-                                              new_dirname=experiment.rawdata_dir.get_tmp_directory(i, 0),
-                                              new_extension="trsf"))
-        res_trsfs.append(common.add_suffix(input_image_list[0][i], "_reg",
-                                           new_dirname=experiment.rawdata_dir.get_tmp_directory(i, 0),
-                                           new_extension="trsf"))
+                                            new_extension="trsf")
+        res_trsfs[i] = common.add_suffix(input_image_list[0][i], "_reg",
+                                         new_dirname=experiment.rawdata_dir.get_tmp_directory(i, 0),
+                                         new_extension="trsf")
 
     #
     # the final image is a weighting sum of the transformed acquisition image
     # weighting may be different for all channel
     #
+
+    unreg_weight_images_list = []
+    weight_images_list = []
+
     for c in range(n_channels):
-        unreg_weight_images = []
-        weight_images = []
+        unreg_weight_images = {}
+        weight_images = {}
         cref = c
         for i in range(0, c):
             if experiment.rawdata_dir.channel[c].fusion_weighting == experiment.rawdata_dir.channel[i].fusion_weighting:
                 cref = i
         #
         # check if the weighting mode was used for previous channels (ie weights have already been computed)
+        # cref is a previous channel that has the same weighting mode that channel #c (cref < c)
+        # if cref == c, it means that there is no other previous channel that has the same weighting mode
+        # weights would have to be computed
         #
         if cref == c:
-            for i in range(0, len(the_images)):
-                unreg_weight_images.append(common.add_suffix(input_image_list[c][i], "_init_weight_" + str(c),
-                                                             new_dirname=experiment.rawdata_dir.get_tmp_directory(i, c),
-                                                             new_extension=experiment.default_image_suffix))
-                weight_images.append(common.add_suffix(input_image_list[c][i], "_weight_" + str(c),
-                                                       new_dirname=experiment.rawdata_dir.get_tmp_directory(i, c),
-                                                       new_extension=experiment.default_image_suffix))
+            for i in the_image_list[0]:
+                unreg_weight_images[i] = common.add_suffix(input_image_list[c][i], "_init_weight_" + str(c),
+                                                           new_dirname=experiment.rawdata_dir.get_tmp_directory(i, c),
+                                                           new_extension=experiment.default_image_suffix)
+                weight_images[i] = common.add_suffix(input_image_list[c][i], "_weight_" + str(c),
+                                                     new_dirname=experiment.rawdata_dir.get_tmp_directory(i, c),
+                                                     new_extension=experiment.default_image_suffix)
         else:
             unreg_weight_images = unreg_weight_images_list[cref]
             weight_images = weight_images_list[cref]
@@ -1750,6 +1809,8 @@ def _direct_fusion_process(input_image_list, the_image_list, fused_image, experi
     # default angle for initial rotation matrix
     #
 
+    monitoring.to_log_and_console("    .. initial transformation", 2)
+
     if parameters.acquisition_orientation.lower() == 'left':
         default_angle = 270.0
     elif parameters.acquisition_orientation.lower() == 'right':
@@ -1761,6 +1822,60 @@ def _direct_fusion_process(input_image_list, the_image_list, fused_image, experi
         sys.exit(1)
 
     #
+    # a fortiori, dictionary keys are not ordered
+    #
+    the_images_keys = sorted(list(the_image_list[0].keys()))
+    rotation_matrix = {}
+    ref_index = the_images_keys[0]
+    ref_center = None
+    monitoring.to_log_and_console("       reference image is #" + str(ref_index), 2)
+    for i in the_images_keys:
+        if not os.path.isfile(init_trsfs[i]) or monitoring.forceResultsToBeBuilt is True:
+            #
+            # get image center
+            #
+            im = imread(the_image_list[0][i])
+            flo_center = np.multiply(im.shape[:3], im.voxelsize) / 2.0
+            del im
+            #
+            # reference image is the first found image
+            #
+            if ref_center == i:
+                ref_center = flo_center
+            #
+            # set angle
+            #
+            if i <= 1:
+                angle = 0.0
+            else:
+                angle = default_angle
+            monitoring.to_log_and_console("       angle used for '" + init_trsfs[i].split(os.path.sep)[-1]
+                                          + "' is " + str(angle), 2)
+
+            #
+            # the initial transformation was computed with _axis_rotation_matrix(). To compute the
+            # translation, it preserves the center of the field of view of the floating image.
+            # However it seems more coherent to compute a translation that put the center of FOV of the
+            # floating image onto he FOV of the reference one.
+            #
+            # the call to _axis_rotation_matrix() was
+            # rotation_matrix = _axis_rotation_matrix(axis="Y", angle=angle, min_space=(0, 0, 0),
+            #                                         max_space=np.multiply(im.shape[:3], im.voxelsize))
+            # Note: it requires that 'im' is deleted after the call
+            #
+            # it can be mimicked by
+            # _ init_rotation_matrix(axis="Y", angle=angle, ref_center=flo_center, flo_center=flo_center)
+            #
+
+            rotation_matrix[i] = _init_rotation_matrix(axis="Y", angle=angle, ref_center=ref_center,
+                                                    flo_center=flo_center)
+            np.savetxt(init_trsfs[i], rotation_matrix[i])
+        elif os.path.isfile(init_trsfs[i]):
+            rotation_matrix[i] = np.loadtxt(init_trsfs[i])
+            print("type(rotation_matrix[" + str(i) + "])=" + str(type(rotation_matrix[i])))
+            print("rotation_matrix["+str(i)+"]="+str(rotation_matrix[i]))
+
+    #
     # process
     # transformations and weights are computed on channel #0
     # and are used for other channels
@@ -1769,7 +1884,7 @@ def _direct_fusion_process(input_image_list, the_image_list, fused_image, experi
     #
 
     #
-    # fusion_box is the croping information computed only on the first channel
+    # fusion_box is the cropping information computed only on the first channel
     # and then used for all other channels
     #
     fusion_box = None
@@ -1784,7 +1899,10 @@ def _direct_fusion_process(input_image_list, the_image_list, fused_image, experi
         unreg_weight_images = unreg_weight_images_list[c]
         weight_images = weight_images_list[c]
 
-        for i in range(0, len(the_images)):
+        #
+        # ensure that the reference image is processed first
+        #
+        for i in the_images_keys:
 
             monitoring.to_log_and_console("    .. process '"
                                           + the_images[i].split(os.path.sep)[-1] + "' for fusion", 2)
@@ -1794,30 +1912,34 @@ def _direct_fusion_process(input_image_list, the_image_list, fused_image, experi
                 continue
 
             #
-            # first image: resampling only
+            # reference image
             #
-            if i == 0:
-                #
-                # image center
-                #
-                im = imread(the_images[i])
-                ref_center = np.multiply(im.shape[:3], im.voxelsize) / 2.0
-                del im
-
-                #
-                # resampling first image
-                #
-                monitoring.to_log_and_console("       resampling '" + the_images[i].split(os.path.sep)[-1]
-                                              + "' at " + str(parameters.target_resolution), 2)
-                if not os.path.isfile(res_images[i]) or monitoring.forceResultsToBeBuilt is True:
-                    cpp_wrapping.apply_transformation(the_images[i], res_images[i], the_transformation=None,
-                                                      template_image=None,
-                                                      voxel_size=parameters.target_resolution,
-                                                      interpolation_mode='linear',
-                                                      monitoring=monitoring)
+            if i == ref_index:
+                if _is_transformation_identity(rotation_matrix[i]):
+                    #
+                    # resampling first image
+                    #
+                    monitoring.to_log_and_console("       resampling '" + the_images[i].split(os.path.sep)[-1]
+                                                  + "' at " + str(parameters.target_resolution), 2)
+                    if not os.path.isfile(res_images[i]) or monitoring.forceResultsToBeBuilt is True:
+                        cpp_wrapping.apply_transformation(the_images[i], res_images[i], the_transformation=None,
+                                                          template_image=None,
+                                                          voxel_size=parameters.target_resolution,
+                                                          interpolation_mode='linear',
+                                                          monitoring=monitoring)
+                    else:
+                        monitoring.to_log_and_console("       already existing", 2)
                 else:
-                    monitoring.to_log_and_console("       already existing", 2)
-
+                    #
+                    # here, it should either be done in two steps
+                    #   1. transform image with the transformation
+                    #   2. resample it at isotropic resolution
+                    # or it can be be changing applyTrsf
+                    #
+                    msg = "       resampling with an non-identity matrix not handled yet\n"
+                    msg += "... exiting"
+                    monitoring.to_log_and_console(msg)
+                    sys.exit(1)
             #
             # other images:
             # - channel #0: co-registration
@@ -1828,52 +1950,17 @@ def _direct_fusion_process(input_image_list, the_image_list, fused_image, experi
                     monitoring.to_log_and_console("       co-registering '" + the_images[i].split(os.path.sep)[-1]
                                                   + "'", 2)
                     #
-                    # initial transformation
-                    #
-                    if not os.path.isfile(init_trsfs[i]) or monitoring.forceResultsToBeBuilt is True:
-                        if i == 1:
-                            angle = 0.0
-                        else:
-                            angle = default_angle
-                        monitoring.to_log_and_console("       angle used for '" + init_trsfs[i].split(os.path.sep)[-1]
-                                                      + "' is " + str(angle), 2)
-                        im = imread(the_images[i])
-                        flo_center = np.multiply(im.shape[:3], im.voxelsize) / 2.0
-                        del im
-
-                        #
-                        # the initial transformation was computed with _axis_rotation_matrix(). To compute the
-                        # translation, it preserves the center of the field of view of the floating image.
-                        # However it seems more coherent to compute a translation that put the center of FOV of the
-                        # floating image onto he FOV of the reference one.
-                        #
-                        # the call to _axis_rotation_matrix() was
-                        # rotation_matrix = _axis_rotation_matrix(axis="Y", angle=angle, min_space=(0, 0, 0),
-                        #                                         max_space=np.multiply(im.shape[:3], im.voxelsize))
-                        # Note: it requires that 'im' is deleted after the call
-                        #
-                        # it can be mimicked by
-                        # _ init_rotation_matrix(axis="Y", angle=angle, ref_center=flo_center, flo_center=flo_center)
-                        #
-
-                        rotation_matrix = _init_rotation_matrix(axis="Y", angle=angle, ref_center=ref_center,
-                                                                flo_center=flo_center)
-
-                        np.savetxt(init_trsfs[i], rotation_matrix)
-                        del rotation_matrix
-
-                    #
                     # a two-fold registration, translation then affine, could be preferable
                     #
                     if not os.path.isfile(res_images[i]) or not os.path.isfile(res_trsfs[i]) \
                             or monitoring.forceResultsToBeBuilt is True:
                         if parameters.acquisition_registration[0].compute_registration is True:
-                            _linear_registration(res_images[0], the_images[i], res_images[i],
+                            _linear_registration(res_images[ref_index], the_images[i], res_images[i],
                                                  prereg_trsfs[i], init_trsfs[i], parameters.acquisition_registration[0])
-                            _linear_registration(res_images[0], the_images[i], res_images[i],
+                            _linear_registration(res_images[ref_index], the_images[i], res_images[i],
                                                  res_trsfs[i], prereg_trsfs[i], parameters.acquisition_registration[1])
                         else:
-                            _linear_registration(res_images[0], the_images[i], res_images[i],
+                            _linear_registration(res_images[ref_index], the_images[i], res_images[i],
                                                  res_trsfs[i], init_trsfs[i], parameters.acquisition_registration[1])
                     else:
                         monitoring.to_log_and_console("       already existing", 2)
@@ -1895,7 +1982,8 @@ def _direct_fusion_process(input_image_list, the_image_list, fused_image, experi
                     monitoring.to_log_and_console("       resampling '" + the_images[i].split(os.path.sep)[-1] + "'", 2)
                     if not os.path.isfile(res_images[i]) or monitoring.forceResultsToBeBuilt is True:
                         cpp_wrapping.apply_transformation(the_images[i], res_images[i],
-                                                          the_transformation=res_trsfs[i], template_image=res_images[0],
+                                                          the_transformation=res_trsfs[i],
+                                                          template_image=res_images[ref_index],
                                                           voxel_size=None, interpolation_mode='linear',
                                                           monitoring=monitoring)
                     else:
@@ -1940,18 +2028,25 @@ def _direct_fusion_process(input_image_list, the_image_list, fused_image, experi
 
             monitoring.to_log_and_console("          resampling '" + unreg_weight_images[i].split(os.path.sep)[-1]
                                           + "'", 2)
-            if i == 0:
-                if not os.path.isfile(weight_images[i]) or monitoring.forceResultsToBeBuilt is True:
-                    cpp_wrapping.apply_transformation(unreg_weight_images[i], weight_images[i],
-                                                      the_transformation=None, template_image=None,
-                                                      voxel_size=parameters.target_resolution,
-                                                      interpolation_mode='linear', monitoring=monitoring)
+            if i == ref_index:
+                if _is_transformation_identity(rotation_matrix[i]):
+                    if not os.path.isfile(weight_images[i]) or monitoring.forceResultsToBeBuilt is True:
+                        cpp_wrapping.apply_transformation(unreg_weight_images[i], weight_images[i],
+                                                          the_transformation=None, template_image=None,
+                                                          voxel_size=parameters.target_resolution,
+                                                          interpolation_mode='linear', monitoring=monitoring)
+                    else:
+                        monitoring.to_log_and_console("       already existing", 2)
                 else:
-                    monitoring.to_log_and_console("          already existing", 2)
+                    msg = "       resampling with an non-identity matrix not handled yet\n"
+                    msg += "... exiting"
+                    monitoring.to_log_and_console(msg)
+                    sys.exit(1)
             else:
                 if not os.path.isfile(weight_images[i]) or monitoring.forceResultsToBeBuilt is True:
                     cpp_wrapping.apply_transformation(unreg_weight_images[i], weight_images[i],
-                                                      the_transformation=res_trsfs[i], template_image=res_images[0],
+                                                      the_transformation=res_trsfs[i],
+                                                      template_image=res_images[ref_index],
                                                       voxel_size=None, interpolation_mode='linear',
                                                       monitoring=monitoring)
                 else:
@@ -2641,12 +2736,12 @@ def _hierarchical_fusion_process(input_image_list, the_image_list, fused_image, 
 def _fusion_process(input_image_list, fused_image, experiment, parameters):
     """
     
-    :param input_image_list: a list of list of images to be fused. One list per channel
-           the list of images to be fused contains successively
-           - the left camera of stack #0
-           - the right camera of stack #0
-           - the left camera of stack #1
-           - the right camera of stack #1
+    :param input_image_list: a list of dictionaries of images to be fused. One list per channel
+           a dictionary of images to be fused contains up to 4 images, with keys
+           0: the left camera of stack #0
+           1: the right camera of stack #0
+           2: the left camera of stack #1
+           3: the right camera of stack #1
     :param fused_image: a generic name for the fusion result
            the same name will be used for each cahnnel
     :param experiment:
@@ -2659,13 +2754,14 @@ def _fusion_process(input_image_list, fused_image, experiment, parameters):
     n_channels = experiment.rawdata_dir.get_number_channels()
 
     if monitoring.debug > 1:
-        print("")
-        print(proc + " was called with:")
-        print("- input_image_list = " + str(input_image_list))
-        print("- fused_image = " + str(fused_image))
-        for c in range(n_channels):
-            experiment.rawdata_dir.channel[c].print_parameters()
-        print("")
+        monitoring.to_log_and_console("")
+        monitoring.to_log_and_console(proc + " was called with:")
+        monitoring.to_log_and_console("- input_image_list = " + str(input_image_list))
+        monitoring.to_log_and_console("- fused_image = " + str(fused_image))
+        if monitoring.debug > 3:
+            for c in range(n_channels):
+                experiment.rawdata_dir.channel[c].print_parameters()
+        monitoring.to_log_and_console("")
 
     #
     # parameter type checking
@@ -2726,7 +2822,7 @@ def _fusion_process(input_image_list, fused_image, experiment, parameters):
 
         the_image_list = res_image_list[:]
         res_image_list = list()
-        corrections = list()
+        corrections = {}
 
         #
         # build the file names
@@ -2735,16 +2831,16 @@ def _fusion_process(input_image_list, fused_image, experiment, parameters):
         for c in range(n_channels):
 
             the_images = the_image_list[c]
-            res_images = []
+            res_images = {}
 
-            for i in range(0, len(the_images)):
-                res_images.append(common.add_suffix(input_image_list[c][i], "_line_corrected",
-                                                    new_dirname=experiment.rawdata_dir.get_tmp_directory(i, c),
-                                                    new_extension=experiment.default_image_suffix))
+            for i in the_images:
+                res_images[i] = common.add_suffix(input_image_list[c][i], "_line_corrected",
+                                                  new_dirname=experiment.rawdata_dir.get_tmp_directory(i, c),
+                                                  new_extension=experiment.default_image_suffix)
                 if c == 0:
-                    corrections.append(common.add_suffix(input_image_list[c][i], "_line_corrected",
-                                                         new_dirname=experiment.rawdata_dir.get_tmp_directory(i, c),
-                                                         new_extension='.txt'))
+                    corrections[i] = common.add_suffix(input_image_list[c][i], "_line_corrected",
+                                                       new_dirname=experiment.rawdata_dir.get_tmp_directory(i, c),
+                                                       new_extension='.txt')
             res_image_list.append(res_images)
 
         #
@@ -2753,14 +2849,16 @@ def _fusion_process(input_image_list, fused_image, experiment, parameters):
         # for channel #0, check also whether the correction file is missing
         #
 
-        do_something = [False] * len(input_image_list[0])
+        do_something = {}
+        for i in the_image_list[0]:
+            do_something[i] = False
 
         for c in range(n_channels):
 
             the_images = the_image_list[c]
             res_images = res_image_list[c]
 
-            for i in range(0, len(the_images)):
+            for i in the_images:
                 if os.path.isfile(res_images[i]):
                     if monitoring.forceResultsToBeBuilt is True:
                         do_something[i] = True
@@ -2784,7 +2882,7 @@ def _fusion_process(input_image_list, fused_image, experiment, parameters):
             the_images = the_image_list[c]
             res_images = res_image_list[c]
 
-            for i in range(0, len(the_images)):
+            for i in the_images:
 
                 monitoring.to_log_and_console("    .. correcting slit lines of '"
                                               + the_images[i].split(os.path.sep)[-1] + "'", 2)
@@ -2820,23 +2918,23 @@ def _fusion_process(input_image_list, fused_image, experiment, parameters):
     for c in range(n_channels):
 
         the_images = the_image_list[c]
-        res_images = []
+        res_images = {}
 
         #
         # build the file names
         #
 
-        for i in range(0, len(the_images)):
-            res_images.append(common.add_suffix(input_image_list[c][i], "_resample",
-                                                new_dirname=experiment.rawdata_dir.get_tmp_directory(i, c),
-                                                new_extension=experiment.default_image_suffix))
+        for i in the_images:
+            res_images[i] = common.add_suffix(input_image_list[c][i], "_resample",
+                                              new_dirname=experiment.rawdata_dir.get_tmp_directory(i, c),
+                                              new_extension=experiment.default_image_suffix)
         res_image_list.append(res_images)
 
         #
         # process
         #
 
-        for i in range(0, len(the_images)):
+        for i in the_images:
 
             im = imread(the_images[i])
             if type(parameters.target_resolution) == int or type(parameters.target_resolution) == float:
@@ -2879,12 +2977,12 @@ def _fusion_process(input_image_list, fused_image, experiment, parameters):
         for c in range(n_channels):
 
             the_images = the_image_list[c]
-            res_images = []
+            res_images = {}
 
-            for i in range(0, len(the_images)):
-                res_images.append(common.add_suffix(input_image_list[c][i], "_crop",
-                                                    new_dirname=experiment.rawdata_dir.get_tmp_directory(i, c),
-                                                    new_extension=experiment.default_image_suffix))
+            for i in the_images:
+                res_images[i] = common.add_suffix(input_image_list[c][i], "_crop",
+                                                  new_dirname=experiment.rawdata_dir.get_tmp_directory(i, c),
+                                                  new_extension=experiment.default_image_suffix)
             res_image_list.append(res_images)
 
         #
@@ -2892,14 +2990,16 @@ def _fusion_process(input_image_list, fused_image, experiment, parameters):
         # check whether one cropped image is missing
         #
 
-        do_something = [False] * len(input_image_list[0])
+        do_something = {}
+        for i in the_image_list[0]:
+            do_something[i] = False
 
         for c in range(n_channels):
 
             the_images = the_image_list[c]
             res_images = res_image_list[c]
 
-            for i in range(0, len(the_images)):
+            for i in the_images:
                 if os.path.isfile(res_images[i]):
                     if monitoring.forceResultsToBeBuilt is True:
                         do_something[i] = True
@@ -2919,7 +3019,7 @@ def _fusion_process(input_image_list, fused_image, experiment, parameters):
             the_images = the_image_list[c]
             res_images = res_image_list[c]
 
-            for i in range(0, len(the_images)):
+            for i in the_images:
 
                 monitoring.to_log_and_console("    .. cropping '"
                                               + the_images[i].split(os.path.sep)[-1] + "'", 2)
@@ -2963,50 +3063,50 @@ def _fusion_process(input_image_list, fused_image, experiment, parameters):
         for c in range(n_channels):
 
             the_images = the_image_list[c]
-            res_images = []
+            res_images = {}
 
             #
             # build the file names
             #
 
-            for i in range(0, len(the_images)):
+            for i in the_images:
 
                 if i == 0:
                     # stack 0, left camera
                     if parameters.acquisition_stack0_leftcamera_z_stacking.lower() == 'inverse':
-                        res_images.append(common.add_suffix(input_image_list[c][i], "_mirror",
-                                                            new_dirname=experiment.rawdata_dir.get_tmp_directory(i, c),
-                                                            new_extension=experiment.default_image_suffix))
+                        res_images[i] = common.add_suffix(input_image_list[c][i], "_mirror",
+                                                          new_dirname=experiment.rawdata_dir.get_tmp_directory(i, c),
+                                                          new_extension=experiment.default_image_suffix)
                     else:
-                        res_images.append(the_images[i])
+                        res_images[i] = the_images[i]
                 elif i == 1:
                     # stack 0, right camera
                     if parameters.acquisition_stack0_leftcamera_z_stacking.lower() == 'inverse' \
                         or parameters.acquisition_mirrors is False:
-                        res_images.append(common.add_suffix(input_image_list[c][i], "_mirror",
-                                                            new_dirname=experiment.rawdata_dir.get_tmp_directory(i, c),
-                                                            new_extension=experiment.default_image_suffix))
+                        res_images[i] = common.add_suffix(input_image_list[c][i], "_mirror",
+                                                          new_dirname=experiment.rawdata_dir.get_tmp_directory(i, c),
+                                                          new_extension=experiment.default_image_suffix)
                     else:
-                        res_images.append(the_images[i])
+                        res_images[i] = the_images[i]
                 elif i == 2:
                     # stack 1, left camera
                     if parameters.acquisition_stack1_leftcamera_z_stacking.lower() == 'inverse':
-                        res_images.append(common.add_suffix(input_image_list[c][i], "_mirror",
-                                                            new_dirname=experiment.rawdata_dir.get_tmp_directory(i, c),
-                                                            new_extension=experiment.default_image_suffix))
+                        res_images[i] = common.add_suffix(input_image_list[c][i], "_mirror",
+                                                          new_dirname=experiment.rawdata_dir.get_tmp_directory(i, c),
+                                                          new_extension=experiment.default_image_suffix)
                     else:
-                        res_images.append(the_images[i])
+                        res_images[i] = the_images[i]
                 elif i == 3:
                     # stack 1, right camera
                     if parameters.acquisition_stack1_leftcamera_z_stacking.lower() == 'inverse' \
                         or parameters.acquisition_mirrors is False:
-                        res_images.append(common.add_suffix(input_image_list[c][i], "_mirror",
-                                                            new_dirname=experiment.rawdata_dir.get_tmp_directory(i, c),
-                                                            new_extension=experiment.default_image_suffix))
+                        res_images[i] = common.add_suffix(input_image_list[c][i], "_mirror",
+                                                          new_dirname=experiment.rawdata_dir.get_tmp_directory(i, c),
+                                                          new_extension=experiment.default_image_suffix)
                     else:
-                        res_images.append(the_images[i])
+                        res_images[i] = the_images[i]
                 else:
-                    monitoring.to_log_and_console("       weird index:'"+str(i)+"'", 2)
+                    monitoring.to_log_and_console("       weird index:'" + str(i) + "'", 2)
 
             res_image_list.append(res_images)
 
@@ -3014,7 +3114,7 @@ def _fusion_process(input_image_list, fused_image, experiment, parameters):
             # process
             #
 
-            for i in range(0, len(the_images)):
+            for i in the_images:
 
                 if i == 0:
                     # stack 0, left camera
@@ -3093,7 +3193,10 @@ def _fusion_process(input_image_list, fused_image, experiment, parameters):
                             monitoring.to_log_and_console("       already existing", 2)
 
     #
-    #
+    # list of list of image names have been changed to list of dictionaries,
+    # to manage the possibilities to fuse with only a subset of images
+    # in _direct_fusion_process()
+    # but not in _hierarchical_fusion_process()
     #
     if len(the_images) == 4 and parameters.fusion_strategy.lower() == 'hierarchical-fusion':
         monitoring.to_log_and_console("    .. hierarchical fusion", 2)
@@ -3102,7 +3205,10 @@ def _fusion_process(input_image_list, fused_image, experiment, parameters):
         #
         # direct fusion
         # each acquisition is co-registered with the left camera of stack #0
-        monitoring.to_log_and_console("    .. direct fusion", 2)
+        if parameters.fusion_strategy.lower() == 'hierarchical-fusion':
+            monitoring.to_log_and_console("    .. not enough images, switch to direct fusion", 2)
+        else:
+            monitoring.to_log_and_console("    .. direct fusion", 2)
         _direct_fusion_process(input_image_list, res_image_list, fused_image, experiment, parameters)
 
     return
@@ -3118,7 +3224,11 @@ def _fusion_process(input_image_list, fused_image, experiment, parameters):
 def _fusion_preprocess(input_images, fused_image, time_point, experiment, parameters):
     """
 
-    :param input_images:
+    :param input_images: dictionary indexed by 0, 1, 2, or 3
+        where 0 corresponds to angle #0 = stack_0_channel_0/Cam_Left_00
+        where 1 corresponds to angle #1 = stack_0_channel_0/Cam_Right_00
+        where 2 corresponds to angle #2 = stack_1_channel_0/Cam_Left_00
+        where 3 corresponds to angle #3 = stack_1_channel_0/Cam_Right_00
     :param fused_image:
     :param time_point:
     :param experiment:
@@ -3129,12 +3239,12 @@ def _fusion_preprocess(input_images, fused_image, time_point, experiment, parame
     proc = "fusion_preprocess"
 
     if monitoring.debug > 1:
-
-        print(proc + " was called with:")
-        print("- input_images = " + str(input_images))
-        print("- fused_image = " + str(fused_image))
-        print("- time_point = " + str(time_point))
-        print("")
+        monitoring.to_log_and_console("")
+        monitoring.to_log_and_console(proc + " was called with:")
+        monitoring.to_log_and_console("- input_images = " + str(input_images))
+        monitoring.to_log_and_console("- fused_image = " + str(fused_image))
+        monitoring.to_log_and_console("- time_point = " + str(time_point))
+        monitoring.to_log_and_console("")
 
     #
     # parameter type checking
@@ -3208,27 +3318,21 @@ def _fusion_preprocess(input_images, fused_image, time_point, experiment, parame
     #
     monitoring.to_log_and_console('    get original images', 2)
 
+    #
+    # this is the list (length = #channels) of dictionaries of images to be fused
+    #
     image_list = list()
 
+    # list of list of image names have been changed to list of dictionaries,
+    # to manage the possibilities to fuse with only a subset of images
+
     for c in range(experiment.rawdata_dir.get_number_channels()):
-        images = list()
-        images.append(_read_image_name(experiment.rawdata_dir.channel[c].get_angle_path(0),
-                                       experiment.rawdata_dir.get_tmp_directory(0, c),
-                                       input_images[0],
-                                       parameters.acquisition_resolution, experiment.default_image_suffix))
-        images.append(_read_image_name(experiment.rawdata_dir.channel[c].get_angle_path(1),
-                                       experiment.rawdata_dir.get_tmp_directory(1, c),
-                                       input_images[1],
-                                       parameters.acquisition_resolution, experiment.default_image_suffix))
-        if len(input_images) == 4:
-            images.append(_read_image_name(experiment.rawdata_dir.channel[c].get_angle_path(2),
-                                           experiment.rawdata_dir.get_tmp_directory(2, c),
-                                           input_images[2],
-                                           parameters.acquisition_resolution, experiment.default_image_suffix))
-            images.append(_read_image_name(experiment.rawdata_dir.channel[c].get_angle_path(3),
-                                           experiment.rawdata_dir.get_tmp_directory(3, c),
-                                           input_images[3],
-                                           parameters.acquisition_resolution, experiment.default_image_suffix))
+        images = {}
+        for i in input_images:
+            images[i] =_read_image_name(experiment.rawdata_dir.channel[c].get_angle_path(i),
+                                        experiment.rawdata_dir.get_tmp_directory(i, c),
+                                        input_images[i],
+                                        parameters.acquisition_resolution, experiment.default_image_suffix)
         image_list.append(images)
 
     #
@@ -3304,20 +3408,13 @@ def fusion_control(experiment, parameters):
     monitoring.to_log_and_console('', 1)
 
     #
-    # make sure that the result directory exists
-    # (although it should have been verified in 1-fuse.py)
-    #
-
-    # for c in range(0, len(experiment.fusion_dir.get_number_directories())):
-    #    if not os.path.isdir(experiment.fusion_dir.get_directory(c)):
-    #        os.makedirs(experiment.fusion_dir.get_directory(c))
-
-    # if not os.path.isdir(environment.path_logdir):
-    #    os.makedirs(environment.path_logdir)
-
-    #
     # if data directories of the main channel are different, parse them
     # else rely on the given names
+    #
+    # This is the historical version of the fusion. Now the muvispim has
+    # standardized outputs
+    # - stack_0_channel_C: contains the 'C' channel of both left and right cameras of stack #0
+    # - stack_1_channel_C: contains the 'C' channel of both left and right cameras of stack #1
     #
 
     if experiment.rawdata_dir.channel[0].sub_directories_are_different() is True:
@@ -3331,6 +3428,11 @@ def fusion_control(experiment, parameters):
         # - the common file suffix
         #
 
+        # get the directories for each of the acquisition/angle. It corresponds to
+        # angle #0 = stack_0_channel_0/Cam_Left_00
+        # angle #1 = stack_0_channel_0/Cam_Right_00
+        # angle #2 = stack_1_channel_0/Cam_Left_00
+        # angle #3 = stack_1_channel_0/Cam_Right_00
         path_angle0 = experiment.rawdata_dir.channel[0].get_angle_path(0)
         path_angle1 = experiment.rawdata_dir.channel[0].get_angle_path(1)
         path_angle2 = experiment.rawdata_dir.channel[0].get_angle_path(2)
@@ -3342,28 +3444,28 @@ def fusion_control(experiment, parameters):
         prefix3, time_length3, time_points3, suffix3 = _analyze_data_directory(path_angle3)
 
         if monitoring.debug > 0:
-            print("")
-            print("analysis of '" + str(path_angle0) + "'")
-            print("   -> " + prefix0)
-            print("   -> " + str(time_length0))
-            print("   -> " + str(time_points0))
-            print("   -> " + suffix0)
-            print("analysis of '" + str(path_angle1) + "'")
-            print("   -> " + prefix1)
-            print("   -> " + str(time_length1))
-            print("   -> " + str(time_points1))
-            print("   -> " + suffix1)
-            print("analysis of '" + str(path_angle2) + "'")
-            print("   -> " + prefix2)
-            print("   -> " + str(time_length2))
-            print("   -> " + str(time_points2))
-            print("   -> " + suffix2)
-            print("analysis of '" + str(path_angle3) + "'")
-            print("   -> " + prefix3)
-            print("   -> " + str(time_length3))
-            print("   -> " + str(time_points3))
-            print("   -> " + suffix3)
-            print("")
+            monitoring.to_log_and_console("")
+            monitoring.to_log_and_console("analysis of '" + str(path_angle0) + "'")
+            monitoring.to_log_and_console("   -> " + prefix0)
+            monitoring.to_log_and_console("   -> " + str(time_length0))
+            monitoring.to_log_and_console("   -> " + str(time_points0))
+            monitoring.to_log_and_console("   -> " + suffix0)
+            monitoring.to_log_and_console("analysis of '" + str(path_angle1) + "'")
+            monitoring.to_log_and_console("   -> " + prefix1)
+            monitoring.to_log_and_console("   -> " + str(time_length1))
+            monitoring.to_log_and_console("   -> " + str(time_points1))
+            monitoring.to_log_and_console("   -> " + suffix1)
+            monitoring.to_log_and_console("analysis of '" + str(path_angle2) + "'")
+            monitoring.to_log_and_console("   -> " + prefix2)
+            monitoring.to_log_and_console("   -> " + str(time_length2))
+            monitoring.to_log_and_console("   -> " + str(time_points2))
+            monitoring.to_log_and_console("   -> " + suffix2)
+            monitoring.to_log_and_console("analysis of '" + str(path_angle3) + "'")
+            monitoring.to_log_and_console("   -> " + prefix3)
+            monitoring.to_log_and_console("   -> " + str(time_length3))
+            monitoring.to_log_and_console("   -> " + str(time_points3))
+            monitoring.to_log_and_console("   -> " + suffix3)
+            monitoring.to_log_and_console("")
 
         #
         # loop over acquisitions
@@ -3397,31 +3499,39 @@ def fusion_control(experiment, parameters):
                 # input image names
                 #
 
-                images = list()
+                images = {}
 
                 images.append(prefix0 + time_point + suffix0)
+                images[0] = im
                 im = prefix1 + time_point + suffix1
                 if time_point not in time_points1:
-                    print(proc + ": image '" + im + "' not found in '" + path_angle1 + "'")
-                    print("\t Exiting.")
-                    sys.exit(1)
+                    monitoring.to_log_and_console("    .. image '" + im + "' not found in '" + path_angle1 + "'", 2)
+                    # monitoring.to_log_and_console("       skip time " + str(time_point), 2)
+                    # continue
                 else:
-                    images.append(im)
+                    images[1] = im
                 im = prefix2 + time_point + suffix2
                 if time_point not in time_points2:
-                    print(proc + ": image '" + im + "' not found in '" + path_angle2 + "'")
-                    print("\t Exiting.")
-                    sys.exit(1)
+                    monitoring.to_log_and_console("    .. image '" + im + "' not found in '" + path_angle2 + "'", 2)
+                    # monitoring.to_log_and_console("       skip time " + str(time_point), 2)
+                    # continue
                 else:
-                    images.append(im)
+                    images[2] = im
                 im = prefix3 + time_point + suffix3
                 if time_point not in time_points3:
-                    print(proc + ": image '" + im + "' not found in '" + path_angle3 + "'")
-                    print("\t Exiting.")
-                    sys.exit(1)
+                    monitoring.to_log_and_console("    .. image '" + im + "' not found in '" + path_angle3 + "'", 2)
+                    # monitoring.to_log_and_console("       skip time " + str(time_point), 2)
+                    # continue
                 else:
-                    images.append(im)
+                    images[3] = im
 
+                #
+                # check whether we found an image
+                #
+                if len(images) == 0:
+                    monitoring.to_log_and_console("    .. no images to be fused", 2)
+                    monitoring.to_log_and_console("       skip time " + str(time_point), 2)
+                    continue
                 #
                 # process
                 #
@@ -3456,36 +3566,44 @@ def fusion_control(experiment, parameters):
                 # input image names
                 #
 
-                images = list()
+                images = {}
 
                 im = prefix0 + acquisition_time + suffix0
                 if acquisition_time not in time_points0:
                     monitoring.to_log_and_console("    .. image '" + im + "' not found in '" + path_angle0 + "'", 2)
-                    monitoring.to_log_and_console("       skip time " + str(acquisition_time), 2)
-                    continue
+                    # monitoring.to_log_and_console("       skip time " + str(acquisition_time), 2)
+                    # continue
                 else:
-                    images.append(im)
+                    images[0] = im
                 im = prefix1 + acquisition_time + suffix1
                 if acquisition_time not in time_points1:
                     monitoring.to_log_and_console("    .. image '" + im + "' not found in '" + path_angle1 + "'", 2)
                     monitoring.to_log_and_console("       skip time " + str(acquisition_time), 2)
                     continue
                 else:
-                    images.append(im)
+                    images[1] = im
                 im = prefix2 + acquisition_time + suffix2
                 if acquisition_time not in time_points2:
                     monitoring.to_log_and_console("    .. image '" + im + "' not found in '" + path_angle2 + "'", 2)
                     monitoring.to_log_and_console("       skip time " + str(acquisition_time), 2)
                     continue
                 else:
-                    images.append(im)
+                    images[2] = im
                 im = prefix3 + acquisition_time + suffix3
                 if acquisition_time not in time_points3:
                     monitoring.to_log_and_console("    .. image '" + im + "' not found in '" + path_angle3 + "'", 2)
                     monitoring.to_log_and_console("       skip time " + str(acquisition_time), 2)
                     continue
                 else:
-                    images.append(im)
+                    images[3] = im
+
+                #
+                # check whether we found an image
+                #
+                if len(images) == 0:
+                    monitoring.to_log_and_console("    .. no images to be fused", 2)
+                    monitoring.to_log_and_console("       skip time " + str(acquisition_time), 2)
+                    continue
 
                 #
                 # process
@@ -3519,47 +3637,54 @@ def fusion_control(experiment, parameters):
             # input image names
             #
 
-            images = list()
+            images = {}
 
             sname = experiment.rawdata_dir.channel[0].get_image_name(0, time_value)
             sdir = experiment.rawdata_dir.channel[0].get_angle_path(0)
-            im = common.find_file(sdir, sname, file_type='image', callfrom=proc, local_monitoring=monitoring)
-            if im is None:
-                monitoring.to_log_and_console("    .. image '" + sname + "' not found in '" + sdir + "'", 2)
-                monitoring.to_log_and_console("       skip time " + str(acquisition_time), 2)
-                continue
-            else:
-                images.append(im)
-
-            sname = experiment.rawdata_dir.channel[0].get_image_name(1, time_value)
-            sdir = experiment.rawdata_dir.channel[0].get_angle_path(1)
-            im = common.find_file(sdir, sname, file_type='image', callfrom=proc, local_monitoring=monitoring)
-            if im is None:
-                monitoring.to_log_and_console("    .. image '" + sname + "' not found in '" + sdir + "'", 2)
-                monitoring.to_log_and_console("       skip time " + str(acquisition_time), 2)
-                continue
-            else:
-                images.append(im)
-
-            sname = experiment.rawdata_dir.channel[0].get_image_name(2, time_value)
-            sdir = experiment.rawdata_dir.channel[0].get_angle_path(2)
-            im = common.find_file(sdir, sname, file_type='image', callfrom=proc, local_monitoring=monitoring)
-
+            im = common.find_file(sdir, sname, file_type='image', callfrom=proc, local_monitoring=None, verbose=False)
             if im is None:
                 monitoring.to_log_and_console("    .. image '" + sname + "' not found in '" + sdir + "'", 2)
                 # monitoring.to_log_and_console("       skip time " + str(acquisition_time), 2)
-                monitoring.to_log_and_console("       maybe there is only one stack ", 2)
+                # continue
             else:
-                images.append(im)
-                sname = experiment.rawdata_dir.channel[0].get_image_name(3, time_value)
-                sdir = experiment.rawdata_dir.channel[0].get_angle_path(3)
-                im = common.find_file(sdir, sname, file_type='image', callfrom=proc, local_monitoring=monitoring)
-                if im is None:
-                    monitoring.to_log_and_console("    .. image '" + sname + "' not found in '" + sdir + "'", 2)
-                    monitoring.to_log_and_console("       skip time " + str(acquisition_time), 2)
-                    continue
-                else:
-                    images.append(im)
+                images[0] = im
+
+            sname = experiment.rawdata_dir.channel[0].get_image_name(1, time_value)
+            sdir = experiment.rawdata_dir.channel[0].get_angle_path(1)
+            im = common.find_file(sdir, sname, file_type='image', callfrom=proc, local_monitoring=None, verbose=False)
+            if im is None:
+                monitoring.to_log_and_console("    .. image '" + sname + "' not found in '" + sdir + "'", 2)
+                # monitoring.to_log_and_console("       skip time " + str(acquisition_time), 2)
+                # continue
+            else:
+                images[1] = im
+
+            sname = experiment.rawdata_dir.channel[0].get_image_name(2, time_value)
+            sdir = experiment.rawdata_dir.channel[0].get_angle_path(2)
+            im = common.find_file(sdir, sname, file_type='image', callfrom=proc, local_monitoring=None, verbose=False)
+            if im is None:
+                monitoring.to_log_and_console("    .. image '" + sname + "' not found in '" + sdir + "'", 2)
+                # monitoring.to_log_and_console("       skip time " + str(acquisition_time), 2)
+                # monitoring.to_log_and_console("       maybe there is only one stack ", 2)
+            else:
+                images[2] = im
+            sname = experiment.rawdata_dir.channel[0].get_image_name(3, time_value)
+            sdir = experiment.rawdata_dir.channel[0].get_angle_path(3)
+            im = common.find_file(sdir, sname, file_type='image', callfrom=proc, local_monitoring=None, verbose=False)
+            if im is None:
+                monitoring.to_log_and_console("    .. image '" + sname + "' not found in '" + sdir + "'", 2)
+                # monitoring.to_log_and_console("       skip time " + str(acquisition_time), 2)
+                # continue
+            else:
+                images[3] = im
+
+            #
+            # check whether we found an image
+            #
+            if len(images) == 0:
+                monitoring.to_log_and_console("    .. no images to be fused", 2)
+                monitoring.to_log_and_console("       skip time " + str(acquisition_time), 2)
+                continue
 
             #
             # process

@@ -624,14 +624,28 @@ def linear_combination(the_weights, the_images, res_image, other_options=None, m
     """
 
     path_to_exec = _find_exec('mc-linearCombination')
+    command_line = path_to_exec
 
-    command_line = path_to_exec + " -weights"
-    for i in range(len(the_weights)):
-        command_line += " " + str(the_weights[i])
-
-    command_line += " -images"
-    for i in range(len(the_images)):
-        command_line += " " + str(the_images[i])
+    if isinstance(the_weights, list) and isinstance(the_images, list):
+        if len(the_weights) != len(the_images):
+            if monitoring is not None:
+                msg = "weight and image lists do not have the same length\n"
+                monitoring.to_log(msg)
+            return
+        command_line += " -weights"
+        for i in range(len(the_weights)):
+            command_line += " " + str(the_weights[i])
+        command_line += " -images"
+        for i in range(len(the_images)):
+            command_line += " " + str(the_images[i])
+    elif isinstance(the_weights, dict) and isinstance(the_images, dict):
+        keys = (set(the_weights.keys())).intersection(set(the_images.keys()))
+        command_line += " -weights"
+        for i in keys:
+            command_line += " " + str(the_weights[i])
+        command_line += " -images"
+        for i in keys:
+            command_line += " " + str(the_images[i])
 
     command_line += " -res " + str(res_image)
 

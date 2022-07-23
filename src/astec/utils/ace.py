@@ -168,7 +168,7 @@ class AceParameters(common.PrefixedParameter):
         #
         doc = "\t Number of processors for parallelization\n"
         self.doc['processors'] = doc
-        self.processors = 7
+        self.processors = 10
 
     ############################################################
     #
