@@ -815,12 +815,20 @@ class RawdataChannel(PrefixedParameter):
 
     def get_angle_path(self, angle_id):
         if angle_id == 0:
+            if self.angle0_sub_directory is None:
+                return None
             return os.path.join(self._parent_directory, self._main_directory, self.angle0_sub_directory)
         elif angle_id == 1:
+            if self.angle1_sub_directory is None:
+                return None
             return os.path.join(self._parent_directory, self._main_directory, self.angle1_sub_directory)
         elif angle_id == 2:
+            if self.angle2_sub_directory is None:
+                return None
             return os.path.join(self._parent_directory, self._main_directory, self.angle2_sub_directory)
         elif angle_id == 3:
+            if self.angle3_sub_directory is None:
+                return None
             return os.path.join(self._parent_directory, self._main_directory, self.angle3_sub_directory)
         return None
 
@@ -877,8 +885,16 @@ class RawdataChannel(PrefixedParameter):
         return True
 
     def is_empty(self):
-        if self.angle0_sub_directory is None or self.angle1_sub_directory is None or self.angle2_sub_directory is None \
-                or self.angle3_sub_directory is None:
+        n_directories = 0
+        if self.angle0_sub_directory is not None:
+            n_directories += 1
+        if self.angle1_sub_directory is not None:
+            n_directories += 1
+        if self.angle2_sub_directory is not None:
+            n_directories += 1
+        if self.angle3_sub_directory is not None:
+            n_directories += 1
+        if n_directories <= 1:
             return True
         return False
 
@@ -2890,6 +2906,9 @@ def find_file(data_path, file_prefix, file_type=None, callfrom=None, local_monit
     :return:
     """
     proc = "find_file"
+
+    if data_path is None:
+        return None
 
     if not os.path.isdir(data_path):
         if local_monitoring is not None:

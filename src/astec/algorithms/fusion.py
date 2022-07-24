@@ -3272,7 +3272,6 @@ def _fusion_preprocess(input_images, fused_image, time_point, experiment, parame
     #
     # check whether there exists some unfused channel
     #
-
     do_something = False
     for c in range(n_channels):
         if os.path.isfile(os.path.join(experiment.fusion_dir.get_directory(c), fused_image)):
@@ -3641,42 +3640,59 @@ def fusion_control(experiment, parameters):
 
             sname = experiment.rawdata_dir.channel[0].get_image_name(0, time_value)
             sdir = experiment.rawdata_dir.channel[0].get_angle_path(0)
-            im = common.find_file(sdir, sname, file_type='image', callfrom=proc, local_monitoring=None, verbose=False)
-            if im is None:
-                monitoring.to_log_and_console("    .. image '" + sname + "' not found in '" + sdir + "'", 2)
-                # monitoring.to_log_and_console("       skip time " + str(acquisition_time), 2)
-                # continue
+            if sdir is None:
+                monitoring.to_log_and_console("    .. no directory for left camera of stack #0", 2)
             else:
-                images[0] = im
+                im = common.find_file(sdir, sname, file_type='image', callfrom=proc, local_monitoring=None,
+                                      verbose=False)
+                if im is None:
+                    monitoring.to_log_and_console("    .. image '" + sname + "' not found in '" + sdir + "'", 2)
+                    # monitoring.to_log_and_console("       skip time " + str(acquisition_time), 2)
+                    # continue
+                else:
+                    images[0] = im
 
             sname = experiment.rawdata_dir.channel[0].get_image_name(1, time_value)
             sdir = experiment.rawdata_dir.channel[0].get_angle_path(1)
-            im = common.find_file(sdir, sname, file_type='image', callfrom=proc, local_monitoring=None, verbose=False)
-            if im is None:
-                monitoring.to_log_and_console("    .. image '" + sname + "' not found in '" + sdir + "'", 2)
-                # monitoring.to_log_and_console("       skip time " + str(acquisition_time), 2)
-                # continue
+            if sdir is None:
+                monitoring.to_log_and_console("    .. no directory for right camera of stack #0", 2)
             else:
-                images[1] = im
+                im = common.find_file(sdir, sname, file_type='image', callfrom=proc, local_monitoring=None,
+                                      verbose=False)
+                if im is None:
+                    monitoring.to_log_and_console("    .. image '" + sname + "' not found in '" + sdir + "'", 2)
+                    # monitoring.to_log_and_console("       skip time " + str(acquisition_time), 2)
+                    # continue
+                else:
+                    images[1] = im
 
             sname = experiment.rawdata_dir.channel[0].get_image_name(2, time_value)
             sdir = experiment.rawdata_dir.channel[0].get_angle_path(2)
-            im = common.find_file(sdir, sname, file_type='image', callfrom=proc, local_monitoring=None, verbose=False)
-            if im is None:
-                monitoring.to_log_and_console("    .. image '" + sname + "' not found in '" + sdir + "'", 2)
-                # monitoring.to_log_and_console("       skip time " + str(acquisition_time), 2)
-                # monitoring.to_log_and_console("       maybe there is only one stack ", 2)
+            if sdir is None:
+                monitoring.to_log_and_console("    .. no directory for left camera of stack #1", 2)
             else:
-                images[2] = im
+                im = common.find_file(sdir, sname, file_type='image', callfrom=proc, local_monitoring=None,
+                                      verbose=False)
+                if im is None:
+                    monitoring.to_log_and_console("    .. image '" + sname + "' not found in '" + sdir + "'", 2)
+                    # monitoring.to_log_and_console("       skip time " + str(acquisition_time), 2)
+                    # monitoring.to_log_and_console("       maybe there is only one stack ", 2)
+                else:
+                    images[2] = im
+
             sname = experiment.rawdata_dir.channel[0].get_image_name(3, time_value)
             sdir = experiment.rawdata_dir.channel[0].get_angle_path(3)
-            im = common.find_file(sdir, sname, file_type='image', callfrom=proc, local_monitoring=None, verbose=False)
-            if im is None:
-                monitoring.to_log_and_console("    .. image '" + sname + "' not found in '" + sdir + "'", 2)
-                # monitoring.to_log_and_console("       skip time " + str(acquisition_time), 2)
-                # continue
+            if sdir is None:
+                monitoring.to_log_and_console("    .. no directory for right camera of stack #1", 2)
             else:
-                images[3] = im
+                im = common.find_file(sdir, sname, file_type='image', callfrom=proc, local_monitoring=None,
+                                      verbose=False)
+                if im is None:
+                    monitoring.to_log_and_console("    .. image '" + sname + "' not found in '" + sdir + "'", 2)
+                    # monitoring.to_log_and_console("       skip time " + str(acquisition_time), 2)
+                    # continue
+                else:
+                    images[3] = im
 
             #
             # check whether we found an image
