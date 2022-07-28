@@ -18,6 +18,8 @@ import astec.utils.atlas_cell as uatlasc
 import astec.utils.atlas_embryo as uatlase
 import astec.utils.icp as icp
 import astec.utils.ioproperties as ioproperties
+import astec.utils.ascidian_name as uname
+
 
 #
 #
@@ -962,13 +964,18 @@ def _register_embryos(transformations, embryo, atlases, parameters, time_digits_
 #
 ########################################################################################
 
+def _get_named_timepoints(prop, time_digits_for_cell_id=4):
+    cells = set(list(prop['cell_name'].keys()))
+    div = 10 ** time_digits_for_cell_id
+    times = list(set([int(c) // div for c in cells]))
+    return times
+
+
 def _test_naming(prop, reference_prop, time_digits_for_cell_id=4, verbose=True):
     #
     #
     #
-    cells = set(list(prop['cell_name'].keys()))
-    div = 10 ** time_digits_for_cell_id
-    times = list(set([int(c) // div for c in cells]))
+    times = _get_named_timepoints(prop, time_digits_for_cell_id=time_digits_for_cell_id)
     if len(times) == 0:
         if verbose:
             msg = "no names were set"
@@ -977,6 +984,10 @@ def _test_naming(prop, reference_prop, time_digits_for_cell_id=4, verbose=True):
         if verbose:
             msg = "weird, names were set on several time points " + str(times)
             monitoring.to_log_and_console("... " + msg)
+
+    cells = set(list(prop['cell_name'].keys()))
+    div = 10 ** time_digits_for_cell_id
+    times = list(set([int(c) // div for c in cells]))
 
     refcells = set([c for c in reference_prop['cell_name'] if int(c) // div in times])
 
@@ -1190,6 +1201,146 @@ def _get_transformation_filename(parameters):
     return None
 
 
+########################################################################################
+#
+#
+#
+########################################################################################
+
+def _get_atlases_cell_volume(name, atlases):
+    ref_atlases = atlases.get_atlases()
+    vols = []
+    for a in ref_atlases:
+        ref_name = ref_atlases[a].cell_name
+        ref_volume = ref_atlases[a].cell_volume
+        for c in ref_name:
+            if ref_name[c] != name:
+                continue
+            if c not in ref_volume:
+                msg = "weird, cell " + str(c) + " is not in volumes of atlas '" + str(a) + "'"
+                monitoring.to_log_and_console("      ... " + msg)
+                continue
+            #
+            # get volume correction for the curr]ent time
+            # to get homogeneized volumes
+            #
+            vols += [ref_atlases[a].get_rectified_cell_volume(c)]
+    return vols
+
+
+def _check_initial_naming_volume(prop, embryo, atlases, time_digits_for_cell_id=4, verbose=True):
+    proc = "_check_initial_naming_volume"
+
+    times = _get_named_timepoints(prop, time_digits_for_cell_id=time_digits_for_cell_id)
+    if len(times) == 0:
+        if verbose:
+            msg = "no names were set"
+            monitoring.to_log_and_console("... " + msg)
+    elif len(times) > 1:
+        if verbose:
+            msg = "weird, names were set on several time points " + str(times)
+            monitoring.to_log_and_console("... " + msg)
+
+    cells = sorted(list(prop['cell_name'].keys()))
+    unnamed_cells = []
+    for c in cells:
+        cell_volume = embryo.get_rectified_cell_volume(c)
+        name = prop['cell_name'][c]
+
+        #
+        # get volumes of cell with the same name in reference
+        #
+        volumes = _get_atlases_cell_volume(name, atlases)
+        mean_volume = np.mean(volumes)
+        std_volume = np.std(volumes)
+        if cell_volume >= mean_volume:
+            #
+            # get volumes of the mother cell in reference
+            #
+            mname = uname.get_mother_name(name)
+            m_volumes = _get_atlases_cell_volume(mname, atlases)
+            if len(m_volumes) == 0:
+                msg = "   ... can not check " + str(c) + " (given name was '" + str(name) + "')."
+                msg += " No mother cell volumes."
+                monitoring.to_log_and_console(msg)
+                continue
+            m_mean_volume = np.mean(m_volumes)
+            if cell_volume >= m_mean_volume:
+                unnamed_cells += [(c, name)]
+                del prop['cell_name'][c]
+                msg = "   ... unnamed cell " + str(c) + " (given name was '" + str(name) + "').\n"
+                msg += "       Cell volume larger than reference mother cell volumes."
+                monitoring.to_log_and_console(msg)
+                continue
+            #   emb_volume[c] < m_mean_volume:
+            if len(m_volumes) == 1:
+                diff_to_cell = (cell_volume - mean_volume)
+                diff_to_mcell = (m_mean_volume - cell_volume)
+            else:
+                m_std_volume = np.std(m_volumes)
+                diff_to_cell = (cell_volume - mean_volume) / std_volume
+                diff_to_mcell = (m_mean_volume - cell_volume) / m_std_volume
+            if diff_to_cell >= diff_to_mcell:
+                unnamed_cells += [(c, name)]
+                del prop['cell_name'][c]
+                msg = "   ... unnamed cell " + str(c) + " (given name was '" + str(name) + "').\n"
+                msg += "       Cell volume closer to reference mother cell volumes."
+                monitoring.to_log_and_console(msg)
+                continue
+        else:
+            dnames = uname.get_daughter_names(name)
+            d_volumes = [0, 0]
+            d_mean_volume = [0, 0]
+            d_volumes[0] = _get_atlases_cell_volume(dnames[0], atlases)
+            d_volumes[1] = _get_atlases_cell_volume(dnames[1], atlases)
+            if len(d_volumes[0]) == 0 and len(d_volumes[1]) == 0:
+                msg = "   ... can not check " + str(c) + " (given name was '" + str(name) + "')."
+                msg += " No daughter cell volumes."
+                monitoring.to_log_and_console(msg)
+                continue
+            elif len(d_volumes[0]) == 0:
+                d_mean_volume[1] = np.mean(d_volumes[1])
+                idaughter = 1
+            elif len(d_volumes[1]) == 0:
+                d_mean_volume[0] = np.mean(d_volumes[0])
+                idaughter = 0
+            else:
+                d_mean_volume = [0, 0]
+                d_mean_volume[0] = np.mean(d_volumes[0])
+                d_mean_volume[1] = np.mean(d_volumes[1])
+                if d_mean_volume[1] > d_mean_volume[0]:
+                    idaughter = 1
+                else:
+                    idaughter = 0
+            if cell_volume <= d_mean_volume[idaughter]:
+                unnamed_cells += [(c, name)]
+                del prop['cell_name'][c]
+                msg = "   ... unnamed cell " + str(c) + " (given name was '" + str(name) + "').\n"
+                msg += "       Cell volume smaller than the largest reference daughter ('"
+                msg += str(dnames[idaughter]) + "') cell volumes."
+                monitoring.to_log_and_console(msg)
+                continue
+            # emb_volume[c] > d_mean_volume[idaughter]
+            if len(d_volumes[idaughter]) == 1:
+                diff_to_cell = (mean_volume - cell_volume)
+                diff_to_dcell = (cell_volume - d_mean_volume[idaughter])
+            else:
+                d_std_volume = np.std(d_volumes[idaughter])
+                diff_to_cell = (mean_volume - cell_volume) / std_volume
+                diff_to_dcell = (cell_volume - d_mean_volume[idaughter]) / d_std_volume
+            if diff_to_cell >= diff_to_dcell:
+                unnamed_cells += [(c, name)]
+                del prop['cell_name'][c]
+                msg = "   ... unnamed cell " + str(c) + " (was '" + str(name) + "').\n"
+                msg += "       Cell volume closer to the largest reference daughter ('"
+                msg += str(dnames[idaughter]) + "') cell volumes."
+                monitoring.to_log_and_console(msg)
+                continue
+    msg = "   unname " + str(len(unnamed_cells)) + " cells"
+    monitoring.to_log_and_console(msg)
+    return prop
+
+
 #######################################################################################
 #
 # leave-one-out tests
@@ -1286,13 +1437,13 @@ def _get_success(atlases, parameters, time_digits_for_cell_id=4, verbose=True):
     return right_naming, wrong_naming, unnamed_naming
 
 
-def _figure_atlas_initnaming(atlases, parameters, time_digits_for_cell_id=4):
+def _figure_atlas_init_naming(atlases, parameters, time_digits_for_cell_id=4):
     right_naming, wrong_naming, unnamed_naming = _get_success(atlases, parameters,
                                                               time_digits_for_cell_id=time_digits_for_cell_id,
                                                               verbose=False)
-    proc = "_figure_atlas_initnaming"
+    proc = "_figure_atlas_init_naming"
 
-    filename = 'figure_atlas_initnaming'
+    filename = 'figure_atlas_init_naming'
     file_suffix = None
     if parameters.figurefile_suffix is not None and isinstance(parameters.figurefile_suffix, str) and \
             len(parameters.figurefile_suffix) > 0:
@@ -1371,7 +1522,7 @@ def _figure_atlas_initnaming(atlases, parameters, time_digits_for_cell_id=4):
     f.write("rmed = [b.get_ydata()[0] for b in rbox['medians']]\n")
     f.write("umed = [b.get_ydata()[0] for b in ubox['medians']]\n")
     f.write("ax.plot(labels, rmed, color='blue', label='right names')\n")
-    f.write("ax.plot(labels, umed, color='cyan', label='no set names')\n")
+    f.write("ax.plot(labels, umed, color='cyan', label='unnamed cells')\n")
 
     f.write("\n")
     f.write("ax.yaxis.grid(True)\n")
@@ -1392,9 +1543,9 @@ def _figure_atlas_initnaming(atlases, parameters, time_digits_for_cell_id=4):
 
 
 def generate_figure(atlases, parameters, time_digits_for_cell_id=4):
-    generate_figure = (isinstance(parameters.generate_figure, bool) and parameters.generate_figure) or \
-                      (isinstance(parameters.generate_figure, str) and parameters.generate_figure == 'all') or \
-                      (isinstance(parameters.generate_figure, list) and 'all' in parameters.generate_figure)
+    do_generate_figure = (isinstance(parameters.generate_figure, bool) and parameters.generate_figure) or \
+                         (isinstance(parameters.generate_figure, str) and parameters.generate_figure == 'all') or \
+                         (isinstance(parameters.generate_figure, list) and 'all' in parameters.generate_figure)
 
     #
     # plot cell number wrt time without and with temporal registration
@@ -1403,9 +1554,9 @@ def generate_figure(atlases, parameters, time_digits_for_cell_id=4):
         parameters.generate_figure == 'atlas-init-naming-leave-one-out') \
             or (isinstance(parameters.generate_figure, list)
                 and 'atlas-init-naming-leave-one-out' in parameters.generate_figure) \
-            or generate_figure:
+            or do_generate_figure:
         monitoring.to_log_and_console("... generate atlas init naming leave one out figure", 1)
-        _figure_atlas_initnaming(atlases, parameters, time_digits_for_cell_id=time_digits_for_cell_id)
+        _figure_atlas_init_naming(atlases, parameters, time_digits_for_cell_id=time_digits_for_cell_id)
         monitoring.to_log_and_console("... done", 1)
 
 
@@ -1461,7 +1612,6 @@ def _initial_naming(embryo, atlases, parameters, time_digits_for_cell_id=4, verb
         pkl.dump(transformations, outputfile)
         outputfile.close()
 
-
     if verbose:
         monitoring.to_log_and_console("... setting names")
 
@@ -1477,6 +1627,24 @@ def _initial_naming(embryo, atlases, parameters, time_digits_for_cell_id=4, verb
     # get consensual names
     #
     prop = _iterate_unanimity_names(name_both, parameters, verbose=verbose)
+
+    return prop
+
+
+def _evaluate_initial_naming(prop, embryo, atlases, parameters, time_digits_for_cell_id=4):
+    proc = "_evaluate_initial_naming"
+
+    if 'cell_volume' not in prop:
+        monitoring.to_log_and_console(str(proc) + ": 'cell_volume' was not in dictionary")
+        return None
+
+    if 'cell_contact_surface' not in prop:
+        monitoring.to_log_and_console(str(proc) + ": 'cell_contact_surface' was not in dictionary")
+        return None
+
+    if 'cell_name' not in prop:
+        monitoring.to_log_and_console(str(proc) + ": 'cell_name' was not in dictionary")
+        return None
 
     return prop
 
@@ -1565,6 +1733,16 @@ def init_naming_process(experiment, parameters):
     #
     #
     #
+
+    # prop = _evaluate_initial_naming(prop, embryo, atlases, parameters, time_digits_for_cell_id=time_digits_for_cell_id)
+
+    if parameters.testFile is not None:
+        output = _test_naming(prop, reference_prop, time_digits_for_cell_id=time_digits_for_cell_id)
+        right_naming, wrong_naming,  unnamed_cells, not_in_reference = output
+
+    monitoring.to_log_and_console("... checking names wrt volumes")
+    prop = _check_initial_naming_volume(prop, embryo, atlases, time_digits_for_cell_id=time_digits_for_cell_id,
+                                        verbose=True)
 
     if parameters.testFile is not None:
         output = _test_naming(prop, reference_prop, time_digits_for_cell_id=time_digits_for_cell_id)
