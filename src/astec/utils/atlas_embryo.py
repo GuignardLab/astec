@@ -230,7 +230,7 @@ class EmbryoSymmetryParameters(common.PrefixedParameter):
         self.sigma = self.read_parameter(parameters, 'sigma', self.sigma)
         self.maxima_threshold = self.read_parameter(parameters, 'maxima_threshold', self.maxima_threshold)
         self.maxima_evaluation = self.read_parameter(parameters, 'maxima_evaluation', self.maxima_evaluation)
-        self.sigma = self.read_parameter(parameters, 'maxima_number', self.maxima_number)
+        self.maxima_number = self.read_parameter(parameters, 'maxima_number', self.maxima_number)
 
     def update_from_parameter_file(self, parameter_file):
         if parameter_file is None:
@@ -363,7 +363,7 @@ def _distribution_direction_build(embryo, timepoint, parameters):
                 #
                 angle = math.acos(sp)
                 if angle < angle_threshold:
-                    contrib = math.exp(- angle / div)
+                    contrib = math.exp(- angle * angle / div)
                     sum_positive_contributions += contrib
                     plist += [(i, contrib)]
                 #
@@ -372,7 +372,7 @@ def _distribution_direction_build(embryo, timepoint, parameters):
                 # so acos( -sp ) will be pi -  acos( sp )
                 angle = np.pi - angle
                 if angle < angle_threshold:
-                    contrib = math.exp(- angle / div)
+                    contrib = math.exp(- angle * angle / div)
                     sum_negative_contributions += contrib
                     nlist += [(i, contrib)]
 
@@ -1281,6 +1281,19 @@ class Atlas(object):
     #
 
     def get_voxelsize_correction(self, timepoint, target_volume=60000000):
+        """
+        Give the scale to be applied to simulate an embryo of volume 'target_volume'
+        - volumes have to be multiplied by scale power 3
+        - surfaces have to be multiplied by scale power 2
+        Parameters
+        ----------
+        timepoint
+        target_volume
+
+        Returns
+        -------
+
+        """
         if 'volume_local_estimation' not in self._properties:
             self._volume_local_fitting()
         if target_volume != self.target_volume:
@@ -1288,6 +1301,20 @@ class Atlas(object):
         v_coefficients = self.volume_local_estimation
         t_volume = v_coefficients[0] * timepoint + v_coefficients[1]
         return np.cbrt(self.target_volume / t_volume)
+
+    def get_rectified_cell_volume(self, cell):
+        timepoint = int(cell) // (10 ** self.time_digits_for_cell_id)
+        voxelsize = self.get_voxelsize_correction(timepoint)
+        vol = self.cell_volume[cell]
+        return vol * voxelsize * voxelsize * voxelsize
+
+    def get_rectified_cell_contact_surface(self, cell1, cell2):
+        timepoint = int(cell1) // (10 ** self.time_digits_for_cell_id)
+        if int(cell2) // (10 ** self.time_digits_for_cell_id) != timepoint:
+            return 0.0
+        voxelsize = self.get_voxelsize_correction(timepoint)
+        surf = self.cell_contact_surface[cell1][cell2]
+        return surf * voxelsize * voxelsize
 
     #
     #
@@ -1595,9 +1622,9 @@ class Atlases(object):
     ############################################################
 
     def generate_figure(self, parameters):
-        generate_figure = (isinstance(parameters.generate_figure, bool) and parameters.generate_figure) or \
-                          (isinstance(parameters.generate_figure, str) and parameters.generate_figure == 'all') or \
-                          (isinstance(parameters.generate_figure, list) and 'all' in parameters.generate_figure)
+        do_generate_figure = (isinstance(parameters.generate_figure, bool) and parameters.generate_figure) or \
+                             (isinstance(parameters.generate_figure, str) and parameters.generate_figure == 'all') or \
+                             (isinstance(parameters.generate_figure, list) and 'all' in parameters.generate_figure)
 
         #
         # plot cell number wrt time without and with temporal registration
@@ -1605,7 +1632,7 @@ class Atlases(object):
         if (isinstance(parameters.generate_figure, str) and parameters.generate_figure == 'cell-number-wrt-time') \
                 or (isinstance(parameters.generate_figure, list)
                     and 'cell-number-wrt-time' in parameters.generate_figure) \
-                or generate_figure:
+                or do_generate_figure:
             monitoring.to_log_and_console("... generate cell number wrt time file", 1)
             _figures_temporal_registration(self, parameters)
             monitoring.to_log_and_console("... done", 1)
@@ -1615,7 +1642,7 @@ class Atlases(object):
         #
         if (isinstance(parameters.generate_figure, str) and parameters.generate_figure == 'embryo-volume') \
                 or (isinstance(parameters.generate_figure, list) and 'embryo-volume' in parameters.generate_figure) \
-                or generate_figure:
+                or do_generate_figure:
             monitoring.to_log_and_console("... generate embryo volume figure file", 1)
             _figures_embryo_volume(self, parameters)
             monitoring.to_log_and_console("... done", 1)
@@ -1626,14 +1653,14 @@ class Atlases(object):
         if (isinstance(parameters.generate_figure, str) and parameters.generate_figure == 'neighbors-wrt-cell-number') \
                 or (isinstance(parameters.generate_figure, list)
                     and 'neighbors-wrt-cell-number' in parameters.generate_figure) \
-                or generate_figure:
+                or do_generate_figure:
             monitoring.to_log_and_console("... generate neighbors histogram figure file", 1)
             _figures_neighbor_histogram(self, parameters)
             monitoring.to_log_and_console("... done", 1)
 
         if (isinstance(parameters.generate_figure, str) and parameters.generate_figure == 'symmetry-axis') \
                 or (isinstance(parameters.generate_figure, list) and 'symmetry-axis' in parameters.generate_figure) \
-                or generate_figure:
+                or do_generate_figure:
             monitoring.to_log_and_console("... generate symmetry axis figure file", 1)
             _figure_symmetry_axis(self, parameters)
             monitoring.to_log_and_console("... done", 1)

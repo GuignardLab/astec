@@ -1484,7 +1484,7 @@ def naming_process(experiment, parameters):
     # naming propagation
     #
     prop = _propagate_naming(prop, embryo, atlases, parameters, time_digits_for_cell_id=time_digits_for_cell_id)
-    prop = _evaluate_naming(prop, embryo, atlases, parameters, time_digits_for_cell_id=4)
+    prop = _evaluate_naming(prop, embryo, atlases, parameters, time_digits_for_cell_id=time_digits_for_cell_id)
     prop = properties.set_fate_from_names(prop)
     prop = properties.set_color_from_fate(prop)
     #

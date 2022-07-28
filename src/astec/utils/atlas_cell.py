@@ -414,11 +414,11 @@ class CellAtlases(uatlase.Atlases):
 
     def generate_figure(self, parameters, time_digits_for_cell_id=4):
 
-        uatlase.Atlases.generate_figure(self, parameters, time_digits_for_cell_id=time_digits_for_cell_id)
+        uatlase.Atlases.generate_figure(self, parameters)
 
-        generate_figure = (isinstance(parameters.generate_figure, bool) and parameters.generate_figure) or \
-                          (isinstance(parameters.generate_figure, str) and parameters.generate_figure == 'all') or \
-                          (isinstance(parameters.generate_figure, list) and 'all' in parameters.generate_figure)
+        do_generate_figure = (isinstance(parameters.generate_figure, bool) and parameters.generate_figure) or \
+                             (isinstance(parameters.generate_figure, str) and parameters.generate_figure == 'all') or \
+                             (isinstance(parameters.generate_figure, list) and 'all' in parameters.generate_figure)
 
         #
         # cell-to-cell distance between successive cells in a branch with respect to distance from first cell
@@ -427,7 +427,7 @@ class CellAtlases(uatlase.Atlases):
         if (isinstance(parameters.generate_figure, str) and parameters.generate_figure == 'cell-distance-along-branch') \
                 or (isinstance(parameters.generate_figure, list)
                     and 'cell-distance-along-branch' in parameters.generate_figure) \
-                or generate_figure:
+                or do_generate_figure:
             monitoring.to_log_and_console("... generate cell distance along branch file", 1)
             _figures_distance_along_branch(self, parameters, time_digits_for_cell_id=time_digits_for_cell_id)
             monitoring.to_log_and_console("... done", 1)
