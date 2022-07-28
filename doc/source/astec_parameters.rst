@@ -432,9 +432,11 @@ For more details, see section :ref:`cli-input-image-preprocessing`.
 
 
 * ``intensity_prenormalization``: possible values are
+
   * ``'identity'``
   * ``'normalization_to_u8'``
   * ``'normalization_to_u16'``
+
   Performs a global robust normalization of the input image, prior to other
   pre-processing. The
   intensity value corresponding to the min percentile is set
@@ -445,6 +447,7 @@ For more details, see section :ref:`cli-input-image-preprocessing`.
   It has been introduced for real-encoded images.
 
   It is governed by the variables:
+
   * ``prenormalization_max_percentile``
   * ``prenormalization_min_percentile``
 
@@ -494,12 +497,14 @@ For more details, see section :ref:`cli-input-image-preprocessing`.
   any benefit.
 
 * ``reconstruction_images_combination``:
+
   * ``'addition'``
   * ``'maximum'``
 
 * ``cell_normalization_min_method``:
   set the cell area where is computed the percentile value that 
   will give the :math:`0` value in the normalized image
+
   * ``'cell'``
   * ``'cellborder'``
   * ``'cellinterior'``
@@ -507,6 +512,7 @@ For more details, see section :ref:`cli-input-image-preprocessing`.
 * ``cell_normalization_max_method``:
   set the cell area where is computed the percentile value that 
   will give the :math:`255` value in the normalized image
+
   * ``'cell'``
   * ``'cellborder'``
   * ``'cellinterior'``
@@ -966,13 +972,13 @@ These parameters are prefixed by ``mars_``.
   other files than the ``astec_mars`` output file.
 * ``manualcorrection_dir``:
   path to directory where to find the mapping file.
-  * ``manualcorrection_file``:
+* ``manualcorrection_file``:
   path to mapping file for manual correction of a segmentation (ie label)
   image. See above the syntax of this file.
   
   * 1 line per label association
   * background label has value 1
-  * the character ``\#`` denotes commented lines 
+  * the character ``#`` denotes commented lines
 
   Example of ``mapping_file``:
 

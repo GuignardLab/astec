@@ -110,8 +110,8 @@ The computed information are
    All the cell identifiers. Each cell (in a segmentation image) has a
    given label (ranging from 2 and above, 1 being used for the
    background) in each image. To uniquely identify a cell in the
-   sequence, it has been given an unique identifier computed by $i *
-   1000 + c$, $i$ and $c$ denoting respectively the image index
+   sequence, it has been given an unique identifier computed by
+   :math:`i *1000 + c`, :math:`i` and :math:`c` denoting respectively the image index
    (ranging in [``<begin>``, ``<end>``]) and the cell label.
    
 ``cell_barycenter``
