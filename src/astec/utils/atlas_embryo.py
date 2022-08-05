@@ -152,21 +152,13 @@ class EmbryoSymmetryParameters(common.PrefixedParameter):
 
         doc = "\t Sigma (standard deviation) to build the direction distribution (in radian)\n"
         self.doc['sigma'] = doc
-        self.sigma = 0.5
+        self.sigma = 0.15
 
         doc = "\t Threshold on the distribution value. Only maxima above this threshold are\n"
         doc += "\t keep. Recall that the distribution values are normalize so that the maximum\n"
         doc += "\t is 1.\n"
         self.doc['maxima_threshold'] = doc
         self.maxima_threshold = 0.5
-
-        doc = "\t Evaluation method to sort (and then select) distribution maxima\n"
-        doc += "\t 'value':\n"
-        doc += "\t 'single_pairing'\n"
-        doc += "\t 'multiple_pairing'\n"
-        doc += "\t 'symmetric_registration'\n"
-        self.doc['maxima_evaluation'] = doc
-        self.maxima_evaluation = 'value'
 
         doc = "\t Number of distribution maxima to be retained as candidates\n"
         doc += "\t 'None' or negative number means all of them\n"
@@ -191,7 +183,6 @@ class EmbryoSymmetryParameters(common.PrefixedParameter):
         self.varprint('sphere_radius', self.sphere_radius, self.doc.get('sphere_radius', None))
         self.varprint('sigma', self.sigma, self.doc.get('sigma', None))
         self.varprint('maxima_threshold', self.maxima_threshold, self.doc.get('maxima_threshold', None))
-        self.varprint('maxima_evaluation', self.maxima_evaluation, self.doc.get('maxima_evaluation', None))
         self.varprint('maxima_number', self.maxima_number, self.doc.get('maxima_number', None))
         print("")
 
@@ -207,7 +198,6 @@ class EmbryoSymmetryParameters(common.PrefixedParameter):
         self.varwrite(logfile, 'sphere_radius', self.sphere_radius, self.doc.get('sphere_radius', None))
         self.varwrite(logfile, 'sigma', self.sigma, self.doc.get('sigma', None))
         self.varwrite(logfile, 'maxima_threshold', self.maxima_threshold, self.doc.get('maxima_threshold', None))
-        self.varwrite(logfile, 'maxima_evaluation', self.maxima_evaluation, self.doc.get('maxima_evaluation', None))
         self.varwrite(logfile, 'maxima_number', self.maxima_number, self.doc.get('maxima_number', None))
 
         logfile.write("\n")
@@ -229,7 +219,6 @@ class EmbryoSymmetryParameters(common.PrefixedParameter):
         self.sphere_radius = self.read_parameter(parameters, 'sphere_radius', self.sphere_radius)
         self.sigma = self.read_parameter(parameters, 'sigma', self.sigma)
         self.maxima_threshold = self.read_parameter(parameters, 'maxima_threshold', self.maxima_threshold)
-        self.maxima_evaluation = self.read_parameter(parameters, 'maxima_evaluation', self.maxima_evaluation)
         self.maxima_number = self.read_parameter(parameters, 'maxima_number', self.maxima_number)
 
     def update_from_parameter_file(self, parameter_file):
@@ -477,248 +466,6 @@ def _distribution_direction_maxima(embryo, timepoint, parameters):
     monitoring.to_log_and_console(msg, 2)
 
     embryo.direction_distribution_maxima[timepoint] = maxima
-    return
-
-
-def _distribution_direction_evaluate_symicp(embryo, timepoint):
-
-    icp.monitoring.copy(monitoring)
-
-    embryo_barycenter = embryo.get_embryo_barycenter(timepoint)
-    candidates = embryo.direction_distribution_maxima[timepoint]
-    #
-    # barycenters is a np.array of (3,n)
-    # barycenters[:,i] is the ith barycenter
-    #
-    barycenters = embryo.get_cell_barycenter(timepoint)
-    sym_barycenters = np.zeros_like(barycenters)
-
-    for p in candidates:
-        p['score_from_symmetry_icp'] = 0
-        p['average_from_symmetry_icp'] = np.zeros(3)
-        for i in range(barycenters.shape[1]):
-            #
-            # G: embryo barycenter, n: symmetry plane normal
-            # search M' symmetric of M wrt (G, n)
-            # GM =  (GM - (GM.n)n) + (GM.n)n
-            # GM' = (GM - (GM.n)n) - (GM.n)n = GM - 2 (GM.n)n
-            # M' = M - 2 (GM.n)n
-            #
-            sp = np.dot(p['vector'], barycenters[:, i] - embryo_barycenter)
-            sym_barycenters[:, i] = barycenters[:, i] - 2 * sp * p['vector']
-
-        #
-        # register cell barycenters with their symmetric counterpart
-        #
-        res_rigid_mat = icp.icp(ref=barycenters, flo=sym_barycenters, transformation_type="rigid")
-
-        # compute transformed floating points
-        trsfs_barycenters = np.zeros((3, sym_barycenters.shape[1]))
-        v = np.ones(4)
-        for j in range(sym_barycenters.shape[1]):
-            v[:3] = sym_barycenters[:, j]
-            trsfs_barycenters[:, j] = (np.matmul(res_rigid_mat, v))[:3]
-
-        # find reference barycenters that are closest to floating ones
-        # i_flo_to_ref[i] is the index (in the list) of the reference cell closest
-        # to the ith floating cell in cell_tflo list
-        nghbref = skn.NearestNeighbors(n_neighbors=1, algorithm='kd_tree').fit(barycenters.T)
-        d_flo_to_ref, i_flo_to_ref = nghbref.kneighbors(trsfs_barycenters.T)
-        i_flo_to_ref = i_flo_to_ref.flatten()
-
-        # find floating barycenters that are closest to reference ones
-        nghbflo = skn.NearestNeighbors(n_neighbors=1, algorithm='kd_tree').fit(trsfs_barycenters.T)
-        d_ref_to_flo, i_ref_to_flo = nghbflo.kneighbors(barycenters.T)
-        i_ref_to_flo = i_ref_to_flo.flatten()
-
-        # find cell/barycenters which are closest to each other
-        reciprocal_n = 0
-        # residual = 0.0
-        for j in range(trsfs_barycenters.shape[1]):
-            k = i_flo_to_ref[j]
-            if i_ref_to_flo[k] != j:
-                continue
-            # there is a pairing between barycenters[:, j] and barycenters[:, k]
-            # they should not be the same point
-            if j == k:
-                continue
-            reciprocal_n += 1
-            # residual += d_flo_to_ref[j] + d_ref_to_flo[k]
-            # print("   " + str(barycenters[:, j]) + " <-> " + str(barycenters[:, k]))
-            v = barycenters[:, j] - barycenters[:, k]
-            v /= np.linalg.norm(v)
-            sp = np.dot(p['vector'], v)
-            if sp > 0:
-                p['score_from_symmetry_icp'] += sp
-                p['average_from_symmetry_icp'] += v
-            else:
-                p['score_from_symmetry_icp'] -= sp
-                p['average_from_symmetry_icp'] -= v
-
-        if reciprocal_n > 0:
-            p['score_from_symmetry_icp'] /= reciprocal_n
-            p['average_from_symmetry_icp'] /= np.linalg.norm(p['average_from_symmetry_icp'])
-
-    embryo.direction_distribution_maxima[timepoint] = sorted(candidates, reverse=True,
-                                                             key=lambda x: x['score_from_symmetry_icp'])
-
-
-def _distribution_direction_candidates(embryo, timepoint, parameters):
-    proc = "_distribution_direction_candidates"
-
-    #
-    # icp between embryo and its symmetric version
-    #
-    if parameters.maxima_evaluation == 'symmetric_registration':
-        _distribution_direction_evaluate_symicp(embryo, timepoint)
-        return
-
-    time_digits_for_cell_id = embryo.time_digits_for_cell_id
-    candidates = embryo.direction_distribution_maxima[timepoint]
-
-    #
-    # evaluation by distribution value
-    #
-    if parameters.maxima_evaluation == 'value':
-        embryo.direction_distribution_maxima[timepoint] = sorted(candidates, reverse=True, key=lambda x: x['value'])
-        return
-
-    #
-    # evaluation from pairings build with cell from each side of the symmetric plane
-    #
-    embryo_barycenter = embryo.get_embryo_barycenter(timepoint)
-    cell_barycenters = embryo.cell_barycenter
-    cell_contact_surface = embryo.cell_contact_surface
-    div = 10 ** time_digits_for_cell_id
-
-    if parameters.maxima_evaluation != 'single_pairing' and parameters.maxima_evaluation != 'multiple_pairing':
-        msg = "unknown distribution maxima evaluation method '" + str(parameters.maxima_evaluation) + "'"
-        monitoring.to_log_and_console(proc + ": " + msg)
-        embryo.direction_distribution_maxima[timepoint] = sorted(candidates, reverse=True, key=lambda x: x['value'])
-        return
-
-    #
-    # get cells for the time point
-    #
-    cells = [c for c in cell_barycenters if (int(c) // div == timepoint) and int(c) % div != 1]
-    for p in candidates:
-        #
-        # initialisation
-        #
-        if parameters.maxima_evaluation == 'single_pairing':
-            p['score_from_single_pairing'] = 0
-            p['vectors_from_single_pairing'] = []
-            p['average_from_single_pairing'] = np.zeros(3)
-        if parameters.maxima_evaluation == 'multiple_pairing':
-            p['score_from_multiple_pairing'] = 0
-            p['vectors_from_multiple_pairing'] = []
-            p['average_from_multiple_pairing'] = np.zeros(3)
-
-        #
-        # part cells into left and right parts wrt hyperplane defined by (embryo barycenter, candidate vector)
-        #
-        pcells = []
-        ncells = []
-        for c in cells:
-            sp = np.dot(p['vector'], cell_barycenters[c] - embryo_barycenter)
-            if sp >= 0.0:
-                pcells += [c]
-            else:
-                ncells += [c]
-        #
-        # find symmetric cell for positive cells
-        #
-        p_symcells = {}
-        for c in pcells:
-            n_neighbors = [d for d in cell_contact_surface[c] if d in ncells]
-            if len(n_neighbors) == 0:
-                continue
-            if parameters.maxima_evaluation == 'single_pairing':
-                n_maxsurface = max([cell_contact_surface[c][d] for d in n_neighbors])
-                p_symcells[c] = [k for k, v in cell_contact_surface[c].items() if v == n_maxsurface][0]
-            if parameters.maxima_evaluation == 'multiple_pairing':
-                v = np.zeros(3)
-                s = 0.0
-                for d in n_neighbors:
-                    v += cell_contact_surface[c][d] * cell_barycenters[d]
-                    s += cell_contact_surface[c][d]
-                v /= s
-                v -= cell_barycenters[c]
-                v /= np.linalg.norm(v)
-                p['vectors_from_multiple_pairing'] += [v]
-        #
-        # find symmetric cell for negative cells
-        #
-        n_symcells = {}
-        for c in ncells:
-            p_neighbors = [d for d in cell_contact_surface[c] if d in pcells]
-            if len(p_neighbors) == 0:
-                continue
-            if parameters.maxima_evaluation == 'single_pairing':
-                p_maxsurface = max([cell_contact_surface[c][d] for d in p_neighbors])
-                n_symcells[c] = [k for k, v in cell_contact_surface[c].items() if v == p_maxsurface][0]
-            if parameters.maxima_evaluation == 'multiple_pairing':
-                v = np.zeros(3)
-                s = 0.0
-                for d in p_neighbors:
-                    v += cell_contact_surface[c][d] * cell_barycenters[d]
-                    s += cell_contact_surface[c][d]
-                v /= s
-                v -= cell_barycenters[c]
-                v /= np.linalg.norm(v)
-                v *= (-1)
-                p['vectors_from_multiple_pairing'] += [v]
-
-        #
-        # evaluation = average of scalar products
-        #
-        if parameters.maxima_evaluation == 'single_pairing':
-            n = 0
-            for c in p_symcells:
-                if p_symcells[c] not in n_symcells:
-                    continue
-                if n_symcells[p_symcells[c]] != c:
-                    continue
-                n += 1
-                v = cell_barycenters[c] - cell_barycenters[p_symcells[c]]
-                v /= np.linalg.norm(v)
-                p['vectors_from_single_pairing'] += [v]
-                sp = np.dot(p['vector'], v)
-                if sp > 0:
-                    p['score_from_single_pairing'] += sp
-                    p['average_from_single_pairing'] += v
-                else:
-                    p['score_from_single_pairing'] -= sp
-                    p['average_from_single_pairing'] -= v
-            if n > 0:
-                p['score_from_single_pairing'] /= n
-                p['average_from_single_pairing'] /= np.linalg.norm(p['average_from_single_pairing'])
-                del p['vectors_from_single_pairing']
-
-        #
-        #
-        #
-        if parameters.maxima_evaluation == 'multiple_pairing':
-            for v in p['vectors_from_multiple_pairing']:
-                sp = np.dot(p['vector'], v)
-                if sp > 0:
-                    p['score_from_multiple_pairing'] += sp
-                    p['average_from_multiple_pairing'] += v
-                else:
-                    p['score_from_multiple_pairing'] -= sp
-                    p['average_from_multiple_pairing'] -= v
-            p['score_from_multiple_pairing'] /= len(p['vectors_from_multiple_pairing'])
-            p['average_from_multiple_pairing'] /= np.linalg.norm(p['average_from_multiple_pairing'])
-            del p['vectors_from_multiple_pairing']
-
-    if parameters.maxima_evaluation == 'single_pairing':
-        embryo.direction_distribution_maxima[timepoint] = sorted(candidates, reverse=True,
-                                                                 key=lambda x: x['score_from_single_pairing'])
-        return
-    if parameters.maxima_evaluation == 'multiple_pairing':
-        embryo.direction_distribution_maxima[timepoint] = sorted(candidates, reverse=True,
-                                                                 key=lambda x: x['score_from_multiple_pairing'])
-    embryo.direction_distribution_maxima[timepoint] = sorted(candidates, reverse=True, key=lambda x: x['value'])
     return
 
 
@@ -1459,7 +1206,8 @@ class Atlas(object):
         #
         # sort maxima
         #
-        _distribution_direction_candidates(self, timepoint, parameters)
+        self.direction_distribution_maxima[timepoint] = sorted(self.direction_distribution_maxima[timepoint],
+                                                               reverse=True, key=lambda x: x['value'])
 
         return self.direction_distribution_maxima[timepoint]
 
@@ -1485,6 +1233,9 @@ class Atlases(object):
     # getters / setters
     #
     ############################################################
+
+    def n_atlases(self):
+        return len(self._atlases)
 
     def get_atlases(self):
         return self._atlases
@@ -1580,13 +1331,14 @@ class Atlases(object):
 
         if isinstance(atlasfiles, str):
             prop = ioproperties.read_dictionary(atlasfiles, inputpropertiesdict={})
-            name = atlasfiles.split(os.path.sep)[-1]
-            if name.endswith(".xml") or name.endswith(".pkl"):
-                name = name[:-4]
-            if parameters.atlas_diagnosis:
-                udiagnosis.diagnosis(prop, ['name', 'contact'], parameters,
-                                     time_digits_for_cell_id=time_digits_for_cell_id)
-            self._add_atlas(prop, name, time_digits_for_cell_id=time_digits_for_cell_id)
+            if len(prop) > 0:
+                name = atlasfiles.split(os.path.sep)[-1]
+                if name.endswith(".xml") or name.endswith(".pkl"):
+                    name = name[:-4]
+                if parameters.atlas_diagnosis:
+                    udiagnosis.diagnosis(prop, ['name', 'contact'], parameters,
+                                         time_digits_for_cell_id=time_digits_for_cell_id)
+                self._add_atlas(prop, name, time_digits_for_cell_id=time_digits_for_cell_id)
             del prop
         elif isinstance(atlasfiles, list):
             if len(atlasfiles) == 0:
@@ -1594,25 +1346,30 @@ class Atlases(object):
                 sys.exit(1)
             for f in atlasfiles:
                 prop = ioproperties.read_dictionary(f, inputpropertiesdict={})
-                name = f.split(os.path.sep)[-1]
-                if name.endswith(".xml") or name.endswith(".pkl"):
-                    name = name[:-4]
-                if parameters.atlas_diagnosis:
-                    udiagnosis.diagnosis(prop, ['name', 'contact'], parameters,
-                                         time_digits_for_cell_id=time_digits_for_cell_id)
-                self._add_atlas(prop, name, time_digits_for_cell_id=time_digits_for_cell_id)
+                if len(prop) > 0:
+                    name = f.split(os.path.sep)[-1]
+                    if name.endswith(".xml") or name.endswith(".pkl"):
+                        name = name[:-4]
+                    if parameters.atlas_diagnosis:
+                        udiagnosis.diagnosis(prop, ['name', 'contact'], parameters,
+                                             time_digits_for_cell_id=time_digits_for_cell_id)
+                    self._add_atlas(prop, name, time_digits_for_cell_id=time_digits_for_cell_id)
                 del prop
 
         #
         # temporal alignment (done from the cell number)
         #
-        monitoring.to_log_and_console("... temporal alignment of lineages", 1)
-        self.temporal_alignment()
-        atlases = self.get_atlases()
-        for n in atlases:
-            msg = "   ... "
-            msg += "linear time warping of '" + str(n) + "' wrt '" + str(self._ref_atlas) + "' is "
-            msg += "({:.3f}, {:.3f})".format(atlases[n].temporal_alignment[0], atlases[n].temporal_alignment[1])
+        if self.n_atlases() > 0:
+            monitoring.to_log_and_console("... temporal alignment of lineages", 1)
+            self.temporal_alignment()
+            atlases = self.get_atlases()
+            for n in atlases:
+                msg = "   ... "
+                msg += "linear time warping of '" + str(n) + "' wrt '" + str(self._ref_atlas) + "' is "
+                msg += "({:.3f}, {:.3f})".format(atlases[n].temporal_alignment[0], atlases[n].temporal_alignment[1])
+                monitoring.to_log_and_console(msg, 1)
+        else:
+            msg = proc + ": no read atlases ?!"
             monitoring.to_log_and_console(msg, 1)
 
     ############################################################
@@ -2209,64 +1966,23 @@ def _symmetry_axis_error_wrt_times(atlas, parameters):
     alltimes = sorted(list(cells_per_time.keys()))
 
     times = []
-
     err_distribution = []
-    err_single_pairing = []
-    err_multiple_pairing = []
-    err_symmetry_icp = []
-
     index_from_distribution_value = []
-    index_from_single_pairing = []
-    index_from_multiple_pairing = []
-    index_from_symmetry_icp = []
 
-    for t in alltimes:
+    for i, t in enumerate(alltimes):
         if t in unnamedtimes:
             continue
+        msg = "    process " + str(i+1) + "/" + str(len(alltimes)-len(unnamedtimes)) + " time " + str(t)
+        monitoring.to_log_and_console(msg)
         times += [t]
 
         symdir = atlas.get_symmetry_axis_from_names(t)
-
-        #
-        # compute distribution, and evaluate with 'single_pairing'
-        #
-        parameters.maxima_evaluation = 'single_pairing'
         candidates = atlas.get_direction_distribution_candidates(t, parameters)
-
-        monitoring.to_log_and_console("   ... processing time " + str(t) + "/" + str(alltimes[-1]) + " - #candidates = " + str(len(candidates)))
-        # print("symdir = " + str(symdir))
-        #
-        # evaluate with 'multiple_pairing'
-        #
-        parameters.maxima_evaluation = 'multiple_pairing'
-        candidates = atlas.get_direction_distribution_candidates(t, parameters)
-
-        #
-        # evaluate with 'symmetric_registration'
-        #
-        parameters.maxima_evaluation = 'symmetric_registration'
-        candidates = atlas.get_direction_distribution_candidates(t, parameters)
-
         for p in candidates:
             err = math.acos(np.dot(p['vector'], symdir))
             if err > np.pi / 2:
                 err = np.pi - err
             p['error'] = err * 180.0 / np.pi
-
-            err = math.acos(np.dot(p['average_from_single_pairing'], symdir))
-            if err > np.pi / 2:
-                err = np.pi - err
-            p['error_from_single_pairing'] = err * 180.0 / np.pi
-
-            err = math.acos(np.dot(p['average_from_multiple_pairing'], symdir))
-            if err > np.pi / 2:
-                err = np.pi - err
-            p['error_from_multiple_pairing'] = err * 180.0 / np.pi
-
-            err = math.acos(np.dot(p['average_from_symmetry_icp'], symdir))
-            if err > np.pi / 2:
-                err = np.pi - err
-            p['error_from_symmetry_icp'] = err * 180.0 / np.pi
 
         minimal_error = min([p['error'] for p in candidates])
         index = [p['error'] for p in candidates].index(minimal_error)
@@ -2276,9 +1992,6 @@ def _symmetry_axis_error_wrt_times(atlas, parameters):
         # print("   index = " + str(index))
 
         err_distribution += [minimal_error]
-        err_single_pairing += [candidates[index]['error_from_single_pairing']]
-        err_multiple_pairing += [candidates[index]['error_from_multiple_pairing']]
-        err_symmetry_icp += [candidates[index]['error_from_symmetry_icp']]
 
         candidates = sorted(candidates, reverse=True, key=lambda x: x['value'])
         index_from_distribution_value += [[p['error'] for p in candidates].index(minimal_error) + 1]
@@ -2286,32 +1999,11 @@ def _symmetry_axis_error_wrt_times(atlas, parameters):
         # _print_candidates(candidates)
         # print("   index_from_distribution_value = " + str(index_from_distribution_value))
 
-        candidates = sorted(candidates, reverse=True, key=lambda x: x['score_from_single_pairing'])
-        index_from_single_pairing += [[p['error'] for p in candidates].index(minimal_error) + 1]
-        # print("SINGLE PAIRING SORTED")
-        # _print_candidates(candidates)
-        # print("   index_from_single_pairing = " + str(index_from_single_pairing))
-
-        candidates = sorted(candidates, reverse=True, key=lambda x: x['score_from_multiple_pairing'])
-        index_from_multiple_pairing += [[p['error'] for p in candidates].index(minimal_error) + 1]
-        # print("MULTIPLE PAIRING SORTED")
-        # _print_candidates(candidates)
-        # print("   index_from_multiple_pairing = " + str(index_from_multiple_pairing))
-
-        candidates = sorted(candidates, reverse=True, key=lambda x: x['score_from_symmetry_icp'])
-        index_from_symmetry_icp += [[p['error'] for p in candidates].index(minimal_error) + 1]
-        # print("SYMMETRIC ICP SORTED")
-        # _print_candidates(candidates)
-        # print("   index_from_symmetry_icp = " + str(index_from_symmetry_icp))
-
         atlas.del_property('direction_distribution')
 
     ncells = [cells_per_time[t] for t in times]
 
-    return times, ncells, err_distribution, err_single_pairing, err_multiple_pairing, err_symmetry_icp, \
-           index_from_distribution_value, index_from_single_pairing, index_from_multiple_pairing, \
-           index_from_symmetry_icp
-
+    return times, ncells, err_distribution, index_from_distribution_value
 
 def _figure_symmetry_axis(atlases, parameters):
     proc = "_figure_symmetry_axis"
@@ -2346,21 +2038,14 @@ def _figure_symmetry_axis(atlases, parameters):
     for a in ref_atlases:
         monitoring.to_log_and_console("... processing " + str(a))
         na = a.replace('-', '_')
-        output = _symmetry_axis_error_wrt_times(ref_atlases[a], parameters)
-        times, ncells, edist, esing, emult, esymicp, idist, ising, imult, isymicp = output
+        times, ncells, edist, idist = _symmetry_axis_error_wrt_times(ref_atlases[a], parameters)
         f.write("temporal_coefficients = " + str(ref_atlases[a].temporal_alignment) + "\n")
         f.write("times_" + na + " = " + str(times) + "\n")
         f.write("atimes_" + na + " = [temporal_coefficients[0] * i + temporal_coefficients[1]")
         f.write(" for i in times_" + na + "]\n")
         f.write("ncells_" + na + " = " + str(ncells) + "\n")
         f.write("edist_" + na + " = " + str(edist) + "\n")
-        f.write("esing_" + na + " = " + str(esing) + "\n")
-        f.write("emult_" + na + " = " + str(emult) + "\n")
-        f.write("esymicp_" + na + " = " + str(esymicp) + "\n")
         f.write("idist_" + na + " = " + str(idist) + "\n")
-        f.write("ising_" + na + " = " + str(ising) + "\n")
-        f.write("imult_" + na + " = " + str(imult) + "\n")
-        f.write("isymicp_" + na + " = " + str(isymicp) + "\n")
         f.write("\n")
 
     f.write("\n")
@@ -2391,111 +2076,6 @@ def _figure_symmetry_axis(atlases, parameters):
     f.write("\n")
     f.write("if savefig:\n")
     f.write("    plt.savefig('symmetry_axis_distribution")
-    if file_suffix is not None:
-        f.write(file_suffix)
-    f.write("'" + " + '.png')\n")
-    f.write("else:\n")
-    f.write("    plt.show()\n")
-    f.write("    plt.close()\n")
-
-    f.write("\n")
-    f.write("fig, (ax1, ax2, ax3) = plt.subplots(ncols=3, sharey=True, figsize=(24, 6))\n")
-    for a in ref_atlases:
-        na = a.replace('-', '_')
-        f.write("p = ax1.plot(ncells_" + na + ", atimes_" + na + ", label='" + na + "')\n")
-        f.write("p = ax2.plot(esing_" + na + ", atimes_" + na + ", label='" + na + "')\n")
-        f.write("p = ax3.plot(ising_" + na + ", atimes_" + na + ", label='" + na + "')\n")
-        f.write("\n")
-
-    f.write("ax1.grid(True)\n")
-    f.write("ax1.legend(prop={'size': 10})\n")
-    f.write("ax1.set_xlabel('cell number')\n")
-    f.write("ax1.set_ylabel('time')\n")
-    f.write("ax1.set_title(\"cell number\", fontsize=15)\n")
-    f.write("\n")
-    f.write("ax2.grid(True)\n")
-    f.write("ax2.set_xlabel('error (degrees)')\n")
-    f.write("ax2.set_title(\"symmetry axis error of estimated vector\", fontsize=15)\n")
-    f.write("\n")
-    f.write("ax3.grid(True)\n")
-    f.write("ax3.set_xlabel('rank')\n")
-    f.write("ax3.set_title(\"rank of the closest vector\", fontsize=15)\n")
-    f.write("\n")
-    f.write("fig.suptitle('Symmetry axis candidate sorted by single pairing score', fontsize=16)\n")
-
-    f.write("\n")
-    f.write("if savefig:\n")
-    f.write("    plt.savefig('symmetry_axis_singlepairing")
-    if file_suffix is not None:
-        f.write(file_suffix)
-    f.write("'" + " + '.png')\n")
-    f.write("else:\n")
-    f.write("    plt.show()\n")
-    f.write("    plt.close()\n")
-
-    f.write("\n")
-    f.write("fig, (ax1, ax2, ax3) = plt.subplots(ncols=3, sharey=True, figsize=(24, 6))\n")
-    for a in ref_atlases:
-        na = a.replace('-', '_')
-        f.write("p = ax1.plot(ncells_" + na + ", atimes_" + na + ", label='" + na + "')\n")
-        f.write("p = ax2.plot(emult_" + na + ", atimes_" + na + ", label='" + na + "')\n")
-        f.write("p = ax3.plot(imult_" + na + ", atimes_" + na + ", label='" + na + "')\n")
-        f.write("\n")
-
-    f.write("ax1.grid(True)\n")
-    f.write("ax1.legend(prop={'size': 10})\n")
-    f.write("ax1.set_xlabel('cell number')\n")
-    f.write("ax1.set_ylabel('time')\n")
-    f.write("ax1.set_title(\"cell number\", fontsize=15)\n")
-    f.write("\n")
-    f.write("ax2.grid(True)\n")
-    f.write("ax2.set_xlabel('error (degrees)')\n")
-    f.write("ax2.set_title(\"symmetry axis error of estimated vector\", fontsize=15)\n")
-    f.write("\n")
-    f.write("ax3.grid(True)\n")
-    f.write("ax3.set_xlabel('rank')\n")
-    f.write("ax3.set_title(\"rank of the closest vector\", fontsize=15)\n")
-    f.write("\n")
-    f.write("fig.suptitle('Symmetry axis candidate sorted by multiple pairing score', fontsize=16)\n")
-
-    f.write("\n")
-    f.write("if savefig:\n")
-    f.write("    plt.savefig('symmetry_axis_multiplepairing")
-    if file_suffix is not None:
-        f.write(file_suffix)
-    f.write("'" + " + '.png')\n")
-    f.write("else:\n")
-    f.write("    plt.show()\n")
-    f.write("    plt.close()\n")
-
-    f.write("\n")
-    f.write("fig, (ax1, ax2, ax3) = plt.subplots(ncols=3, sharey=True, figsize=(24, 6))\n")
-    for a in ref_atlases:
-        na = a.replace('-', '_')
-        f.write("p = ax1.plot(ncells_" + na + ", atimes_" + na + ", label='" + na + "')\n")
-        f.write("p = ax2.plot(esymicp_" + na + ", atimes_" + na + ", label='" + na + "')\n")
-        f.write("p = ax3.plot(isymicp_" + na + ", atimes_" + na + ", label='" + na + "')\n")
-        f.write("\n")
-
-    f.write("ax1.grid(True)\n")
-    f.write("ax1.legend(prop={'size': 10})\n")
-    f.write("ax1.set_xlabel('cell number')\n")
-    f.write("ax1.set_ylabel('time')\n")
-    f.write("ax1.set_title(\"cell number\", fontsize=15)\n")
-    f.write("\n")
-    f.write("ax2.grid(True)\n")
-    f.write("ax2.set_xlabel('error (degrees)')\n")
-    f.write("ax2.set_title(\"symmetry axis error of estimated vector\", fontsize=15)\n")
-    f.write("\n")
-    f.write("ax3.grid(True)\n")
-    f.write("ax3.set_xlabel('rank')\n")
-    f.write("ax3.set_title(\"rank of the closest vector\", fontsize=15)\n")
-    f.write("\n")
-    f.write("fig.suptitle('Symmetry axis candidate sorted by symmetry registration', fontsize=16)\n")
-
-    f.write("\n")
-    f.write("if savefig:\n")
-    f.write("    plt.savefig('symmetry_axis_symmetryregistration")
     if file_suffix is not None:
         f.write(file_suffix)
     f.write("'" + " + '.png')\n")
