@@ -7,7 +7,6 @@ from collections import Counter
 
 import numpy as np
 import sklearn.linear_model as sklm
-import sklearn.neighbors as skn
 import matplotlib.pyplot as plt
 
 import astec.utils.common as common
@@ -567,7 +566,7 @@ class AtlasParameters(udiagnosis.DiagnosisParameters, EmbryoSymmetryParameters):
         doc += "\t 0 means right after the division.\n"
         doc += "\t negative values means that the delay is counted backwards from the end of the branch.\n"
         self.doc['name_delay_from_division'] = doc
-        self.name_delay_from_division = 0
+        self.name_delay_from_division = 3
 
         doc = "\t Delay from the division to extract the neighborhooods used for naming confidence.\n"
         doc += "\t 0 means right after the division.\n"
