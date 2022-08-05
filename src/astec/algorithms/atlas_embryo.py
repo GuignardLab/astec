@@ -51,6 +51,12 @@ def atlas_embryo_process(experiment, parameters):
     #
     atlases.add_atlases(parameters.atlasFiles, parameters, time_digits_for_cell_id=time_digits_for_cell_id)
 
+
+    if atlases.n_atlases() == 0:
+        msg = proc + ": no atlases ?!"
+        monitoring.to_log_and_console(msg, 1)
+        return None
+
     #
     # division based part
     # build division atlas
