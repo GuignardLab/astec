@@ -1,5 +1,6 @@
 
 import copy
+import numpy as np
 
 import astec.utils.common as common
 import astec.utils.ascidian_name as uname
@@ -59,7 +60,7 @@ def _is_ancestor_in_stages(neigh, neighbors_by_stage):
 
     """
 
-    if neigh == 'background' or neigh == 'other-half':
+    if neigh == 'background' or neigh == 'other-half' or isinstance(neigh, int) or isinstance(neigh, np.int64):
         return False
 
     stage = int(neigh.split('.')[0][1:])
@@ -110,13 +111,19 @@ def build_same_contact_surfaces(neighborhoods, celllist, celltobeexcluded=None, 
             continue
         for r in neighborhoods[c]:
             for n in neighborhoods[c][r]:
-                if n == 'background' or n == 'other-half':
+                #
+                # 'background' and 'other-half' are names used for named neighborhood
+                # partially named neighborhood will have cell ids as keys
+                #
+                if n == 'background' or n == 'other-half' or isinstance(n, int) or isinstance(n, np.int64):
                     neighbors_by_stage[0] = neighbors_by_stage.get(0, []) + [n]
                     continue
                 stage = int(n.split('.')[0][1:])
                 neighbors_by_stage[stage] = neighbors_by_stage.get(stage, []) + [n]
     # suppress duplicate
     for s in neighbors_by_stage:
+        if s == 0:
+            continue
         neighbors_by_stage[s] = list(sorted(set(neighbors_by_stage[s])))
 
     #
@@ -130,6 +137,8 @@ def build_same_contact_surfaces(neighborhoods, celllist, celltobeexcluded=None, 
     # process stages, the latest first
     #
     for s in stages:
+        if s == 0:
+            continue
         if debug:
             print("stage " + str(s))
         for neigh in neighbors_by_stage[s]:
@@ -214,12 +223,20 @@ def cell_distance_elements(vect0, vect1, innersurfaces=[]):
     n0 = 0.0
     n1 = 0.0
     nm = 0.0
+    # sum of eligible surfaces for vect0
+    # remove innersurfaces if any
     for k in vect0:
         if k not in innersurfaces:
             n0 += vect0[k]
+    # sum of eligible surfaces for vectq
+    # remove innersurfaces if any
     for k in vect1:
         if k not in innersurfaces:
             n1 += vect1[k]
+    # sum of differences
+    # 1. common neighbors
+    # 2. neighbors only in vect0
+    # 3. neighbors only in vect1
     for k in set(vect0.keys()) & set(vect1.keys()):
         if k not in innersurfaces:
             nm += abs(vect0[k] - vect1[k])
