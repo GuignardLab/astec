@@ -16,6 +16,11 @@ Mars
 .. automodule:: astec.algorithms.mars
    :members:
 
+Manual correction
+-----------------
+.. automodule:: astec.algorithms.manualcorrection
+   :members:
+
 Astec
 -----
 .. automodule:: astec.algorithms.astec
@@ -27,19 +32,23 @@ Post correction
    :members:
 
 Motion compensation aka intra-registration
-------------------------------------------
+-------------------------------------------
 .. automodule:: astec.algorithms.intraregistration
    :members:
 
-Contact surface atlas
----------------------
-.. automodule:: astec.algorithms.contact_atlas
+Atlas building
+--------------
+.. automodule:: astec.algorithms.atlas_embryo
    :members:
 
-Contact surface based naming
-----------------------------
-.. automodule:: astec.algorithms.contact_naming
+Name propagation from atlases
+-----------------------------
+.. automodule:: astec.algorithms.atlas_naming
    :members:
 
+Name initialization from atlases
+--------------------------------
+.. automodule:: astec.algorithms.atlas_init_naming
+   :members:
 
 

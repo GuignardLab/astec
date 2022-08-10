@@ -138,7 +138,8 @@ class EmbryoSymmetryParameters(common.PrefixedParameter):
         #
         #
 
-        doc = "\t Sphere radius to build the distribution support, for looking for symmetry direction\n"
+        doc = "\t Sphere radius to build the distribution support, The distribution of the surface normal\n"
+        doc += "\t is computed onto a discrete sphere, ie a sphere made of voxels. \n"
         doc += "\t radius = 10:   978 vectors, angle between neighboring vectors in [4.40, 10.58] degrees\n"
         doc += "\t radius = 15:  2262 vectors, angle between neighboring vectors in [2.98, 6.93] degrees\n"
         doc += "\t radius = 20:  4026 vectors, angle between neighboring vectors in [2.25, 5.16] degrees\n"
@@ -149,18 +150,23 @@ class EmbryoSymmetryParameters(common.PrefixedParameter):
         self.doc['sphere_radius'] = doc
         self.sphere_radius = 20
 
-        doc = "\t Sigma (standard deviation) to build the direction distribution (in radian)\n"
+        doc = "\t Sigma (standard deviation) to build the direction distribution (in radian).\n"
+        doc += "\t The distribution is built through a Gaussian kernel density estimation."
         self.doc['sigma'] = doc
         self.sigma = 0.15
 
         doc = "\t Threshold on the distribution value. Only maxima above this threshold are\n"
-        doc += "\t keep. Recall that the distribution values are normalize so that the maximum\n"
+        doc += "\t kept. Recall that the distribution values are normalize so that the maximum\n"
         doc += "\t is 1.\n"
         self.doc['maxima_threshold'] = doc
         self.maxima_threshold = 0.5
 
-        doc = "\t Number of distribution maxima to be retained as candidates\n"
-        doc += "\t 'None' or negative number means all of them\n"
+        doc = "\t Number of distribution maxima to be retained as candidates.\n"
+        doc += "\t 'None' or negative number means all of them. Since the distribution\n"
+        doc += "\t is computed onto a sphere, both the surface normal and its opposite\n"
+        doc += "\t contribute to the distribution estimation. It comes out that each symmetry\n"
+        doc += "\t direction is represented by two (opposite) vectors, meaning that this\n"
+        doc += "\t parameter has to be even. \n"
         self.doc['maxima_number'] = doc
         self.maxima_number = 12
 
@@ -549,7 +555,8 @@ class AtlasParameters(udiagnosis.DiagnosisParameters, EmbryoSymmetryParameters):
         doc += "\t    distance between divisions\n"
         doc += "\t 'embryo-volume': plot the embryo volume (in voxel)\n"
         doc += "\t    without and with temporal registration (computed from cell number)\n"
-        doc += "\t 'symmetry - axis':\n"
+        doc += "\t 'symmetry-axis': lot the error of the best symmetry axes (the closest to the one\n"
+        doc += "\t estimated with cell names), as well as its rank with respect to the distribution value\n"
         self.doc['generate_figure'] = doc
         self.generate_figure = False
 
@@ -578,6 +585,7 @@ class AtlasParameters(udiagnosis.DiagnosisParameters, EmbryoSymmetryParameters):
         # parameters dedicated to build neighborhoods
         #
         doc = "\t if 'True', add the symmetric neighborhood as additional exemplar.\n"
+        doc += "\t It means that left and right embryo hemisphere are considered together"
         self.doc['add_symmetric_neighborhood'] = doc
         self.add_symmetric_neighborhood = True
 
@@ -599,11 +607,15 @@ class AtlasParameters(udiagnosis.DiagnosisParameters, EmbryoSymmetryParameters):
         #
         #
         #
-        doc = "\t - None\n"
+        doc = "\t Embryos/atlases have different volumes, and their volume decrease with time.\n"
+        doc += "\t To compare surfaces and/or volumes, a normalization is required. I can be chosen among:"
+        doc += "\t - None: no normalization (for test purpose)\n"
         doc += "\t - 'local': normalization by the cell surface\n"
-        doc += "\t   The normalization factor is then different from cell to cell within a embryo.\n"
+        doc += "\t   The normalization factor is then different from cell to cell within a embryo,\n"
+        doc += "\t   and obviously for the two daughter cells resulting from a division\n"
         doc += "\t - 'global': normalization by embryo volume\n"
-        doc += "\t   The normalization factor is the same from cell to cell within a embryo.\n"
+        doc += "\t   The normalization factor is for all the cells from the same time point within a embryo.\n"
+        doc += "\t   It changes along time to compensate for the volume decrease."
         self.doc['cell_normalization'] = doc
         self.cell_normalization = 'global'
 

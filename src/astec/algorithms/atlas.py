@@ -22,8 +22,8 @@ _instrumented_ = False
 ########################################################################################
 
 
-def atlas_embryo_process(experiment, parameters):
-    proc = "atlas_embryo_process"
+def atlas_process(experiment, parameters):
+    proc = "atlas_process"
     #
     # parameter type checking
     #

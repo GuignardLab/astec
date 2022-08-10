@@ -108,15 +108,18 @@ class EmbryoRegistrationParameters(common.PrefixedParameter):
         doc += "\t    for the reference embryo\n"
         doc += "\t - 'sphere_wrt_symaxis': an uniform sampling of 3D directions is done for the floating\n"
         doc += "\t    embryo (parameter 'direction_sphere_radius') while one (out of two) vector\n"
-        doc += "\t    defining the symmetry axis is used for the reference embryo\n"
+        doc += "\t    defining the symmetry axis direction is used for the reference embryo\n"
         doc += "\t    (to be used for test purposes)\n"
         doc += "\t - 'symaxis_wrt_symaxis': symmetry direction candidates are used for the floating \n"
         doc += "\t    embryo (parameters 'distribution_sphere_radius' and 'distribution_sigma') while\n"
-        doc += "\t    the two opposite vectors defining the symmetry axis is used for the reference embryo\n"
+        doc += "\t    one vector defining the symmetry axis (estimated from the cell name) is used for\n"
+        doc += "\t    the reference embryo. Due to computational performances, this option should be\n"
+        doc += "\t    considered first. \n"
         self.doc['rotation_initialization'] = doc
-        self.rotation_initialization = 'sphere_wrt_z'
+        self.rotation_initialization = 'symaxis_wrt_symaxis'
 
-        doc = "\t To get an uniform sampling of the 3d directions in space, a discrete sphere is build\n"
+        doc = "\t To get an uniform sampling of the 3d directions in space (options 'sphere_wrt_z'\n"
+        doc += "\t and 'sphere_wrt_symaxis' of 'rotation_initialization'), a discrete sphere is build\n"
         doc += "\t and each point of the outer surface gives a sample. The larger the radius, the more\n"
         doc += "\t vectors and the higher computational time\n"
         doc += "\t radius = 2.0: 26 vectors, angle between neighboring vectors in [36.26, 60.0] degrees\n"
@@ -136,7 +139,7 @@ class EmbryoRegistrationParameters(common.PrefixedParameter):
         # 2D rotation
         #
         doc = "\t Increment (in degrees) between two successive angles when enumerating\n"
-        doc += "\t rotation along the z axe\n"
+        doc += "\t rotations along the z or the symmetry axis\n"
         self.doc['z_rotation_angle_increment'] = doc
         self.z_rotation_angle_increment = 15
 
@@ -151,7 +154,8 @@ class EmbryoRegistrationParameters(common.PrefixedParameter):
         #
         #
         #
-        doc = "\t The residual value of a transformation is the sum of the smallest\n"
+        doc = "\t The optimal transformation between two embryos is the one giving the smallest\n"
+        doc += "\t residual value. The residual value of a transformation is the sum of the smallest\n"
         doc += "\t distances between paired points. This parameter gives the ratio of\n"
         doc += "\t points to be retained\n"
         self.doc['pair_ratio_for_residual'] = doc
@@ -291,14 +295,11 @@ class InitNamingParameters(EmbryoRegistrationParameters, uatlase.AtlasParameters
         doc += "\t   else, only the specified figure files are generated (see below for the list)\n"
         doc += "\t List of figures:\n"
         doc += "\t 'success-wrt-atlasnumber':\n"
-        doc += "\t    bla bla bla\n"
-        doc += "\t 'symmetry-axis':\n"
-        doc += "\t    bla bla bla\n"
+        doc += "\t    plot leave-one-out results when naming a time points with [1, n-1] atlases\n"
         self.doc['generate_figure'] = doc
         self.generate_figure = False
 
         doc = "\t Input property file to be named. Must contain lineage, volumes and contact surfaces\n"
-        doc += "\t as well as some input names (one time point should be entirely named).\n"
         self.doc['inputFile'] = doc
         self.inputFile = None
         doc = "\t Output property file."
@@ -311,14 +312,15 @@ class InitNamingParameters(EmbryoRegistrationParameters, uatlase.AtlasParameters
         self.cell_number = 64
 
         doc = "\t Maximal number of iterations to be done when naming with unanimity rule\n"
+        doc += "\t None means until stability is reached.\n"
         self.doc['unanimity_iterations'] = doc
         self.unanimity_iterations = None
 
-        doc = "\t Check whether some names are duplicated, and, if yes, remove them\n"
+        doc = "\t After naming, check whether some names are duplicated, and, if yes, remove them\n"
         self.doc['check_duplicate'] = doc
         self.check_duplicate = True
 
-        doc = "\t Check whether the named cell volume is coherent with its mother/daughters volumes\n"
+        doc = "\t After naming, check whether the named cell volume is coherent with its mother/daughters volumes\n"
         self.doc['check_volume'] = doc
         self.check_volume = True
 

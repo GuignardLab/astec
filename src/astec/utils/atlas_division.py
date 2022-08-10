@@ -40,7 +40,7 @@ class DivisionParameters(uatlase.AtlasParameters):
         #
         #
         #
-        doc = "\t Exclude inner surfaces from the division-to-division distance calculation\n"
+        doc = "\t True or False. Exclude inner surfaces from the division-to-division distance calculation\n"
         self.doc['exclude_inner_surfaces'] = doc
         self.exclude_inner_surfaces = False
 
@@ -48,20 +48,22 @@ class DivisionParameters(uatlase.AtlasParameters):
         #
         #
         doc = "\t True or False. Performs some diagnosis after building the division atlas. \n"
-        doc += "\t Incrementing the verboseness ('-v' in the command line) may give more details."
+        doc += "\t Incrementing the verboseness ('-v' in the command line) may give more details.\n"
         self.doc['division_diagnosis'] = doc
         self.division_diagnosis = False
 
         doc = "\t If True, will propose some daughters switches in the atlases. For a given division,\n"
         doc += "\t a global score is computed as the sum of all pairwise division similarity.\n"
-        doc += "\t A switch is proposed for an atlas if it allows to decrease this global score."
+        doc += "\t A switch is proposed for an atlas if it allows to decrease this global score.\n"
         self.doc['division_permutation_proposal'] = doc
         self.division_permutation_proposal = False
 
         #
         #
         #
-        doc = "\t Cluster distance used to build dendrograms. choices are\n"
+        doc = "\t Cluster distance used to build dendrograms. Dendrograms are used either for\n"
+        doc += "\t diagnosis purpose (if 'diagnosis_properties' is set to True) or to generate\n"
+        doc += "\t figures (if 'generate_figure' is set to True)\n"
         doc += "\t - 'single'\n"
         doc += "\t - 'complete'\n"
         doc += "\t - 'average'\n"
@@ -90,7 +92,7 @@ class DivisionParameters(uatlase.AtlasParameters):
     def print_parameters(self):
         print("")
         print('#')
-        print('# CellAtlasParameters')
+        print('# DivisionParameters')
         print('#')
         print("")
 
@@ -112,7 +114,7 @@ class DivisionParameters(uatlase.AtlasParameters):
     def write_parameters_in_file(self, logfile):
         logfile.write("\n")
         logfile.write("# \n")
-        logfile.write("# CellAtlasParameters\n")
+        logfile.write("# DivisionParameters\n")
         logfile.write("# \n")
         logfile.write("\n")
 

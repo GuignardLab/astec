@@ -1,18 +1,18 @@
 .. role:: python(code)
    :language: python
 
-.. _cli-astec-contact-atlas:
+.. _cli-astec-atlas:
 
-``astec_contact_atlas``
-=======================
+``astec_atlas``
+===============
 
-``astec_contact_atlas`` can be used to assess the quality/coherency of a set of already 
-named embryos (or atlases) as well to point out potential corrections.
+``astec_atlas`` can be used to assess the quality/coherency of a set of already 
+named ascidian embryos (or atlases) as well to point out potential corrections.
 It assumes that the set (or mathematically speaking the vector) of valued surface
 contact of a named cell can be used as its signature.
 
-``astec_contact_atlas`` additional options
-------------------------------------------
+``astec_atlas`` additional options
+----------------------------------
 
 The following options are available:
 
@@ -20,8 +20,8 @@ The following options are available:
    write out morphonet selection files
 
 
-``astec_contact_atlas`` principle
----------------------------------
+``astec_atlas`` principle
+-------------------------
 
 Eg, the cell :math:`c^{R}_i` (the cell :math:`c_i` of atlas :math:`R`) is represented by the 
 vector
@@ -33,12 +33,10 @@ s^{R}_{i,j} \\
 \end{array}
 \right)`.
 
-To account for embryo size difference, normalized  surface
-contact vector are used for computation (contact surfaces are divided by the total cell surface, 
-so values represented the fraction of the total cell surface). A distance between cells comes to a distance 
-between two vectors (or the modulus of the difference of the two vectors).
-This distance can be set by ``cell_contact_distance`` 
-(see section :ref:`cli-parameters-contact-surface`).
+To account for size differences (between embryos, or between time points within an embryo), normalized  surface
+contact vector should be used for computation (parameter ``cell_normalization``, see section :ref:`cli-parameters-atlas`).
+A distance between cells comes to a L1 distance 
+between two vectors.
 
 From the cell-to-cell distance, a division-to-division similarity can be built, a division being represented by 
 the couple of daughter cells (extracted at the distance ``delay_from_division`` from the division).
@@ -63,28 +61,32 @@ Thus, to assess the quality of a set of atlases, a typical parameter file may be
    #
    add_symmetric_neighborhood = True
    use_common_neighborhood = True
-   delay_from_division = 0
+   delay_from_division = 3
    # 
    # how to compute distances
    #
-   cell_contact_distance = 'l1-distance'
-   division_contact_similarity = 'distance'
+   cell_normalization = 'global'
    #
    # how to extract/display information
    #
-   diagnosis_properties = True
-   daughter_switch_proposal = True
+   atlas_diagnosis = True
+   division_diagnosis = True
+   division_permutation_proposal = True
    generate_figure = True
    figurefile_suffix = 'some_suffix'
 
-* ``diagnosis_properties`` may be quite verbose. It may be adviced to set it to ``True`` when
+* ``atlas_diagnosis`` and ``division_diagnosis``may be quite verbose. It may be adviced to set them to ``True`` when
   introducing a new atlas, but not when using a set of already curated atlases.
   Two kinds of diagnosis are conducted.
 
-  * on each single atlas/reference file, the ``name`` and the ``contact`` properties are assessed. 
-    Such diagnosis can also be conducted with ``astec_embryoproperties``
-    (see section :ref:`cli-embryoproperties`)
-  * on the population of division neighborhoods:
+  * ``atlas_diagnosis``
+
+    * on each single atlas/reference file, the ``name`` and the ``contact`` properties are assessed. 
+      Such diagnosis can also be conducted with ``astec_embryoproperties``
+      (see section :ref:`cli-embryoproperties`)
+    * on the population of division neighborhoods:
+
+  * ``division_diagnosis``
 
     * pairwise disagreements: for a given cell and every couple of reference embryos, 
       the distance of the two divisions (one per reference) is compared to the distance
@@ -97,7 +99,7 @@ Thus, to assess the quality of a set of atlases, a typical parameter file may be
       in the ``outputDir`` directory.
 
 
-* ``daughter_switch_proposal`` may propose to switch the names of some divisions. It calculates
+* ``division_permutation_proposal`` may propose to switch the daughter names of some divisions. It calculates
   whether a name switch result in a global score improvement, and, if so, proposes the switch.
   It is somehow computationally costly.
   Individualized ``morphonet`` selection files are written (if ``write_selection`` is set to ``True``)
@@ -108,6 +110,6 @@ Thus, to assess the quality of a set of atlases, a typical parameter file may be
   It is somehow computationally costly.
 
 
-Section :ref:`cli-parameters-contact-atlas` provides a view on all the parameters.
+Section :ref:`cli-parameters-astec-atlas` provides a view on all the parameters.
 
 

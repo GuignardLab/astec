@@ -1171,22 +1171,6 @@ def _image_cell_division(input_image, output_image, current_time, properties, ex
 
 def correction_process(current_time, properties, experiment, parameters, fusion, new_division,
                        propagated_division={}):
-    """
-
-    Parameters
-    ----------
-    current_time
-    properties
-    experiment
-    parameters
-    fusion
-    new_division
-    propagated_division
-
-    Returns
-    -------
-
-    """
 
     proc = "correction_process"
 
