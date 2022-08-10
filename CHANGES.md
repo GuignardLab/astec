@@ -1,5 +1,10 @@
 # Change Log
 
+## version 1.6.0
+
+- write/update documentation for astec_atlas_init_naming and astec_atlas_naming
+- add assessment measure for initial naming
+
 ## version 1.5.3
 
 - astec_atlas_init_naming: enrich outputs

@@ -22,7 +22,7 @@ copyright = '2021, Grégoire MALANDAIN'
 author = 'Grégoire MALANDAIN'
 
 # The full version, including alpha/beta/rc tags
-release = '1.5.3'
+release = '1.6.0'
 
 
 # -- General configuration ---------------------------------------------------
