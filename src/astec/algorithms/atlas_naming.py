@@ -68,7 +68,7 @@ class NamingParameters(uatlasd.DivisionParameters):
         doc += "\t - 'minimum': choose the couple of names that yield a minimal distance.\n"
         doc += "\t   It comes to name after the closest atlas (for this division).\n"
         doc += "\t - 'sum': same as 'mean' \n"
-        doc += "\t - 'majority': for each choices, order the distances in increasing order\n"
+        doc += "\t - 'majority': for each choice, order the distances in increasing order\n"
         doc += "\t   then compute the cumulated sum over the n first elements (so the first\n"
         doc += "\t   is the minimum distance, and the last one is the average over all\n"
         doc += "\t   atlases). Counts then the number of times when a choice is better than\n"
@@ -80,7 +80,7 @@ class NamingParameters(uatlasd.DivisionParameters):
         doc += "\t in the database for the aimed division, naming is not assessed."
         self.doc['confidence_atlases_nmin'] = doc
         self.confidence_atlases_nmin = 2
-        doc = "\t Percentage of atlases used to assessed naming confidence. If the percentage is less than\n"
+        doc = "\t Percentage of atlases used to assess naming confidence. If the percentage is less than\n"
         doc += "\t 'confidence_atlases_nmin', 'confidence_atlases_nmin' atlases are used."
         self.doc['confidence_atlases_percentage'] = doc
         self.confidence_atlases_percentage = 50
@@ -1484,7 +1484,7 @@ def naming_process(experiment, parameters):
     # naming propagation
     #
     prop = _propagate_naming(prop, embryo, atlases, parameters, time_digits_for_cell_id=time_digits_for_cell_id)
-    prop = _evaluate_naming(prop, embryo, atlases, parameters, time_digits_for_cell_id=4)
+    prop = _evaluate_naming(prop, embryo, atlases, parameters, time_digits_for_cell_id=time_digits_for_cell_id)
     prop = properties.set_fate_from_names(prop)
     prop = properties.set_color_from_fate(prop)
     #

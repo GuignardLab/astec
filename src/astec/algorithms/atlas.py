@@ -22,8 +22,8 @@ _instrumented_ = False
 ########################################################################################
 
 
-def atlas_embryo_process(experiment, parameters):
-    proc = "atlas_embryo_process"
+def atlas_process(experiment, parameters):
+    proc = "atlas_process"
     #
     # parameter type checking
     #
@@ -50,6 +50,12 @@ def atlas_embryo_process(experiment, parameters):
     # and temporally register the atlases
     #
     atlases.add_atlases(parameters.atlasFiles, parameters, time_digits_for_cell_id=time_digits_for_cell_id)
+
+
+    if atlases.n_atlases() == 0:
+        msg = proc + ": no atlases ?!"
+        monitoring.to_log_and_console(msg, 1)
+        return None
 
     #
     # division based part

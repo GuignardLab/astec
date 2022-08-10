@@ -26,7 +26,7 @@ by :math:`h`-minima computation for the indicated cells, ie
 The :math:`h`-minima computation start with a :math:`h` of ``watershed_seed_hmin_max_value`` until two seeds are found 
 inside the cell of interest. Then, a watershed is performed to get the final splitting of the cell.
 
-See section :ref:`cli-parameters-manualcorrection` for a detailed presentation of the mapping file,
+See section :ref:`cli-parameters-astec-manualcorrection` for a detailed presentation of the mapping file,
 to specify cells to be fused or cells to be splitted.
 
 For time series, newly formed divisions are propagated along the time series and embryo properties are updated (only cell lineage 
@@ -110,7 +110,8 @@ and should be recomputed with ``astec_embryoproperties`` once the corrections ar
 Segmentation correction parameters
 ----------------------------------
 
-``astec_manualcorrection`` parses a correction file whose name is given by the variable ``manualcorrection_file``. The syntax of this file is described in section :ref:`cli-parameters-manualcorrection`.
+``astec_manualcorrection`` parses a correction file whose name is given by the variable ``manualcorrection_file``.
+The syntax of this file is described in section :ref:`cli-parameters-astec-manualcorrection`.
 See also the 
 `tutorial section <https://astec.gitlabpages.inria.fr/astec-tutorial/astec_tutorial.html#correction-of-the-first-time-point-segmentation>`_
 for an other example.

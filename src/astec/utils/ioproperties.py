@@ -713,7 +713,7 @@ def read_dictionary(inputfilenames, inputpropertiesdict={}):
     if type(inputfilenames) == str:
         if not os.path.isfile(inputfilenames):
             monitoring.to_log_and_console(proc + ": error, file '" + str(inputfilenames) + "' does not exist")
-            return {}
+            return propertiesdict
 
         if inputfilenames.endswith("xml") is True:
             propertiesdict = _read_xml_file(inputfilenames, propertiesdict)

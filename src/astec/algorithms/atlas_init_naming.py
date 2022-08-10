@@ -11,13 +11,15 @@ from sklearn.neighbors import NearestNeighbors
 from operator import itemgetter
 
 
-
 import astec.utils.common as common
 import astec.utils.atlas_division as uatlasd
 import astec.utils.atlas_cell as uatlasc
 import astec.utils.atlas_embryo as uatlase
 import astec.utils.icp as icp
 import astec.utils.ioproperties as ioproperties
+import astec.utils.ascidian_name as uname
+import astec.utils.neighborhood_distance as uneighborhood
+
 
 #
 #
@@ -106,15 +108,18 @@ class EmbryoRegistrationParameters(common.PrefixedParameter):
         doc += "\t    for the reference embryo\n"
         doc += "\t - 'sphere_wrt_symaxis': an uniform sampling of 3D directions is done for the floating\n"
         doc += "\t    embryo (parameter 'direction_sphere_radius') while one (out of two) vector\n"
-        doc += "\t    defining the symmetry axis is used for the reference embryo\n"
+        doc += "\t    defining the symmetry axis direction is used for the reference embryo\n"
         doc += "\t    (to be used for test purposes)\n"
         doc += "\t - 'symaxis_wrt_symaxis': symmetry direction candidates are used for the floating \n"
         doc += "\t    embryo (parameters 'distribution_sphere_radius' and 'distribution_sigma') while\n"
-        doc += "\t    the two opposite vectors defining the symmetry axis is used for the reference embryo\n"
+        doc += "\t    one vector defining the symmetry axis (estimated from the cell name) is used for\n"
+        doc += "\t    the reference embryo. Due to computational performances, this option should be\n"
+        doc += "\t    considered first. \n"
         self.doc['rotation_initialization'] = doc
-        self.rotation_initialization = 'sphere_wrt_z'
+        self.rotation_initialization = 'symaxis_wrt_symaxis'
 
-        doc = "\t To get an uniform sampling of the 3d directions in space, a discrete sphere is build\n"
+        doc = "\t To get an uniform sampling of the 3d directions in space (options 'sphere_wrt_z'\n"
+        doc += "\t and 'sphere_wrt_symaxis' of 'rotation_initialization'), a discrete sphere is build\n"
         doc += "\t and each point of the outer surface gives a sample. The larger the radius, the more\n"
         doc += "\t vectors and the higher computational time\n"
         doc += "\t radius = 2.0: 26 vectors, angle between neighboring vectors in [36.26, 60.0] degrees\n"
@@ -134,7 +139,7 @@ class EmbryoRegistrationParameters(common.PrefixedParameter):
         # 2D rotation
         #
         doc = "\t Increment (in degrees) between two successive angles when enumerating\n"
-        doc += "\t rotation along the z axe\n"
+        doc += "\t rotations along the z or the symmetry axis\n"
         self.doc['z_rotation_angle_increment'] = doc
         self.z_rotation_angle_increment = 15
 
@@ -149,7 +154,8 @@ class EmbryoRegistrationParameters(common.PrefixedParameter):
         #
         #
         #
-        doc = "\t The residual value of a transformation is the sum of the smallest\n"
+        doc = "\t The optimal transformation between two embryos is the one giving the smallest\n"
+        doc += "\t residual value. The residual value of a transformation is the sum of the smallest\n"
         doc += "\t distances between paired points. This parameter gives the ratio of\n"
         doc += "\t points to be retained\n"
         self.doc['pair_ratio_for_residual'] = doc
@@ -289,14 +295,11 @@ class InitNamingParameters(EmbryoRegistrationParameters, uatlase.AtlasParameters
         doc += "\t   else, only the specified figure files are generated (see below for the list)\n"
         doc += "\t List of figures:\n"
         doc += "\t 'success-wrt-atlasnumber':\n"
-        doc += "\t    bla bla bla\n"
-        doc += "\t 'symmetry-axis':\n"
-        doc += "\t    bla bla bla\n"
+        doc += "\t    plot leave-one-out results when naming a time points with [1, n-1] atlases\n"
         self.doc['generate_figure'] = doc
         self.generate_figure = False
 
         doc = "\t Input property file to be named. Must contain lineage, volumes and contact surfaces\n"
-        doc += "\t as well as some input names (one time point should be entirely named).\n"
         self.doc['inputFile'] = doc
         self.inputFile = None
         doc = "\t Output property file."
@@ -309,8 +312,17 @@ class InitNamingParameters(EmbryoRegistrationParameters, uatlase.AtlasParameters
         self.cell_number = 64
 
         doc = "\t Maximal number of iterations to be done when naming with unanimity rule\n"
+        doc += "\t None means until stability is reached.\n"
         self.doc['unanimity_iterations'] = doc
         self.unanimity_iterations = None
+
+        doc = "\t After naming, check whether some names are duplicated, and, if yes, remove them\n"
+        self.doc['check_duplicate'] = doc
+        self.check_duplicate = True
+
+        doc = "\t After naming, check whether the named cell volume is coherent with its mother/daughters volumes\n"
+        self.doc['check_volume'] = doc
+        self.check_volume = True
 
         #
         # for test:
@@ -344,6 +356,9 @@ class InitNamingParameters(EmbryoRegistrationParameters, uatlase.AtlasParameters
         self.varprint('cell_number', self.cell_number, self.doc.get('cell_number', None))
         self.varprint('unanimity_iterations', self.unanimity_iterations, self.doc.get('unanimity_iterations', None))
 
+        self.varprint('check_duplicate', self.check_duplicate, self.doc.get('cell_ncheck_duplicateumber', None))
+        self.varprint('check_volume', self.check_volume, self.doc.get('check_volume', None))
+
         self.varprint('testFile', self.testFile, self.doc.get('testFile', None))
         print("")
 
@@ -365,6 +380,9 @@ class InitNamingParameters(EmbryoRegistrationParameters, uatlase.AtlasParameters
         self.varwrite(logfile, 'cell_number', self.cell_number, self.doc.get('cell_number', None))
         self.varwrite(logfile, 'unanimity_iterations', self.unanimity_iterations, self.doc.get('unanimity_iterations',
                                                                                                None))
+
+        self.varwrite(logfile, 'check_duplicate', self.check_duplicate, self.doc.get('check_duplicate', None))
+        self.varwrite(logfile, 'check_volume', self.check_volume, self.doc.get('check_volume', None))
 
         self.varwrite(logfile, 'testFile', self.testFile, self.doc.get('testFile', None))
 
@@ -391,6 +409,9 @@ class InitNamingParameters(EmbryoRegistrationParameters, uatlase.AtlasParameters
 
         self.cell_number = self.read_parameter(parameters, 'cell_number', self.cell_number)
         self.unanimity_iterations = self.read_parameter(parameters, 'unanimity_iterations', self.unanimity_iterations)
+
+        self.check_duplicate = self.read_parameter(parameters, 'check_duplicate', self.check_duplicate)
+        self.check_volume = self.read_parameter(parameters, 'check_volume', self.check_volume)
 
         self.testFile = self.read_parameter(parameters, 'testFile', self.testFile)
 
@@ -592,12 +613,6 @@ def _get_barycenters(embryo, t, transformation=None):
 
 ########################################################################################
 #
-# direction distribution
-#
-########################################################################################
-
-########################################################################################
-#
 #
 #
 ########################################################################################
@@ -789,8 +804,7 @@ def _coregister_embryos_one_timepoint(embryo, info_embryo, atlas, info_atlas, pa
     return rigid_matrice[index_min], affine_matrice[index_min]
 
 
-def _coregister_embryos(transformations, embryo, info_embryo, atlas, info_atlas, atlas_name, parameters,
-                        time_digits_for_cell_id=4, verbose=True):
+def _coregister_embryos(transformations, embryo, info_embryo, atlas, info_atlas, atlas_name, parameters, verbose=True):
     proc = "_coregister_embryos"
 
     first_flotime = info_embryo['first_time']
@@ -855,7 +869,7 @@ def _register_embryos(transformations, embryo, atlases, parameters, time_digits_
         msg = "weird, requested cell number was " + str(parameters.cell_number) + ". "
         msg += "Found cell range was [" + str(lowerncells) + ", " + str(upperncells) + "]"
         monitoring.to_log_and_console(proc + ": " + msg)
-        return transformations
+        return transformations, [], False
 
     flo_embryo = {'time_range': flotimerange, 'cell_number': cell_number}
     flo_embryo['first_time'] = statistics.median_low(flo_embryo['time_range'])
@@ -911,7 +925,7 @@ def _register_embryos(transformations, embryo, atlases, parameters, time_digits_
     if are_transformations_already_computed:
         msg = "   ... co-registrations of embryo to be named already done"
         monitoring.to_log_and_console(msg)
-        return transformations, flo_embryo['time_range']
+        return transformations, flo_embryo['time_range'], False
 
     #
     #
@@ -932,7 +946,7 @@ def _register_embryos(transformations, embryo, atlases, parameters, time_digits_
     else:
         msg = "unknown rotation initialization '" + str(parameters.rotation_initialization) + "'"
         monitoring.to_log_and_console(proc + ": " + msg)
-        return transformations
+        return transformations, flo_embryo['time_range'], False
 
     if parameters.rotation_initialization == 'sphere_wrt_z':
         for a in ref_atlases:
@@ -946,14 +960,13 @@ def _register_embryos(transformations, embryo, atlases, parameters, time_digits_
     else:
         msg = "unknown rotation initialization '" + str(parameters.rotation_initialization) + "'"
         monitoring.to_log_and_console(proc + ": " + msg)
-        return transformations
+        return transformations, flo_embryo['time_range'], False
 
     for a in ref_atlases:
         transformations = _coregister_embryos(transformations, embryo, flo_embryo, atlases[a], ref_atlases[a], a,
-                                              parameters, time_digits_for_cell_id=time_digits_for_cell_id,
-                                              verbose=verbose)
+                                              parameters, verbose=verbose)
 
-    return transformations, flo_embryo['time_range']
+    return transformations, flo_embryo['time_range'], True
 
 
 #########################################################################################
@@ -962,13 +975,18 @@ def _register_embryos(transformations, embryo, atlases, parameters, time_digits_
 #
 ########################################################################################
 
+def _get_named_timepoints(prop, time_digits_for_cell_id=4):
+    cells = set(list(prop['cell_name'].keys()))
+    div = 10 ** time_digits_for_cell_id
+    times = list(set([int(c) // div for c in cells]))
+    return times
+
+
 def _test_naming(prop, reference_prop, time_digits_for_cell_id=4, verbose=True):
     #
     #
     #
-    cells = set(list(prop['cell_name'].keys()))
-    div = 10 ** time_digits_for_cell_id
-    times = list(set([int(c) // div for c in cells]))
+    times = _get_named_timepoints(prop, time_digits_for_cell_id=time_digits_for_cell_id)
     if len(times) == 0:
         if verbose:
             msg = "no names were set"
@@ -977,6 +995,10 @@ def _test_naming(prop, reference_prop, time_digits_for_cell_id=4, verbose=True):
         if verbose:
             msg = "weird, names were set on several time points " + str(times)
             monitoring.to_log_and_console("... " + msg)
+
+    cells = set(list(prop['cell_name'].keys()))
+    div = 10 ** time_digits_for_cell_id
+    times = list(set([int(c) // div for c in cells]))
 
     refcells = set([c for c in reference_prop['cell_name'] if int(c) // div in times])
 
@@ -1012,6 +1034,45 @@ def _test_naming(prop, reference_prop, time_digits_for_cell_id=4, verbose=True):
     return len(right_cells), len(wrong_cells), len(unnamed_cells), len(not_in_reference_cells)
 
 
+def _test_distance(prop, reference_prop, time_digits_for_cell_id=4, verbose=True):
+    #
+    #
+    #
+    times = _get_named_timepoints(prop, time_digits_for_cell_id=time_digits_for_cell_id)
+    if len(times) == 0:
+        if verbose:
+            msg = "no names were set"
+            monitoring.to_log_and_console("... " + msg)
+    elif len(times) > 1:
+        if verbose:
+            msg = "weird, names were set on several time points " + str(times)
+            monitoring.to_log_and_console("... " + msg)
+
+    cells = set(list(prop['cell_name'].keys()))
+    div = 10 ** time_digits_for_cell_id
+    times = list(set([int(c) // div for c in cells]))
+
+    refcells = set([c for c in reference_prop['cell_name'] if int(c) // div in times])
+
+    common_cells = refcells.intersection(cells)
+    right_cells = []
+    wrong_cells = []
+    for c in common_cells:
+        if prop['cell_name'][c] != reference_prop['cell_name'][c]:
+            wrong_cells += [c]
+            continue
+        right_cells += [c]
+
+    keydistance = 'morphonet_float_init_naming_neighborhood_assessment'
+    right_distances = []
+    for c in right_cells:
+        right_distances += [prop[keydistance][c]]
+    wrong_distances = []
+    for c in wrong_cells:
+        wrong_distances += [prop[keydistance][c]]
+
+    return right_distances, wrong_distances
+
 ########################################################################################
 #
 #
@@ -1045,7 +1106,7 @@ def _get_correspondence(flo_time_range, embryo):
     return correspondence
 
 
-def _set_candidate_name(name_from_both, name_from_flo, name_from_ref, correspondence, embryo, reference, tflo, tref,
+def _set_candidate_name(name_from_both, name_from_flo, name_from_ref, embryo, reference, tflo, tref,
                         transformation, time_digits_for_cell_id=4):
 
     # get cell ids of both the reference and floating cells
@@ -1089,10 +1150,10 @@ def _set_candidate_name(name_from_both, name_from_flo, name_from_ref, correspond
         if cr not in ref_name:
             continue
         if i_ref_to_flo[j] == i:
-            name_from_both[correspondence[cf]] = name_from_both.get(correspondence[cf], []) + [ref_name[cr]]
+            name_from_both[cf] = name_from_both.get(cf, []) + [ref_name[cr]]
             reciprocal_n += 1
         else:
-            name_from_flo[correspondence[cf]] = name_from_flo.get(correspondence[cf], []) + [ref_name[cr]]
+            name_from_flo[cf] = name_from_flo.get(cf, []) + [ref_name[cr]]
 
     for j, cr in enumerate(cell_tref):
         i = i_ref_to_flo[j]
@@ -1102,23 +1163,21 @@ def _set_candidate_name(name_from_both, name_from_flo, name_from_ref, correspond
         if i_flo_to_ref[i] == j:
             pass
         else:
-            name_from_ref[correspondence[cf]] = name_from_ref.get(correspondence[cf], []) + [ref_name[cr]]
+            name_from_ref[cf] = name_from_ref.get(cf, []) + [ref_name[cr]]
 
     return name_from_both, name_from_flo, name_from_ref, reciprocal_n
 
 
-def _get_floating_names(transformations, flo_time_range, embryo, atlases, parameters, time_digits_for_cell_id=4,
-                        verbose=True):
+def _get_floating_names(transformations, embryo, atlases, time_digits_for_cell_id=4, verbose=True):
     #
     # correspondences
+    # build dictionaries indexed by cell ids (from embryo to be named)
+    # each dictionary entry being a list of names issued  from atlases
     #
-    correspondence = _get_correspondence(flo_time_range, embryo)
 
     name_both = {}
     name_flo = {}
     name_ref = {}
-    if len(correspondence) == 0:
-        return name_both, name_flo, name_ref
 
     ref_atlases = atlases.get_atlases()
     # parse time points of the floating embryo
@@ -1131,7 +1190,7 @@ def _get_floating_names(transformations, flo_time_range, embryo, atlases, parame
                 monitoring.to_log_and_console("      ... " + msg, 2)
                 continue
             for tref in transformations[tflo][a]:
-                output = _set_candidate_name(name_both, name_flo, name_ref, correspondence, embryo, ref_atlases[a],
+                output = _set_candidate_name(name_both, name_flo, name_ref, embryo, ref_atlases[a],
                                              tflo, tref, transformations[tflo][a][tref],
                                              time_digits_for_cell_id=time_digits_for_cell_id)
                 name_both, name_flo, name_ref, n = output
@@ -1154,9 +1213,9 @@ def _get_unanimity_names(prop, name):
     return prop, name, n
 
 
-def _iterate_unanimity_names(name_both, parameters, verbose=False):
+def _iterate_unanimity_names(prop, name_both, parameters, verbose=False):
     iteration = 0
-    prop = {'cell_name': {}}
+    prop['cell_name'] = {}
     while True:
         prop, name_both, n = _get_unanimity_names(prop, name_both)
         if n == 0:
@@ -1180,6 +1239,45 @@ def _iterate_unanimity_names(name_both, parameters, verbose=False):
 #
 ########################################################################################
 
+def _remove_duplicate(prop, embryo, verbose=True):
+    proc = "_remove_duplicate"
+
+    if 'cell_name' not in prop:
+        monitoring.to_log_and_console(str(proc) + ": 'cell_name' was not in dictionary")
+        return prop
+
+    times = _get_named_timepoints(prop, time_digits_for_cell_id=embryo.time_digits_for_cell_id)
+    if len(times) == 0:
+        msg = "no names were set"
+        monitoring.to_log_and_console("... " + msg)
+        return prop
+    elif len(times) > 1:
+        msg = "weird, names were set on several time points " + str(times)
+        monitoring.to_log_and_console("... " + msg)
+        return prop
+
+    cell_per_name = {}
+    for c in prop['cell_name']:
+        cell_per_name[prop['cell_name'][c]] = cell_per_name.get(prop['cell_name'][c], []) + [c]
+
+    duplicates = [n for n in cell_per_name if len(cell_per_name[n]) > 1]
+    if len(duplicates) > 0:
+        for n in duplicates:
+            for c in cell_per_name[n]:
+                del prop['cell_name'][c]
+            if verbose:
+                msg = "   ... name " + str(n) + " was given " + str(len(cell_per_name[n])) + "  times"
+                monitoring.to_log_and_console(msg)
+
+    return prop
+
+
+########################################################################################
+#
+#
+#
+########################################################################################
+
 def _get_transformation_filename(parameters):
     if parameters.transformation_filename is None:
         return None
@@ -1188,6 +1286,189 @@ def _get_transformation_filename(parameters):
             return parameters.transformation_filename
         return parameters.transformation_filename + '.pkl'
     return None
+
+
+########################################################################################
+#
+#
+#
+########################################################################################
+
+def _get_atlases_branch_volume(name, atlases):
+    ref_atlases = atlases.get_atlases()
+    vols = []
+    for a in ref_atlases:
+        ref_name = ref_atlases[a].cell_name
+        ref_volume = ref_atlases[a].cell_volume
+        for c in ref_name:
+            if ref_name[c] != name:
+                continue
+            if c not in ref_volume:
+                msg = "weird, cell " + str(c) + " is not in volumes of atlas '" + str(a) + "'"
+                monitoring.to_log_and_console("      ... " + msg)
+                continue
+            #
+            # get volume correction for the curr]ent time
+            # to get homogeneized volumes
+            #
+            vols += [ref_atlases[a].get_rectified_cell_volume(c)]
+    return vols
+
+
+def _get_embryo_branch_volume(embryo, cell, lineage, reverse_lineage):
+    vols = []
+    c = cell
+    cell_volume = embryo.cell_volume
+    while True:
+        if c in cell_volume:
+            vols += [embryo.get_rectified_cell_volume(c)]
+        if c not in lineage:
+            break
+        if len(lineage[c]) != 1:
+            break
+        c = lineage[c][0]
+
+    c = cell
+    while True:
+        if c not in reverse_lineage:
+            break
+        c = reverse_lineage[c]
+        if len(lineage[c]) != 1:
+            break
+        if c in cell_volume:
+            vols += [embryo.get_rectified_cell_volume(c)]
+    return vols
+
+
+def _check_initial_naming_volume(prop, embryo, atlases, time_digits_for_cell_id=4, verbose=True):
+
+    times = _get_named_timepoints(prop, time_digits_for_cell_id=time_digits_for_cell_id)
+    if len(times) == 0:
+        if verbose:
+            msg = "no names were set"
+            monitoring.to_log_and_console("... " + msg)
+    elif len(times) > 1:
+        if verbose:
+            msg = "weird, names were set on several time points " + str(times)
+            monitoring.to_log_and_console("... " + msg)
+
+    lineage = embryo.cell_lineage
+    reverse_lineage = {v: k for k, values in lineage.items() for v in values}
+
+    cells = sorted(list(prop['cell_name'].keys()))
+    unnamed_cells = []
+    for c in cells:
+        branch_volume = _get_embryo_branch_volume(embryo, c, lineage, reverse_lineage)
+        cell_volume = np.mean(branch_volume)
+        name = prop['cell_name'][c]
+
+        #
+        # get volumes of cell with the same name in reference
+        #
+        volumes = _get_atlases_branch_volume(name, atlases)
+        mean_volume = np.mean(volumes)
+        std_volume = np.std(volumes)
+        if cell_volume >= mean_volume:
+            #
+            # get volumes of the mother cell in reference
+            #
+            mname = uname.get_mother_name(name)
+            m_volumes = _get_atlases_branch_volume(mname, atlases)
+            if len(m_volumes) == 0:
+                if verbose:
+                    msg = "   ... can not check " + str(c) + " (given name was '" + str(name) + "')."
+                    msg += " No mother cell volumes."
+                    monitoring.to_log_and_console(msg)
+                continue
+            m_mean_volume = np.mean(m_volumes)
+            if cell_volume >= m_mean_volume:
+                unnamed_cells += [(c, name)]
+                del prop['cell_name'][c]
+                if verbose:
+                    msg = "   ... unnamed cell " + str(c) + " (given name was '" + str(name) + "').\n"
+                    msg += "       Cell volume larger than reference mother cell volumes."
+                    monitoring.to_log_and_console(msg)
+                continue
+            #   emb_volume[c] < m_mean_volume:
+            if len(m_volumes) == 1:
+                diff_to_cell = (cell_volume - mean_volume)
+                diff_to_mcell = (m_mean_volume - cell_volume)
+            else:
+                m_std_volume = np.std(m_volumes)
+                if std_volume > 0 and m_std_volume > 0:
+                    diff_to_cell = (cell_volume - mean_volume) / std_volume
+                    diff_to_mcell = (m_mean_volume - cell_volume) / m_std_volume
+                else:
+                    diff_to_cell = (cell_volume - mean_volume)
+                    diff_to_mcell = (m_mean_volume - cell_volume)
+            if diff_to_cell >= diff_to_mcell:
+                unnamed_cells += [(c, name)]
+                del prop['cell_name'][c]
+                if verbose:
+                    msg = "   ... unnamed cell " + str(c) + " (given name was '" + str(name) + "').\n"
+                    msg += "       Cell volume closer to reference mother cell volumes."
+                    monitoring.to_log_and_console(msg)
+                continue
+        else:
+            dnames = uname.get_daughter_names(name)
+            d_volumes = [0, 0]
+            d_mean_volume = [0, 0]
+            d_volumes[0] = _get_atlases_branch_volume(dnames[0], atlases)
+            d_volumes[1] = _get_atlases_branch_volume(dnames[1], atlases)
+            if len(d_volumes[0]) == 0 and len(d_volumes[1]) == 0:
+                if verbose:
+                    msg = "   ... can not check " + str(c) + " (given name was '" + str(name) + "')."
+                    msg += " No daughter cell volumes."
+                    monitoring.to_log_and_console(msg)
+                continue
+            elif len(d_volumes[0]) == 0:
+                d_mean_volume[1] = np.mean(d_volumes[1])
+                idaughter = 1
+            elif len(d_volumes[1]) == 0:
+                d_mean_volume[0] = np.mean(d_volumes[0])
+                idaughter = 0
+            else:
+                d_mean_volume = [0, 0]
+                d_mean_volume[0] = np.mean(d_volumes[0])
+                d_mean_volume[1] = np.mean(d_volumes[1])
+                if d_mean_volume[1] > d_mean_volume[0]:
+                    idaughter = 1
+                else:
+                    idaughter = 0
+            if cell_volume <= d_mean_volume[idaughter]:
+                unnamed_cells += [(c, name)]
+                del prop['cell_name'][c]
+                if verbose:
+                    msg = "   ... unnamed cell " + str(c) + " (given name was '" + str(name) + "').\n"
+                    msg += "       Cell volume smaller than the largest reference daughter ('"
+                    msg += str(dnames[idaughter]) + "') cell volumes."
+                    monitoring.to_log_and_console(msg)
+                continue
+            # emb_volume[c] > d_mean_volume[idaughter]
+            if len(d_volumes[idaughter]) == 1:
+                diff_to_cell = (mean_volume - cell_volume)
+                diff_to_dcell = (cell_volume - d_mean_volume[idaughter])
+            else:
+                d_std_volume = np.std(d_volumes[idaughter])
+                if std_volume > 0 and d_std_volume > 0:
+                    diff_to_cell = (mean_volume - cell_volume) / std_volume
+                    diff_to_dcell = (cell_volume - d_mean_volume[idaughter]) / d_std_volume
+                else:
+                    diff_to_cell = (mean_volume - cell_volume)
+                    diff_to_dcell = (cell_volume - d_mean_volume[idaughter])
+            if diff_to_cell >= diff_to_dcell:
+                unnamed_cells += [(c, name)]
+                del prop['cell_name'][c]
+                if verbose:
+                    msg = "   ... unnamed cell " + str(c) + " (given name was '" + str(name) + "').\n"
+                    msg += "       Cell volume closer to the largest reference daughter ('"
+                    msg += str(dnames[idaughter]) + "') cell volumes."
+                    monitoring.to_log_and_console(msg)
+                continue
+    if verbose:
+        msg = "   unname " + str(len(unnamed_cells)) + " cells"
+        monitoring.to_log_and_console(msg)
+    return prop
 
 
 #######################################################################################
@@ -1217,11 +1498,10 @@ def _get_success(atlases, parameters, time_digits_for_cell_id=4, verbose=True):
         del tmp_atlases[a]
         if a not in transformations:
             transformations[a] = {}
-        transformations[a], flo_time_range[a] = _register_embryos(transformations[a], all_atlases[a], tmp_atlases,
-                                                                  parameters,
-                                                                  time_digits_for_cell_id=time_digits_for_cell_id,
-                                                                  verbose=verbose)
-        if isinstance(transformation_filename, str):
+        output = _register_embryos(transformations[a], all_atlases[a], tmp_atlases, parameters,
+                                   time_digits_for_cell_id=time_digits_for_cell_id, verbose=verbose)
+        transformations[a], flo_time_range[a], transformations_have_been_computed = output
+        if isinstance(transformation_filename, str) and transformations_have_been_computed:
             outputfile = open(transformation_filename, 'wb')
             pkl.dump(transformations, outputfile)
             outputfile.close()
@@ -1232,11 +1512,14 @@ def _get_success(atlases, parameters, time_digits_for_cell_id=4, verbose=True):
     right_naming = {}
     wrong_naming = {}
     unnamed_naming = {}
+    right_distance = {}
+    wrong_distance = {}
     for a in all_atlases:
         # atlas to be tested
         ref_test_atlas = copy.deepcopy(all_atlases[a])
         test_atlas = copy.deepcopy(ref_test_atlas)
         test_atlas.del_property('cell_name')
+
         # reference atlas list
         ref_atlas_list = list(all_atlases.keys())
         ref_atlas_list.remove(a)
@@ -1244,12 +1527,15 @@ def _get_success(atlases, parameters, time_digits_for_cell_id=4, verbose=True):
         #
         # pick combinations of reference atlas
         #
-        monitoring.to_log_and_console(" - compare " + str(a) + " versus " + str(ref_atlas_list))
+        monitoring.to_log_and_console("*** compare " + str(a) + " versus " + str(ref_atlas_list))
         for i in range(1, len(ref_atlas_list) + 1):
             subset_atlas = list(itertools.combinations(ref_atlas_list, i))
-            monitoring.to_log_and_console("      " + str(len(subset_atlas)) + " combinations of " + str(i) + " atlases")
-            for s in subset_atlas:
-                monitoring.to_log_and_console("     - compare " + str(a) + " versus " + str(s))
+            msg = " ** compare " + str(a)
+            msg += " versus " + str(len(subset_atlas)) + " combinations of " + str(i) + " atlases"
+            monitoring.to_log_and_console(msg)
+            for j, s in enumerate(subset_atlas):
+                msg = "  * " + str(j+1) + "/" + str(len(subset_atlas)) + " compare " + str(a) + " versus " + str(s)
+                monitoring.to_log_and_console(msg)
                 #
                 # build references atlases
                 #
@@ -1261,15 +1547,34 @@ def _get_success(atlases, parameters, time_digits_for_cell_id=4, verbose=True):
                 #
                 # collect names from each co-registration
                 #
-                output = _get_floating_names(transformations[a], flo_time_range[a], test_atlas, tmp_atlases,
-                                             parameters, time_digits_for_cell_id=time_digits_for_cell_id,
-                                             verbose=verbose)
+                output = _get_floating_names(transformations[a], test_atlas, tmp_atlases,
+                                             time_digits_for_cell_id=time_digits_for_cell_id, verbose=verbose)
                 name_both, name_flo, name_ref = output
 
                 #
                 # get consensual names
                 #
-                prop = _iterate_unanimity_names(name_both, parameters, verbose=verbose)
+                prop = copy.deepcopy(test_atlas.get_property())
+                prop = _iterate_unanimity_names(prop, name_both, parameters, verbose=verbose)
+
+                #
+                # eventually remove some names
+                #
+                if parameters.check_duplicate:
+                    if verbose:
+                        monitoring.to_log_and_console("... removing duplicates")
+                    prop = _remove_duplicate(prop, test_atlas, verbose=verbose)
+
+                if parameters.check_volume:
+                    if verbose:
+                        monitoring.to_log_and_console("... checking names wrt volumes")
+                    prop = _check_initial_naming_volume(prop, test_atlas, tmp_atlases,
+                                                        time_digits_for_cell_id=time_digits_for_cell_id,
+                                                        verbose=verbose)
+                #
+                #
+                #
+                prop = _evaluate_initial_naming(prop, transformations[a], test_atlas, tmp_atlases)
 
                 #
                 #
@@ -1281,18 +1586,40 @@ def _get_success(atlases, parameters, time_digits_for_cell_id=4, verbose=True):
                 wrong_naming[i] = wrong_naming.get(i, []) + [wrong]
                 unnamed_naming[i] = unnamed_naming.get(i, []) + [unnamed]
 
+                right, wrong = _test_distance(prop, ref_test_atlas.get_property(),
+                                              time_digits_for_cell_id=time_digits_for_cell_id, verbose=False)
+                right_distance[i] = right_distance.get(i, []) + right
+                wrong_distance[i] = wrong_distance.get(i, []) + wrong
+
+
     # print("right_naming = " + str(right_naming))
     # print("wrong_naming = " + str(wrong_naming))
-    return right_naming, wrong_naming, unnamed_naming
+    return right_naming, wrong_naming, unnamed_naming, right_distance, wrong_distance
 
 
-def _figure_atlas_initnaming(atlases, parameters, time_digits_for_cell_id=4):
-    right_naming, wrong_naming, unnamed_naming = _get_success(atlases, parameters,
-                                                              time_digits_for_cell_id=time_digits_for_cell_id,
-                                                              verbose=False)
-    proc = "_figure_atlas_initnaming"
+def _print_dict_of_list(f, d, name):
+    f.write(str(name) + " = ")
+    f.write("{")
+    ks = list(d.keys())
+    for j, k in enumerate(ks):
+        f.write(str(k) + ": [")
+        for i, e in enumerate(d[k]):
+            f.write("{:.3f}".format(e))
+            if i+1 < len(d[k]):
+                f.write(", ")
+        f.write("]")
+        if j + 1 < len(ks):
+            f.write(", ")
+    f.write("}")
+    f.write("\n")
 
-    filename = 'figure_atlas_initnaming'
+
+def _figure_atlas_init_naming(atlases, parameters, time_digits_for_cell_id=4):
+    proc = "_figure_atlas_init_naming"
+    output = _get_success(atlases, parameters, time_digits_for_cell_id=time_digits_for_cell_id, verbose=False)
+    right_naming, wrong_naming, unnamed_naming, right_distance, wrong_distance = output
+
+    filename = 'figure_atlas_init_naming'
     file_suffix = None
     if parameters.figurefile_suffix is not None and isinstance(parameters.figurefile_suffix, str) and \
             len(parameters.figurefile_suffix) > 0:
@@ -1325,6 +1652,10 @@ def _figure_atlas_initnaming(atlases, parameters, time_digits_for_cell_id=4):
     f.write("wrong_naming = " + str(wrong_naming) + "\n")
     f.write("unnamed_naming = " + str(unnamed_naming) + "\n")
     f.write("labels = sorted(list(right_naming.keys()))\n")
+
+    f.write("\n")
+    _print_dict_of_list(f, right_distance, "right_distance")
+    _print_dict_of_list(f, wrong_distance, "wrong_distance")
 
     f.write("\n")
     f.write("right_list = []\n")
@@ -1361,6 +1692,7 @@ def _figure_atlas_initnaming(atlases, parameters, time_digits_for_cell_id=4):
     f.write("'" + " + '.png')\n")
     f.write("else:\n")
     f.write("    plt.show()\n")
+    f.write("    plt.close()\n")
     f.write("\n")
 
     f.write("fig, ax = plt.subplots(figsize=(16, 6.5))\n")
@@ -1371,7 +1703,7 @@ def _figure_atlas_initnaming(atlases, parameters, time_digits_for_cell_id=4):
     f.write("rmed = [b.get_ydata()[0] for b in rbox['medians']]\n")
     f.write("umed = [b.get_ydata()[0] for b in ubox['medians']]\n")
     f.write("ax.plot(labels, rmed, color='blue', label='right names')\n")
-    f.write("ax.plot(labels, umed, color='cyan', label='no set names')\n")
+    f.write("ax.plot(labels, umed, color='cyan', label='unnamed cells')\n")
 
     f.write("\n")
     f.write("ax.yaxis.grid(True)\n")
@@ -1388,13 +1720,37 @@ def _figure_atlas_initnaming(atlases, parameters, time_digits_for_cell_id=4):
     f.write("'" + " + '.png')\n")
     f.write("else:\n")
     f.write("    plt.show()\n")
+    f.write("    plt.close()\n")
+
+    f.write("\n")
+    f.write("fig, axs = plt.subplots(2, 3, sharex=True, figsize=(16, 6.5))\n")
+    f.write("for i in right_distance:\n")
+    f.write("    y = (i - 1) // 3\n")
+    f.write("    x = (i - 1) % 3\n")
+    f.write("    if i in wrong_distance:\n")
+    f.write("        labels = ['right name', 'wrong name']\n")
+    f.write("        axs[y, x].hist([right_distance[i], wrong_distance[i]], 25, histtype='bar', label=labels)\n")
+    f.write("    axs[y, x].set_title('#atlases = ' + str(i))\n")
+    f.write("    axs[y, x].set(xlim=(0, 1))\n")
+    f.write("fig.suptitle('Assessment score (1 - neighborhood distance)', fontsize=16)\n")
+
+    f.write("\n")
+    f.write("if savefig:\n")
+    f.write("    plt.savefig('right_wrong_distances")
+    if file_suffix is not None:
+        f.write(file_suffix)
+    f.write("'" + " + '.png')\n")
+    f.write("else:\n")
+    f.write("    plt.show()\n")
+    f.write("    plt.close()\n")
+
     f.close()
 
 
 def generate_figure(atlases, parameters, time_digits_for_cell_id=4):
-    generate_figure = (isinstance(parameters.generate_figure, bool) and parameters.generate_figure) or \
-                      (isinstance(parameters.generate_figure, str) and parameters.generate_figure == 'all') or \
-                      (isinstance(parameters.generate_figure, list) and 'all' in parameters.generate_figure)
+    do_generate_figure = (isinstance(parameters.generate_figure, bool) and parameters.generate_figure) or \
+                         (isinstance(parameters.generate_figure, str) and parameters.generate_figure == 'all') or \
+                         (isinstance(parameters.generate_figure, list) and 'all' in parameters.generate_figure)
 
     #
     # plot cell number wrt time without and with temporal registration
@@ -1403,9 +1759,9 @@ def generate_figure(atlases, parameters, time_digits_for_cell_id=4):
         parameters.generate_figure == 'atlas-init-naming-leave-one-out') \
             or (isinstance(parameters.generate_figure, list)
                 and 'atlas-init-naming-leave-one-out' in parameters.generate_figure) \
-            or generate_figure:
+            or do_generate_figure:
         monitoring.to_log_and_console("... generate atlas init naming leave one out figure", 1)
-        _figure_atlas_initnaming(atlases, parameters, time_digits_for_cell_id=time_digits_for_cell_id)
+        _figure_atlas_init_naming(atlases, parameters, time_digits_for_cell_id=time_digits_for_cell_id)
         monitoring.to_log_and_console("... done", 1)
 
 
@@ -1415,7 +1771,149 @@ def generate_figure(atlases, parameters, time_digits_for_cell_id=4):
 #
 ########################################################################################
 
-def _initial_naming(embryo, atlases, parameters, time_digits_for_cell_id=4, verbose=True):
+def _evaluate_initial_naming(prop, transformations, embryo, atlases):
+    proc = "_evaluate_initial_naming"
+
+    if 'cell_name' not in prop:
+        monitoring.to_log_and_console(str(proc) + ": 'cell_name' was not in dictionary")
+        return prop
+
+    times = _get_named_timepoints(prop, time_digits_for_cell_id=embryo.time_digits_for_cell_id)
+    if len(times) == 0:
+        msg = "no names were set"
+        monitoring.to_log_and_console("... " + msg)
+        return prop
+    elif len(times) > 1:
+        msg = "weird, names were set on several time points " + str(times)
+        monitoring.to_log_and_console("... " + msg)
+    elif len(times) == 1 and times[0] != list(transformations.keys())[0]:
+        msg = "named time point is " + str(times[0]) + " while transformations were computed at time "
+        msg += str(list(transformations.keys()))
+        monitoring.to_log_and_console("... " + msg)
+
+    ref_atlases = atlases.get_atlases()
+    keydistance = 'morphonet_float_init_naming_neighborhood_assessment'
+    keyassessment = 'morphonet_float_init_naming_neighborhood_assessment_quality'
+    prop[keydistance] = {}
+    prop[keyassessment] = {}
+    div = 10 ** embryo.time_digits_for_cell_id
+
+    cell_contact_surface = embryo.cell_contact_surface
+    cells = sorted(list(prop['cell_name'].keys()))
+    for c in cells:
+        if c not in cell_contact_surface:
+            msg = "weird, cell '" + str(c) + "' is not in 'cell_contact_surface' dictionary "
+            monitoring.to_log_and_console("... " + msg)
+            continue
+        #
+        # get the cell neighborhood
+        # normalize it
+        # replace cell id with names
+        #
+        t_flo = c // div
+        if t_flo not in transformations:
+            msg = "weird, time point '" + str(t_flo) + "' is not in transformation dictionary "
+            monitoring.to_log_and_console("... " + msg)
+            continue
+        neighborhood = {'foo': {}}
+        neighborhood['foo']['embryo'] = copy.deepcopy(cell_contact_surface[c])
+        neighborhood['foo']['embryo'] = uatlasc.neighborhood_normalization(neighborhood['foo']['embryo'], embryo,
+                                                                           t_flo, cell_normalization='global')
+        surface = 0.0
+        named_surface = 0.0
+        cellids = list(neighborhood['foo']['embryo'].keys())
+        for d in cellids:
+            surface += neighborhood['foo']['embryo'][d]
+            if int(d) % div == 1 or int(d) % div == 0:
+                named_surface += neighborhood['foo']['embryo'][d]
+                neighborhood['foo']['embryo']['background'] = neighborhood['foo']['embryo'][d]
+                del neighborhood['foo']['embryo'][d]
+            elif d in prop['cell_name']:
+                named_surface += neighborhood['foo']['embryo'][d]
+                neighborhood['foo']['embryo'][prop['cell_name'][d]] = neighborhood['foo']['embryo'][d]
+                del neighborhood['foo']['embryo'][d]
+            else:
+                #
+                # we kept the cell id as key
+                # it may be problematic if the same cell id correspond to an unnamed cell
+                # in the neighborhood of the cell with the same name in an atlas
+                #
+                pass
+
+        prop[keyassessment][c] = named_surface / surface
+
+        #
+        # get other neighborhoods
+        # transformations[t_flo][atlas][t_ref] is the affine transformation that maps the floating frame
+        # (at t_flo) into the reference one (at t_ref)
+        #
+        for a in ref_atlases:
+            if a not in transformations[t_flo]:
+                msg = "weird, atlas '" + str(a) + "' is not in transformation dictionary at time point " + str(t_flo)
+                monitoring.to_log_and_console("... " + msg)
+                continue
+            t_ref = list(transformations[t_flo][a].keys())[0]
+            #
+            # find cells at t_ref in atlas 'a' with the same name than c
+            #
+            adiv = 10 ** ref_atlases[a].time_digits_for_cell_id
+            acell = [ac for ac in ref_atlases[a].cell_name if ac // adiv == t_ref and ref_atlases[a].cell_name[ac] ==
+                     prop['cell_name'][c]]
+            if len(acell) == 0:
+                # msg = "weird, atlas '" + str(a) + "' has no cell named " + str(prop['cell_name'][c])
+                # msg += " at time point " + str(t_ref)
+                # monitoring.to_log_and_console("... " + msg)
+                continue
+            elif len(acell) > 1:
+                msg = "weird, atlas '" + str(a) + "' has several cells named " + str(prop['cell_name'][c])
+                msg += " at time point " + str(t_ref)
+                monitoring.to_log_and_console("... " + msg)
+                continue
+            neighborhood['foo'][a] = copy.deepcopy(ref_atlases[a].cell_contact_surface[acell[0]])
+            neighborhood['foo'][a] = uatlasc.neighborhood_normalization(neighborhood['foo'][a], ref_atlases[a],
+                                                                        t_ref, cell_normalization='global')
+            cellids = list(neighborhood['foo'][a].keys())
+            for d in cellids:
+                if int(d) % adiv == 1 or int(d) % adiv == 0:
+                    neighborhood['foo'][a]['background'] = neighborhood['foo'][a][d]
+                    del neighborhood['foo'][a][d]
+                elif d in ref_atlases[a].cell_name:
+                    neighborhood['foo'][a][ref_atlases[a].cell_name[d]] = neighborhood['foo'][a][d]
+                    del neighborhood['foo'][a][d]
+                else:
+                    #
+                    # we kept the cell id as key
+                    # it may be problematic if the same cell id correspond to an unnamed cell
+                    # in the neighborhood of the cell from the embryo to be tested
+                    #
+                    pass
+        #
+        # for named cell c, we built neighborhood['foo'][embryo, a in atlases]
+        # which is a dictionary/vector of contact surfaces whose key are cell names (when it is possible)
+        # build same contact surfaces
+        #
+        neighborhood = uneighborhood.build_same_contact_surfaces(neighborhood, ['foo'])
+        distances = []
+        for a in neighborhood['foo']:
+            if a == 'embryo':
+                continue
+            nm, n0, n1 = uneighborhood.cell_distance_elements(neighborhood['foo']['embryo'], neighborhood['foo'][a])
+            distances += [1.0 - nm / (n0 + n1)]
+        if len(distances) == 0:
+            msg = "weird, no atlases are found to name cell " + str(c) + " as " + str(prop['cell_name'][c])
+            monitoring.to_log_and_console("... " + msg)
+        else:
+            prop[keydistance][c] = np.mean(distances)
+    return prop
+
+
+########################################################################################
+#
+#
+#
+########################################################################################
+
+def _initial_naming(prop, embryo, atlases, parameters, time_digits_for_cell_id=4, verbose=True):
     proc = "_initial_naming"
 
     properties = embryo.property_list()
@@ -1452,15 +1950,14 @@ def _initial_naming(embryo, atlases, parameters, time_digits_for_cell_id=4, verb
         transformations = pkl.load(inputfile)
         inputfile.close()
 
-    transformations, flo_time_range = _register_embryos(transformations, embryo, ref_atlases, parameters,
-                                                        time_digits_for_cell_id=time_digits_for_cell_id,
-                                                        verbose=verbose)
+    output = _register_embryos(transformations, embryo, ref_atlases, parameters,
+                               time_digits_for_cell_id=time_digits_for_cell_id, verbose=verbose)
+    transformations, flo_time_range, transformations_have_been_computed = output
 
-    if isinstance(transformation_filename, str):
+    if isinstance(transformation_filename, str) and transformations_have_been_computed:
         outputfile = open(transformation_filename, 'wb')
         pkl.dump(transformations, outputfile)
         outputfile.close()
-
 
     if verbose:
         monitoring.to_log_and_console("... setting names")
@@ -1469,14 +1966,30 @@ def _initial_naming(embryo, atlases, parameters, time_digits_for_cell_id=4, verb
     # collect names from each co-registration
     # name_both, name_flo, name_ref are dictionaries indexed by cell ids
     # name_both
-    output = _get_floating_names(transformations, flo_time_range, embryo, atlases, parameters,
+    output = _get_floating_names(transformations, embryo, atlases,
                                  time_digits_for_cell_id=time_digits_for_cell_id, verbose=verbose)
     name_both, name_flo, name_ref = output
 
     #
     # get consensual names
     #
-    prop = _iterate_unanimity_names(name_both, parameters, verbose=verbose)
+    prop = _iterate_unanimity_names(prop, name_both, parameters, verbose=verbose)
+
+    #
+    # eventually remove some names
+    #
+    if parameters.check_duplicate:
+        monitoring.to_log_and_console("... removing duplicates")
+        prop = _remove_duplicate(prop, embryo)
+
+    if parameters.check_volume:
+        monitoring.to_log_and_console("... checking names wrt volumes")
+        prop = _check_initial_naming_volume(prop, embryo, atlases, time_digits_for_cell_id=time_digits_for_cell_id,
+                                            verbose=True)
+    #
+    #
+    #
+    prop = _evaluate_initial_naming(prop, transformations, embryo, atlases)
 
     return prop
 
@@ -1561,14 +2074,14 @@ def init_naming_process(experiment, parameters):
     msg += "({:.3f}, {:.3f})".format(embryo.temporal_alignment[0], embryo.temporal_alignment[1])
     monitoring.to_log_and_console(msg, 1)
 
-    prop = _initial_naming(embryo, atlases, parameters, time_digits_for_cell_id=time_digits_for_cell_id)
+    prop = _initial_naming(prop, embryo, atlases, parameters, time_digits_for_cell_id=time_digits_for_cell_id)
     #
     #
     #
 
     if parameters.testFile is not None:
         output = _test_naming(prop, reference_prop, time_digits_for_cell_id=time_digits_for_cell_id)
-        right_naming, wrong_naming,  unnamed_cells, not_in_reference = output
+        right_naming, wrong_naming, unnamed_cells, not_in_reference = output
 
     if isinstance(parameters.outputFile, str):
         ioproperties.write_dictionary(parameters.outputFile, prop)

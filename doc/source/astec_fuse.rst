@@ -61,7 +61,7 @@ Important parameters in the parameter file
 
 A simple parameter file for fusion is described in the 
 `tutorial section <https://astec.gitlabpages.inria.fr/astec-tutorial/astec_tutorial.html#fusion>`_. 
-An exhaustive presentation of all parameters can be found in section :ref:`cli-parameters-fuse`.
+An exhaustive presentation of all parameters can be found in section :ref:`cli-parameters-astec-fuse`.
 
 Indicating the right values of the
 acquisition parameters is crucial; these parameters are

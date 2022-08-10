@@ -1,25 +1,27 @@
 .. role:: python(code)
    :language: python
 
-.. _cli-astec-contact-naming:
+.. _cli-astec-atlas-naming:
 
-``astec_contact_naming``
-========================
+``astec_atlas_naming``
+======================
 
-``astec_contact_naming`` can be used either to name an embryo (for which the lineage and the contact surfaces are known), or to evaluate the naming on an already named embryo.
+``astec_atlas_naming`` can be used either to name an ascidian embryo 
+(for which the lineage and the contact surfaces are known, and one time point is already named), 
+or to evaluate the naming on an already named embryo.
 
-Section :ref:`cli-parameters-contact-naming` provides a view on all the parameters.
+Section :ref:`cli-parameters-astec-atlas-naming` provides a view on all the parameters.
 
-``astec_contact_naming`` additional options
--------------------------------------------
+``astec_atlas_naming`` additional options
+-----------------------------------------
 
 The following options are available:
 
 ``-write-selection, --write-selection``
    write out ``morphonet`` selection files
 
-Naming an embryo
-----------------
+Naming propagation for an embryo
+--------------------------------
 
 To name an embryo, the minimal parameter file has to contain:
 
@@ -44,9 +46,9 @@ To name an embryo, the minimal parameter file has to contain:
    atlasFiles += ['/path_to_reference_embryos/Astec-pm8.pkl']
    atlasFiles += ['/path_to_reference_embryos/Astec-pm9.pkl']
 
-Section :ref:`cli-parameters-contact-naming` provides a view on all the parameters. Most of the parameters concern 
-the atlas building and are shared with ``astec_contact_atlas`` (see section :ref:`cli-astec-contact-atlas` and 
-section :ref:`cli-parameters-contact-atlas`).
+Section :ref:`cli-parameters-astec-atlas-naming` provides a view on all the parameters. Most of the parameters concern 
+the atlas building and are shared with ``astec_atlas`` (see section :ref:`cli-astec-atlas` and 
+section :ref:`cli-parameters-astec-atlas`).
 
 A ``morphonet`` selection (of ``float`` type) is added to the output file that gives an estimation of the certainty 
 (in :math:`[0, 1]`) of each naming.
@@ -83,5 +85,5 @@ A ``morphonet`` selection (of ``selection`` type) is added to the output file wh
 
 * ``255`` indicates the other errors
 
-Calling ``astec_contact_naming`` with the ``-extract-selection`` option allows to write selection files (in the ``morphonet`` sense) together with the ouput file.
+Calling ``astec_atlas_naming`` with the ``-extract-selection`` option allows to write selection files (in the ``morphonet`` sense) together with the ouput file.
 

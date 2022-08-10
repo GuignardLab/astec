@@ -11,7 +11,7 @@ import sys
 #
 
 import astec.utils.common as common
-import astec.algorithms.atlas_embryo as aatlase
+import astec.algorithms.atlas as aatlas
 import astec.utils.atlas_embryo as uatlase
 import astec.utils.atlas_cell as uatlasc
 import astec.utils.atlas_division as uatlasd
@@ -126,7 +126,7 @@ def main():
     experiment.update_from_args(args)
 
     if args.printParameters:
-        parameters = uatlase.AtlasParameters()
+        parameters = uatlasd.DivisionParameters()
         if args.parameterFile is not None and os.path.isfile(args.parameterFile):
             experiment.update_from_parameter_file(args.parameterFile)
             parameters.update_from_parameter_file(args.parameterFile)
@@ -182,7 +182,7 @@ def main():
     # copy monitoring information into other "files"
     # so the log filename is known
     #
-    aatlase.monitoring.copy(monitoring)
+    aatlas.monitoring.copy(monitoring)
     uatlase.monitoring.copy(monitoring)
     uatlasc.monitoring.copy(monitoring)
     uatlasd.monitoring.copy(monitoring)
@@ -205,7 +205,7 @@ def main():
     #
     # processing
     #
-    atlases = aatlase.atlas_embryo_process(experiment, parameters)
+    atlases = aatlas.atlas_process(experiment, parameters)
 
     #
     # end of execution

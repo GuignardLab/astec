@@ -8,7 +8,7 @@ The different command line interfaces, or CLIs, (``astec_fuse``, ``astec_mars``,
 Prefixed parameters
 -------------------
 
-Some of the parameter sets are said to be *prefixed*, such as the two sets of pre-processing parameters for the ``astec_mars`` CLI (see section :ref:`cli-parameters-mars`). Indeed, the pre-processing can be set differently for the seed input image and the membrane input image (eg see section :ref:`cli-mars`).
+Some of the parameter sets are said to be *prefixed*, such as the two sets of pre-processing parameters for the ``astec_mars`` CLI (see section :ref:`cli-parameters-astec-mars`). Indeed, the pre-processing can be set differently for the seed input image and the membrane input image (eg see section :ref:`cli-mars`).
 
 Prefixing parameters allows to either set *all* the parameters with the same name together or set them *independently*.
 
@@ -402,8 +402,7 @@ Morphosnake parameters
 ``balloon``:
   internal parameter for the morphosnake.
 
-``processors``: number of processors used for the 
-  morphosnake correction.
+``processors``: number of processors used for the morphosnake correction.
 
 ``mimic_historical_astec``:
   ``True`` or ``False``. 
@@ -432,9 +431,11 @@ For more details, see section :ref:`cli-input-image-preprocessing`.
 
 
 * ``intensity_prenormalization``: possible values are
+
   * ``'identity'``
   * ``'normalization_to_u8'``
   * ``'normalization_to_u16'``
+
   Performs a global robust normalization of the input image, prior to other
   pre-processing. The
   intensity value corresponding to the min percentile is set
@@ -445,6 +446,7 @@ For more details, see section :ref:`cli-input-image-preprocessing`.
   It has been introduced for real-encoded images.
 
   It is governed by the variables:
+
   * ``prenormalization_max_percentile``
   * ``prenormalization_min_percentile``
 
@@ -494,12 +496,14 @@ For more details, see section :ref:`cli-input-image-preprocessing`.
   any benefit.
 
 * ``reconstruction_images_combination``:
+
   * ``'addition'``
   * ``'maximum'``
 
 * ``cell_normalization_min_method``:
   set the cell area where is computed the percentile value that 
   will give the :math:`0` value in the normalized image
+
   * ``'cell'``
   * ``'cellborder'``
   * ``'cellinterior'``
@@ -507,6 +511,7 @@ For more details, see section :ref:`cli-input-image-preprocessing`.
 * ``cell_normalization_max_method``:
   set the cell area where is computed the percentile value that 
   will give the :math:`255` value in the normalized image
+
   * ``'cell'``
   * ``'cellborder'``
   * ``'cellinterior'``
@@ -615,7 +620,7 @@ Watershed parameters
   (real coordinates).
 
 
-.. _cli-parameters-fuse:
+.. _cli-parameters-astec-fuse:
 
 ``astec_fuse`` parameters
 -------------------------
@@ -853,6 +858,8 @@ The following parameters are kept for backward compatibility:
 
 
 
+.. _cli-parameters-astec-intraregistration:
+
 ``astec_intraregistration`` parameters
 --------------------------------------
 
@@ -918,7 +925,7 @@ These parameters are prefixed by ``intra_registration_``.
 
 
 
-.. _cli-parameters-mars:
+.. _cli-parameters-astec-mars:
 
 ``astec_mars`` parameters
 -------------------------
@@ -942,7 +949,7 @@ These parameters are prefixed by ``mars_``.
   prefixed by ``membrane_``
 
 
-.. _cli-parameters-manualcorrection:
+.. _cli-parameters-astec-manualcorrection:
 
 ``astec_manualcorrection`` parameters
 -------------------------------------
@@ -951,7 +958,7 @@ These parameters are prefixed by ``mars_``.
   (see section :ref:`cli-parameters-diagnosis`)
 
 * Astec parameters
-  (see section :ref:`cli-parameters-astec`)
+  (see section :ref:`cli-parameters-astec-astec`)
 
 * ``first_time_point``:
   first time point to be corrected.
@@ -966,13 +973,13 @@ These parameters are prefixed by ``mars_``.
   other files than the ``astec_mars`` output file.
 * ``manualcorrection_dir``:
   path to directory where to find the mapping file.
-  * ``manualcorrection_file``:
+* ``manualcorrection_file``:
   path to mapping file for manual correction of a segmentation (ie label)
   image. See above the syntax of this file.
   
   * 1 line per label association
   * background label has value 1
-  * the character ``\#`` denotes commented lines 
+  * the character ``#`` denotes commented lines
 
   Example of ``mapping_file``:
 
@@ -1014,7 +1021,7 @@ These parameters are prefixed by ``mars_``.
      # their offspring will be fused until time point 12
 
 
-.. _cli-parameters-astec:
+.. _cli-parameters-astec-astec:
 
 ``astec_astec`` parameters
 --------------------------
@@ -1103,7 +1110,7 @@ These parameters are prefixed by ``astec_``.
 
 
 
-
+.. _cli-parameters-astec-postcorrection:
 
 ``astec_postcorrection`` parameters
 -----------------------------------
@@ -1124,22 +1131,6 @@ These parameters are prefixed by ``postcorrection_``.
 * ``lineage_diagnosis``
   performs a kind of diagnosis on the lineage before and after
   the post-correction.
-
-
-
-.. _cli-parameters-contact-surface:
-
-Contact surface parameters
---------------------------
-
-* ``cell_contact_distance``
-  Defines the contact surface similarity. Contact surface vectors are normalized before
-  comparison (by the l1-norm, so percentages of the total surface are compared). Possible values are:
-
-  * ``l1_distance``: sum of absolute value of coordinate difference (or Manhattan distance).
-  * ``l2_distance``: euclidean distance.
-
-  This measure is normalized into [0, 1]: 0 means perfect equality, 1 means total dissimilarity.
 
 
 
@@ -1181,16 +1172,50 @@ These parameters are prefixed by ``diagnosis_``.
 
 
 
-.. _cli-parameters-contact-atlas:
+.. _cli-parameters-embryo-symmetry:
 
-``astec_contact_atlas`` parameters
-----------------------------------
+Embryo symmetry parameters
+--------------------------
 
-These parameters are prefixed by ``atlas_``.
+Embryo co-registration can be made efficiently by using embryo symmetry axis candidates, 
+by first computing the distribution of the surface normals, and then extracting the maxima.
+
+* ``sphere_radius``: sphere radius to build the distribution support. 
+  The distribution of the surface normal is computed onto a discrete sphere, ie
+  a sphere made of voxels. 
+
+  * radius = 10:   978 vectors, angle between neighboring vectors in [4.40, 10.58] degrees
+  * radius = 15:  2262 vectors, angle between neighboring vectors in [2.98, 6.93] degrees
+  * radius = 20:  4026 vectors, angle between neighboring vectors in [2.25, 5.16] degrees
+  * radius = 25:  6366 vectors, angle between neighboring vectors in [1.73, 4.01] degrees
+  * radius = 30:  9194 vectors, angle between neighboring vectors in [1.46, 3.40] degrees
+  * radius = 35: 12542 vectors, angle between neighboring vectors in [1.26, 2.90] degrees
+  * radius = 40: 16418 vectors, angle between neighboring vectors in [1.08, 2.53] degrees
+
+* ``sigma``: Sigma (standard deviation) to build the direction distribution (in radian).
+  The distribution is built through a Gaussian kernel density estimation.
+
+* ``maxima_threshold``: Threshold on the distribution value. Only maxima above this threshold are
+  kept. Recall that the distribution values are normalize so that the maximum is 1.
+
+* ``maxima_number``: Number of distribution maxima to be retained as symmetry axis candidates.
+  ``None`` or negative number means all of them. Since the distribution is computed onto a sphere,
+  both the surface normal and its opposite contribute to the distribution estimation. 
+  It comes out that each symmetry direction is represented by two (opposite) vectors, meaning that 
+  this parameter has to be even.
+
+
+
+.. _cli-parameters-atlas:
+
+Atlas parameters
+----------------
 
 * Diagnosis parameters 
   (see section :ref:`cli-parameters-diagnosis`)
 
+* Embryo symmetry parameters
+  (see section :ref:`cli-parameters-embryo-symmetry`)
 
 * ``atlasFiles``: list of atlas files. An atlas file is a property file that contains lineage,
   names, and contact surfaces for an embryo.
@@ -1201,7 +1226,52 @@ These parameters are prefixed by ``atlas_``.
 * ``outputDir``: output directory where to write atlas-individualized output files,
   ie morphonet selection files or figure files.
 
-* ``write_selection``: write morphonet selection file on disk.
+* ``atlas_diagnosis``: ``True`` or ``False``. Performs some diagnosis when reading an additional property 
+  file into the atlases. Incrementing the verboseness (``-v`` in the command line) may give more details.
+
+* ``generate_figure``: if ``True``, generate python files (prefixed by ``figures_``) that generate figures.
+  Those files will be saved into the ``outputDir`` directory.
+  ``generate_figure`` can be
+
+  * a boolean value: if ``True``, all figure files are generated; if ``False``, none of them
+  * a string: if ``'all'``, all figure files are generated; else, only the specified
+    figure file is generated (see below for the list)
+  * a list of strings: if ``'all'`` is in the list, all figure files are generated; else, only 
+    the specified figure files are generated (see below for the list)
+  
+  List of figures:
+
+  * ``cell-distance-along-branch``: plot the cell-to-cell distance between successive
+    along a branch (a cell without division) wrt the distance to the first cell. Cell neighborhoods 
+    are expressed with the neighbors of the first cell of the branch (thus it ignores divisions 
+    occurring in the cell neighborhood during the cell life)
+  * ``cell-number-wrt-time``: plot the number of cells wrt time point (ie image indices)
+    without and with temporal registration (allows to assess the temporal registration)
+  * ``neighbors-wrt-cell-number``: plot the cell number in the cell neighborhood wrt
+    the total cell number in the embryo
+  * ``cell-distance-histograms``: plot cell-to-cell distance histograms.
+    Warning: it may be long.
+  * ``division-distance-histograms``: plot division-to-division distance histograms.
+  * ``distance-histograms``: plot cell-to-cell distance histograms, as well as division-to-division 
+    distance histograms. Warning: it may be long.
+  * ``division-dendrograms``: draw a dendrogram per division where atlases are grouped with
+    distance between divisions
+  * ``embryo-volume``: plot the embryo volume (in voxel) without and with temporal registration 
+    (computed from cell number)
+  * ``symmetry-axis``: plot the error of the best symmetry axes (the closest to the one estimated
+    with cell names), as well as its rank with respect to the distribution value.
+
+* ``figurefile_suffix``: suffix used to named the above python files as well as the generated figures.
+
+* ``name_delay_from_division``: Delay from the division to extract the neighborhooods used for atlas building,
+  and thus for naming. 0 means right after the division. Negative values means that the delay is counted 
+  backwards from the end of the branch.
+
+* ``confidence_delay_from_division``: Delay from the division to extract the neighborhooods used for naming confidence.
+  0 means right after the division. Negative values means that the delay is counted 
+  backwards from the end of the branch.
+
+* ``delay_from_division``: set both ``name_delay_from_division`` and ``confidence_delay_from_division``.
 
 * ``add_symmetric_neighborhood``: if ``True``, add the symmetric neighborhood as additional exemplar. It means
   that left and right embryo hemisphere are considered together.
@@ -1218,47 +1288,39 @@ These parameters are prefixed by ``atlas_``.
   exhibit the parent cell. 
   Please do not consider changing its default value (``True``).
 
-* ``name_delay_from_division``: Delay from the division to extract the neighborhooods.
-  0 means right after the division.
 
-* ``confidence_delay_from_division``: Delay from the division to compute a name confidence with
-  respect to all the atlases (the ones from ``atlasFiles``).
-  0 means right after the division.
-  The naming confidence is computed from the ``N`` closest atlases: for a given division
-  division-to-division distances are computed between the named atlas (to be assessed) and each atlas of 
-  ``atlasFiles`` and the ``N`` with the smallest distances are retained.
-  The confidence measure is the average of the differences between the division-to-division distance for 
-  the wrong choice (names are inverted) and the division-to-division distance for the right choice.
+* ``cell_normalization``: Embryos/atlases have different volumes, and their volume decrease with time.
+  To compare surfaces and/or volumes, a normalization is required. I can be chosen among:"
 
-  If there are less atlases for the given division than ``confidence_atlases_nmin``, the confidence is
-  not computed. Else ``N`` is the maximum of ``confidence_atlases_nmin`` and the percentage of atlases 
-  ``confidence_atlases_percentage``.
+  * ``None``: no normalization (for test purpose)
+  * ``'local'``: normalization by the cell surface. The normalization factor is then different from cell 
+    to cell within a embryo, and obviously for the two daughter cells resulting from a division
+  * ``'global'``: normalization by embryo volume. The normalization factor is for all the cells from 
+    the same time point within a embryo. It changes along time to compensate for the volume decrease.
 
-* ``confidence_atlases_nmin``: minimum number of atlases to compute the naming
-  confidence.
 
-* ``confidence_atlases_percentage``: percentage of atlases (for a given division) to compute the naming
-  confidence. The actual number of atlases used is the maximum value of thsi percentage and
-  ``confidence_atlases_nmin``.
 
-* ``delay_from_division``: set both ``name_delay_from_division`` and ``confidence_delay_from_division``.
+.. _cli-parameters-astec-atlas:
 
-* ``division_contact_similarity``: How to compare two division patterns (a division is considered here
-  as the concatenation of the contact surface vectors of the 2 daughter cells). Choices are:
+``astec_atlas`` parameters
+--------------------------
 
-  * ``distance``: the distance type is given by ``cell_contact_distance`` 
-    (see section :ref:`cli-parameters-contact-surface`).
-    Distances are normalized between 0 (perfect match) and 1 (complete mismatch).
-  * ``probability``: 1-(division probability) is used to keep the same meaning
-    for the 0 and 1 extremal values. Probabilities are built with the distance
-    ``cell_contact_distance``. This is kept for test purposes and should not be used.
+These parameters are prefixed by ``atlas_``.
 
-* ``diagnosis_properties``: ``True`` or ``False``. Performs some diagnosis when reading an additional 
-  property file into the atlases. Incrementing the verboseness ('-v' in the command line) may give more details.
+* Atlas parameters
+  (see section :ref:`cli-parameters-atlas`)
 
-* ``division_permutation_proposal``: If ``True``, will propose some daughters switches in the atlases. 
-  For a given division, a global score is computed as the sum of all pairwise division similarity. 
+* ``exclude_inner_surfaces``: ``True`` or ``False``. 
+  Exclude inner surfaces from the division-to-division distance calculation.
+
+* ``division_diagnosis``: ``True`` or ``False``. 
+  Performs some diagnosis after building the division atlas.
+  Incrementing the verboseness ('-v' in the command line) may give more details.
+
+* ``division_permutation_proposal``: it ``True``, will propose some daughters switches in the atlases. 
+  For a given division, a global score is computed as the sum of all pairwise division similarity.
   A switch is proposed for an atlas if it allows to decrease this global score.
+
 
 * ``dendrogram_cluster_distance``: cluster distance used to build dendrograms.
   Dendrograms are used either for diagnosis purpose (if ``diagnosis_properties`` is set to ``True``)
@@ -1273,20 +1335,20 @@ These parameters are prefixed by ``atlas_``.
   * ``'median'``
   * ``'ward'``
 
-* ``generate_figure``: if ``True``, generate python files in (prefixed by ``figures_``) that generate figures.
 
-* ``figurefile_suffix``: suffix used to named the above python files as well as the generated figures.
+* ``write_selection``: write morphonet selection file on disk.
 
 
-.. _cli-parameters-contact-naming:
 
-``astec_contact_naming`` parameters
------------------------------------
+.. _cli-parameters-astec-atlas-naming:
+
+``astec_atlas_naming`` parameters
+---------------------------------
 
 These parameters are prefixed by ``naming_``.
 
-* ``astec_contact_atlas`` parameters
-  (see section :ref:`cli-parameters-contact-atlas`)
+* ``astec_atlas`` parameters 
+  (see section :ref:`cli-parameters-astec-atlas`).
 
 * ``inputFile``: input property file to be named. Must contain lineage and contact surfaces
   as well as some input names (one time point should be entirely named).
@@ -1297,10 +1359,20 @@ These parameters are prefixed by ``naming_``.
   between the couple of daugthers to be named as well as the couple of switched daughters and 
   all the atlas divisions.
 
-  * ``mean``: choose the couple of names that yield the minimal average distance over all the atlases.
-  * ``minimum``: choose the couple of names that yield a minimal distance.
+  * ``'mean'``: choose the couple of names that yield the minimal average distance over all the atlases.
+  * 'minimum': choose the couple of names that yield a minimal distance.
     It comes to name after the closest atlas (for this division).
-  * ``sum``: same as ``mean``.
+  * ``'sum'``: same as ``mean``.
+  * ``'majority'``: for each choice, order the distances in increasing order then compute the cumulated 
+    sum over the n first elements (so the first is the minimum distance, and the last one is the 
+    average over all atlases). Counts then the number of times when a choice is better than
+    the switched one, and choose the name couple with majority choices.
+
+* ``confidence_atlases_nmin``: minimum number of atlases required to assess naming confidence.
+  If there is not enough atlases in the database for the aimed division, naming is not assessed.
+
+* ``confidence_atlases_percentage``: percentage of atlases (for a given division) used to assess naming 
+  confidence. If the percentage is less than 'confidence_atlases_nmin', 'confidence_atlases_nmin' atlases are used.
 
 * ``testFile``: input property file to be tested (must include cell names), for instance for
    leave-one-out test.
@@ -1308,8 +1380,92 @@ These parameters are prefixed by ``naming_``.
    is entirely renamed from this given time point. Comparison between new names and actual ones are reported.
    If given, ``inputFile`` is ignored.
 
-
 * ``test_diagnosis``: if ``True``, some diagnosis are conducted on the property file to be tested.
 
 
+
+.. _cli-parameters-embryo-registration:
+
+Embryo registration parameters
+------------------------------
+
+* ``rotation_initialization``: to coregister two embryos, a first 3D rotation is done that align vectors issued 
+  from the floating embryo (the embryo to be named) onto vectors issued from the reference embryo 
+  (an already named embryo)
+  
+  * ``'sphere_wrt_z'``: an uniform sampling of 3D directions is done for the floating embryo 
+    (parameter 'direction_sphere_radius') while the 'z' direction is used for the reference embryo
+  * ``'sphere_wrt_symaxis'``: an uniform sampling of 3D directions is done for the floating embryo 
+    (parameter 'direction_sphere_radius') while one (out of two) vector defining the symmetry axis 
+    direction is used for the reference embryo (to be used for test purposes)
+  * ``'symaxis_wrt_symaxis'``: symmetry axis vector candidates are used for the floating embryo 
+    (embryo symmetry parameters, see section :ref:`cli-parameters-embryo-symmetry`) while one 
+    (out of the two) vector defining the symmetry axis (estimated from the cell name) is used for the reference embryo.
+
+* ``direction_sphere_radius``: to get an uniform sampling of the 3d directions in space (options ``'sphere_wrt_z'``
+  and ``'sphere_wrt_symaxis'`` of ``rotation_initialization``), a discrete sphere is build and each point of the 
+  outer surface gives a sample. The larger the radius, the more vectors and the higher computational time.
+
+  * radius = 2.0: 26 vectors, angle between neighboring vectors in [36.26, 60.0] degrees
+  * radius = 2.3: 38 vectors, angle between neighboring vectors in [26.57, 54.74] degrees
+  * radius = 2.5: 54 vectors, angle between neighboring vectors in [24.09, 43.09] degrees
+  * radius = 2.9: 66 vectors, angle between neighboring vectors in [18.43, 43.09] degrees
+  * radius = 3.0: 90 vectors, angle between neighboring vectors in [17.72, 43.09] degrees
+  * radius = 3.5: 98 vectors, angle between neighboring vectors in [15.79, 32.51] degrees
+  * radius = 3.7: 110 vectors, angle between neighboring vectors in [15.26, 32.51] degrees
+  * radius = 3.8: 134 vectors, angle between neighboring vectors in [14.76, 29.50] degrees
+  * radius = 4.0: 222 vectors, angle between neighboring vectors in [10.31, 22.57] degrees
+  * radius = 5.0: 222 vectors, angle between neighboring vectors in [10.31, 22.57] degrees
+
+* ``'z_rotation_angle_increment'``: increment (in degrees) between two successive angles when enumerating
+  rotations along the z or the symmetry axis
+
+* ``transformation_filename``: file name to save or to read the transformations between the embryos.
+  Useful when parsing name choice parameters (for test purposes then).
+
+* ``pair_ratio_for_residual``: the optimal transformation between two embryos is the one giving the smallest
+  residual value. The residual value of a transformation is the sum of the smallest  distances between paired points. 
+  This parameter gives the ratio of points to be retained 
+  (default value issued from G. Michelin's thesis :cite:p:`michelin:tel-01451608`).
+
+* ``processors``: number of processors for parallelization
+
+
+
+
+.. _cli-parameters-astec-atlas-init-naming:
+
+``astec_atlas_init_naming`` parameters
+--------------------------------------
+
+* Embryo registration parameters
+  (see section :ref:`cli-parameters-embryo-registration`)
+
+* Atlas parameters
+  (see section :ref:`cli-parameters-atlas`)
+
+
+* ``generate_figure``: see section :ref:`cli-parameters-atlas`. An additional figure file generation
+  is available.
+
+  * ``'success-wrt-atlasnumber'``: plot leave-one-out results when naming a time points with [1, n-1] atlases
+
+
+* ``inputFile``: Input property file to be named. Must contain lineage, volumes and contact surfaces
+
+* ``OutputFile``: Output property file.
+
+* ``cell_number`` Cell number of the developmental stade to be named
+
+* ``unanimity_iterations``: Maximal number of iterations to be done when naming with unanimity rule.
+  
+
+* ``check_duplicate``: ``True`` or ``False``. 
+  After naming, check whether some names are duplicated, and, if yes, remove them
+
+* ``check_volume``: ``True`` or ``False``. 
+  After naming, check whether the named cell volume is coherent with its mother/daughters volumes
+
+* ``testFile``: input property file to be tested (must include cell names).
+  If given, ``inputFile`` is ignored.
 

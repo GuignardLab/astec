@@ -11,7 +11,6 @@ import sys
 #
 
 import astec.utils.common as common
-import astec.algorithms.atlas_embryo as aatlase
 import astec.utils.atlas_embryo as uatlase
 import astec.utils.atlas_cell as uatlasc
 import astec.utils.atlas_division as uatlasd
@@ -184,7 +183,6 @@ def main():
     # copy monitoring information into other "files"
     # so the log filename is known
     #
-    aatlase.monitoring.copy(monitoring)
     uatlase.monitoring.copy(monitoring)
     uatlasc.monitoring.copy(monitoring)
     uatlasd.monitoring.copy(monitoring)
