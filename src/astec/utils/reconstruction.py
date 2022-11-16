@@ -972,9 +972,18 @@ def build_reconstructed_image(current_time, experiment, parameters, previous_tim
                 monitoring.to_log_and_console("    .. global enhancement of '"
                                               + str(input_image).split(os.path.sep)[-1] + "'", 2)
                 ace.monitoring.copy(monitoring)
-                ace.global_membrane_enhancement(input_image, enhanced_image, experiment,
-                                                temporary_path=experiment.working_dir.get_tmp_directory(0),
-                                                parameters=parameters)
+
+                print(parameters.membrane_seg, current_time)
+                if parameters.membrane_seg is None:
+                    ace.global_membrane_enhancement(input_image, enhanced_image, experiment,
+                                                    temporary_path=experiment.working_dir.get_tmp_directory(0),
+                                                    parameters=parameters)
+                else:
+                    membrane_seg = parameters.membrane_seg.format(t=int(current_time))
+                    ace.global_membrane_enhancement(membrane_seg, enhanced_image, experiment, binary_input=True,
+                                                    temporary_path=experiment.working_dir.get_tmp_directory(0),
+                                                    parameters=parameters)
+
             elif parameters.intensity_enhancement.lower() == 'glace':
                 monitoring.to_log_and_console("    .. cell enhancement of '"
                                               + str(input_image).split(os.path.sep)[-1] + "'", 2)

@@ -17,13 +17,16 @@ def read_tif(filename):
     _data = _data.T
 
     xtag = tif.pages[0].tags['XResolution']
-    ytag = tif.pages[0].tags['XResolution']
+    ytag = tif.pages[0].tags['YResolution']
     imagej_metadata = tif.imagej_metadata
 
     _vx = xtag.value[1] / xtag.value[0]
     _vy = ytag.value[1] / ytag.value[0]
-    _vz = imagej_metadata['spacing']
-
+    if imagej_metadata is not None and 'spacing' in imagej_metadata:
+        _vz = imagej_metadata['spacing']
+    else:
+        _vz = 1
+        
     tif.close()
     # -- dtypes are not really stored in a compatible way (">u2" instead of uint16)
     # but we can convert those --

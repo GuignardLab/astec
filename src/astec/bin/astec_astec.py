@@ -186,7 +186,7 @@ def main():
     parameters.morphosnake_reconstruction.set_suffixes(parameters.membrane_reconstruction)
 
     parameters.write_parameters(monitoring.log_filename)
-
+    print(parameters.membrane_reconstruction.intensity_enhancement)
     #
     # processing
     #

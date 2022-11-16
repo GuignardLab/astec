@@ -170,6 +170,10 @@ class AceParameters(common.PrefixedParameter):
         self.doc['processors'] = doc
         self.processors = 10
 
+        doc = "\tBinary membrane image for intensity enhancement\n"
+        self.doc['membrane_seg'] = doc
+        self.membrane_seg = None
+
     ############################################################
     #
     # print / write
@@ -270,6 +274,8 @@ class AceParameters(common.PrefixedParameter):
                                                          self.bounding_box_dilation)
 
         self.processors = self.read_parameter(parameters, 'processors', self.processors)
+
+        self.membrane_seg = self.read_parameter(parameters, 'membrane_seg', self.membrane_seg)
 
     def update_from_parameter_file(self, parameter_file):
         if parameter_file is None:
