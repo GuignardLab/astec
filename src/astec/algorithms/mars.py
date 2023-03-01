@@ -548,10 +548,12 @@ def build_seeds(input_image, difference_image, output_seed_image, experiment, pa
                                                    new_extension=experiment.default_image_suffix)
     else:
         local_difference_image = difference_image
+    #
+    #
+    print(local_difference_image)
+    seeds_input_mem = imread(seed_preimage)
+    imsave('~/Desktop/tmp/hmin_test/seeds_input_membrane_image.tif', seeds_input_mem)
 
-    #
-    #
-    #
     if operation_type.lower() == 'min':
         monitoring.to_log_and_console("       extract regional minima '"
                                       + str(seed_preimage).split(os.path.sep)[-1] + "' with h = " + str(hmin), 2)
@@ -600,8 +602,13 @@ def build_seeds(input_image, difference_image, output_seed_image, experiment, pa
     # get the list of volumes
     # get the list of indexes associated with the maximal volume
     #
+
+    seeds = imread(output_seed_image)
+    imsave('~/Desktop/tmp/hmin_test/seed_image.tif', seeds)
+    del seeds  
+
     if check_background_label:
-        seeds = imread(output_seed_image)
+        seeds = imread(output_seed_image)        
         labels = list(np.unique(seeds))
         labels.pop(0)
         volumes = nd.sum(np.ones_like(seeds), seeds, index=np.int16(labels))
@@ -615,6 +622,7 @@ def build_seeds(input_image, difference_image, output_seed_image, experiment, pa
             seeds[seeds == 1] = newlabel
             seeds[seeds == labels[indexmax[0]]] = 1
             imsave(output_seed_image, seeds)
+            imsave('~/Desktop/tmp/hmin_test/seeds_bg_image.tif', seeds)
         del seeds
 
     if difference_image is None:

@@ -3068,6 +3068,7 @@ def get_file_suffix(experiment, data_path, file_format, flag_time=None):
     #
     for s, n in suffixes.items():
         if n == nimages:
+            print("\nreturning common suffix")
             return s
 
     if nfiles < nimages:

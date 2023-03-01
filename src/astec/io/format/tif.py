@@ -25,8 +25,14 @@ def read_tif(filename):
     if imagej_metadata is not None and 'spacing' in imagej_metadata:
         _vz = imagej_metadata['spacing']
     else:
+        _vx = 0.173
+        _vy = 0.173
         _vz = 1
-        
+        #_vz = 5.78
+        print("vz = ", _vz)
+    
+    print(_vx, _vy, _vz)
+
     tif.close()
     # -- dtypes are not really stored in a compatible way (">u2" instead of uint16)
     # but we can convert those --

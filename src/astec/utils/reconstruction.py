@@ -376,7 +376,7 @@ class ReconstructionParameters(ace.AceParameters):
         #
 
         self.intensity_transformation = self.read_parameter(parameters, 'intensity_transformation',
-                                                            self.intensity_transformation)
+                                                            self.intensity_transformation)                                                  
         self.intensity_enhancement = self.read_parameter(parameters, 'intensity_enhancement',
                                                          self.intensity_enhancement)
         self.outer_contour_enhancement = self.read_parameter(parameters, 'outer_contour_enhancement',
@@ -398,7 +398,6 @@ class ReconstructionParameters(ace.AceParameters):
         self.cell_normalization_sigma = self.read_parameter(parameters, 'cell_normalization_sigma',
                                                             self.cell_normalization_sigma)
         self.intensity_sigma = self.read_parameter(parameters, 'intensity_sigma', self.intensity_sigma)
-
         #
         #
         #
@@ -973,7 +972,6 @@ def build_reconstructed_image(current_time, experiment, parameters, previous_tim
                                               + str(input_image).split(os.path.sep)[-1] + "'", 2)
                 ace.monitoring.copy(monitoring)
 
-                print(parameters.membrane_seg, current_time)
                 if parameters.membrane_seg is None:
                     ace.global_membrane_enhancement(input_image, enhanced_image, experiment,
                                                     temporary_path=experiment.working_dir.get_tmp_directory(0),
