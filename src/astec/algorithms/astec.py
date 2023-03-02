@@ -3380,8 +3380,8 @@ def new_membrane_sanity_check(segmentation_image, astec_first_image, dataframe_p
     for pair in newly_div_cell_pairs:
         if len(pair) > 2:
             newly_div_cell_pairs.remove(pair)
-            res = [(a, b) for i, a in enumerate(list(pair)) for b in pair[i + 1:]]
-            newly_div_cell_pairs.append(res)
+            combinations_of_two = [(a, b) for i, a in enumerate(list(pair)) for b in pair[i + 1:]]
+            newly_div_cell_pairs = newly_div_cell_pairs + combinations_of_two
  
     #subset newly created membrane ids
     new_membrane_ids = [value for key, value in mapper.items() if \
