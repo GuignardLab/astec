@@ -3372,21 +3372,21 @@ def new_membrane_sanity_check(segmentation_image, astec_first_image, dataframe_p
     #load segmentation image
     curr_seg = imread(segmentation_image)
     
-    #get labels of cells that have divided between last current time point (but labels must be of current not last)
-    new_div_cell_ids = [x for value in correspondences.values() if len(value) > 1 for x in value]
-
     #find interfaces between all cells
     interfaces, mapper = membranes.extract_touching_surfaces(curr_seg)
-        
+
+    #get labels of cells that have divided between last current time point (but labels must be of current not last)
+    newly_div_cell_pairs = [value for value in correspondences.values() if len(value) > 1]
+    for pair in newly_div_cell_pairs:
+        if len(pair) > 2:
+            newly_div_cell_pairs.remove(pair)
+            res = [(a, b) for i, a in enumerate(list(pair)) for b in pair[i + 1:]]
+            newly_div_cell_pairs.append(res)
+ 
     #subset newly created membrane ids
-    #################
-    #TO DO: this comprehesion currently results in an empty list 
-    # --> find way to find the ids of membrane between cell pairs of newly divided cells
     new_membrane_ids = [value for key, value in mapper.items() if \
-                            (list(key) in new_div_cell_ids)]
-    print(f"{new_div_cell_ids}")
-    print(f"{mapper=}")
-    print(f"{new_membrane_ids=}")
+                            (list(key) in newly_div_cell_pairs)]
+
     #calculate volume_ratios for all cells 
     volumes_all_current = membranes.volume_ratio_after_closing(interfaces, mapper)
     volumes_new = {key: value for key, value in volumes_all_current.items() if key in new_membrane_ids}
@@ -3401,7 +3401,6 @@ def new_membrane_sanity_check(segmentation_image, astec_first_image, dataframe_p
         stable_membrane_ids.remove(0)      
         
     #load or create dataframe that has metrics of all true membranes
-
     if not os.path.isfile(dataframe_path):
         
         ############
@@ -3427,7 +3426,7 @@ def new_membrane_sanity_check(segmentation_image, astec_first_image, dataframe_p
 
         
     #start sanity check only if any cells were called dividing
-    if len(new_div_cell_ids) > 0:
+    if len(newly_div_cell_pairs) > 0:
         monitoring.to_log_and_console('      .. found dividing cells: running membrane sanity check on new membranes', 2)
 
         #sliding window for n time points that are used for calculating the volume_ratio cut-off from ground truth
