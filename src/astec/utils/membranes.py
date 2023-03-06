@@ -120,12 +120,13 @@ def volume_ratio_after_closing(interface_image, mapper, voxel_size = (1, 0.173, 
         iterations (int): how many times should the closing algorithm be applied
     '''
     
-    output = {}
-    
-    #test if all values are equal
+    volume_ratios = {}
+    volumes = {}
+
+    # test if all values are equal
     if len(set(voxel_size)) > 1:
            
-        #create 3D kernel for dilation which takes the anisotropy of the image into account
+        # create 3D kernel for dilation which takes the anisotropy of the image into account
         z_dim, y_dim, x_dim = voxel_size
            
         # use scaling factor to find the smallest possible ellipsoid
@@ -135,11 +136,11 @@ def volume_ratio_after_closing(interface_image, mapper, voxel_size = (1, 0.173, 
         increment = np.ceil(iterations * np.max(semiaxes)).astype(int)
     else:
         structure = None
-    #calculate bounding boxes for all cells, dilate bounding box by amount needing for the binary closing
+    # calculate bounding boxes for all cells, dilate bounding box by amount needied for the binary closing
     incremented_b_boxes = calculate_incremented_bounding_boxes(interface_image, increment = increment)
     
     for label in set(mapper.values()):
-        #subset image for region around membrane of interest
+        # subset image for region around membrane of interest
         b_box = incremented_b_boxes[label]
         sub_image = interface_image[b_box]
         interface = sub_image == label
@@ -150,9 +151,10 @@ def volume_ratio_after_closing(interface_image, mapper, voxel_size = (1, 0.173, 
         
         vol_before = interface.sum()
         vol_after = interface_closed.sum()
-        output[label] = vol_after/vol_before
-        
-    return output
+        volume_ratios[label] = float(vol_after/vol_before)
+        volumes[label] = (vol_before)
+
+    return volume_ratios, volumes
 
 
 
@@ -198,3 +200,7 @@ def merge_labels_with_false_membranes(false_pairs_list, original_watershed_label
             merged_watershed[merged_watershed == label] = smallest_id
     
     return merged_watershed, merging_dict
+
+def translate_cell_pair_to_previous (cell_pair, reversed_correspondences):
+    print(f"{cell_pair=}")
+    return tuple(sorted([reversed_correspondences[cell_pair[0]], reversed_correspondences[cell_pair[1]]]))
