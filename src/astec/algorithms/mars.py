@@ -550,9 +550,7 @@ def build_seeds(input_image, difference_image, output_seed_image, experiment, pa
         local_difference_image = difference_image
     #
     #
-    print(local_difference_image)
     seeds_input_mem = imread(seed_preimage)
-    imsave('~/Desktop/tmp/hmin_test/seeds_input_membrane_image.tif', seeds_input_mem)
 
     if operation_type.lower() == 'min':
         monitoring.to_log_and_console("       extract regional minima '"
@@ -604,7 +602,6 @@ def build_seeds(input_image, difference_image, output_seed_image, experiment, pa
     #
 
     seeds = imread(output_seed_image)
-    imsave('~/Desktop/tmp/hmin_test/seed_image.tif', seeds)
     del seeds  
 
     if check_background_label:
@@ -622,7 +619,6 @@ def build_seeds(input_image, difference_image, output_seed_image, experiment, pa
             seeds[seeds == 1] = newlabel
             seeds[seeds == labels[indexmax[0]]] = 1
             imsave(output_seed_image, seeds)
-            imsave('~/Desktop/tmp/hmin_test/seeds_bg_image.tif', seeds)
         del seeds
 
     if difference_image is None:

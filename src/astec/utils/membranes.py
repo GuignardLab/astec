@@ -95,7 +95,7 @@ def extract_touching_surfaces(watershed_labels):
                 n_mask = mask_dilation & (sub_image == neighbor)
                 if (n_mask.sum() > 0) and (tuple(sorted([label, neighbor])) not in mapp_mem.keys()):
                     membrane_labels[b_box][n_mask] = membrane_id
-                    mapp_mem[tuple(sorted([label, neighbor]))] = membrane_id
+                    mapp_mem[tuple(sorted([label, neighbor]))] = int(membrane_id)
                     membrane_id += 1
    
     #some very small membrane fragment might have gotten covered by bigger ones, so we make sure only existing membranes exist in the mapper
@@ -202,5 +202,4 @@ def merge_labels_with_false_membranes(false_pairs_list, original_watershed_label
     return merged_watershed, merging_dict
 
 def translate_cell_pair_to_previous (cell_pair, reversed_correspondences):
-    print(f"{cell_pair=}")
     return tuple(sorted([reversed_correspondences[cell_pair[0]], reversed_correspondences[cell_pair[1]]]))

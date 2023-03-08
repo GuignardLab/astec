@@ -8,7 +8,7 @@ import numpy as np
 from scipy import ndimage as nd
 import copy
 import pandas as pd
-
+from itertools import combinations
 
 import astec.utils.common as common
 import astec.utils.ace as ace
@@ -2899,7 +2899,7 @@ def astec_process(previous_time, current_time, lineage_tree_information, experim
     #astec_first_image_path = os.path.join(astec_dir, astec_first_image)
 
     #path where the dataframe containing membranes metrics is stored
-    membranes_df_path = os.path.join(astec_dir, "volume_ratio_membranes.csv")
+    membranes_df_path = os.path.join(astec_dir, "volume_ratio_membranes.pkl")
 
     #call membrane sanity check and return path to merged image (in tmp folder)
     ######## use previous time instead of first time point
@@ -3379,17 +3379,15 @@ def new_membrane_sanity_check(segmentation_image, previous_segmentation, datafra
     ############ I am not really using this anywhere, right?
     #cell_pairs_previous_id = {cell_pair: membranes.translate_cell_pair_to_previous(cell_pair, corr_rev) for cell_pair in mapper.keys()}
 
-    # get labels of cells that have divided between last current time point (current labels)
-    newly_div_cell_pairs = [value for value in correspondences.values() if len(value) > 1]
-    for pair in newly_div_cell_pairs:
-        if len(pair) > 2:
-            newly_div_cell_pairs.remove(pair)
-            combinations_of_two = [(a, b) for i, a in enumerate(list(pair)) for b in pair[i + 1:]]
-            newly_div_cell_pairs = newly_div_cell_pairs + combinations_of_two
- 
+    # get labels of cells that have divided between the previous and current time point and make sure there are only combinations of two
+    newly_div_cells = [value for value in correspondences.values() if len(value) > 1]
+    newly_div_cell_pairs = []
+    for pair in newly_div_cells:
+        newly_div_cell_pairs = newly_div_cell_pairs + list(combinations(pair, 2))
+
     # derive newly created membrane ids from new cell pairs
     new_membrane_ids = [value for key, value in mapper.items() if
-                            (list(key) in newly_div_cell_pairs)]
+                            key in newly_div_cell_pairs]
 
     # calculate volume_ratios for all cells, subset for cells that have divided 
     volume_ratios_all_current, volumes_all_current = membranes.volume_ratio_after_closing(interfaces, mapper)
@@ -3398,7 +3396,7 @@ def new_membrane_sanity_check(segmentation_image, previous_segmentation, datafra
 
     ################ adapt this to 0 or 1 as background or remove?  
     if 0 in new_membrane_ids:
-        print("weird case: background label in dividing cells")
+        print("    !! weird case: background label in dividing cells")
         sys.exit(0)
     stable_membrane_ids = set(np.unique(interfaces)).difference(set(new_membrane_ids))
     if 0 in stable_membrane_ids:
@@ -3414,65 +3412,65 @@ def new_membrane_sanity_check(segmentation_image, previous_segmentation, datafra
         # calculate volumes for ground truth
         gt_interfaces, gt_mapper = membranes.extract_touching_surfaces(gt_image)
         gt_true_membranes_volumes, gt_volumes = membranes.volume_ratio_after_closing(gt_interfaces, gt_mapper)
-            
         # create dataframe with ground truth metrics
         gt_volumes_df = pd.DataFrame(columns = ["mem_id", "cells"])
         gt_volumes_df["mem_id"] = gt_mapper.values()
         gt_volumes_df["cells"] = gt_mapper.keys()
         gt_volumes_df["time_point"] = current_time - 1
         gt_volumes_df["mem_lineage_id"] = gt_mapper.values()
-
         # create extra dataframes with volume ratios/ volumes and  membrane ids to make sure we don't mix up values
         add_vol_ratio_df = pd.DataFrame.from_dict(gt_true_membranes_volumes, orient = "index", columns = ["mem_volume_ratio"])
         gt_volumes_df = gt_volumes_df.join(add_vol_ratio_df, on = "mem_id")
         add_vol_df = pd.DataFrame.from_dict(gt_volumes, orient = "index", columns = ["volume"])
         gt_volumes_df = gt_volumes_df.join(add_vol_df, on = "mem_id")
-
+        gt_volumes_df["membrane_classification"] = True
         gt_volumes_df["membrane_status"] = "certain"
         gt_volumes_df["new_contact"] = False
-
+        gt_volumes_df["cut_off"] = None
     # if the dataframe already exists, just load it        
     else:
-        gt_volumes_df = pd.read_csv(dataframe_path, sep = "\t")
+        gt_volumes_df = pd.read_pickle(dataframe_path)
 
     # add stable membranes (stable_membrane_ids) to ground truth
     mem_id_add = list(stable_membrane_ids)
     former_uncertain_pairs = list(gt_volumes_df.loc[(gt_volumes_df["membrane_status"] == "uncertain") & (gt_volumes_df["time_point"] == current_time-1)]["cells"])
     previous_cell_pairs = set(gt_volumes_df.loc[gt_volumes_df["time_point"] == current_time-1]["cells"])
+    max_lineage_id = gt_volumes_df["mem_lineage_id"].astype(int).max()
 
-    max_lineage_id = gt_volumes_df["mem_lineage_id"].max()
+    append_df = pd.DataFrame(index = list(range (0, len(mem_id_add))), 
+                            columns = ["mem_id", "cells", "time_point", "mem_lineage_id", "mem_volume_ratio", 
+                                        "volume", "membrane_classification", "membrane_status", "new_contact", "cut_off"])
+    index = 0
     for mem_id in mem_id_add:
-        single_row = pd.DataFrame(columns = ["mem_id", "cells", "time_point", "mem_lineage_id", "mem_volume_ratio", "volume", "membrane_status", "new_contact"])
-        single_row["mem_id"] = [mem_id]
+        append_df["mem_id"][index] = mem_id
         cell_pair = [k for k, v in mapper.items() if v == mem_id][0]
-        single_row["cells"] = [cell_pair]
-        single_row["time_point"] = current_time
-        single_row["mem_volume_ratio"] = [v for k, v in volume_ratios_all_current.items() if k == mem_id][0]
-        single_row["volume"] = [v for k, v in volumes_all_current.items() if k == mem_id][0]
+        append_df["cells"][index] = cell_pair
+        append_df["time_point"][index] = current_time
+        append_df["mem_volume_ratio"][index] = [v for k, v in volume_ratios_all_current.items() if k == mem_id][0]
+        append_df["volume"][index] = [v for k, v in volumes_all_current.items() if k == mem_id][0]
 
         #convert to id's from the previous time point
         pair_in_prev_ids = membranes.translate_cell_pair_to_previous(cell_pair, corr_rev)
-
-        ################### does this comparison work?
         if pair_in_prev_ids in former_uncertain_pairs:
-            print("\nYES this is working")
-            single_row["membrane_status"] = "uncertain"
+            append_df["membrane_status"][index] = "uncertain"
         else:
-            single_row["membrane_status"] = "certain"
+            append_df["membrane_status"][index] = "certain"
         
         if pair_in_prev_ids in previous_cell_pairs:
-            gt_volumes_df["new_contact"] = False
-            mem_lineage = gt_volumes_df.loc[(gt_volumes_df["time_point"] == current_time-1) & (gt_volumes_df["cells"] == pair_in_prev_ids)]["mem_lineage_id"]
-            gt_volumes_df["mem_lineage_id"] = mem_lineage
+            append_df["new_contact"][index] = False
+            mem_lineage = gt_volumes_df.loc[(gt_volumes_df["time_point"] == current_time-1) & 
+                                            (gt_volumes_df["cells"] == pair_in_prev_ids)]["mem_lineage_id"].values[0]
+            append_df["mem_lineage_id"][index] = mem_lineage
         else:
-            gt_volumes_df["new_contact"] = True
+            append_df["new_contact"][index] = True
             max_lineage_id += 1
-            gt_volumes_df["mem_lineage_id"] = max_lineage_id
-        
-        gt_volumes_df = pd.concat([gt_volumes_df, single_row])
-
+            append_df["mem_lineage_id"][index] = max_lineage_id
+        append_df["membrane_classification"][index] = True
+        append_df["cut_off"][index] = None
+        index += 1
+    gt_volumes_df = pd.concat([gt_volumes_df, append_df])
     gt_volumes_df.reset_index(drop = True, inplace = True)
-    
+
     # sliding window for n time points that are used for calculating the volume_ratio cut-off from ground truth
     lower_time_limit = current_time - parameters.gt_time_frame
     if (not parameters.gt_time_frame == None) and (experiment.first_time_point < lower_time_limit):  
@@ -3482,18 +3480,17 @@ def new_membrane_sanity_check(segmentation_image, previous_segmentation, datafra
     else:
         considered_gt_membranes = gt_volumes_df
 
-    #only consider membranes that have "certain" membrane_status
-    considered_gt_membranes_certain = considered_gt_membranes.loc[considered_gt_membranes["membrane_status"] == "certain"]
+    #only consider membranes that have "certain" membrane_status and membrane_classification == True
+    considered_gt_membranes_certain = considered_gt_membranes.loc[(considered_gt_membranes["membrane_status"] == "certain") & 
+                                                                  (considered_gt_membranes["membrane_classification"] == True)]
 
     # calculate interfaces and volumes of considered gt membranes and find cut-off value for volume ratio 
     median_gt = considered_gt_membranes_certain["mem_volume_ratio"].median()
     std_gt = considered_gt_membranes_certain["mem_volume_ratio"].std()
     cut_off = median_gt + parameters.stringency_factor * std_gt
     
-    # check if cell pair was in the uncertain category before, if so apply threshold for certain vs uncertain label
-    # translate cell pair from correspondences
-    
-    #go through all uncertain of current_time
+    # check if cell pair was in the uncertain category at t-1, if so apply threshold for certain vs uncertain label at current time point
+    # re-evaluate all uncertain of current_time
     double_check_indices = list(gt_volumes_df.loc[(gt_volumes_df["membrane_status"] == "uncertain") 
                                                   & (gt_volumes_df["time_point"] == current_time)].index)
     for index in double_check_indices:
@@ -3502,19 +3499,21 @@ def new_membrane_sanity_check(segmentation_image, previous_segmentation, datafra
                          > median_gt + (parameters.stringency_factor/2) * std_gt):
             gt_volumes_df["membrane_status"][index] = "uncertain"
         else:
+            gt_volumes_df["membrane_classification"][index] = True
             gt_volumes_df["membrane_status"][index] = "certain"
-    
-    # save dataframe in main directory
-    gt_volumes_df.to_csv(dataframe_path, sep = "\t", index = False)
+        gt_volumes_df["cut_off"][index] = (((parameters.stringency_factor/2) * std_gt), cut_off)
 
-    uncertain_pairs = list(gt_volumes_df.loc[gt_volumes_df["membrane_status"] == "uncertain"]["cells"])
+    # start sanity check only if any cells were called dividing or uncertain
+    uncertain_pairs = list(gt_volumes_df.loc[(gt_volumes_df["membrane_status"] == "uncertain")
+                                              & (gt_volumes_df["time_point"] == current_time)]["cells"])
+
     uncertain_membrane_ids = [value for key, value in mapper.items() if
                             (list(key) in uncertain_pairs)]
 
-
-    # start sanity check only if any cells were called dividing or uncertain
-    if (len(newly_div_cell_pairs) == 0) & len(uncertain_pairs) == 0:
+    if (len(newly_div_cell_pairs) == 0) & (len(uncertain_pairs) == 0):
         monitoring.to_log_and_console('      .. found no new or uncertain cell membranes: not running membrane sanity check', 2)
+        # save dataframe in main directory
+        gt_volumes_df.to_pickle(dataframe_path)
         return segmentation_image, correspondences
     
     else:
@@ -3549,32 +3548,68 @@ def new_membrane_sanity_check(segmentation_image, previous_segmentation, datafra
             else:
                 new_correspondences[key] = correspondences[key]
  
-        # add good_new_membranes membranes to ground truth dataframe, label them uncertain 
+        # add good_new_membranes membranes to ground truth dataframe, but label them uncertain 
         # if they were more than (stringency_factor/2)*std away from the median
         mem_id_add = passed_new_membranes
-        max_lineage_id = gt_volumes_df["mem_lineage_id"].max()
+        append_df = pd.DataFrame(index = list(range (0, len(mem_id_add))), 
+                                columns = ["mem_id", "cells", "time_point", "mem_lineage_id", 
+                                            "mem_volume_ratio", "volume", "membrane_classification", "membrane_status", "new_contact", "cut_off"])
+        index = 0
         for mem_id in mem_id_add:
-            single_row = pd.DataFrame(columns = ["mem_id", "cells", "time_point", "mem_lineage_id", "mem_volume_ratio", "volume", "membrane_status", "new_contact"])
-            single_row["mem_id"] = [mem_id]
-            single_row["cells"] = [k for k, v in mapper.items() if v == mem_id]
-            single_row["time_point"] = current_time
-            mem_volume_ratio =  [v for k, v in volume_ratios_all_current.items() if k == mem_id]
-            single_row["mem_volume_ratio"] = mem_volume_ratio
-            single_row["volume"] = [v for k, v in volumes_all_current.items() if k == mem_id]
+            append_df["mem_id"][index] = mem_id
+            cell_pair = [k for k, v in mapper.items() if v == mem_id][0]
+            append_df["cells"][index] = cell_pair
+            append_df["time_point"][index] = current_time
+            mem_volume_ratio =  [v for k, v in volume_ratios_all_current.items() if k == mem_id][0]
+            append_df["mem_volume_ratio"][index] = mem_volume_ratio
+            append_df["volume"][index] = [v for k, v in volumes_all_current.items() if k == mem_id][0]
             if mem_volume_ratio > median_gt + (parameters.stringency_factor/2) * std_gt:
-                single_row["membrane_status"] = "uncertain"  
+                append_df["membrane_status"][index] = "uncertain"  
             else:
-                single_row["membrane_status"] = "certain"
+                append_df["membrane_status"][index] = "certain"
 
-            gt_volumes_df["new_contact"] = True
-            max_lineage_id += 1
-            gt_volumes_df["mem_lineage_id"] = max_lineage_id
-
-            gt_volumes_df = pd.concat([gt_volumes_df, single_row])
+            append_df["membrane_classification"][index] = True
+            if cell_pair in newly_div_cell_pairs:
+                append_df["new_contact"][index] = True
+                max_lineage_id += 1
+            else:
+                append_df["new_contact"][index] = False
+            append_df["mem_lineage_id"][index] = max_lineage_id
+            append_df["cut_off"][index] = (((parameters.stringency_factor/2) * std_gt), cut_off)
+            index += 1
+        gt_volumes_df = pd.concat([gt_volumes_df, append_df])
         gt_volumes_df.reset_index(drop = True, inplace = True)
-        # save dataframe in main directory
-        gt_volumes_df.to_csv(dataframe_path, sep = "\t", index = False)
+        
+        #add membranes that will be removed
+        mem_id_add = membranes_for_fusion
+        append_df = pd.DataFrame(index = list(range (0, len(mem_id_add))), 
+                                columns = ["mem_id", "cells", "time_point", "mem_lineage_id", 
+                                            "mem_volume_ratio", "volume", "membrane_classification", "membrane_status", "new_contact", "cut_off"])
+        index = 0
+        for mem_id in mem_id_add:
+            append_df["mem_id"][index] = mem_id
+            cell_pair = [k for k, v in mapper.items() if v == mem_id][0]
+            append_df["cells"][index] = cell_pair            
+            append_df["time_point"][index] = current_time
+            mem_volume_ratio =  [v for k, v in volume_ratios_all_current.items() if k == mem_id][0]
+            append_df["mem_volume_ratio"][index] = mem_volume_ratio
+            append_df["volume"][index] = [v for k, v in volumes_all_current.items() if k == mem_id][0]
+            append_df["membrane_status"][index] = "certain"
+            append_df["membrane_classification"][index] = False
+            if cell_pair in newly_div_cell_pairs:
+                append_df["new_contact"][index] = True
+                max_lineage_id += 1
+            else:
+                append_df["new_contact"][index] = False
+            append_df["mem_lineage_id"][index] = max_lineage_id
+            append_df["cut_off"][index] = (((parameters.stringency_factor/2) * std_gt), cut_off)
+            index += 1
 
+        # concatenate and save dataframe in main directory
+        gt_volumes_df = pd.concat([gt_volumes_df, append_df])
+        gt_volumes_df.reset_index(drop = True, inplace = True)
+        gt_volumes_df.to_pickle(dataframe_path)
+        print(unknown)
         return merged_segmentation_name, new_correspondences
 
         
