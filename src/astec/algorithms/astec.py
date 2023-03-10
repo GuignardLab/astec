@@ -3391,7 +3391,7 @@ def new_membrane_sanity_check(segmentation_image, previous_segmentation, datafra
 
     # calculate volume_ratios for all cells, subset for cells that have divided 
     volume_ratios_all_current, volumes_all_current = membranes.volume_ratio_after_closing(interfaces, mapper)
-    volume_ratios_new = {key: value for key, value in volumes_all_current.items() if key in new_membrane_ids}
+    volume_ratios_new = {key: value for key, value in volume_ratios_all_current.items() if key in new_membrane_ids}
 
 
     ################ adapt this to 0 or 1 as background or remove?  
@@ -3487,22 +3487,18 @@ def new_membrane_sanity_check(segmentation_image, previous_segmentation, datafra
     # calculate interfaces and volumes of considered gt membranes and find cut-off value for volume ratio 
     median_gt = considered_gt_membranes_certain["mem_volume_ratio"].median()
     std_gt = considered_gt_membranes_certain["mem_volume_ratio"].std()
-    cut_off = median_gt + parameters.stringency_factor * std_gt
+    cut_off = float(median_gt + parameters.stringency_factor * std_gt)
+    cut_off_grey_zone = float(median_gt + ((parameters.stringency_factor/2) * std_gt))
     
     # check if cell pair was in the uncertain category at t-1, if so apply threshold for certain vs uncertain label at current time point
     # re-evaluate all uncertain of current_time
     double_check_indices = list(gt_volumes_df.loc[(gt_volumes_df["membrane_status"] == "uncertain") 
                                                   & (gt_volumes_df["time_point"] == current_time)].index)
     for index in double_check_indices:
-        if (gt_volumes_df["membrane_status"][index] == "uncertain")\
-                    and (gt_volumes_df["mem_volume_ratio"][index]
-                         > median_gt + (parameters.stringency_factor/2) * std_gt):
-            gt_volumes_df["membrane_status"][index] = "uncertain"
-        else:
-            gt_volumes_df["membrane_classification"][index] = True
+        if gt_volumes_df["mem_volume_ratio"][index] < cut_off_grey_zone:
             gt_volumes_df["membrane_status"][index] = "certain"
-        gt_volumes_df["cut_off"][index] = (((parameters.stringency_factor/2) * std_gt), cut_off)
-
+        gt_volumes_df["cut_off"][index] = (cut_off_grey_zone, cut_off)
+    
     # start sanity check only if any cells were called dividing or uncertain
     uncertain_pairs = list(gt_volumes_df.loc[(gt_volumes_df["membrane_status"] == "uncertain")
                                               & (gt_volumes_df["time_point"] == current_time)]["cells"])
@@ -3563,7 +3559,7 @@ def new_membrane_sanity_check(segmentation_image, previous_segmentation, datafra
             mem_volume_ratio =  [v for k, v in volume_ratios_all_current.items() if k == mem_id][0]
             append_df["mem_volume_ratio"][index] = mem_volume_ratio
             append_df["volume"][index] = [v for k, v in volumes_all_current.items() if k == mem_id][0]
-            if mem_volume_ratio > median_gt + (parameters.stringency_factor/2) * std_gt:
+            if mem_volume_ratio >= cut_off_grey_zone:
                 append_df["membrane_status"][index] = "uncertain"  
             else:
                 append_df["membrane_status"][index] = "certain"
@@ -3575,12 +3571,12 @@ def new_membrane_sanity_check(segmentation_image, previous_segmentation, datafra
             else:
                 append_df["new_contact"][index] = False
             append_df["mem_lineage_id"][index] = max_lineage_id
-            append_df["cut_off"][index] = (((parameters.stringency_factor/2) * std_gt), cut_off)
+            append_df["cut_off"][index] = (cut_off_grey_zone, cut_off)
             index += 1
         gt_volumes_df = pd.concat([gt_volumes_df, append_df])
         gt_volumes_df.reset_index(drop = True, inplace = True)
         
-        #add membranes that will be removed
+        #add membranes that are classified as false --> cells will be fused
         mem_id_add = membranes_for_fusion
         append_df = pd.DataFrame(index = list(range (0, len(mem_id_add))), 
                                 columns = ["mem_id", "cells", "time_point", "mem_lineage_id", 
@@ -3602,14 +3598,13 @@ def new_membrane_sanity_check(segmentation_image, previous_segmentation, datafra
             else:
                 append_df["new_contact"][index] = False
             append_df["mem_lineage_id"][index] = max_lineage_id
-            append_df["cut_off"][index] = (((parameters.stringency_factor/2) * std_gt), cut_off)
+            append_df["cut_off"][index] = (cut_off_grey_zone, cut_off)
             index += 1
 
         # concatenate and save dataframe in main directory
         gt_volumes_df = pd.concat([gt_volumes_df, append_df])
         gt_volumes_df.reset_index(drop = True, inplace = True)
         gt_volumes_df.to_pickle(dataframe_path)
-        print(unknown)
         return merged_segmentation_name, new_correspondences
 
         
