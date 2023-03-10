@@ -24,9 +24,7 @@ def calculate_incremented_bounding_boxes(watershed_labels, increment = 1):
 
     #calculate bounding boxes
     b_boxes = find_objects(watershed_labels)
-    im_shape = watershed_labels.shape
     z_max, x_max, y_max = watershed_labels.shape
-    #print(z_max, x_max, y_max)
 
     #increment bounding boxes by one voxel
     incremented_b_boxes = {}
@@ -35,8 +33,7 @@ def calculate_incremented_bounding_boxes(watershed_labels, increment = 1):
             new_entry = (slice(max(b_box[0].start - increment, 0), min(b_box[0].stop + increment, z_max-1), b_box[0].step),
                           slice(max(b_box[1].start - increment, 0), min(b_box[1].stop + increment, x_max-1), b_box[1].step),
                           slice(max(b_box[2].start - increment, 0), min(b_box[2].stop + increment, y_max-1), b_box[2].step))
-            #new_entry = (__increment_slice(bb, increment, im_shape[i]-1) for i, bb in enumerate(b_box))
-            
+
             #adapt index to match the label of the object
             incremented_b_boxes[i+1] = new_entry
 
@@ -139,7 +136,7 @@ def volume_ratio_after_closing(interface_image, mapper, voxel_size = (1, 0.173, 
     # calculate bounding boxes for all cells, dilate bounding box by amount needied for the binary closing
     incremented_b_boxes = calculate_incremented_bounding_boxes(interface_image, increment = increment)
     
-    for label in set(mapper.values()):
+    for label in mapper.values():
         # subset image for region around membrane of interest
         b_box = incremented_b_boxes[label]
         sub_image = interface_image[b_box]
@@ -152,7 +149,7 @@ def volume_ratio_after_closing(interface_image, mapper, voxel_size = (1, 0.173, 
         vol_before = interface.sum()
         vol_after = interface_closed.sum()
         volume_ratios[label] = float(vol_after/vol_before)
-        volumes[label] = (vol_before)
+        volumes[label] = int(vol_before)
 
     return volume_ratios, volumes
 
