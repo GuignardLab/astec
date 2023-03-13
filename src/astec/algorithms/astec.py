@@ -642,7 +642,6 @@ class AstecParameters(mars.WatershedParameters, MorphoSnakeParameters):
 
 
         #added parameters for membrane sanity check
-        
         self.membrane_sanity_check = self.read_parameter(parameters, 'membrane_sanity_check', self.membrane_sanity_check)
         self.stringency_factor = self.read_parameter(parameters, 'membrane_stringency_factor', self.stringency_factor)
         self.gt_time_frame = self.read_parameter(parameters, 'membrane_ground_truth_time_frame', self.gt_time_frame)
@@ -3509,17 +3508,9 @@ def new_membrane_sanity_check(segmentation_image, previous_segmentation, datafra
         gt_volumes_df["cut_off"][index] = (cut_off_grey_zone, cut_off)
     
     # start sanity check only if any cells were called dividing or uncertain
-    print(f"{current_time=}")
-    print(f"{gt_volumes_df.membrane_status.unique()=}")
-    uncertain_membrane_ids = list(gt_volumes_df.loc[(gt_volumes_df["membrane_status"] == "uncertain")
-                                              & (gt_volumes_df["time_point"] == current_time)]["mem_id"])
-    #list(vol_df.loc[(vol_df["membrane_status"] == "uncertain") & (vol_df["time_point"] == 19)]["mem_id"])
-    #uncertain_membrane_ids = [value for key, value in mapper.items() if
-    #                        (list(key) in uncertain_pairs)]
-    
-    #print(f"{uncertain_pairs=}")
+    uncertain_membrane_ids = list(gt_volumes_df.loc[(gt_volumes_df["membrane_status"] == "uncertain") 
+                                                    & (gt_volumes_df["time_point"] == current_time)]["mem_id"])
     print(f"{uncertain_membrane_ids=}")
-
     if (len(newly_div_cell_pairs) == 0) & (len(uncertain_membrane_ids) == 0):
         monitoring.to_log_and_console('      .. found no new or uncertain cell membranes: not running membrane sanity check', 2)
         # save dataframe in main directory
