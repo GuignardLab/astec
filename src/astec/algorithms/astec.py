@@ -3510,7 +3510,7 @@ def new_membrane_sanity_check(segmentation_image, previous_segmentation, datafra
     # start sanity check only if any cells were called dividing or uncertain
     uncertain_membrane_ids = list(gt_volumes_df.loc[(gt_volumes_df["membrane_status"] == "uncertain") 
                                                     & (gt_volumes_df["time_point"] == current_time)]["mem_id"])
-    print(f"{uncertain_membrane_ids=}")
+
     if (len(newly_div_cell_pairs) == 0) & (len(uncertain_membrane_ids) == 0):
         monitoring.to_log_and_console('      .. found no new or uncertain cell membranes: not running membrane sanity check', 2)
         # save dataframe in main directory
