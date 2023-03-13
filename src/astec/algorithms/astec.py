@@ -375,6 +375,13 @@ class AstecParameters(mars.WatershedParameters, MorphoSnakeParameters):
         doc += "\t Membranes with a volume ratio smaller than\n"
         doc += "\t a cut-off = median(true membranes) + std(true mebranes) * stringency factor\n"
         doc += "\t are scored as true membranes, other cells are merged into respective bigger cells\n"
+        self.doc['membrane_sanity_check'] = doc
+        self.membrane_sanity_check = False
+
+        doc = "\t Membrane sanity check - stringency\n"
+        doc += "\t Membranes with a volume ratio smaller than\n"
+        doc += "\t a cut-off = median(true membranes) + std(true mebranes) * stringency factor\n"
+        doc += "\t are scored as true membranes, other cells are merged into respective bigger cells\n"
         self.doc['stringency_factor'] = doc
         self.stringency_factor = 4
 
@@ -635,6 +642,8 @@ class AstecParameters(mars.WatershedParameters, MorphoSnakeParameters):
 
 
         #added parameters for membrane sanity check
+        
+        self.membrane_sanity_check = self.read_parameter(parameters, 'membrane_sanity_check', self.membrane_sanity_check)
         self.stringency_factor = self.read_parameter(parameters, 'membrane_stringency_factor', self.stringency_factor)
         self.gt_time_frame = self.read_parameter(parameters, 'membrane_ground_truth_time_frame', self.gt_time_frame)
         ###
@@ -2891,38 +2900,38 @@ def astec_process(previous_time, current_time, lineage_tree_information, experim
     ###############
     ###############
     # 1ST MODIFICATION FOR MEMBRANE SANITY CHECK STARTS HERE (1/2)
+    if parameters.membrane_sanity_check == True:
+
+        #find name and path for the first image that is used for the segmentation propagation
+        #astec_first_name = experiment.astec_dir.get_image_name(experiment.first_time_point)
+        #astec_first_image = common.find_file(astec_dir, astec_first_name, file_type='image')
+        #astec_first_image_path = os.path.join(astec_dir, astec_first_image)
+
+        #path where the dataframe containing membranes metrics is stored
+        membranes_df_path = os.path.join(astec_dir, "volume_ratio_membranes.pkl")
+
+        #call membrane sanity check and return path to merged image (in tmp folder)
+        ######## use previous time instead of first time point
+        merged_segmentation, correspondences = new_membrane_sanity_check(input_segmentation, previous_segmentation, 
+                                                                        membranes_df_path, experiment, parameters, 
+                                                                        correspondences, current_time)
+        
+        # copy results from temporary folder to main folder
+        # I think this is also unnecessary at this point, as long as the output from here is set as the input for the following
+        shutil.copyfile(merged_segmentation, astec_image)
+
+        ############# since it is updated after morphasnakes section anyways, I do not think it is necessary here
+        # update volumes and lineage
+        #
+        #lineage_tree_information = _update_volume_properties(lineage_tree_information, astec_image,
+        #                                                     current_time, experiment)
+        #lineage_tree_information = _update_lineage_properties(lineage_tree_information, correspondences, previous_time,
+        #                                                      current_time, experiment)
 
 
-    #find name and path for the first image that is used for the segmentation propagation
-    #astec_first_name = experiment.astec_dir.get_image_name(experiment.first_time_point)
-    #astec_first_image = common.find_file(astec_dir, astec_first_name, file_type='image')
-    #astec_first_image_path = os.path.join(astec_dir, astec_first_image)
-
-    #path where the dataframe containing membranes metrics is stored
-    membranes_df_path = os.path.join(astec_dir, "volume_ratio_membranes.pkl")
-
-    #call membrane sanity check and return path to merged image (in tmp folder)
-    ######## use previous time instead of first time point
-    merged_segmentation, correspondences = new_membrane_sanity_check(input_segmentation, previous_segmentation, 
-                                                                     membranes_df_path, experiment, parameters, 
-                                                                     correspondences, current_time)
-    
-    # copy results from temporary folder to main folder
-    # I think this is also unnecessary at this point, as long as the output from here is set as the input for the following
-    shutil.copyfile(merged_segmentation, astec_image)
-
-    ############# since it is updated after morphasnakes section anyways, I do not think it is necessary here
-    # update volumes and lineage
-    #
-    #lineage_tree_information = _update_volume_properties(lineage_tree_information, astec_image,
-    #                                                     current_time, experiment)
-    #lineage_tree_information = _update_lineage_properties(lineage_tree_information, correspondences, previous_time,
-    #                                                      current_time, experiment)
-
-
-    #set input for next step to be the merged output of this step
-    input_segmentation = merged_segmentation
-    
+        #set input for next step to be the merged output of this step
+        input_segmentation = merged_segmentation
+        
     
     # END OF FIRST MODIFICATION
     ###############
@@ -3449,7 +3458,7 @@ def new_membrane_sanity_check(segmentation_image, previous_segmentation, datafra
         append_df["mem_volume_ratio"][index] = [v for k, v in volume_ratios_all_current.items() if k == mem_id][0]
         append_df["volume"][index] = [v for k, v in volumes_all_current.items() if k == mem_id][0]
 
-        #convert to id's from the previous time point
+        # convert to id's from the previous time point
         pair_in_prev_ids = membranes.translate_cell_pair_to_previous(cell_pair, corr_rev)
         if pair_in_prev_ids in former_uncertain_pairs:
             append_df["membrane_status"][index] = "uncertain"
@@ -3500,13 +3509,18 @@ def new_membrane_sanity_check(segmentation_image, previous_segmentation, datafra
         gt_volumes_df["cut_off"][index] = (cut_off_grey_zone, cut_off)
     
     # start sanity check only if any cells were called dividing or uncertain
-    uncertain_pairs = list(gt_volumes_df.loc[(gt_volumes_df["membrane_status"] == "uncertain")
-                                              & (gt_volumes_df["time_point"] == current_time)]["cells"])
+    print(f"{current_time=}")
+    print(f"{gt_volumes_df.membrane_status.unique()=}")
+    uncertain_membrane_ids = list(gt_volumes_df.loc[(gt_volumes_df["membrane_status"] == "uncertain")
+                                              & (gt_volumes_df["time_point"] == current_time)]["mem_id"])
+    #list(vol_df.loc[(vol_df["membrane_status"] == "uncertain") & (vol_df["time_point"] == 19)]["mem_id"])
+    #uncertain_membrane_ids = [value for key, value in mapper.items() if
+    #                        (list(key) in uncertain_pairs)]
+    
+    #print(f"{uncertain_pairs=}")
+    print(f"{uncertain_membrane_ids=}")
 
-    uncertain_membrane_ids = [value for key, value in mapper.items() if
-                            (list(key) in uncertain_pairs)]
-
-    if (len(newly_div_cell_pairs) == 0) & (len(uncertain_pairs) == 0):
+    if (len(newly_div_cell_pairs) == 0) & (len(uncertain_membrane_ids) == 0):
         monitoring.to_log_and_console('      .. found no new or uncertain cell membranes: not running membrane sanity check', 2)
         # save dataframe in main directory
         gt_volumes_df.to_pickle(dataframe_path)
