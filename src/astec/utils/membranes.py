@@ -189,14 +189,51 @@ def merge_labels_with_false_membranes(false_pairs_list, original_watershed_label
     cc_list = find_connected_components(false_pairs_list)
     #create image with merged cells based on sets of cells and original watershed image
     merged_watershed = original_watershed_labels.copy()
-    merging_dict = {}
     for cell_set in cc_list:
         smallest_id = min(cell_set)
-        merging_dict[smallest_id] = cell_set
         for label in cell_set:
             merged_watershed[merged_watershed == label] = smallest_id
     
-    return merged_watershed, merging_dict
+    return merged_watershed, cc_list
 
 def translate_cell_pair_to_previous (cell_pair, reversed_correspondences):
     return tuple(sorted([reversed_correspondences[cell_pair[0]], reversed_correspondences[cell_pair[1]]]))
+
+
+
+def update_correspondences_dictionary(correspondences, new_false_pairs, uncertain_false_pairs, cc_list, volumes):
+    # update correspondences dictionary to match cell_ids of t-1 to new id of merged cells at current t
+    print(f"{correspondences=}")
+    new_correspondences = {}
+    all_uncertain_cells = [x for m in uncertain_false_pairs for x in m]
+    for key in correspondences.keys():
+        progeny = tuple(correspondences[key])
+        #this will find newly divided cells that we want to merge and use the smaller label
+        if progeny in new_false_pairs:
+            new_correspondences[key] = [np.min(correspondences[key])]
+
+        elif [cells for cells in all_uncertain_cells if cells in progeny]:
+            cells = [cells for cells in all_uncertain_cells if cells in progeny]
+            all_cc_cells = [connected_cells for connected_cells in cc_list if cells[0] in connected_cells]
+            #find volumes for cells to place the new merged cell in place of the largest fragment in the lineage
+            volumes_cells = {id: volume for id, volume in volumes.items() if id in all_cc_cells[0]}
+            largest_vol_id = [id for id, value in volumes_cells.items() if value == max(volumes_cells.values())]
+
+            #all cells should be in the respective set in cc_list, so it is sufficient to query for the first entry
+            new_id = [min(connected_cells) for connected_cells in cc_list if cells[0] in connected_cells]
+            if (len(progeny) == 1) and (largest_vol_id[0] in progeny):
+                new_correspondences[key] = new_id
+            elif len(progeny) > 1:
+                #if largest_vol_id[0] in progeny:
+                pair_containing_new_id = [list(pair) for pair in uncertain_false_pairs if new_id[0] in pair]
+                removed_cells = [cell for cell in pair_containing_new_id[0] if cell not in new_id]
+                new_id_list = [cell for cell in progeny if cell not in removed_cells]
+                if (not new_id[0] in new_id_list) and (largest_vol_id[0] in progeny):
+                    new_id_list.append(new_id[0])
+                new_id_list.sort()
+                new_correspondences[key] = new_id_list
+        else:
+            #if there are no changes we just use the original values
+            new_correspondences[key] = correspondences[key]
+
+    return new_correspondences
