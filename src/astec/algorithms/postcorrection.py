@@ -818,6 +818,7 @@ def _prune_lineage_tree(lineage, volume, surfaces, experiment, parameters):
             # lineage, volume and surfaces are passed by their ids, so the modifications done
             # by _fuse_branch() are kept
             #
+
             _fuse_branch(lineage, volume, surfaces, labels_to_be_fused, division_cell, branch, experiment)
 
         #
