@@ -1062,7 +1062,6 @@ def watershed(path_seeds, path_gradient, path_output, other_options=None, monito
     #
     #
     command_line = path_to_exec + " -seeds " + path_seeds + " -gradient " + path_gradient + " " + path_output
-
     #
     #
     #

@@ -206,12 +206,22 @@ def update_correspondences_dictionary(correspondences, new_false_pairs, uncertai
     print(f"{correspondences=}")
     new_correspondences = {}
     all_uncertain_cells = [x for m in uncertain_false_pairs for x in m]
+    all_new_cells = [x for m in new_false_pairs for x in m]
     for key in correspondences.keys():
-        progeny = tuple(correspondences[key])
         #this will find newly divided cells that we want to merge and use the smaller label
-        if progeny in new_false_pairs:
-            new_correspondences[key] = [np.min(correspondences[key])]
+        daughters = correspondences[key]
+        merge = [n for n in daughters if n in all_new_cells]
+        progeny = tuple(daughters)
+        if len(merge) > 0:
+            
+            if set(merge) == set(daughters):
+                new_progeny = [np.min(daughters)]
+            else:
+                not_in_merge = list(set(daughters).difference(set(merge)) )
+                new_progeny = [np.min(merge)] + not_in_merge
 
+            new_correspondences[key] = new_progeny
+        
         elif [cells for cells in all_uncertain_cells if cells in progeny]:
             cells = [cells for cells in all_uncertain_cells if cells in progeny]
             all_cc_cells = [connected_cells for connected_cells in cc_list if cells[0] in connected_cells]

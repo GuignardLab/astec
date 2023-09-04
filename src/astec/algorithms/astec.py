@@ -2908,7 +2908,7 @@ def astec_process(previous_time, current_time, lineage_tree_information, experim
         merged_segmentation, correspondences = new_membrane_sanity_check(input_segmentation, previous_segmentation, 
                                                                         membranes_df_path, experiment, parameters, 
                                                                         correspondences, current_time)
-        
+        print("new corrrespondences:", correspondences)
         # copy results from temporary folder to main folder
         shutil.copyfile(merged_segmentation, astec_image)
 
@@ -2917,8 +2917,11 @@ def astec_process(previous_time, current_time, lineage_tree_information, experim
         
         lineage_tree_information = _update_volume_properties(lineage_tree_information, astec_image,
                                                          current_time, experiment)
+        
         lineage_tree_information = _update_lineage_properties(lineage_tree_information, correspondences, previous_time,
                                                           current_time, experiment)
+
+
     
     # END OF FIRST MODIFICATION
     ###############
@@ -3520,12 +3523,15 @@ def new_membrane_sanity_check(segmentation_image, previous_segmentation, datafra
         new_false_pairs = [key for key, value in mapper.items() if value in new_for_fusion]
         uncertain_false_pairs =  [key for key, value in mapper.items() if value in uncertain_for_fusion]
         false_pairs_list = new_false_pairs + uncertain_false_pairs
-
+        print(f"{new_false_pairs=}")
+        print(f"{uncertain_false_pairs=}")
+        print(f"{false_pairs_list=}")
         monitoring.to_log_and_console('      .. fusing cell pairs:' + f"{false_pairs_list}", 2)
 
         # merge cells that are seperated by false membranes in the segmentation image
         merged_segmentation, cc_list = membranes.merge_labels_with_false_membranes(false_pairs_list, curr_seg) 
-
+        print(cc_list)
+        print(np.unique(merged_segmentation))
         # output will first be saved in tmp and copied to main in astec_process as final result of membrane sanity check
         voxelsize = merged_segmentation.voxelsize
         imsave(merged_segmentation_name, SpatialImage(merged_segmentation, voxelsize=voxelsize).astype(np.uint16))
@@ -3535,7 +3541,7 @@ def new_membrane_sanity_check(segmentation_image, previous_segmentation, datafra
                                                                           uncertain_false_pairs, 
                                                                           cc_list, 
                                                                           volumes_all_current)
-
+ 
         mem_id_add = passed_new_membranes
         append_df = pd.DataFrame(index = list(range (0, len(mem_id_add))), 
                                 columns = ["mem_id", "cells", "time_point", "mem_lineage_id", 
