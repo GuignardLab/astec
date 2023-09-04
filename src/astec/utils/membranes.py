@@ -203,7 +203,6 @@ def translate_cell_pair_to_previous (cell_pair, reversed_correspondences):
 
 def update_correspondences_dictionary(correspondences, new_false_pairs, uncertain_false_pairs, cc_list, volumes):
     # update correspondences dictionary to match cell_ids of t-1 to new id of merged cells at current t
-    print(f"{correspondences=}")
     new_correspondences = {}
     all_uncertain_cells = [x for m in uncertain_false_pairs for x in m]
     all_new_cells = [x for m in new_false_pairs for x in m]
