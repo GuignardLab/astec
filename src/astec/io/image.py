@@ -1,6 +1,7 @@
 from os.path import exists, splitext, split as psplit, expanduser as expusr
 import os
 import subprocess
+import shutil
 
 from astec.components.spatial_image import SpatialImage
 from astec.components.threading import CompressFile
@@ -114,3 +115,21 @@ def imsave(filename, img):
         write_nii(filename, img)
     else:
         raise IOError("Such image extension not handled yet: %s" % filename)
+
+
+
+
+def imcopy(src, dst):
+
+    """
+    copying a file from the temporary to the main results folder, while making sure that the final result has the specified format
+    Parameters:
+    src (str): string of path of the file that should be copied
+    dst (str): string of path of the destination of the file
+    
+    """
+
+    if src.split(".")[-1] == dst.split(".")[-1]:
+        shutil.copyfile(src, dst)
+    else:
+        subprocess.call(f"copy {src} {dst}", shell=True)

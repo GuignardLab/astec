@@ -18,7 +18,7 @@ import astec.utils.ioproperties as ioproperties
 import astec.utils.diagnosis as diagnosis
 from astec.utils import morphsnakes
 from astec.components.spatial_image import SpatialImage
-from astec.io.image import imread, imsave
+from astec.io.image import imread, imsave, imcopy
 from astec.wrapping import cpp_wrapping
 from astec.utils import membranes
 
@@ -2526,7 +2526,6 @@ def _multiple_label_fusion(input_segmentation, output_segmentation, corresponden
         segmentation[segmentation == min_label] = share_label
         correspondences[mother].remove(min_label)
 
-    imsave(output_segmentation, segmentation)
     return correspondences
 
 
@@ -2893,7 +2892,7 @@ def astec_process(previous_time, current_time, lineage_tree_information, experim
     #
 
     input_segmentation = segmentation_from_selection
-    
+
     ###############
     ###############
     ###############
@@ -2908,18 +2907,18 @@ def astec_process(previous_time, current_time, lineage_tree_information, experim
         merged_segmentation, correspondences = new_membrane_sanity_check(input_segmentation, previous_segmentation, 
                                                                         membranes_df_path, experiment, parameters, 
                                                                         correspondences, current_time)
-        print("new corrrespondences:", correspondences)
-        # copy results from temporary folder to main folder
-        shutil.copyfile(merged_segmentation, astec_image)
-
+        
         #set input for next step to be the merged output of this step
         input_segmentation = merged_segmentation
+
+        # copy results from temporary folder to main folder
+        imcopy(merged_segmentation, astec_image)
         
         lineage_tree_information = _update_volume_properties(lineage_tree_information, astec_image,
-                                                         current_time, experiment)
+                                                          current_time, experiment)
         
         lineage_tree_information = _update_lineage_properties(lineage_tree_information, correspondences, previous_time,
-                                                          current_time, experiment)
+                                                           current_time, experiment)
 
 
     
@@ -2951,10 +2950,10 @@ def astec_process(previous_time, current_time, lineage_tree_information, experim
         output_segmentation = common.add_suffix(astec_name, '_watershed_after_seeds_fusion',
                                                 new_dirname=experiment.astec_dir.get_tmp_directory(),
                                                 new_extension=experiment.default_image_suffix)
+        
         correspondences = _multiple_label_fusion(input_segmentation, output_segmentation, correspondences,
                                                  labels_to_be_fused)
         input_segmentation = output_segmentation
-
     #
     # Morphosnakes
     #
@@ -3005,17 +3004,15 @@ def astec_process(previous_time, current_time, lineage_tree_information, experim
 
     #
     # copy the last segmentation image (in the auxiliary directory) as the result
-    #
-    shutil.copyfile(input_segmentation, astec_image)
+    imcopy(input_segmentation, astec_image)
 
-    #
     # update volumes and lineage
     #
     lineage_tree_information = _update_volume_properties(lineage_tree_information, astec_image,
-                                                         current_time, experiment)
+                                                         current_time, experiment) 
     lineage_tree_information = _update_lineage_properties(lineage_tree_information, correspondences, previous_time,
                                                           current_time, experiment)
-
+    
     return lineage_tree_information
 
 
@@ -3526,7 +3523,7 @@ def new_membrane_sanity_check(segmentation_image, previous_segmentation, datafra
         monitoring.to_log_and_console('      .. fusing cell pairs:' + f"{false_pairs_list}", 2)
 
         # merge cells that are seperated by false membranes in the segmentation image
-        merged_segmentation, cc_list = membranes.merge_labels_with_false_membranes(false_pairs_list, curr_seg) 
+        merged_segmentation, cc_list = membranes.merge_labels_with_false_membranes(false_pairs_list, curr_seg)
         # output will first be saved in tmp and copied to main in astec_process as final result of membrane sanity check
         voxelsize = merged_segmentation.voxelsize
         imsave(merged_segmentation_name, SpatialImage(merged_segmentation, voxelsize=voxelsize).astype(np.uint16))
@@ -3536,7 +3533,7 @@ def new_membrane_sanity_check(segmentation_image, previous_segmentation, datafra
                                                                           uncertain_false_pairs, 
                                                                           cc_list, 
                                                                           volumes_all_current)
- 
+        print(f"{new_correspondences=}")
         mem_id_add = passed_new_membranes
         append_df = pd.DataFrame(index = list(range (0, len(mem_id_add))), 
                                 columns = ["mem_id", "cells", "time_point", "mem_lineage_id", 
