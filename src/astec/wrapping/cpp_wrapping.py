@@ -1331,7 +1331,7 @@ def arithmetic_operation(path_first_input, path_second_input, path_output, other
     command_line = path_to_exec + " " + path_first_input + " " + path_second_input + " " + path_output
     if other_options is not None:
         command_line += " " + other_options
-
+        
     _launch_inline_cmd(command_line, monitoring=monitoring)
 
     return

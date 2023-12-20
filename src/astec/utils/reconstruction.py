@@ -1009,6 +1009,27 @@ def build_reconstructed_image(current_time, experiment, parameters, previous_tim
     #
     if parameters.outer_contour_enhancement is False:
         contour_image = None
+        
+    ######
+    #added searching for contour images in <PATH_EMBRYO>/CONTOUR/CONTOUR_<EXP_CONTOUR>/ - Gesa
+    elif parameters.outer_contour_enhancement == "from_contour_image":
+
+        # get contour image
+        #
+        contour_dir = experiment.contour_dir.get_directory(0)
+        contour_name = experiment.contour_dir.get_image_name(current_time)
+        contour_image = common.find_file(contour_dir, contour_name, file_type='image', callfrom=proc, local_monitoring=monitoring)
+
+        if contour_image is None:
+            monitoring.to_log_and_console("    .. contour image '" + contour_name + "' not found in '" + str(contour_dir) + "'", 2)
+            return None
+        contour_image = os.path.join(contour_dir, contour_image)
+        monitoring.to_log_and_console(f"    .. getting contour image from: '" + contour_image + "'", 2)
+
+        #here I need to implement checking the bit_depth of the image to adjust the parameter contour_image_bytes (1 for 8 bit, 2 for 16 bit)
+        contour_image_bytes = 2
+    ######
+
     else:
         local_suffix = parameters.outercontour_suffix + "_outercontour"
         contour_image = common.add_suffix(input_image, local_suffix,

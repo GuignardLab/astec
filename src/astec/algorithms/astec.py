@@ -2606,6 +2606,8 @@ def astec_process(previous_time, current_time, lineage_tree_information, experim
     membrane_image = reconstruction.build_reconstructed_image(current_time, experiment,
                                                               parameters.membrane_reconstruction,
                                                               previous_time=previous_time)
+    print(f"{membrane_image=}")
+
     if membrane_image is None:
         monitoring.to_log_and_console("    .. " + proc + ": no membrane image was found/built for time "
                                       + str(current_time), 2)
@@ -2694,6 +2696,7 @@ def astec_process(previous_time, current_time, lineage_tree_information, experim
     # original astec: there is no smoothing of the membrane image
     #
     if not os.path.isfile(segmentation_from_previous) or monitoring.forceResultsToBeBuilt is True:
+        print(f"input for watershed is: {membrane_image=}")
         mars.watershed(deformed_seeds, membrane_image, segmentation_from_previous, parameters)
 
     #
@@ -2893,6 +2896,34 @@ def astec_process(previous_time, current_time, lineage_tree_information, experim
 
     input_segmentation = segmentation_from_selection
 
+    
+
+
+    #
+    # multiple label processing
+    #
+
+    labels_to_be_fused = []
+    for key, value in correspondences.items():
+        if len(value) >= 3:
+            labels_to_be_fused.append([key, value])
+    if len(labels_to_be_fused) > 0:
+        monitoring.to_log_and_console('    3-seeds fusion', 2)
+        monitoring.to_log_and_console('      seeds to be fused: ' + str(labels_to_be_fused), 2)
+        #
+        # bounding boxes have been defined with the watershed obtained with seeds issued
+        # from the previous segmentation
+        # borders may have changed, so recompute the bounding boxes
+        #
+        output_segmentation = common.add_suffix(astec_name, '_watershed_after_seeds_fusion',
+                                                new_dirname=experiment.astec_dir.get_tmp_directory(),
+                                                new_extension=experiment.default_image_suffix)
+        
+        correspondences = _multiple_label_fusion(input_segmentation, output_segmentation, correspondences,
+                                                 labels_to_be_fused)
+        input_segmentation = output_segmentation
+
+
     ###############
     ###############
     ###############
@@ -2929,31 +2960,6 @@ def astec_process(previous_time, current_time, lineage_tree_information, experim
     ###############
 
 
-
-
-    #
-    # multiple label processing
-    #
-
-    labels_to_be_fused = []
-    for key, value in correspondences.items():
-        if len(value) >= 3:
-            labels_to_be_fused.append([key, value])
-    if len(labels_to_be_fused) > 0:
-        monitoring.to_log_and_console('    3-seeds fusion', 2)
-        monitoring.to_log_and_console('      seeds to be fused: ' + str(labels_to_be_fused), 2)
-        #
-        # bounding boxes have been defined with the watershed obtained with seeds issued
-        # from the previous segmentation
-        # borders may have changed, so recompute the bounding boxes
-        #
-        output_segmentation = common.add_suffix(astec_name, '_watershed_after_seeds_fusion',
-                                                new_dirname=experiment.astec_dir.get_tmp_directory(),
-                                                new_extension=experiment.default_image_suffix)
-        
-        correspondences = _multiple_label_fusion(input_segmentation, output_segmentation, correspondences,
-                                                 labels_to_be_fused)
-        input_segmentation = output_segmentation
     #
     # Morphosnakes
     #

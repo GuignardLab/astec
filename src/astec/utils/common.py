@@ -1497,6 +1497,71 @@ class FuseSubdirectory(GenericSubdirectory):
         return d
 
 #
+
+####### modification by Gesa
+# add section for contour subdirectory
+# based on FUSION sub-directory (just above)
+#
+#
+
+
+class ContourSubdirectory(GenericSubdirectory):
+
+    def __init__(self):
+        GenericSubdirectory.__init__(self)
+        if "doc" not in self.__dict__:
+            self.doc = {}
+        self._main_directory = 'CONTOUR'
+        doc = "\t suffix to built fusion image subdirectory name, that is\n"
+        doc += "\t <PATH_EMBRYO>/CONTOUR/CONTOUR_<EXP_CONTOUR>/\n"
+        self.doc['EXP_CONTOUR'] = doc
+        self._sub_directory_prefix = 'CONTOUR_'
+        self._sub_directory_suffix = 'RELEASE'
+        self._file_suffix = "_contour"
+
+        self._xzsection_directory = list()
+
+    def print_configuration(self, spaces=0):
+        self._set_directory()
+        print("  - subpath/to/contour is")
+        GenericSubdirectory.print_configuration(self)
+        return
+
+    def write_configuration_in_file(self, logfile, spaces=0):
+        self._set_directory()
+        logfile.write("  - subpath/to/contour is \n")
+        GenericSubdirectory.write_configuration_in_file(self, logfile)
+
+    def print_parameters(self):
+        self.varprint('EXP_CONTOUR', self._sub_directory_suffix, self.doc['EXP_CONTOUR'])
+        return
+
+    def write_parameters_in_file(self, logfile):
+        self.varwrite(logfile, 'EXP_CONTOUR', self._sub_directory_suffix, self.doc['EXP_CONTOUR'])
+        return
+
+    def update_from_parameters(self, parameters):
+        if hasattr(parameters, 'EXP_CONTOUR'):
+            if parameters.EXP_CONTOUR is not None:
+                self._sub_directory_suffix = parameters.EXP_CONTOUR
+        return
+
+    def set_xzsection_directory(self, time_value):
+        self._xzsection_directory = list()
+        t = "XZSECTION_" + self.timepoint_to_str(time_value)
+        for c in range(self.get_number_directories()):
+            d = os.path.join(self.get_directory(c), t)
+            self._xzsection_directory.append(d)
+        return
+
+    def get_xzsection_directory(self, channel_id=0):
+        d = _get_directory(self._xzsection_directory, channel_id)
+        if not os.path.isdir(d):
+            os.makedirs(d)
+        return d
+
+
+
 #
 # INTRAREG sub-directory
 #
@@ -1742,6 +1807,9 @@ class Experiment(PrefixedParameter):
         #
         self.rawdata_dir = RawdataSubdirectory()
         self.fusion_dir = FuseSubdirectory()
+
+        #added contour dir by Gesa
+        self.contour_dir = ContourSubdirectory()
         self.mars_dir = MarsSubdirectory()
         self.astec_dir = AstecSubdirectory()
         self.post_dir = PostSubdirectory()
@@ -1799,6 +1867,9 @@ class Experiment(PrefixedParameter):
         self.rawdata_dir.print_configuration()
         print('- fusion directory is')
         self.fusion_dir.print_configuration()
+        #added contour - Gesa
+        print('- contour directory is')
+        self.contour_dir.print_configuration()
         print('- mars directory is')
         self.mars_dir.print_configuration()
         print('- segmentation directory is')
@@ -1846,6 +1917,9 @@ class Experiment(PrefixedParameter):
                 self.rawdata_dir.write_configuration_in_file(logfile)
                 logfile.write('- fusion directory is \n')
                 self.fusion_dir.write_configuration_in_file(logfile)
+                #added contour - Gesa
+                logfile.write('- contour directory is \n')
+                self.contour_dir.write_configuration_in_file(logfile)
                 logfile.write('- mars directory is \n')
                 self.mars_dir.write_configuration_in_file(logfile)
                 logfile.write('- segmentation directory is \n')
@@ -1889,6 +1963,9 @@ class Experiment(PrefixedParameter):
             self.rawdata_dir.print_parameters()
         if directories is None or (type(directories) == list and 'fusion' in directories):
             self.fusion_dir.print_parameters()
+        #added contour - Gesa
+        if directories is None or (type(directories) == list and 'contour' in directories):
+            self.contour_dir.print_parameters()
         if directories is None or (type(directories) == list and 'mars' in directories):
             self.mars_dir.print_parameters()
         if directories is None or (type(directories) == list and 'astec' in directories):
@@ -2119,6 +2196,8 @@ class Experiment(PrefixedParameter):
 
         self.rawdata_dir.update_from_parameters(parameters)
         self.fusion_dir.update_from_parameters(parameters)
+        #added contour - Gesa
+        self.contour_dir.update_from_parameters(parameters)
         self.mars_dir.update_from_parameters(parameters)
         self.astec_dir.update_from_parameters(parameters)
         self.post_dir.update_from_parameters(parameters)
@@ -2240,6 +2319,8 @@ class Experiment(PrefixedParameter):
         # set file prefix
         #
         self.fusion_dir.set_file_prefix(embryo_name)
+        #added contour - Gesa
+        self.contour_dir.set_file_prefix(embryo_name)
         self.mars_dir.set_file_prefix(embryo_name)
         self.astec_dir.set_file_prefix(embryo_name)
         self.post_dir.set_file_prefix(embryo_name)
@@ -2258,6 +2339,8 @@ class Experiment(PrefixedParameter):
         #
         self.rawdata_dir.set_parent_directory(embryo_path)
         self.fusion_dir.set_parent_directory(embryo_path)
+        #added contour - Gesa
+        self.contour_dir.set_parent_directory(embryo_path)
         self.mars_dir.set_parent_directory(embryo_path)
         self.astec_dir.set_parent_directory(embryo_path)
         self.post_dir.set_parent_directory(embryo_path)
@@ -2298,6 +2381,8 @@ class Experiment(PrefixedParameter):
             return
         self._time_digits_for_filename = time_digits
         self.fusion_dir.set_time_digits_for_filename(time_digits)
+        #added contour - Gesa
+        self.contour_dir.set_time_digits_for_filename(time_digits)
         self.mars_dir.set_time_digits_for_filename(time_digits)
         self.astec_dir.set_time_digits_for_filename(time_digits)
         self.post_dir.set_time_digits_for_filename(time_digits)
