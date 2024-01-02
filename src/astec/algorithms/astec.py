@@ -2526,6 +2526,10 @@ def _multiple_label_fusion(input_segmentation, output_segmentation, corresponden
         segmentation[segmentation == min_label] = share_label
         correspondences[mother].remove(min_label)
 
+    #save new image to output_segmentation so it can be used downstream (added by Gesa 02.01.24)
+    imsave(output_segmentation, SpatialImage(segmentation))
+        
+
     return correspondences
 
 
@@ -2921,6 +2925,9 @@ def astec_process(previous_time, current_time, lineage_tree_information, experim
         
         correspondences = _multiple_label_fusion(input_segmentation, output_segmentation, correspondences,
                                                  labels_to_be_fused)
+        
+        #####why are we not returning a new output image????
+
         input_segmentation = output_segmentation
 
 
