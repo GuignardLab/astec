@@ -9,6 +9,7 @@ from scipy import ndimage as nd
 import copy
 import pandas as pd
 from itertools import combinations
+from skimage.morphology import h_minima, ball
 
 import astec.utils.common as common
 import astec.utils.ace as ace
@@ -773,6 +774,277 @@ def build_seeds_from_previous_segmentation(label_image, output_image, parameters
 
     return
 
+#
+#
+#############
+#############
+#############
+
+#       start of 3rd big nodification by Gesa (Feb 2024):
+#       this modification aims at restructuring the way h-values are determined 
+
+#############
+#############
+#############
+
+
+#new function:
+def calculate_h_by_measuring_h_range_for_two_seeds_in_all_cells(raw_intensity_image, intensity_seed_image, segmentation_image, path_to_previous_seeds, output_path, tau = 0.1):
+    
+    """
+    raw_intensity_image = current time raw intensity image
+    int_image_for_h_min = intensity image after blurring
+    segmentation_image = eroded and transformed segmentation from t-1
+    output_path = path where I wanna save the full seed image
+    
+    
+    """
+
+    # TO DO:
+    # check if result image already existes, if yes skip everything?
+    #load images:
+    intensity_image = imread(raw_intensity_image)
+    intensity_seed_image = imread(intensity_seed_image)
+    segmentation_image  = imread(segmentation_image)
+    #if the segmentation_image has a background of 1, we need to set it to 0 for the following to work smoothly
+    #find background label as label with the biggest volume
+    # vol_0 = (segmentation_image == 0).sum()
+    # vol_1 = (segmentation_image == 1).sum()
+    vol_0, vol_1 = nd.sum(np.ones_like(segmentation_image), segmentation_image, index = [0, 1])
+    print("volumes:", vol_0, vol_1)
+    if vol_1 > vol_0:
+        segmentation_image[segmentation_image == 1] = 0
+        # segmentation_image = np.where(segmentation_image == 1, 0, segmentation_image)
+
+
+    #create bounding boxes for all labels
+    # TODO 
+    # dilate bounding boxes
+    b_boxes = nd.find_objects(segmentation_image)
+    #calculate the dynamic range as the range of signal intensity between 1 and 99%iles
+    dr = np.percentile(intensity_image, 99) - np.percentile(intensity_image, 1) # do in want to use this image, or the seed_int im??
+    abs_tau = int(np.round(tau*dr)) #if tau is in decimals, otherwise tau/100 # built-in function round gives out int
+    print(f"{dr=}", f"{abs_tau=}")
+    results_dict = {} #final result of selected value and wanted number of seeds - label: [h_value, n_seeds]
+    # TODO do I want to turn it around? then we would use a.setdefault(2, []).append(100)
+    # but then we could check as easily whether we already calculated a specific h value
+    all_h_n_seeds = {} #
+    correspondences = {}
+    full_seed_image = np.zeros_like(segmentation_image)
+    print(f"{b_boxes=}")
+    cell_count = 0
+    previous_seeds = None
+    for i, box in enumerate(b_boxes):
+
+        if box is not None:
+            cell_count += 1
+            print(f"{cell_count=}")
+            # temporary result: number of seeds for each h value in a dictionary
+            h_n_seeds = {} #h_value: n_seeds in target cell
+            # label of mother cell
+            label = i + 1
+            print(f"{label=}")
+            # create a intensity and segmentation sub-images to cut computation time
+            sub_im = intensity_seed_image[box]
+            seg_sub_im = segmentation_image[box]
+            # stepsize = half the length between 1 and dr, first h in the middle of 1 and dr
+            stepsize = (dr - 1) * 0.5
+            h = int(np.round((dr - stepsize)))
+            h_min = h_minima(sub_im, h = h)
+            labels, _ = nd.label(h_min) # underscore because value isnt needed
+            num_seeds = count_seeds_in_cell_area(labels, seg_sub_im, label) 
+            h_n_seeds[h] = num_seeds
+            print(f"{h=}", f"{num_seeds=}")
+            
+            #these parameters prevent an endless loop if two adjacent h values skip n_seeds = 2
+            h_lower_before = False # I can use the dictionary keys here
+            h_higher_before = False
+            #this defines the accuracy with which we search, in this case 1/10th of tau, rounded to the next highest integer
+            minimum_step = int(np.round(abs_tau / 10)) # make it a proportion of dr
+            if minimum_step < 1:
+                minimum_step = 1
+            while (num_seeds != 2):
+                if num_seeds < 2: 
+                    # TODO
+                    # review this if
+                    stepsize = stepsize / 2
+                    if stepsize < minimum_step:
+                        stepsize = minimum_step
+                    print("position 1")
+                    print(f"{stepsize=}")
+                    h = int(np.round(h - stepsize))
+                    if (h > 0) and (h != h_lower_before):
+                        h_min = h_minima(sub_im, h = h)
+                        labels, n = nd.label(h_min)
+                        num_seeds = count_seeds_in_cell_area(labels, seg_sub_im, label)
+                        h_n_seeds[h] = num_seeds
+                        print(f"{h_lower_before=}", f"{h=}", f"{num_seeds=}")
+                        h_lower_before = h
+                    else: 
+                        break
+                    
+                elif num_seeds > 2:
+                    stepsize = stepsize / 2
+                    if stepsize < minimum_step:
+                        stepsize = minimum_step
+                    print("position 2", f"{stepsize=}")
+                    h = int(np.round(h + stepsize))
+                    if (h < dr) and (h != h_higher_before):
+                        print(f"{h=}")
+                        h_min = h_minima(sub_im, h = h)
+                        labels, n = nd.label(h_min)
+                        num_seeds = count_seeds_in_cell_area(labels, seg_sub_im, label)
+                        print(f"{h=}", f"{num_seeds=}")
+                        h_n_seeds[h] = num_seeds
+                        h_higher_before = h
+                    else:
+                        break
+                    
+                    
+            if num_seeds == 2:
+                print("position 3")
+                stepsize = minimum_step
+                h_former = h
+                while num_seeds == 2:
+                # find lower end
+                    h_low = int(np.round(h_former - stepsize))
+                    if h_low > 0:
+                        h_min = h_minima(sub_im, h = h_low)
+                        labels, n = nd.label(h_min)
+                        num_seeds = count_seeds_in_cell_area(labels, seg_sub_im, label)
+                        h_former = h_low
+                        h_n_seeds[h_low] = num_seeds
+                        print(f"{h_low=}", f"{num_seeds=}")
+                    else:
+                        break
+                    
+                h_former = h
+                num_seeds = 2
+                while num_seeds == 2:
+                    # find upper end
+                    h_up = int(np.round(h_former + stepsize))
+                    if h_up < dr:
+                        h_min = h_minima(sub_im, h = h_up)
+                        labels, n = nd.label(h_min)
+                        num_seeds = count_seeds_in_cell_area(labels, seg_sub_im, label)
+                        h_n_seeds[h_up] = num_seeds
+                        h_former = h_up
+                        print("mapping upper end", f"{h_up=}", f"{num_seeds=}")
+                    else:
+                        break
+                        
+            #after all calculations find the appropriate h value that should be used (and determine the number of seeds)
+            h_value, n_seeds = find_appropriate_number_of_seeds(h_n_seeds, abs_tau)
+            results_dict[label] = [h_value, n_seeds]
+            max_label = max(np.unique(segmentation_image))
+            
+            # TODO correct for seeds that are in and outside of the cell --> see paper
+            if n_seeds == 1:
+                print(f"{h_value=}", f"{n_seeds=}")
+                print("adding 1 seed")
+                #at this point I start putting together a seed image for the watershed, so I dont have to loop through all cells again later
+                #run h-min with chosen h in sub_im, pick seeds inside cell, add to output array
+                final_h_min = h_minima(sub_im, h = h_value)
+                labels, n = nd.label(final_h_min)
+                #change all seeds in cell to label of mother cell so we have coherent labels
+                labels[seg_sub_im != label] = 0
+                full_seed_image[box] = np.where(labels > 0, label, full_seed_image[box])
+                correspondences[label] = label
+                    
+            elif n_seeds == 2: # that means the cells has divided
+                print("adding 2 seeds")
+                #run h-min with chosen h in sub_im, pick seeds inside cell, add to output array
+                final_h_min = h_minima(sub_im, h = h_value)
+                labels, n = nd.label(final_h_min)
+                # find new labels for the two daughter cells, to start a new lineage
+                new_labels = [max_label + 1, max_label + 2]
+                max_label = max_label + 2
+                correspondences[label] = new_labels
+                # set everything outside of the cell to 0
+                labels[seg_sub_im != label] = 0
+
+                
+                # rename the seeds already in labels and then place them into the full seed image
+                labels_in_cell = list(np.unique(labels > 0))
+                print(f"{labels_in_cell=}")
+
+                for old_label in enumerate(labels_in_cell):
+                    labels = np.where(labels == old_label, new_labels[i], labels)
+                #then map the new labels onto the old for coherent labeling
+                full_seed_image[box] = np.where(labels > 0, labels, full_seed_image[box])
+                
+                #TO DO
+                #test if n_seeds == actual amount of labels, otherwise spit out an error
+
+    
+            else: # in case there are no seeds, we retrieve the seed from previous and assume the cdell has not divided
+                print("adding 1 seed from previous")
+                monitoring.to_log_and_console("       Processing unseeded cell: retrieving seed from previous for cell " + str(label), 2)
+
+                if previous_seeds is None:
+                    previous_seeds = imread(path_to_previous_seeds)
+                full_seed_image[box] = np.where(previous_seeds[box] == label, previous_seeds[box], full_seed_image[box])
+
+            all_h_n_seeds[label] = h_n_seeds
+
+
+    # TODO add outside seed --> take 1 from previous seed image
+            
+    print("seeds: ", np.unique(full_seed_image))
+    print("input: ", np.unique(seg_sub_im))
+    # save full_seed_image after all cells were processed in output_path
+    imsave(output_path, SpatialImage(full_seed_image))
+    # TO DO: return all tested h-values and the numbers of seeds for the vol decrease correction
+    return results_dict, all_h_n_seeds, correspondences           
+
+def count_seeds_in_cell_area(labels, cell_area, label):
+    #only count seeds in the area of where the cell is predicted to be and not in the whole bounding box
+    #remove 0 from the list, so we only count seeds
+    #make a list with all labels
+    #make a list with labels to be removed
+    #subtract the list
+    #calc len of list
+
+    labels_list = [x for x in np.unique(np.where(cell_area == label, labels, 0)) if x != 0]
+    count = len(labels_list)
+    return count
+
+def find_appropriate_number_of_seeds(h_n_seeds_dictionary, abs_tau):
+    #for each label: calculate the span of h-values that result in two seeds and compare it to tau (abs)
+    #find h_bottom and h_top for 2 seeds
+    
+    two_seeds_list = [h for h, n in h_n_seeds_dictionary.items() if n == 2]
+    if len(two_seeds_list) > 0:
+        h_bottom = min(two_seeds_list)
+        h_top = max(two_seeds_list)
+        h_diff = h_top - h_bottom
+    else:
+        h_diff = 0
+    
+    if h_diff > abs_tau:
+        n_seeds = 2
+        h_value = h_top
+    else:
+        n_seeds = 1
+        one_seed_list = [h for h, n in h_n_seeds_dictionary.items() if n == 1]
+        if len(one_seed_list) > 0:
+            h_value = max(one_seed_list)
+        else:
+            print("case of 1 seeds but no correct h", f"{h_n_seeds_dictionary=}")
+            #test if any h results in more than 0 seeds, otherwise note this cell for getting a seed from previous?\
+            h_n_seeds_dictionary_no_zeros = {key: value for key, value in h_n_seeds_dictionary.items() if value > 0}
+            if len(h_n_seeds_dictionary_no_zeros) > 0:
+                h_value = min(h_n_seeds_dictionary_no_zeros, key=h_n_seeds_dictionary_no_zeros.get)
+            else:
+                h_value = min(h_n_seeds_dictionary, key=h_n_seeds_dictionary.get)
+                n_seeds = 0
+
+    return h_value, n_seeds
+
+
+
+
+
 
 ########################################################################################
 #  newvalue = [current_time * 10**time_digits + i for i in value]
@@ -784,214 +1056,214 @@ def build_seeds_from_previous_segmentation(label_image, output_image, parameters
 # compute the seeds for a range of 'h' values
 #
 
-def _extract_seeds_in_cell(parameters):
-    """
-    Return the seeds in seeds_sub_image stricly included in cell c in cell_segmentation
-    """
-    #
-    # cell_segmentation is a sub-image (extracted from the propagated segmentation at t-1) with 'c' for the cell
-    # and 1 for the background
-    # seeds_sub_image is a sub-image of the extracted seeds
-    # c is the cell label
-    #
-    cell_segmentation, seeds_sub_image, c = parameters
+# def _extract_seeds_in_cell(parameters):
+#     """
+#     Return the seeds in seeds_sub_image stricly included in cell c in cell_segmentation
+#     """
+#     #
+#     # cell_segmentation is a sub-image (extracted from the propagated segmentation at t-1) with 'c' for the cell
+#     # and 1 for the background
+#     # seeds_sub_image is a sub-image of the extracted seeds
+#     # c is the cell label
+#     #
+#     cell_segmentation, seeds_sub_image, c = parameters
 
-    #
-    # check whether the cell_segmentation has only two labels
-    # it occurs when the cell is a nxmxp cube
-    #
-    np_unique = np.unique(cell_segmentation)
-    if len(np_unique) != 2:
-        monitoring.to_log_and_console('       .. weird, sub-image of cell ' + str(c) + ' contains '
-                                      + str(len(np_unique)) + ' labels = ' + str(np_unique), 2)
+#     #
+#     # check whether the cell_segmentation has only two labels
+#     # it occurs when the cell is a nxmxp cube
+#     #
+#     np_unique = np.unique(cell_segmentation)
+#     if len(np_unique) != 2:
+#         monitoring.to_log_and_console('       .. weird, sub-image of cell ' + str(c) + ' contains '
+#                                       + str(len(np_unique)) + ' labels = ' + str(np_unique), 2)
 
-    #
-    # get the seeds that intersect the cell 'c'
-    #
-    labels = list(np.unique(seeds_sub_image[cell_segmentation == c]))
+#     #
+#     # get the seeds that intersect the cell 'c'
+#     #
+#     labels = list(np.unique(seeds_sub_image[cell_segmentation == c]))
 
-    #
-    # remove 0 label (correspond to non-minima regions)
-    # Note: check whether 0 is inside labels list (?)
-    #
-    if 0 in labels:
-        labels.remove(0)
+#     #
+#     # remove 0 label (correspond to non-minima regions)
+#     # Note: check whether 0 is inside labels list (?)
+#     #
+#     if 0 in labels:
+#         labels.remove(0)
 
-    nb = len(labels)
+#     nb = len(labels)
 
-    return nb, labels, c
+#     return nb, labels, c
 
 
-def _cell_based_h_minima(first_segmentation, cells, bounding_boxes, image_for_seed, experiment, parameters,
-                         nprocessors=26):
-    """
-    Computes the seeds (h-minima) for a range of h values
-    Seeds are labeled, and only seeds entirely contained in one single cell are kept
-    (seeds that superimposed two cells, or more, are rejected).
+# def _cell_based_h_minima(first_segmentation, cells, bounding_boxes, image_for_seed, experiment, parameters,
+#                          nprocessors=26):
+#     """
+#     Computes the seeds (h-minima) for a range of h values
+#     Seeds are labeled, and only seeds entirely contained in one single cell are kept
+#     (seeds that superimposed two cells, or more, are rejected).
 
-    :param first_segmentation: watershed based segmentation where the seeds are the cells from the previous,
-        eroded and then deformed
-    :param cells:
-    :param bounding_boxes:
-    :param image_for_seed:
-    :param experiment:
-    :param parameters:
-    :param nprocessors:
-    :return:
-    """
+#     :param first_segmentation: watershed based segmentation where the seeds are the cells from the previous,
+#         eroded and then deformed
+#     :param cells:
+#     :param bounding_boxes:
+#     :param image_for_seed:
+#     :param experiment:
+#     :param parameters:
+#     :param nprocessors:
+#     :return:
+#     """
 
-    proc = '_cell_based_h_minima'
+#     proc = '_cell_based_h_minima'
 
-    #
-    # parameter type checking
-    #
+#     #
+#     # parameter type checking
+#     #
 
-    if not isinstance(experiment, common.Experiment):
-        monitoring.to_log_and_console(str(proc) + ": unexpected type for 'experiment' variable: "
-                                      + str(type(experiment)))
-        sys.exit(1)
+#     if not isinstance(experiment, common.Experiment):
+#         monitoring.to_log_and_console(str(proc) + ": unexpected type for 'experiment' variable: "
+#                                       + str(type(experiment)))
+#         sys.exit(1)
 
-    if not isinstance(parameters, AstecParameters):
-        monitoring.to_log_and_console(str(proc) + ": unexpected type for 'parameters' variable: "
-                                      + str(type(parameters)))
-        sys.exit(1)
+#     if not isinstance(parameters, AstecParameters):
+#         monitoring.to_log_and_console(str(proc) + ": unexpected type for 'parameters' variable: "
+#                                       + str(type(parameters)))
+#         sys.exit(1)
 
-    #
-    # h-minima extraction with h = max value
-    # the difference image is kept for further computation
-    #
-    h_max = parameters.watershed_seed_hmin_max_value
-    wparam = mars.WatershedParameters(obj=parameters)
-    wparam.seed_hmin = h_max
-    h_min = h_max
+#     #
+#     # h-minima extraction with h = max value
+#     # the difference image is kept for further computation
+#     #
+#     h_max = parameters.watershed_seed_hmin_max_value
+#     wparam = mars.WatershedParameters(obj=parameters)
+#     wparam.seed_hmin = h_max
+#     h_min = h_max
 
-    input_image = image_for_seed
-    unmasked_seed_image = common.add_suffix(image_for_seed, "_unmasked_seed_h" + str('{:03d}'.format(h_min)),
-                                            new_dirname=experiment.astec_dir.get_tmp_directory(),
-                                            new_extension=experiment.default_image_suffix)
-    seed_image = common.add_suffix(image_for_seed, "_seed_h" + str('{:03d}'.format(h_min)),
-                                   new_dirname=experiment.astec_dir.get_tmp_directory(),
-                                   new_extension=experiment.default_image_suffix)
-    difference_image = common.add_suffix(image_for_seed, "_seed_diff_h" + str('{:03d}'.format(h_min)),
-                                         new_dirname=experiment.astec_dir.get_tmp_directory(),
-                                         new_extension=experiment.default_image_suffix)
+#     input_image = image_for_seed
+#     unmasked_seed_image = common.add_suffix(image_for_seed, "_unmasked_seed_h" + str('{:03d}'.format(h_min)),
+#                                             new_dirname=experiment.astec_dir.get_tmp_directory(),
+#                                             new_extension=experiment.default_image_suffix)
+#     seed_image = common.add_suffix(image_for_seed, "_seed_h" + str('{:03d}'.format(h_min)),
+#                                    new_dirname=experiment.astec_dir.get_tmp_directory(),
+#                                    new_extension=experiment.default_image_suffix)
+#     difference_image = common.add_suffix(image_for_seed, "_seed_diff_h" + str('{:03d}'.format(h_min)),
+#                                          new_dirname=experiment.astec_dir.get_tmp_directory(),
+#                                          new_extension=experiment.default_image_suffix)
 
-    if not os.path.isfile(seed_image) or not os.path.isfile(difference_image) \
-            or monitoring.forceResultsToBeBuilt is True:
-        #
-        # computation of labeled regional minima
-        # -> keeping the 'difference' image allows to speed up the further computation
-        #    for smaller values of h
-        #
-        mars.build_seeds(input_image, difference_image, unmasked_seed_image, experiment, wparam)
-        #
-        # select only the 'seeds' that are totally included in cells
-        #
-        cpp_wrapping.mc_mask_seeds(unmasked_seed_image, first_segmentation, seed_image)
+#     if not os.path.isfile(seed_image) or not os.path.isfile(difference_image) \
+#             or monitoring.forceResultsToBeBuilt is True:
+#         #
+#         # computation of labeled regional minima
+#         # -> keeping the 'difference' image allows to speed up the further computation
+#         #    for smaller values of h
+#         #
+#         mars.build_seeds(input_image, difference_image, unmasked_seed_image, experiment, wparam)
+#         #
+#         # select only the 'seeds' that are totally included in cells
+#         #
+#         cpp_wrapping.mc_mask_seeds(unmasked_seed_image, first_segmentation, seed_image)
 
-    #
-    # collect the number of seeds found for each cell
-    #
-    #
+#     #
+#     # collect the number of seeds found for each cell
+#     #
+#     #
 
-    n_seeds = {}
-    parameter_seeds = {}
+#     n_seeds = {}
+#     parameter_seeds = {}
 
-    checking = True
+#     checking = True
 
-    while (h_min >= parameters.watershed_seed_hmin_min_value) and checking:
+#     while (h_min >= parameters.watershed_seed_hmin_min_value) and checking:
 
-        #
-        # for each cell,
-        # 2. build a sub-image (corresponding to the bounding box) from the propagated segmentation from t-1
-        #    with the cell labeled at 'c' and the rest at '1'
-        # 3. build a sub-image from the seeds extracted at h
-        #
+#         #
+#         # for each cell,
+#         # 2. build a sub-image (corresponding to the bounding box) from the propagated segmentation from t-1
+#         #    with the cell labeled at 'c' and the rest at '1'
+#         # 3. build a sub-image from the seeds extracted at h
+#         #
 
-        im_segmentation = imread(first_segmentation)
-        im_seed = imread(seed_image)
-        mapping = []
+#         im_segmentation = imread(first_segmentation)
+#         im_seed = imread(seed_image)
+#         mapping = []
 
-        for c in cells:
-            cell_segmentation = np.ones_like(im_segmentation[bounding_boxes[c]])
-            cell_segmentation[im_segmentation[bounding_boxes[c]] == c] = c
-            mapping.append((cell_segmentation, im_seed[bounding_boxes[c]], c))
+#         for c in cells:
+#             cell_segmentation = np.ones_like(im_segmentation[bounding_boxes[c]])
+#             cell_segmentation[im_segmentation[bounding_boxes[c]] == c] = c
+#             mapping.append((cell_segmentation, im_seed[bounding_boxes[c]], c))
 
-        del im_seed
-        del im_segmentation
+#         del im_seed
+#         del im_segmentation
 
-        pool = multiprocessing.Pool(processes=nprocessors)
-        outputs = pool.map(_extract_seeds_in_cell, mapping)
-        pool.close()
-        pool.terminate()
+#         pool = multiprocessing.Pool(processes=nprocessors)
+#         outputs = pool.map(_extract_seeds_in_cell, mapping)
+#         pool.close()
+#         pool.terminate()
 
-        #
-        # outputs are
-        # - nb: the number of labels/seeds that are totally inside cell 'c'
-        # - labels: the list of these labels
-        # - c: the id of the cell
-        #
-        returned_n_seeds = []
-        for nb, labels, c in outputs:
-            returned_n_seeds.append(nb)
-            n_seeds.setdefault(c, []).append(nb)
-            parameter_seeds.setdefault(c, []).append([h_min, parameters.seed_reconstruction.intensity_sigma])
+#         #
+#         # outputs are
+#         # - nb: the number of labels/seeds that are totally inside cell 'c'
+#         # - labels: the list of these labels
+#         # - c: the id of the cell
+#         #
+#         returned_n_seeds = []
+#         for nb, labels, c in outputs:
+#             returned_n_seeds.append(nb)
+#             n_seeds.setdefault(c, []).append(nb)
+#             parameter_seeds.setdefault(c, []).append([h_min, parameters.seed_reconstruction.intensity_sigma])
 
-        #
-        # next h value
-        # since we compute the maxima from the previous difference image
-        # there is no need for smoothing -> sigma = 0.0
-        #
-        h_min -= parameters.watershed_seed_hmin_delta_value
+#         #
+#         # next h value
+#         # since we compute the maxima from the previous difference image
+#         # there is no need for smoothing -> sigma = 0.0
+#         #
+#         h_min -= parameters.watershed_seed_hmin_delta_value
 
-        #
-        # still compute while
-        # - h has not reach the minimum value
-        # and
-        # - there is at least one cell with a number of seeds in [1, 2]
-        # it stops then if all cells have more than 2 seeds\
-        #            or if no cell has a seed (np.array(returned_n_seeds) != 0 is False everywhere)
-        # The latter can occur when h is too large
-        # => keep only the (np.array(returned_n_seeds) <= 2).any() test
-        #
-        # Note: I did not catch the utility of 'or returned_n_seeds == []'
-        #
-        checking = (np.array(returned_n_seeds) <= 2).any()
+#         #
+#         # still compute while
+#         # - h has not reach the minimum value
+#         # and
+#         # - there is at least one cell with a number of seeds in [1, 2]
+#         # it stops then if all cells have more than 2 seeds\
+#         #            or if no cell has a seed (np.array(returned_n_seeds) != 0 is False everywhere)
+#         # The latter can occur when h is too large
+#         # => keep only the (np.array(returned_n_seeds) <= 2).any() test
+#         #
+#         # Note: I did not catch the utility of 'or returned_n_seeds == []'
+#         #
+#         checking = (np.array(returned_n_seeds) <= 2).any()
 
-        if (h_min >= parameters.watershed_seed_hmin_min_value) and checking:
+#         if (h_min >= parameters.watershed_seed_hmin_min_value) and checking:
 
-            #
-            # compute seeds fot this new value of h
-            # seeds are computed on the previous 'difference' image
-            # - they are now local maxima
-            # - smoothing has already been done (to get the first difference image)
-            #   and is no more required -> sigma = 0.0
-            #
-            wparam.seed_hmin = h_min
+#             #
+#             # compute seeds fot this new value of h
+#             # seeds are computed on the previous 'difference' image
+#             # - they are now local maxima
+#             # - smoothing has already been done (to get the first difference image)
+#             #   and is no more required -> sigma = 0.0
+#             #
+#             wparam.seed_hmin = h_min
 
-            input_image = difference_image
-            unmasked_seed_image = common.add_suffix(image_for_seed, "_unmasked_seed_h" + str('{:03d}'.format(h_min)),
-                                                    new_dirname=experiment.astec_dir.get_tmp_directory(),
-                                                    new_extension=experiment.default_image_suffix)
-            seed_image = common.add_suffix(image_for_seed, "_seed_h" + str('{:03d}'.format(h_min)),
-                                           new_dirname=experiment.astec_dir.get_tmp_directory(),
-                                           new_extension=experiment.default_image_suffix)
-            difference_image = common.add_suffix(image_for_seed, "_seed_diff_h" + str('{:03d}'.format(h_min)),
-                                                 new_dirname=experiment.astec_dir.get_tmp_directory(),
-                                                 new_extension=experiment.default_image_suffix)
+#             input_image = difference_image
+#             unmasked_seed_image = common.add_suffix(image_for_seed, "_unmasked_seed_h" + str('{:03d}'.format(h_min)),
+#                                                     new_dirname=experiment.astec_dir.get_tmp_directory(),
+#                                                     new_extension=experiment.default_image_suffix)
+#             seed_image = common.add_suffix(image_for_seed, "_seed_h" + str('{:03d}'.format(h_min)),
+#                                            new_dirname=experiment.astec_dir.get_tmp_directory(),
+#                                            new_extension=experiment.default_image_suffix)
+#             difference_image = common.add_suffix(image_for_seed, "_seed_diff_h" + str('{:03d}'.format(h_min)),
+#                                                  new_dirname=experiment.astec_dir.get_tmp_directory(),
+#                                                  new_extension=experiment.default_image_suffix)
 
-            if not os.path.isfile(seed_image) or not os.path.isfile(difference_image) \
-                    or monitoring.forceResultsToBeBuilt is True:
-                mars.build_seeds(input_image, difference_image, unmasked_seed_image, experiment, wparam,
-                                 operation_type='max')
-                cpp_wrapping.mc_mask_seeds(unmasked_seed_image, first_segmentation, seed_image)
+#             if not os.path.isfile(seed_image) or not os.path.isfile(difference_image) \
+#                     or monitoring.forceResultsToBeBuilt is True:
+#                 mars.build_seeds(input_image, difference_image, unmasked_seed_image, experiment, wparam,
+#                                  operation_type='max')
+#                 cpp_wrapping.mc_mask_seeds(unmasked_seed_image, first_segmentation, seed_image)
 
-            if not os.path.isfile(seed_image) or not os.path.isfile(difference_image):
-                monitoring.to_log_and_console("       " + proc + ": computation failed at h = " + str(h_min), 2)
-                monitoring.to_log_and_console("\t Exiting.")
-                sys.exit(1)
+#             if not os.path.isfile(seed_image) or not os.path.isfile(difference_image):
+#                 monitoring.to_log_and_console("       " + proc + ": computation failed at h = " + str(h_min), 2)
+#                 monitoring.to_log_and_console("\t Exiting.")
+#                 sys.exit(1)
 
-    return n_seeds, parameter_seeds
+#     return n_seeds, parameter_seeds
 
 
 ########################################################################################
@@ -1000,70 +1272,70 @@ def _cell_based_h_minima(first_segmentation, cells, bounding_boxes, image_for_se
 #
 ########################################################################################
 
-#
-#
-#
 
-def _select_seed_parameters(n_seeds, parameter_seeds, tau=25):
-    """
-    Return the correct h-minima value for each cell
-    :param n_seeds: { cell: [#seeds, ] }: dict, key: cell, values: list of #seeds
-    :param parameter_seeds: { cell: [[h_min, sigma], ]}: dict matching nb_cells, key: cell, values: list of parameters
-    :param tau: magic threshold (see page 72 of L. Guignard PhD thesis)
-    :return:
-    """
 
-    selected_parameter_seeds = {}
-    unseeded_cells = []
+# def _select_seed_parameters(n_seeds, parameter_seeds, tau=25):
+#     """
+#     Return the correct h-minima value for each cell
+#     :param n_seeds: { cell: [#seeds, ] }: dict, key: cell, values: list of #seeds
+#     :param parameter_seeds: { cell: [[h_min, sigma], ]}: dict matching nb_cells, key: cell, values: list of parameters
+#     :param tau: magic threshold (see page 72 of L. Guignard PhD thesis)
+#     :return:
+#     """
 
-    #
-    # the selection whether a cell should divide or not is based on the length
-    # of the plateau of h values that yield a division (see section 2.3.3.5, pages 70-72
-    # of L. Guignard PhD thesis)
-    # nb_2 is $N_2(c)$, but nb_3 is *not* $N_{2^{+}}(c)$ ?
-    #
-    # it can also divided into 2 if there is no h value that gives one seed
-    #
-    # np.sum(np.array(s) == 2) is equal to s.count(2)
-    # 
+#     selected_parameter_seeds = {}
+#     unseeded_cells = []
 
-    for c, s in n_seeds.items():
-        nb_2 = np.sum(np.array(s) == 2)
-        nb_3 = np.sum(np.array(s) >= 2)
-        score = nb_2*nb_3
-        if (s.count(1) or s.count(2)) != 0:
-            if score >= tau:
-                #
-                # obviously s.count(2) != 0
-                # the largest h that gives 2 seeds is kept
-                #
-                h, sigma = parameter_seeds[c][np.where(np.array(s) == 2)[0][0]]
-                nb_final = 2
-            elif s.count(1) != 0:
-                #
-                # score < tau and s.count(1) != 0
-                # the largest h that gives 1 seeds is kept
-                #
-                h, sigma = parameter_seeds[c][np.where(np.array(s) == 1)[0][0]]
-                nb_final = 1
-            else:
-                #
-                # score < tau and s.count(1) == 0 then obviously s.count(2)) != 0
-                # the largest h that gives 1 seeds is kept
-                #
-                h, sigma = parameter_seeds[c][np.where(np.array(s) == 2)[0][0]]
-                nb_final = 2
-            selected_parameter_seeds[c] = [h, sigma, nb_final]
-        #
-        # s.count(1) == 0 and  s.count(2) == 0
-        #
-        elif s.count(3) != 0:
-            h, sigma = parameter_seeds[c][s.index(3)]
-            selected_parameter_seeds[c] = [h, sigma, 3]
-        else:
-            unseeded_cells.append(c)
-            selected_parameter_seeds[c] = [0, 0, 0]
-    return selected_parameter_seeds, unseeded_cells
+#     #
+#     # the selection whether a cell should divide or not is based on the length
+#     # of the plateau of h values that yield a division (see section 2.3.3.5, pages 70-72
+#     # of L. Guignard PhD thesis)
+#     # nb_2 is $N_2(c)$, but nb_3 is *not* $N_{2^{+}}(c)$ ?
+#     #
+#     # it can also divided into 2 if there is no h value that gives one seed
+#     #
+#     # np.sum(np.array(s) == 2) is equal to s.count(2)
+#     # 
+
+#     print(f"{n_seeds=}")
+
+#     for c, s in n_seeds.items():
+#         nb_2 = np.sum(np.array(s) == 2)
+#         nb_3 = np.sum(np.array(s) >= 2)
+#         score = nb_2*nb_3
+#         if (s.count(1) or s.count(2)) != 0:
+#             if score >= tau:
+#                 #
+#                 # obviously s.count(2) != 0
+#                 # the largest h that gives 2 seeds is kept
+#                 #
+#                 h, sigma = parameter_seeds[c][np.where(np.array(s) == 2)[0][0]]
+#                 nb_final = 2
+#             elif s.count(1) != 0:
+#                 #
+#                 # score < tau and s.count(1) != 0
+#                 # the largest h that gives 1 seeds is kept
+#                 #
+#                 h, sigma = parameter_seeds[c][np.where(np.array(s) == 1)[0][0]]
+#                 nb_final = 1
+#             else:
+#                 #
+#                 # score < tau and s.count(1) == 0 then obviously s.count(2)) != 0
+#                 # the largest h that gives 1 seeds is kept
+#                 #
+#                 h, sigma = parameter_seeds[c][np.where(np.array(s) == 2)[0][0]]
+#                 nb_final = 2
+#             selected_parameter_seeds[c] = [h, sigma, nb_final]
+#         #
+#         # s.count(1) == 0 and  s.count(2) == 0
+#         #
+#         elif s.count(3) != 0:
+#             h, sigma = parameter_seeds[c][s.index(3)]
+#             selected_parameter_seeds[c] = [h, sigma, 3]
+#         else:
+#             unseeded_cells.append(c)
+#             selected_parameter_seeds[c] = [0, 0, 0]
+#     return selected_parameter_seeds, unseeded_cells
 
 
 ########################################################################################
@@ -1648,7 +1920,11 @@ def _volume_decrease_correction(astec_name, previous_segmentation, segmentation_
 
     prev_volumes = _compute_volumes(prev_seg)
     curr_volumes = _compute_volumes(curr_seg)
-
+    
+    print(f"{prev_volumes=}")
+    print(f"{curr_volumes=}")
+    print(np.unique(prev_seg))
+    print(np.unique(curr_seg))
     #
     # check embryo volume
     #
@@ -2776,65 +3052,116 @@ def astec_process(previous_time, current_time, lineage_tree_information, experim
     # seeds are masked by 'segmentation_from_previous'
     # ie the segmentation obtained with the seeds from the previous time point
     #
-    monitoring.to_log_and_console('    estimation of h-minima for h in ['
-                                  + str(parameters.watershed_seed_hmin_min_value) + ','
-                                  + str(parameters.watershed_seed_hmin_max_value) + ']', 2)
-    n_seeds, parameter_seeds = _cell_based_h_minima(segmentation_from_previous, cells, bounding_boxes, image_for_seed,
-                                                    experiment, parameters)
 
-    #
-    # First selection of seeds
-    #
-    # from above results (ie, the number of seeds for every value of h),
-    # select the parameter (ie h value)
-    # Note: sigma (smoothing parameter to extract seeds) is also kept here, meaning that
-    #       it also could be used for selection
-    #
-    # selected_parameter_seeds is a dictionary indexed by mother cell index
-    # selected_parameter_seeds[mother_c] is an array [selected_h, sigma, n_seeds]
-    # unseeded_cells is a list
-    #
-    monitoring.to_log_and_console('    parameter selection', 2)
-    selected_parameter_seeds, unseeded_cells = _select_seed_parameters(n_seeds, parameter_seeds,
-                                                                       tau=parameters.seed_selection_tau)
 
-    #
-    # print out the list of cells without seeds and the list of cells that may divide
-    #
-    if len(unseeded_cells) > 0:
-        string = ""
-        for i in range(len(unseeded_cells)):
-            if string == "":
-                string = str(unseeded_cells[i])
-            else:
-                string += ", " + str(unseeded_cells[i])
-        monitoring.to_log_and_console('    .. cells at time ' + str(previous_time) + ' with no seeds: ' + string, 2)
-    string = ""
-    for c in cells:
-        if c in unseeded_cells:
-            continue
-        if selected_parameter_seeds[c][2] > 1:
-            if string == "":
-                string = str(c)
-            else:
-                string += ", " + str(c)
-    if string != "":
-        monitoring.to_log_and_console('    .. cells at time ' + str(previous_time) + ' that will divide: ' + string, 2)
 
+
+    ################
+    ################
+    ################
+
+    # modification 3.2 by Gesa (Feb 2024)
+
+    # get fused image
     #
-    # rebuild an image of seeds with selected parameters h
-    #
-    monitoring.to_log_and_console('    build seed image from all h-minima images', 2)
+    input_dir = experiment.fusion_dir.get_directory(0)
+    input_name = experiment.fusion_dir.get_image_name(current_time)
+
+    input_image = common.find_file(input_dir, input_name, file_type='image', callfrom=proc, local_monitoring=monitoring)
+
+    if input_image is None:
+        monitoring.to_log_and_console("    .. image '" + input_name + "' not found in '" + str(input_dir) + "'", 2)
+        return None
+    raw_intensity_image = os.path.join(input_dir, input_image)
+
+    path_to_previous_seeds = deformed_seeds
 
     selected_seeds = common.add_suffix(astec_name, '_seeds_from_selection',
-                                       new_dirname=experiment.astec_dir.get_tmp_directory(),
-                                       new_extension=experiment.default_image_suffix)
+                                        new_dirname=experiment.astec_dir.get_tmp_directory(),
+                                        new_extension=experiment.default_image_suffix)
+    
+    # results_division = dictionary mother_cell_label: [h_value, n_seeds]
+    results_division, all_h_n_seeds, correspondences = calculate_h_by_measuring_h_range_for_two_seeds_in_all_cells(raw_intensity_image, 
+                                                                image_for_seed, 
+                                                                segmentation_from_previous, 
+                                                                path_to_previous_seeds, 
+                                                                selected_seeds, 
+                                                                parameters.seed_selection_tau)
 
-    output = _build_seeds_from_selected_parameters(selected_parameter_seeds, segmentation_from_previous, deformed_seeds,
-                                                   selected_seeds, cells, unseeded_cells, bounding_boxes,
-                                                   image_for_seed, experiment, parameters)
+    print(f"{all_h_n_seeds=}")
 
-    label_max, correspondences, divided_cells = output
+    # print out the list of cells without seeds and the list of cells that may divide
+    dividing_cells = [mother for mother, result_list in results_division.items() if result_list[1] >= 2]
+    if len(dividing_cells) > 0:
+        monitoring.to_log_and_console('    .. cells at time ' + str(previous_time) + ' that will divide: ' + dividing_cells, 2)
+    else:
+        monitoring.to_log_and_console('    .. no dividing cell at time ' + str(previous_time), 2)
+
+
+    # TO DO: print out cells without seeds 
+
+    ###### OLD
+
+
+    # monitoring.to_log_and_console('    estimation of h-minima for h in ['
+    #                               + str(parameters.watershed_seed_hmin_min_value) + ','
+    #                               + str(parameters.watershed_seed_hmin_max_value) + ']', 2)
+    # n_seeds, parameter_seeds = _cell_based_h_minima(segmentation_from_previous, cells, bounding_boxes, image_for_seed,
+    #                                                 experiment, parameters)
+
+    # #
+    # # First selection of seeds
+    # #
+    # # from above results (ie, the number of seeds for every value of h),
+    # # select the parameter (ie h value)
+    # # Note: sigma (smoothing parameter to extract seeds) is also kept here, meaning that
+    # #       it also could be used for selection
+    # #
+    # # selected_parameter_seeds is a dictionary indexed by mother cell index
+    # # selected_parameter_seeds[mother_c] is an array [selected_h, sigma, n_seeds]
+    # # unseeded_cells is a list
+    # #
+    # monitoring.to_log_and_console('    parameter selection', 2)
+    # selected_parameter_seeds, unseeded_cells = _select_seed_parameters(n_seeds, parameter_seeds,
+    #                                                                    tau=parameters.seed_selection_tau)
+
+    # #
+    # # print out the list of cells without seeds and the list of cells that may divide
+    # #
+    # if len(unseeded_cells) > 0:
+    #     string = ""
+    #     for i in range(len(unseeded_cells)):
+    #         if string == "":
+    #             string = str(unseeded_cells[i])
+    #         else:
+    #             string += ", " + str(unseeded_cells[i])
+    #     monitoring.to_log_and_console('    .. cells at time ' + str(previous_time) + ' with no seeds: ' + string, 2)
+    # string = ""
+    # for c in cells:
+    #     if c in unseeded_cells:
+    #         continue
+    #     if selected_parameter_seeds[c][2] > 1:
+    #         if string == "":
+    #             string = str(c)
+    #         else:
+    #             string += ", " + str(c)
+    # if string != "":
+    #     monitoring.to_log_and_console('    .. cells at time ' + str(previous_time) + ' that will divide: ' + string, 2)
+
+    # #
+    # # rebuild an image of seeds with selected parameters h
+    # #
+    # monitoring.to_log_and_console('    build seed image from all h-minima images', 2)
+
+    # selected_seeds = common.add_suffix(astec_name, '_seeds_from_selection',
+    #                                    new_dirname=experiment.astec_dir.get_tmp_directory(),
+    #                                    new_extension=experiment.default_image_suffix)
+
+    # output = _build_seeds_from_selected_parameters(selected_parameter_seeds, segmentation_from_previous, deformed_seeds,
+    #                                                selected_seeds, cells, unseeded_cells, bounding_boxes,
+    #                                                image_for_seed, experiment, parameters)
+
+    # label_max, correspondences, divided_cells = output
 
     #
     # second watershed segmentation (with the selected seeds)
@@ -2886,6 +3213,16 @@ def astec_process(previous_time, current_time, lineage_tree_information, experim
     # reference segmentation for volume decrease checking is
     # the segmentation at the previous time point
     #
+
+    n_seeds = {key: sorted([*value.values()]) for key, value in all_h_n_seeds.items()}
+    print(f"{n_seeds=}")
+    selected_parameter_seeds = results_division
+    print(f"{selected_parameter_seeds=}")
+
+    #hard coding sigma just for the sake of testing if this works
+    parameter_seeds = {key: [[h, 1] for h in value.keys()] for key, value in all_h_n_seeds.items()}
+    print(f"{parameter_seeds=}")
+    print(f"{segmentation_from_selection=}")
     output = _volume_decrease_correction(astec_name, previous_segmentation, segmentation_from_previous,
                                          segmentation_from_selection, deformed_seeds, selected_seeds, membrane_image,
                                          image_for_seed, correspondences, selected_parameter_seeds, n_seeds,
