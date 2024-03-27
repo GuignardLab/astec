@@ -793,7 +793,7 @@ def build_seeds_from_previous_segmentation(label_image, output_image, parameters
 def calculate_h_by_measuring_h_range_for_two_seeds_in_all_cells(raw_intensity_image, intensity_seed_image, segmentation_image, path_to_previous_seeds, output_path, tau = 0.1):
     
     """
-    Function to determine for each cell in the embryo whether it has divided betrween current and previous time point.
+    Function to determine for each cell in the embryo whether it has divided between current and previous time point.
 
     params:
     raw_intensity_image = current time raw intensity image
@@ -811,14 +811,13 @@ def calculate_h_by_measuring_h_range_for_two_seeds_in_all_cells(raw_intensity_im
     #find background label --> label: it should be either 0 or 1, whichever has the bigger volume
     vol_0, vol_1 = nd.sum(np.ones_like(segmentation_image), segmentation_image, index = [0, 1])
     if vol_1 > vol_0:
-        segmentation_image[segmentation_image == 1] = 0)
+        segmentation_image[segmentation_image == 1] = 0
     #create dilated bounding boxes for all labels, increment is 1 voxel if not specified
     b_boxes = membranes.calculate_incremented_bounding_boxes(segmentation_image)
     #calculate the dynamic range (dr) as the range of signal intensity between the 1 and 99%iles of raw intesnity values
     dr = np.percentile(intensity_image, 99) - np.percentile(intensity_image, 1)
     abs_tau = int(np.round(tau*dr)) #if tau is in decimals, otherwise tau/100 # built-in function round gives out int
     results_dict = {} #final result of selected value and wanted number of seeds - label: [h_value, n_seeds]
-    all_h_n_seeds = {}
     correspondences = {}
     full_seed_image = np.zeros_like(segmentation_image)
     previous_seeds = None
@@ -932,43 +931,43 @@ def calculate_h_by_measuring_h_range_for_two_seeds_in_all_cells(raw_intensity_im
                 # rename the seeds already in labels and then place them into the full seed image
                 labels_in_cell = list(np.unique(labels[labels > 0]))
                 if len(labels_in_cell) != 2:
-                    monitoring.to_log_and_console(f"Something is wrong with cell {label}, 
-                                                  it was called dividing but the current time point does not have 2 seeds with the predicted parameters.")
+                    monitoring.to_log_and_console(f"Something is wrong with cell {label}, it was called dividing but the current time point does not have 2 seeds with the predicted parameters.")
                 # this works because we know that there will only be two labels (otherwise this cell wouldnt have been classified as diving)
                 for i, old_label in enumerate(labels_in_cell):
                     labels = np.where(labels == old_label, new_labels[i], labels)
                 # then map the new labels onto the old for coherent labeling
                 full_seed_image[box] = np.where(labels > 0, labels, full_seed_image[box])
     
-            else: # in case there are no seeds, we retrieve the seed from previous and assume the cdell has not divided
+            else: # in case there are no seeds, we retrieve the seed from previous and assume the cell has not divided
                 monitoring.to_log_and_console("       Processing unseeded cell: retrieving seed from previous for cell " + str(label), 2)
                 if previous_seeds is None:
                     previous_seeds = imread(path_to_previous_seeds)
                 full_seed_image[box] = np.where(previous_seeds[box] == label, previous_seeds[box], full_seed_image[box])
-
-            all_h_n_seeds[label] = h_n_seeds
+                correspondences[label] = [label]
 
     # add a seed for the background --> use the background seed from previous
     if previous_seeds is None:
         previous_seeds = imread(path_to_previous_seeds)
     bg_seeds = previous_seeds == 1 
     # erode the background seed as much as possible, while checking that we dont loose it completely
+    # TODO this is super slow and feels unnecessary --> do we have a better idea for the bg erosion?
     erode = True
     bg_eroded_last = None
+    bg_eroded = bg_seeds.astype(int)
     while erode == True:
-        bg_eroded = nd.binary_erosion(bg_seeds.astype(int))
+        bg_eroded = nd.binary_erosion(bg_eroded)
+        print(f"{np.unique(bg_eroded)=}")
         if len(np.unique(bg_eroded)) == 1:
             erode = False
-            if bg_eroded_last != None:
-                bg_eroded = bg_eroded_last
-            else:
-                bg_eroded = bg_seeds.astype(int)  
+            if bg_eroded_last is not None:
+                bg_eroded = bg_eroded_last 
         bg_eroded_last = bg_eroded
     print(f"{np.unique(bg_eroded)=}")
     full_seed_image[bg_eroded == 1] = 1
     # save full_seed_image after all cells were processed in output_path
     imsave(output_path, SpatialImage(full_seed_image))
-    return results_dict, all_h_n_seeds, correspondences           
+    print(f"{correspondences=}")
+    return results_dict, correspondences           
 
 def count_seeds_in_cell_area(labels, cell_area, label):
     # only count seeds fully enclosed in the cell area prediction from previous segmentation
@@ -1938,12 +1937,9 @@ def _volume_decrease_correction(astec_name, intensity_seed_image, segmentation_f
     # check whole embryo volume
     prev_embryo_volume = segmentation_from_previous.size - prev_volumes[1]
     curr_embryo_volume = current_segmentation.size - curr_volumes[1]
-
-    # TODO check why this is so weird and make it simpler
     volume_ratio = 1.0 - prev_embryo_volume / curr_embryo_volume
     if -parameters.volume_ratio_tolerance <= volume_ratio <= parameters.volume_ratio_tolerance:
         pass
-    # TODO check the rational and wording here
     else:
         if volume_ratio < 0:
             monitoring.to_log_and_console('      .. warning: embryo volume has strongly diminished', 2)
@@ -2023,7 +2019,6 @@ def _volume_decrease_correction(astec_name, intensity_seed_image, segmentation_f
                         seeds_to_assign.remove(unique_seed)
 
                 if len(touching_both) > 0:
-                    
                     for double_seed in touching_both:
                         if double_seed in seeds_to_assign:
                             #measure touching surface volume, assign to daughter cell with bigger shared volume
@@ -2055,13 +2050,14 @@ def _volume_decrease_correction(astec_name, intensity_seed_image, segmentation_f
                                                 new_extension=experiment.default_image_suffix)
         voxelsize = full_seed_image.voxelsize
         imsave(corr_selected_seeds, SpatialImage(full_seed_image, voxelsize=voxelsize).astype(np.uint16))
+        print(f"{np.unique(full_seed_image)=}")
         del full_seed_image
 
         segmentation_from_corr_selection = common.add_suffix(astec_name, '_watershed_from_corrected_selection',
                                                             new_dirname=experiment.astec_dir.get_tmp_directory(),
                                                             new_extension=experiment.default_image_suffix)
         mars.watershed(corr_selected_seeds, membrane_image, segmentation_from_corr_selection, parameters)
-
+        print(f"{np.unique(current_segmentation)=}")
         return segmentation_from_corr_selection, corr_selected_seeds
 
 
@@ -3286,7 +3282,7 @@ def astec_process(previous_time, current_time, lineage_tree_information, experim
     
     # results_division = dictionary mother_cell_label: [h_value, n_seeds]
     if not os.path.isfile(selected_seeds) or monitoring.forceResultsToBeBuilt is True:
-        results_division, all_h_n_seeds, correspondences = calculate_h_by_measuring_h_range_for_two_seeds_in_all_cells(raw_intensity_image, 
+        results_division, correspondences = calculate_h_by_measuring_h_range_for_two_seeds_in_all_cells(raw_intensity_image, 
                                                                     image_for_seed, 
                                                                     segmentation_from_previous, 
                                                                     path_to_previous_seeds, 
@@ -3470,7 +3466,7 @@ def astec_process(previous_time, current_time, lineage_tree_information, experim
     #
 
     input_segmentation = segmentation_from_selection
-
+    print(f"{input_segmentation=}")
     
 
 
@@ -3500,7 +3496,7 @@ def astec_process(previous_time, current_time, lineage_tree_information, experim
         #####why are we not returning a new output image????
 
         input_segmentation = output_segmentation
-
+        print(f"{input_segmentation=}")
 
     ###############
     ###############
@@ -3511,8 +3507,8 @@ def astec_process(previous_time, current_time, lineage_tree_information, experim
 
         #path where the dataframe containing membranes metrics is stored
         membranes_df_path = os.path.join(astec_dir, "volume_ratio_membranes.pkl")
-
-        #call membrane sanity check and return path to merged image (in tmp folder) and upodated correspondences dictionary
+        print(f"{input_segmentation=}")
+        #call membrane sanity check and return path to merged image (in tmp folder) and updated correspondences dictionary
         merged_segmentation, correspondences = new_membrane_sanity_check(input_segmentation, previous_segmentation, 
                                                                         membranes_df_path, experiment, parameters, 
                                                                         correspondences, current_time)
@@ -3952,7 +3948,7 @@ def new_membrane_sanity_check(segmentation_image, previous_segmentation, datafra
 
     # load segmentation image
     curr_seg = imread(segmentation_image)
-    
+    print(f"{np.unique(curr_seg)=}")
     # find interfaces between all cells
     interfaces, mapper = membranes.extract_touching_surfaces(curr_seg)
 
@@ -3974,6 +3970,7 @@ def new_membrane_sanity_check(segmentation_image, previous_segmentation, datafra
 
     # calculate volume_ratios for all cells, subset for cells that have divided 
     volume_ratios_all_current, volumes_all_current = membranes.volume_ratio_after_closing(interfaces, mapper)
+    print(f"{mapper=}")
     volume_ratios_new = {key: value for key, value in volume_ratios_all_current.items() if key in new_membrane_ids}
 
 
@@ -4034,6 +4031,9 @@ def new_membrane_sanity_check(segmentation_image, previous_segmentation, datafra
         append_df["volume"][index] = [v for k, v in volumes_all_current.items() if k == mem_id][0]
 
         # convert to id's from the previous time point
+        print(f"{correspondences=}")
+        print(f"{corr_rev=}")
+        print(f"{cell_pair=}")
         pair_in_prev_ids = membranes.translate_cell_pair_to_previous(cell_pair, corr_rev)
         if pair_in_prev_ids in former_uncertain_pairs:
             append_df["membrane_classification"][index] = "uncertain"
