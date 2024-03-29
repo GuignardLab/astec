@@ -821,6 +821,7 @@ def calculate_h_by_measuring_h_range_for_two_seeds_in_all_cells(raw_intensity_im
     correspondences = {}
     full_seed_image = np.zeros_like(segmentation_image)
     previous_seeds = None
+    max_label = max(np.unique(segmentation_image))
     for label, box in b_boxes.items():
         if box is not None:
             # temporary result: number of seeds for each h value in a dictionary h_value: n_seeds
@@ -899,8 +900,6 @@ def calculate_h_by_measuring_h_range_for_two_seeds_in_all_cells(raw_intensity_im
             # after all calculations find the appropriate h value that should be used (and determine the number of seeds)
             h_value, n_seeds = find_appropriate_number_of_seeds(h_n_seeds, abs_tau)
             results_dict[label] = [h_value, n_seeds]
-            max_label = max(np.unique(segmentation_image))
-            print(f"{n_seeds=}")
             if n_seeds == 1:
                 # at this point I start putting together a seed image for the watershed, so I dont have to loop through all cells again later
                 #run h-min with chosen h in sub_im, pick seeds inside cell, add to output array
@@ -922,6 +921,7 @@ def calculate_h_by_measuring_h_range_for_two_seeds_in_all_cells(raw_intensity_im
                 # find new labels for the two daughter cells, to start a new lineage
                 new_labels = [max_label + 1, max_label + 2]
                 max_label = max_label + 2
+                print("found dividing cell")
                 correspondences[label] = new_labels
                 # remove all labels that are not exclusively inside the predicted cell area
                 seeds_to_be_removed = set(np.unique(labels[seg_sub_im != label]))
@@ -956,17 +956,14 @@ def calculate_h_by_measuring_h_range_for_two_seeds_in_all_cells(raw_intensity_im
     bg_eroded = bg_seeds.astype(int)
     while erode == True:
         bg_eroded = nd.binary_erosion(bg_eroded)
-        print(f"{np.unique(bg_eroded)=}")
         if len(np.unique(bg_eroded)) == 1:
             erode = False
             if bg_eroded_last is not None:
                 bg_eroded = bg_eroded_last 
         bg_eroded_last = bg_eroded
-    print(f"{np.unique(bg_eroded)=}")
     full_seed_image[bg_eroded == 1] = 1
     # save full_seed_image after all cells were processed in output_path
     imsave(output_path, SpatialImage(full_seed_image))
-    print(f"{correspondences=}")
     return results_dict, correspondences           
 
 def count_seeds_in_cell_area(labels, cell_area, label):
@@ -3466,7 +3463,6 @@ def astec_process(previous_time, current_time, lineage_tree_information, experim
     #
 
     input_segmentation = segmentation_from_selection
-    print(f"{input_segmentation=}")
     
 
 
@@ -3496,7 +3492,6 @@ def astec_process(previous_time, current_time, lineage_tree_information, experim
         #####why are we not returning a new output image????
 
         input_segmentation = output_segmentation
-        print(f"{input_segmentation=}")
 
     ###############
     ###############
@@ -3507,7 +3502,6 @@ def astec_process(previous_time, current_time, lineage_tree_information, experim
 
         #path where the dataframe containing membranes metrics is stored
         membranes_df_path = os.path.join(astec_dir, "volume_ratio_membranes.pkl")
-        print(f"{input_segmentation=}")
         #call membrane sanity check and return path to merged image (in tmp folder) and updated correspondences dictionary
         merged_segmentation, correspondences = new_membrane_sanity_check(input_segmentation, previous_segmentation, 
                                                                         membranes_df_path, experiment, parameters, 
@@ -3948,7 +3942,6 @@ def new_membrane_sanity_check(segmentation_image, previous_segmentation, datafra
 
     # load segmentation image
     curr_seg = imread(segmentation_image)
-    print(f"{np.unique(curr_seg)=}")
     # find interfaces between all cells
     interfaces, mapper = membranes.extract_touching_surfaces(curr_seg)
 
@@ -3970,7 +3963,6 @@ def new_membrane_sanity_check(segmentation_image, previous_segmentation, datafra
 
     # calculate volume_ratios for all cells, subset for cells that have divided 
     volume_ratios_all_current, volumes_all_current = membranes.volume_ratio_after_closing(interfaces, mapper)
-    print(f"{mapper=}")
     volume_ratios_new = {key: value for key, value in volume_ratios_all_current.items() if key in new_membrane_ids}
 
 
@@ -4031,9 +4023,6 @@ def new_membrane_sanity_check(segmentation_image, previous_segmentation, datafra
         append_df["volume"][index] = [v for k, v in volumes_all_current.items() if k == mem_id][0]
 
         # convert to id's from the previous time point
-        print(f"{correspondences=}")
-        print(f"{corr_rev=}")
-        print(f"{cell_pair=}")
         pair_in_prev_ids = membranes.translate_cell_pair_to_previous(cell_pair, corr_rev)
         if pair_in_prev_ids in former_uncertain_pairs:
             append_df["membrane_classification"][index] = "uncertain"
@@ -4104,20 +4093,22 @@ def new_membrane_sanity_check(segmentation_image, previous_segmentation, datafra
         new_false_pairs = [key for key, value in mapper.items() if value in new_for_fusion]
         uncertain_false_pairs =  [key for key, value in mapper.items() if value in uncertain_for_fusion]
         false_pairs_list = new_false_pairs + uncertain_false_pairs
-        monitoring.to_log_and_console('      .. fusing cell pairs:' + f"{false_pairs_list}", 2)
-
-        # merge cells that are seperated by false membranes in the segmentation image
-        merged_segmentation, cc_list = membranes.merge_labels_with_false_membranes(false_pairs_list, curr_seg)
-        # output will first be saved in tmp and copied to main in astec_process as final result of membrane sanity check
-        voxelsize = merged_segmentation.voxelsize
-        imsave(merged_segmentation_name, SpatialImage(merged_segmentation, voxelsize=voxelsize).astype(np.uint16))
-        
-        new_correspondences = membranes.update_correspondences_dictionary(correspondences, 
-                                                                          new_false_pairs, 
-                                                                          uncertain_false_pairs, 
-                                                                          cc_list, 
-                                                                          volumes_all_current)
-        print(f"{new_correspondences=}")
+        if len(false_pairs_list) > 0:
+            monitoring.to_log_and_console('      .. fusing cell pairs:' + f"{false_pairs_list}", 2)
+            # merge cells that are seperated by false membranes in the segmentation image
+            merged_segmentation, cc_list, changed_cells = membranes.merge_labels_with_false_membranes(false_pairs_list, 
+                                                                                                      curr_seg, 
+                                                                                                      correspondences)
+            # output will first be saved in tmp and copied to main in astec_process as final result of membrane sanity check
+            voxelsize = merged_segmentation.voxelsize
+            imsave(merged_segmentation_name, SpatialImage(merged_segmentation, voxelsize=voxelsize).astype(np.uint16))
+            correspondences = membranes.update_correspondences_dictionary(correspondences,
+                                                                            changed_cells
+                                                                            )
+        else:
+            monitoring.to_log_and_console('      .. did not find false membranes, not fusing any cell pairs', 2)
+            voxelsize = merged_segmentation.voxelsize
+            imsave(merged_segmentation_name, SpatialImage(curr_seg, voxelsize=voxelsize).astype(np.uint16))
         mem_id_add = passed_new_membranes
         append_df = pd.DataFrame(index = list(range (0, len(mem_id_add))), 
                                 columns = ["mem_id", "cells", "time_point", "mem_lineage_id", 
@@ -4186,6 +4177,6 @@ def new_membrane_sanity_check(segmentation_image, previous_segmentation, datafra
         gt_volumes_df = pd.concat([gt_volumes_df, append_df])
         gt_volumes_df.reset_index(drop = True, inplace = True)
         gt_volumes_df.to_pickle(dataframe_path)
-        return merged_segmentation_name, new_correspondences
+        return merged_segmentation_name, correspondences
 
         

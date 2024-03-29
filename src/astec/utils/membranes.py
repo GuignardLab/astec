@@ -173,7 +173,7 @@ def find_connected_components(false_pairs_list):
     return cc_list
 
 
-def merge_labels_with_false_membranes(false_pairs_list, original_watershed_labels):
+def merge_labels_with_false_membranes(false_pairs_list, original_watershed_labels, correspondences):
     
     """combine labels that are seperated by interfaces that are detected as false membranes
     Args:
@@ -189,60 +189,111 @@ def merge_labels_with_false_membranes(false_pairs_list, original_watershed_label
     cc_list = find_connected_components(false_pairs_list)
     #create image with merged cells based on sets of cells and original watershed image
     merged_watershed = original_watershed_labels.copy()
+    changed_cells = {}
+    #find mother_cell id for each cell, if there are several use the smallest id for the merged cell
     for cell_set in cc_list:
-        smallest_id = min(cell_set)
+        list_of_mothers = [key for key, value in correspondences.items() if len(set(value).intersection(cell_set)) > 0]
+        smallest_id = min(list_of_mothers)
         for label in cell_set:
+            mother = [key for key, value in correspondences.items() if label in value][0]
             merged_watershed[merged_watershed == label] = smallest_id
-    
-    return merged_watershed, cc_list
+            changed_cells[mother] = smallest_id
+            # update correspondences, while not just replacing the old with new, but keeping sibling relationships
+            old_daugthers = correspondences[mother]
+            new_daughters = [smallest_id if x == label else x for x in old_daugthers]
+            # in case we merged both of the daughter (pretty likely) we reduce the list using a set transformation
+            correspondences[mother] = list(set(new_daughters))
+    # print(f"{correspondences=}")
+    return merged_watershed, cc_list, changed_cells
 
 def translate_cell_pair_to_previous (cell_pair, reversed_correspondences):
     return tuple(sorted([reversed_correspondences[cell_pair[0]], reversed_correspondences[cell_pair[1]]]))
 
 
 
-def update_correspondences_dictionary(correspondences, new_false_pairs, uncertain_false_pairs, cc_list, volumes):
-    # update correspondences dictionary to match cell_ids of t-1 to new id of merged cells at current t
+def update_correspondences_dictionary(correspondences, changed_cells):
+    ''' 
+    update correspondences dictionary to remove mothers that have the same daughters (important for downstream compatibility)
+
+    ''' 
+
     new_correspondences = {}
-    all_uncertain_cells = [x for m in uncertain_false_pairs for x in m]
-    all_new_cells = [x for m in new_false_pairs for x in m]
-    for key in correspondences.keys():
-        #this will find newly divided cells that we want to merge and use the smaller label
-        daughters = correspondences[key]
-        merge = [n for n in daughters if n in all_new_cells]
-        progeny = tuple(daughters)
-        if len(merge) > 0:
-            
-            if set(merge) == set(daughters):
-                new_progeny = [np.min(daughters)]
-            else:
-                not_in_merge = list(set(daughters).difference(set(merge)) )
-                new_progeny = [np.min(merge)] + not_in_merge
-
-            new_correspondences[key] = new_progeny
-        
-        elif [cells for cells in all_uncertain_cells if cells in progeny]:
-            cells = [cells for cells in all_uncertain_cells if cells in progeny]
-            all_cc_cells = [connected_cells for connected_cells in cc_list if cells[0] in connected_cells]
-            #find volumes for cells to place the new merged cell in place of the largest fragment in the lineage
-            volumes_cells = {id: volume for id, volume in volumes.items() if id in all_cc_cells[0]}
-            largest_vol_id = [id for id, value in volumes_cells.items() if value == max(volumes_cells.values())]
-
-            #all cells should be in the respective set in cc_list, so it is sufficient to query for the first entry
-            new_id = [min(connected_cells) for connected_cells in cc_list if cells[0] in connected_cells]
-            if (len(progeny) == 1) and (largest_vol_id[0] in progeny):
-                new_correspondences[key] = new_id
-            elif len(progeny) > 1:
-                #if largest_vol_id[0] in progeny:
-                pair_containing_new_id = [list(pair) for pair in uncertain_false_pairs if new_id[0] in pair]
-                removed_cells = [cell for cell in pair_containing_new_id[0] if cell not in new_id]
-                new_id_list = [cell for cell in progeny if cell not in removed_cells]
-                if (not new_id[0] in new_id_list) and (largest_vol_id[0] in progeny):
-                    new_id_list.append(new_id[0])
-                new_id_list.sort()
-                new_correspondences[key] = new_id_list
+    processed_daughters = set()
+    for mother_cell in correspondences:
+        if mother_cell in changed_cells:
+            new_daughter = changed_cells[mother_cell]
+            if new_daughter not in processed_daughters:
+                # filter correspondences for all entries containing the new daughter cell
+                cut_correspondences = {key: value for key, value in correspondences.items() if new_daughter in value}
+                if len(cut_correspondences) == 1: # because if there is just one, the necessary change was already doine during the merging
+                    new_correspondences[mother_cell] = correspondences[mother_cell]
+                else:
+                    print(f"{len(cut_correspondences)=}")
+                    len_daughters = [len(daughter_list) for daughter_list in cut_correspondences.values()]
+                    # check whether any of those mothers have divided and not been merged
+                    if max(len_daughters) == 1 and len(len_daughters) > 1:
+                        #pick mother with the smallest label (that should be the same label as the daughter), discard the others
+                        only_mother = min(cut_correspondences.keys())
+                        new_correspondences[only_mother] = [new_daughter]
+                    elif max(len_daughters) == 2: # that means there must be cells that have divided
+                        # is there more than one daughter pair? 
+                        daughter_pairs = [x for x in cut_correspondences.values() if len(x) == 2]
+                        if len(daughter_pairs) > 1: # if there is just one, the necessary changes have already been done in the merging
+                            for i, daughter_pair_list in enumerate(daughter_pairs):
+                                mother = [key for key, value in correspondences.items() if value == daughter_pair_list][0]
+                                # TODO find the right mother to keep - currently it is arbitrarily chosen as the first in line
+                                if i == 0:
+                                    new_daughters = daughter_pair_list
+                                else:
+                                    # remove entry from other daughter lists
+                                    new_daughters = [x for x in daughter_pair_list if x != new_daughter]
+                                new_correspondences[mother] = new_daughters
+            processed_daughters.add(new_daughter)
         else:
-            #if there are no changes we just use the original values
-            new_correspondences[key] = correspondences[key]
-
+            new_correspondences[mother_cell] = correspondences[mother_cell]
     return new_correspondences
+
+
+    # old (from Gesa but was not compatible with the new output after volume decrease correction)
+    # all_uncertain_cells = [x for m in uncertain_false_pairs for x in m]
+    # all_new_cells = [x for m in new_false_pairs for x in m]
+    # for key in correspondences.keys():
+    #     #this will find newly divided cells that we want to merge and use the smaller label
+    #     daughters = correspondences[key]
+    #     merge = [n for n in daughters if n in all_new_cells]
+    #     progeny = tuple(daughters)
+    #     if len(merge) > 0:
+            
+    #         if set(merge) == set(daughters):
+    #             new_progeny = [np.min(daughters)]
+    #         else:
+    #             not_in_merge = list(set(daughters).difference(set(merge)) )
+    #             new_progeny = [np.min(merge)] + not_in_merge
+
+    #         new_correspondences[key] = new_progeny
+        
+    #     elif [cells for cells in all_uncertain_cells if cells in progeny]:
+    #         cells = [cells for cells in all_uncertain_cells if cells in progeny]
+    #         all_cc_cells = [connected_cells for connected_cells in cc_list if cells[0] in connected_cells]
+    #         #find volumes for cells to place the new merged cell in place of the largest fragment in the lineage
+    #         volumes_cells = {id: volume for id, volume in volumes.items() if id in all_cc_cells[0]}
+    #         largest_vol_id = [id for id, value in volumes_cells.items() if value == max(volumes_cells.values())]
+
+    #         #all cells should be in the respective set in cc_list, so it is sufficient to query for the first entry
+    #         new_id = [min(connected_cells) for connected_cells in cc_list if cells[0] in connected_cells]
+    #         if (len(progeny) == 1) and (largest_vol_id[0] in progeny):
+    #             new_correspondences[key] = new_id
+    #         elif len(progeny) > 1:
+    #             #if largest_vol_id[0] in progeny:
+    #             pair_containing_new_id = [list(pair) for pair in uncertain_false_pairs if new_id[0] in pair]
+    #             removed_cells = [cell for cell in pair_containing_new_id[0] if cell not in new_id]
+    #             new_id_list = [cell for cell in progeny if cell not in removed_cells]
+    #             if (not new_id[0] in new_id_list) and (largest_vol_id[0] in progeny):
+    #                 new_id_list.append(new_id[0])
+    #             new_id_list.sort()
+    #             new_correspondences[key] = new_id_list
+    #     else:
+    #         #if there are no changes we just use the original values
+    #         new_correspondences[key] = correspondences[key]
+
+    # return new_correspondences
