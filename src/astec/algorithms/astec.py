@@ -808,7 +808,7 @@ def calculate_h_by_measuring_h_range_for_two_seeds_in_all_cells(raw_intensity_im
     intensity_seed_image = imread(intensity_seed_image)
     segmentation_image  = imread(segmentation_image)
     #if the segmentation_image has a background of 1, we need to set it to 0 for the following to work smoothly
-    #find background label --> label: it should be either 0 or 1, whichever has the bigger volume
+    #find background label --> it should be either 0 or 1, whichever has the bigger volume
     vol_0, vol_1 = nd.sum(np.ones_like(segmentation_image), segmentation_image, index = [0, 1])
     if vol_1 > vol_0:
         segmentation_image[segmentation_image == 1] = 0
@@ -4107,7 +4107,7 @@ def new_membrane_sanity_check(segmentation_image, previous_segmentation, datafra
                                                                             )
         else:
             monitoring.to_log_and_console('      .. did not find false membranes, not fusing any cell pairs', 2)
-            voxelsize = merged_segmentation.voxelsize
+            voxelsize = curr_seg.voxelsize
             imsave(merged_segmentation_name, SpatialImage(curr_seg, voxelsize=voxelsize).astype(np.uint16))
         mem_id_add = passed_new_membranes
         append_df = pd.DataFrame(index = list(range (0, len(mem_id_add))), 
