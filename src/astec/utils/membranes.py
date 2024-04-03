@@ -203,7 +203,7 @@ def merge_labels_with_false_membranes(false_pairs_list, original_watershed_label
             new_daughters = [smallest_id if x == label else x for x in old_daugthers]
             # in case we merged both of the daughter (pretty likely) we reduce the list using a set transformation
             correspondences[mother] = list(set(new_daughters))
-    return merged_watershed, cc_list, changed_cells
+    return merged_watershed, changed_cells
 
 def translate_cell_pair_to_previous (cell_pair, reversed_correspondences):
     return tuple(sorted([reversed_correspondences[cell_pair[0]], reversed_correspondences[cell_pair[1]]]))
