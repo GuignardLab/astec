@@ -254,7 +254,11 @@ class AstecParameters(mars.WatershedParameters, MorphoSnakeParameters):
 
         MorphoSnakeParameters.__init__(self, prefix=prefix)
 
-        #
+        # general parameters
+        doc = "\t Voxel size of the in- and output images\n"
+        self.doc['voxelsize'] = doc
+        self.voxelsize = None
+
         #
         #
         doc = "\t Possible values are 'seeds_from_previous_segmentation', \n"
@@ -448,6 +452,8 @@ class AstecParameters(mars.WatershedParameters, MorphoSnakeParameters):
         self.morphosnake_reconstruction.print_parameters()
         MorphoSnakeParameters.print_parameters(self)
 
+        self.varprint('voxelsize', self.voxelsize, self.doc['voxelsize'])
+
         self.varprint('propagation_strategy', self.propagation_strategy, self.doc['propagation_strategy'])
 
         self.varprint('previous_seg_method', self.previous_seg_method, self.doc['previous_seg_method'])
@@ -506,6 +512,8 @@ class AstecParameters(mars.WatershedParameters, MorphoSnakeParameters):
         self.morphosnake_reconstruction.write_parameters_in_file(logfile)
         MorphoSnakeParameters.write_parameters_in_file(self, logfile)
 
+        self.varwrite(logfile, 'voxelsize', self.voxelsize, self.doc['voxelsize'])
+        
         self.varwrite(logfile, 'propagation_strategy', self.propagation_strategy, self.doc['propagation_strategy'])
 
         self.varwrite(logfile, 'previous_seg_method', self.previous_seg_method, self.doc['previous_seg_method'])
@@ -574,6 +582,8 @@ class AstecParameters(mars.WatershedParameters, MorphoSnakeParameters):
         self.morphosnake_reconstruction.update_from_parameters(parameters)
         MorphoSnakeParameters.update_from_parameters(self, parameters)
 
+        self.voxelsize = self.read_parameter(parameters, 'voxelsize', self.voxelsize)
+        
         self.propagation_strategy = self.read_parameter(parameters, 'propagation_strategy', self.propagation_strategy)
 
         #
@@ -724,14 +734,24 @@ def _erode_cell(parameters):
     # i : label of the cell to erode
     #
 
-    tmp, iterations, bb, i = parameters
-
+    ###### small modification by Gesa: adapting erosion to anisotropic images by creating a scaled structure element
+    tmp, iterations, bb, i, voxelsize = parameters
     nb_iter = iterations
+    
+    if len(set(voxelsize)) > 1:
+        # create 3D kernel for erosion which takes the anisotropy of the image into account
+        z_dim, y_dim, x_dim = voxelsize
+        # use scaling factor to find the smallest possible ellipsoid
+        semiaxes = np.array([1/z_dim, 1/y_dim, 1/x_dim])*np.max(voxelsize)
+        shape = [int(c) for c in np.ceil(semiaxes*2+1)]
+        structure = rg.ellipsoid(shape, semiaxes)
+    else:
+        structure = None
 
     eroded = nd.binary_erosion(tmp, iterations=nb_iter)
     while len(nd.find_objects(eroded)) != 1 and nb_iter >= 0:
         nb_iter -= 1
-        eroded = nd.binary_erosion(tmp, iterations=nb_iter)
+        eroded = nd.binary_erosion(tmp, iterations=nb_iter, structure = structure)
 
     return eroded, i, bb
 
@@ -772,15 +792,20 @@ def build_seeds_from_previous_segmentation(label_image, output_image, parameters
     #
     # since the label_image is obtained through the deformation of the segmentation at previous
     # time point, it may contains 0 values
-    #
+    ###### small modification by Gesa: adapting erosion to anisotropic images by creating a scaled structure element
+    if parameters.voxelsize != None:
+        voxelsize = parameters.voxelsize
+    else:
+        voxelsize = seg.voxelsize
+    
     for i in labels[labels != 0]:
         tmp = seg[bboxes[i - 1]] == i
         size_cell = np.sum(tmp)
         if size_cell > parameters.previous_seg_erosion_cell_min_size:
             if i == 1:
-                mapping.append((tmp, parameters.previous_seg_erosion_background_iterations, bboxes[i - 1], i))
+                mapping.append((tmp, parameters.previous_seg_erosion_background_iterations, bboxes[i - 1], i, voxelsize))
             else:
-                mapping.append((tmp, parameters.previous_seg_erosion_cell_iterations, bboxes[i - 1], i))
+                mapping.append((tmp, parameters.previous_seg_erosion_cell_iterations, bboxes[i - 1], i, voxelsize))
         else:
             monitoring.to_log_and_console('     .. skip cell ' + str(i) + ', volume (' + str(size_cell) + ') <= '
                                           + str(parameters.previous_seg_erosion_cell_min_size), 2)
@@ -793,7 +818,10 @@ def build_seeds_from_previous_segmentation(label_image, output_image, parameters
     for eroded, i, bb in outputs:
         seeds[bb][eroded] = i
 
-    seeds.voxelsize = seg.voxelsize
+    if parameters.voxelsize != None:
+        voxelsize = parameters.voxelsize
+    else:    
+        seeds.voxelsize = seg.voxelsize
     imsave(output_image, seeds)
 
     return
@@ -844,7 +872,7 @@ def calculate_h_by_measuring_h_range_for_two_seeds_in_all_cells(raw_intensity_im
     b_boxes = membranes.calculate_incremented_bounding_boxes(segmentation_image)
     #calculate the dynamic range (dr) as the range of signal intensity between the 1 and 99%iles of raw intesnity values
     dr = np.percentile(intensity_image, 99) - np.percentile(intensity_image, 1)
-    abs_tau = int(np.round(parameters.seed_selection_tau*dr)) #if tau is in decimals, otherwise tau/100 # built-in function round gives out int
+    abs_tau = int(np.round((parameters.seed_selection_tau/100)*dr)) #tau is a percentage >> divide by 100
     results_dict = {} #final result of selected value and wanted number of seeds - label: [h_value, n_seeds]
     correspondences = {}
     full_seed_image = np.zeros_like(segmentation_image)
@@ -977,9 +1005,12 @@ def calculate_h_by_measuring_h_range_for_two_seeds_in_all_cells(raw_intensity_im
     bg_seeds = previous_seeds == 1 
     # create an eroded background seed from previous
     # test if image is anisotropic
-    voxelsize = full_seed_image.voxelsize
+    if parameters.voxelsize != None:
+        voxelsize = parameters.voxelsize
+    else:    
+        voxelsize = full_seed_image.voxelsize
     print(voxelsize)
-    if len(set(voxelsize)) > 1:
+    if len(set(voxelsize)) > 1: # that means the image is anisotropic
         # create 3D kernel for dilation which takes the anisotropy of the image into account
         z_dim, y_dim, x_dim = voxelsize
         # use scaling factor to find the smallest possible ellipsoid
@@ -995,7 +1026,7 @@ def calculate_h_by_measuring_h_range_for_two_seeds_in_all_cells(raw_intensity_im
     # make sure we did not erode background seed into nothing
     if len(np.unique(bg_eroded)) < 2:
         while len(np.unique(bg_eroded)) < 2:
-            iterations = np.round(iterations/2)
+            iterations = int(np.round(iterations/2))
             if iterations >= 1:
                 bg_eroded = nd.binary_erosion(bg_seeds, 
                                         iterations = iterations,
@@ -1795,7 +1826,7 @@ def _volume_diagnosis(prev_volumes, curr_volumes, correspondences, volume_decrea
             # calc a ratio
             # compare ratio to cut-off
             elif len(daughters_c) == 2:
-                vol_ratio = 1/(prev_volumes[mother_c]/(curr_volumes[daughters_c][0]+curr_volumes[daughters_c][1]))
+                vol_ratio = 1/(prev_volumes[mother_c]/(curr_volumes[daughters_c[0]]+curr_volumes[daughters_c[1]]))
                 if vol_ratio < volume_decrease_cut_off:
                     cells_with_volume_loss[mother_c] = daughters_c
             else:
@@ -2040,6 +2071,7 @@ def _volume_decrease_correction(astec_name, intensity_seed_image, segmentation_f
                 touching_both = touching_cell_a.intersection(touching_cell_b)
 
                 if len(unique_to_a) == 0 & len(unique_to_b) == 0 & len(touching_both) == 0:
+                    print(f"     ... found no extra seeds for divided cell {cell}, seeding remains unchanged despite volume loss")
                     break
                 # assign clear cases, decide doubles based on surface volume
                 for unique_seed in unique_to_a:
@@ -2085,7 +2117,10 @@ def _volume_decrease_correction(astec_name, intensity_seed_image, segmentation_f
         corr_selected_seeds = common.add_suffix(astec_name, '_seeds_from_corrected_selection',
                                                 new_dirname=experiment.astec_dir.get_tmp_directory(),
                                                 new_extension=experiment.default_image_suffix)
-        voxelsize = full_seed_image.voxelsize
+        if parameters.voxelsize != None:
+            voxelsize = parameters.voxelsize
+        else:    
+            voxelsize = full_seed_image.voxelsize
         imsave(corr_selected_seeds, SpatialImage(full_seed_image, voxelsize=voxelsize).astype(np.uint16))
         del full_seed_image
 
@@ -4116,7 +4151,10 @@ def new_membrane_sanity_check(segmentation_image, previous_segmentation, datafra
         # save dataframe in main directory
         gt_volumes_df.to_pickle(dataframe_path)
         # save image here with new name to keep track that it went through the membrane sanity check
-        voxelsize = curr_seg.voxelsize
+        if parameters.voxelsize != None:
+            voxelsize = parameters.voxelsize
+        else:    
+            voxelsize = curr_seg.voxelsize
         imsave(merged_segmentation_name, SpatialImage(curr_seg, voxelsize=voxelsize).astype(np.uint16))
         return merged_segmentation_name, correspondences
     
@@ -4135,6 +4173,10 @@ def new_membrane_sanity_check(segmentation_image, previous_segmentation, datafra
         new_false_pairs = [key for key, value in mapper.items() if value in new_for_fusion]
         uncertain_false_pairs =  [key for key, value in mapper.items() if value in uncertain_for_fusion]
         false_pairs_list = new_false_pairs + uncertain_false_pairs
+        if parameters.voxelsize != None:
+            voxelsize = parameters.voxelsize    
+        else:    
+            voxelsize = merged_segmentation.voxelsize
         if len(false_pairs_list) > 0:
             monitoring.to_log_and_console('      .. fusing cell pairs:' + f"{false_pairs_list}", 2)
             # merge cells that are seperated by false membranes in the segmentation image
@@ -4142,14 +4184,12 @@ def new_membrane_sanity_check(segmentation_image, previous_segmentation, datafra
                                                                                                       curr_seg, 
                                                                                                       correspondences)
             # output will first be saved in tmp and copied to main in astec_process as final result of membrane sanity check
-            voxelsize = merged_segmentation.voxelsize
             imsave(merged_segmentation_name, SpatialImage(merged_segmentation, voxelsize=voxelsize).astype(np.uint16))
             correspondences = membranes.update_correspondences_dictionary(correspondences,
                                                                             changed_cells
                                                                             )
         else:
             monitoring.to_log_and_console('      .. did not find false membranes, not fusing any cell pairs', 2)
-            voxelsize = curr_seg.voxelsize
             imsave(merged_segmentation_name, SpatialImage(curr_seg, voxelsize=voxelsize).astype(np.uint16))
         mem_id_add = passed_new_membranes
         append_df = pd.DataFrame(index = list(range (0, len(mem_id_add))), 

@@ -24,7 +24,9 @@ def read_tif(filename):
     _vy = ytag.value[1] / ytag.value[0]
     if imagej_metadata is not None and 'spacing' in imagej_metadata:
         _vz = imagej_metadata['spacing']
+        print("oh oh - voxel size is not correct")
     else:
+        # TODO make this more universally applicable
         _vx = 0.173
         _vy = 0.173
         _vz = 1
