@@ -999,43 +999,10 @@ def calculate_h_by_measuring_h_range_for_two_seeds_in_all_cells(raw_intensity_im
                 full_seed_image[box] = np.where(previous_seeds[box] == label, previous_seeds[box], full_seed_image[box])
                 correspondences[label] = [label]
 
-    # add a seed for the background --> use the background seed from previous
+    # add a seed for the background --> use the background seed from previous (this seed has already been eroded)
     if previous_seeds is None:
-        previous_seeds = imread(path_to_previous_seeds)
-    bg_seeds = previous_seeds == 1 
-    # create an eroded background seed from previous
-    # test if image is anisotropic
-    if parameters.voxelsize != None:
-        voxelsize = parameters.voxelsize
-    else:    
-        voxelsize = full_seed_image.voxelsize
-    print(voxelsize)
-    if len(set(voxelsize)) > 1: # that means the image is anisotropic
-        # create 3D kernel for dilation which takes the anisotropy of the image into account
-        z_dim, y_dim, x_dim = voxelsize
-        # use scaling factor to find the smallest possible ellipsoid
-        semiaxes = np.array([1/z_dim, 1/y_dim, 1/x_dim])*np.max(voxelsize)
-        shape = [int(c) for c in np.ceil(semiaxes*2+1)]
-        structure = rg.ellipsoid(shape, semiaxes)
-    else:
-        structure = None
-    iterations = parameters.previous_seg_erosion_background_iterations
-    bg_eroded = nd.binary_erosion(bg_seeds, 
-                                  iterations = iterations,
-                                  structure = structure)
-    # make sure we did not erode background seed into nothing
-    if len(np.unique(bg_eroded)) < 2:
-        while len(np.unique(bg_eroded)) < 2:
-            iterations = int(np.round(iterations/2))
-            if iterations >= 1:
-                bg_eroded = nd.binary_erosion(bg_seeds, 
-                                        iterations = iterations,
-                                        structure = structure)
-            else:
-                bg_eroded = bg_seeds
-                break
-    # place background seed into the full seed image    
-    full_seed_image[bg_eroded == 1] = 1
+        previous_seeds = imread(path_to_previous_seeds)   
+    full_seed_image[previous_seeds == 1] = 1
 
     # save full_seed_image after all cells were processed in output_path
     imsave(output_path, SpatialImage(full_seed_image))
@@ -2121,6 +2088,7 @@ def _volume_decrease_correction(astec_name, intensity_seed_image, segmentation_f
             voxelsize = parameters.voxelsize
         else:    
             voxelsize = full_seed_image.voxelsize
+        print(f"{voxelsize=}")
         imsave(corr_selected_seeds, SpatialImage(full_seed_image, voxelsize=voxelsize).astype(np.uint16))
         del full_seed_image
 
@@ -4024,10 +3992,10 @@ def new_membrane_sanity_check(segmentation_image, previous_segmentation, datafra
 
     #reverse correspondences dictionary to make cell_id mapping easier
     corr_rev = {value: key for key, value_list in correspondences.items() for value in value_list}
-    
-    ############ I am not really using this anywhere, right?
-    #cell_pairs_previous_id = {cell_pair: membranes.translate_cell_pair_to_previous(cell_pair, corr_rev) for cell_pair in mapper.keys()}
-
+    if parameters.voxelsize != None:
+        voxelsize = parameters.voxelsize
+    else:
+        voxelsize = gt_image.voxelsize
     # get labels of cells that have divided between the previous and current time point and make sure there are only combinations of two
     newly_div_cells = [value for value in correspondences.values() if len(value) > 1]
     newly_div_cell_pairs = []
@@ -4060,7 +4028,7 @@ def new_membrane_sanity_check(segmentation_image, previous_segmentation, datafra
 
         # calculate volumes for ground truth
         gt_interfaces, gt_mapper = membranes.extract_touching_surfaces(gt_image)
-        gt_true_membranes_volumes, gt_volumes = membranes.volume_ratio_after_closing(gt_interfaces, gt_mapper)
+        gt_true_membranes_volumes, gt_volumes = membranes.volume_ratio_after_closing(gt_interfaces, gt_mapper, voxelsize)
         # create dataframe with ground truth metrics
         gt_volumes_df = pd.DataFrame(columns = ["mem_id", "cells"])
         gt_volumes_df["mem_id"] = gt_mapper.values()
@@ -4151,10 +4119,6 @@ def new_membrane_sanity_check(segmentation_image, previous_segmentation, datafra
         # save dataframe in main directory
         gt_volumes_df.to_pickle(dataframe_path)
         # save image here with new name to keep track that it went through the membrane sanity check
-        if parameters.voxelsize != None:
-            voxelsize = parameters.voxelsize
-        else:    
-            voxelsize = curr_seg.voxelsize
         imsave(merged_segmentation_name, SpatialImage(curr_seg, voxelsize=voxelsize).astype(np.uint16))
         return merged_segmentation_name, correspondences
     
@@ -4173,10 +4137,6 @@ def new_membrane_sanity_check(segmentation_image, previous_segmentation, datafra
         new_false_pairs = [key for key, value in mapper.items() if value in new_for_fusion]
         uncertain_false_pairs =  [key for key, value in mapper.items() if value in uncertain_for_fusion]
         false_pairs_list = new_false_pairs + uncertain_false_pairs
-        if parameters.voxelsize != None:
-            voxelsize = parameters.voxelsize    
-        else:    
-            voxelsize = merged_segmentation.voxelsize
         if len(false_pairs_list) > 0:
             monitoring.to_log_and_console('      .. fusing cell pairs:' + f"{false_pairs_list}", 2)
             # merge cells that are seperated by false membranes in the segmentation image
