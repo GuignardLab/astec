@@ -11,6 +11,7 @@ import pandas as pd
 from itertools import combinations
 from skimage.morphology import h_minima, ball
 import pickle as pkl
+import raster_geometry as rg
 
 import astec.utils.common as common
 import astec.utils.ace as ace
@@ -974,19 +975,37 @@ def calculate_h_by_measuring_h_range_for_two_seeds_in_all_cells(raw_intensity_im
     if previous_seeds is None:
         previous_seeds = imread(path_to_previous_seeds)
     bg_seeds = previous_seeds == 1 
-    # erode the background seed as much as possible, while checking that we dont loose it completely
-    # TODO this is super slow and feels unnecessary --> do we have a better idea for the bg erosion?
-    erode = True
-    bg_eroded_last = None
-    bg_eroded = bg_seeds.astype(int)
-    while erode == True:
-        bg_eroded = nd.binary_erosion(bg_eroded)
-        if len(np.unique(bg_eroded)) == 1:
-            erode = False
-            if bg_eroded_last is not None:
-                bg_eroded = bg_eroded_last 
-        bg_eroded_last = bg_eroded
+    # create an eroded background seed from previous
+    # test if image is anisotropic
+    voxelsize = full_seed_image.voxelsize
+    print(voxelsize)
+    if len(set(voxelsize)) > 1:
+        # create 3D kernel for dilation which takes the anisotropy of the image into account
+        z_dim, y_dim, x_dim = voxelsize
+        # use scaling factor to find the smallest possible ellipsoid
+        semiaxes = np.array([1/z_dim, 1/y_dim, 1/x_dim])*np.max(voxelsize)
+        shape = [int(c) for c in np.ceil(semiaxes*2+1)]
+        structure = rg.ellipsoid(shape, semiaxes)
+    else:
+        structure = None
+    iterations = parameters.previous_seg_erosion_background_iterations
+    bg_eroded = nd.binary_erosion(bg_seeds, 
+                                  iterations = iterations,
+                                  structure = structure)
+    # make sure we did not erode background seed into nothing
+    if len(np.unique(bg_eroded)) < 2:
+        while len(np.unique(bg_eroded)) < 2:
+            iterations = np.round(iterations/2)
+            if iterations >= 1:
+                bg_eroded = nd.binary_erosion(bg_seeds, 
+                                        iterations = iterations,
+                                        structure = structure)
+            else:
+                bg_eroded = bg_seeds
+                break
+    # place background seed into the full seed image    
     full_seed_image[bg_eroded == 1] = 1
+
     # save full_seed_image after all cells were processed in output_path
     imsave(output_path, SpatialImage(full_seed_image))
     return results_dict, correspondences           
@@ -1012,7 +1031,8 @@ def find_appropriate_number_of_seeds(h_n_seeds_dictionary, abs_tau):
         h_diff = h_top - h_bottom
     else:
         h_diff = 0
-    
+    print(f"{h_diff=}")
+    print(f"{abs_tau=}")
     if h_diff > abs_tau:
         n_seeds = 2
         h_value = h_top
@@ -1743,7 +1763,7 @@ def _update_lineage_properties(lineage_tree_information, correspondences, previo
 #########
 # Modification by Gesa Feb 24: new volume diagnosis
 
-def _volume_diagnosis(prev_volumes, curr_volumes, correspondences, volume_cut_off):
+def _volume_diagnosis(prev_volumes, curr_volumes, correspondences, volume_decrease_cut_off):
     """
     Function that calculates the volume of daughter cells and compares them to the mother cell. 
     If cells lost more than 30% of volume they will be added to a list. In case of cell divisions, cell volume will be compared
@@ -1769,16 +1789,15 @@ def _volume_diagnosis(prev_volumes, curr_volumes, correspondences, volume_cut_of
         else:
             if len(daughters_c) == 1:
                 vol_ratio = 1/(prev_volumes[mother_c]/curr_volumes[daughters_c[0]])
-                if vol_ratio < volume_cut_off:
+                if vol_ratio < volume_decrease_cut_off:
                     cells_with_volume_loss[mother_c] = daughters_c
             # measure the volume of the mother and daughter
             # calc a ratio
             # compare ratio to cut-off
             elif len(daughters_c) == 2:
-                for daughter in daughters_c:
-                    vol_ratio = 1/((prev_volumes[mother_c]/2)/curr_volumes[daughter])
-                    if vol_ratio < volume_cut_off/2:
-                        cells_with_volume_loss.setdefault(mother_c, []).append(daughter)
+                vol_ratio = 1/(prev_volumes[mother_c]/(curr_volumes[daughters_c][0]+curr_volumes[daughters_c][1]))
+                if vol_ratio < volume_decrease_cut_off:
+                    cells_with_volume_loss[mother_c] = daughters_c
             else:
                 monitoring.to_log_and_console('    ' + proc + ': cell ' + str(mother_c)
                                           + ' has an anomalie in the number of daughter cells (more than 2)', 2)
@@ -3941,7 +3960,7 @@ def new_membrane_sanity_check(segmentation_image, previous_segmentation, datafra
                         
    
     """
-    ################ TO DO!
+    ################ TODO!
     # Make sure the dataframe stays correct even if I repeat a time frame in the middle and the df is already created
     # it seems to be working, but better double check again
 
@@ -4160,7 +4179,7 @@ def new_membrane_sanity_check(segmentation_image, previous_segmentation, datafra
         gt_volumes_df = pd.concat([gt_volumes_df, append_df])
         gt_volumes_df.reset_index(drop = True, inplace = True)
         
-        #add new membranes that are classified as false --> dividing cells will be fused
+        # add new membranes that are classified as false --> dividing cells will be fused
         mem_id_add = new_for_fusion
         append_df = pd.DataFrame(index = list(range (0, len(mem_id_add))), 
                                 columns = ["mem_id", "cells", "time_point", "mem_lineage_id", 
@@ -4201,5 +4220,4 @@ def new_membrane_sanity_check(segmentation_image, previous_segmentation, datafra
         gt_volumes_df.reset_index(drop = True, inplace = True)
         gt_volumes_df.to_pickle(dataframe_path)
         return merged_segmentation_name, correspondences
-
-        
+    
