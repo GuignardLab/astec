@@ -296,6 +296,7 @@ class AstecParameters(mars.WatershedParameters, MorphoSnakeParameters):
         self.doc['previous_seg_erosion_background_iterations'] = doc
         self.previous_seg_erosion_background_iterations = 25
 
+        # TODO make this a relative value rather than a hardcoded cut-off
         doc = "\t Minimal size of a cell from segmentation at t-1\n"
         doc += "\t to generate a cell.\n"
         doc += "\t Lineage of too small cell then ends at t-1\n"
@@ -303,20 +304,20 @@ class AstecParameters(mars.WatershedParameters, MorphoSnakeParameters):
         self.previous_seg_erosion_cell_min_size = 1000
 
         #
-        # astec-dedicated watershed parameters
+        # OLD astec-dedicated watershed parameters
         #
-        doc = "\t Low bound of the h range used to compute h-minima\n"
-        self.doc['watershed_seed_hmin_min_value'] = doc
-        self.watershed_seed_hmin_min_value = 4
+        # doc = "\t Low bound of the h range used to compute h-minima\n"
+        # self.doc['watershed_seed_hmin_min_value'] = doc
+        # self.watershed_seed_hmin_min_value = 4
 
-        doc = "\t High bound of the h range used to compute h-minima\n"
-        self.doc['watershed_seed_hmin_max_value'] = doc
-        self.watershed_seed_hmin_max_value = 18
+        # doc = "\t High bound of the h range used to compute h-minima\n"
+        # self.doc['watershed_seed_hmin_max_value'] = doc
+        # self.watershed_seed_hmin_max_value = 18
 
-        doc = "\t Step between two successive h values when computing\n"
-        doc += "\t h-minima\n"
-        self.doc['watershed_seed_hmin_delta_value'] = doc
-        self.watershed_seed_hmin_delta_value = 2
+        # doc = "\t Step between two successive h values when computing\n"
+        # doc += "\t h-minima\n"
+        # self.doc['watershed_seed_hmin_delta_value'] = doc
+        # self.watershed_seed_hmin_delta_value = 2
 
         #
         #
@@ -464,12 +465,13 @@ class AstecParameters(mars.WatershedParameters, MorphoSnakeParameters):
         self.varprint('previous_seg_erosion_cell_min_size', self.previous_seg_erosion_cell_min_size,
                       self.doc['previous_seg_erosion_cell_min_size'])
 
-        self.varprint('watershed_seed_hmin_min_value', self.watershed_seed_hmin_min_value,
-                      self.doc['watershed_seed_hmin_min_value'])
-        self.varprint('watershed_seed_hmin_max_value', self.watershed_seed_hmin_max_value,
-                      self.doc['watershed_seed_hmin_max_value'])
-        self.varprint('watershed_seed_hmin_delta_value', self.watershed_seed_hmin_delta_value,
-                      self.doc['watershed_seed_hmin_delta_value'])
+        # OLD astec parameters
+        # self.varprint('watershed_seed_hmin_min_value', self.watershed_seed_hmin_min_value,
+        #               self.doc['watershed_seed_hmin_min_value'])
+        # self.varprint('watershed_seed_hmin_max_value', self.watershed_seed_hmin_max_value,
+        #               self.doc['watershed_seed_hmin_max_value'])
+        # self.varprint('watershed_seed_hmin_delta_value', self.watershed_seed_hmin_delta_value,
+        #               self.doc['watershed_seed_hmin_delta_value'])
 
         self.varprint('background_seed_from_hmin', self.background_seed_from_hmin,
                       self.doc['background_seed_from_hmin'])
@@ -525,12 +527,13 @@ class AstecParameters(mars.WatershedParameters, MorphoSnakeParameters):
         self.varwrite(logfile, 'previous_seg_erosion_cell_min_size', self.previous_seg_erosion_cell_min_size,
                       self.doc['previous_seg_erosion_cell_min_size'])
 
-        self.varwrite(logfile, 'watershed_seed_hmin_min_value', self.watershed_seed_hmin_min_value,
-                      self.doc['watershed_seed_hmin_min_value'])
-        self.varwrite(logfile, 'watershed_seed_hmin_max_value',
-                      self.watershed_seed_hmin_max_value, self.doc['watershed_seed_hmin_max_value'])
-        self.varwrite(logfile, 'watershed_seed_hmin_delta_value', self.watershed_seed_hmin_delta_value,
-                      self.doc['watershed_seed_hmin_delta_value'])
+        # OLD astec parameters
+        # self.varwrite(logfile, 'watershed_seed_hmin_min_value', self.watershed_seed_hmin_min_value,
+        #               self.doc['watershed_seed_hmin_min_value'])
+        # self.varwrite(logfile, 'watershed_seed_hmin_max_value',
+        #               self.watershed_seed_hmin_max_value, self.doc['watershed_seed_hmin_max_value'])
+        # self.varwrite(logfile, 'watershed_seed_hmin_delta_value', self.watershed_seed_hmin_delta_value,
+        #               self.doc['watershed_seed_hmin_delta_value'])
 
         self.varwrite(logfile, 'background_seed_from_hmin', self.background_seed_from_hmin,
                       self.doc['background_seed_from_hmin'])
@@ -602,35 +605,35 @@ class AstecParameters(mars.WatershedParameters, MorphoSnakeParameters):
         #
         # watershed
         #
+        # OLD astec parameters
+        # self.watershed_seed_hmin_min_value = self.read_parameter(parameters, 'watershed_seed_hmin_min_value',
+        #                                                          self.watershed_seed_hmin_min_value)
+        # self.watershed_seed_hmin_min_value = self.read_parameter(parameters, 'hmin_min_value',
+        #                                                          self.watershed_seed_hmin_min_value)
+        # self.watershed_seed_hmin_min_value = self.read_parameter(parameters, 'hmin_min',
+        #                                                          self.watershed_seed_hmin_min_value)
+        # self.watershed_seed_hmin_min_value = self.read_parameter(parameters, 'h_min_min_value',
+        #                                                          self.watershed_seed_hmin_min_value)
+        # self.watershed_seed_hmin_min_value = self.read_parameter(parameters, 'h_min_min',
+        #                                                          self.watershed_seed_hmin_min_value)
 
-        self.watershed_seed_hmin_min_value = self.read_parameter(parameters, 'watershed_seed_hmin_min_value',
-                                                                 self.watershed_seed_hmin_min_value)
-        self.watershed_seed_hmin_min_value = self.read_parameter(parameters, 'hmin_min_value',
-                                                                 self.watershed_seed_hmin_min_value)
-        self.watershed_seed_hmin_min_value = self.read_parameter(parameters, 'hmin_min',
-                                                                 self.watershed_seed_hmin_min_value)
-        self.watershed_seed_hmin_min_value = self.read_parameter(parameters, 'h_min_min_value',
-                                                                 self.watershed_seed_hmin_min_value)
-        self.watershed_seed_hmin_min_value = self.read_parameter(parameters, 'h_min_min',
-                                                                 self.watershed_seed_hmin_min_value)
+        # self.watershed_seed_hmin_max_value = self.read_parameter(parameters, 'watershed_seed_hmin_max_value',
+        #                                                          self.watershed_seed_hmin_max_value)
+        # self.watershed_seed_hmin_max_value = self.read_parameter(parameters, 'hmin_max_value',
+        #                                                          self.watershed_seed_hmin_max_value)
+        # self.watershed_seed_hmin_max_value = self.read_parameter(parameters, 'hmin_max',
+        #                                                          self.watershed_seed_hmin_max_value)
+        # self.watershed_seed_hmin_max_value = self.read_parameter(parameters, 'h_min_max_value',
+        #                                                          self.watershed_seed_hmin_max_value)
+        # self.watershed_seed_hmin_max_value = self.read_parameter(parameters, 'h_min_max',
+        #                                                          self.watershed_seed_hmin_max_value)
 
-        self.watershed_seed_hmin_max_value = self.read_parameter(parameters, 'watershed_seed_hmin_max_value',
-                                                                 self.watershed_seed_hmin_max_value)
-        self.watershed_seed_hmin_max_value = self.read_parameter(parameters, 'hmin_max_value',
-                                                                 self.watershed_seed_hmin_max_value)
-        self.watershed_seed_hmin_max_value = self.read_parameter(parameters, 'hmin_max',
-                                                                 self.watershed_seed_hmin_max_value)
-        self.watershed_seed_hmin_max_value = self.read_parameter(parameters, 'h_min_max_value',
-                                                                 self.watershed_seed_hmin_max_value)
-        self.watershed_seed_hmin_max_value = self.read_parameter(parameters, 'h_min_max',
-                                                                 self.watershed_seed_hmin_max_value)
-
-        self.watershed_seed_hmin_delta_value = self.read_parameter(parameters, 'watershed_seed_hmin_delta_value',
-                                                                   self.watershed_seed_hmin_delta_value)
-        self.watershed_seed_hmin_delta_value = self.read_parameter(parameters, 'hmin_delta_value',
-                                                                   self.watershed_seed_hmin_delta_value)
-        self.watershed_seed_hmin_delta_value = self.read_parameter(parameters, 'h_min_delta_value',
-                                                                   self.watershed_seed_hmin_delta_value)
+        # self.watershed_seed_hmin_delta_value = self.read_parameter(parameters, 'watershed_seed_hmin_delta_value',
+        #                                                            self.watershed_seed_hmin_delta_value)
+        # self.watershed_seed_hmin_delta_value = self.read_parameter(parameters, 'hmin_delta_value',
+        #                                                            self.watershed_seed_hmin_delta_value)
+        # self.watershed_seed_hmin_delta_value = self.read_parameter(parameters, 'h_min_delta_value',
+        #                                                            self.watershed_seed_hmin_delta_value)
 
         #
         #
@@ -740,19 +743,23 @@ def _erode_cell(parameters):
     
     if len(set(voxelsize)) > 1:
         # create 3D kernel for erosion which takes the anisotropy of the image into account
-        z_dim, y_dim, x_dim = voxelsize
+        x_dim, y_dim, z_dim = voxelsize
         # use scaling factor to find the smallest possible ellipsoid
         semiaxes = np.array([1/z_dim, 1/y_dim, 1/x_dim])*np.max(voxelsize)
         shape = [int(c) for c in np.ceil(semiaxes*2+1)]
         structure = rg.ellipsoid(shape, semiaxes)
     else:
         structure = None
-
-    eroded = nd.binary_erosion(tmp, iterations=nb_iter)
+    if structure != None:
+        eroded = nd.binary_erosion(tmp, iterations=nb_iter, structure = structure)
+    else:
+        eroded = nd.binary_erosion(tmp, iterations=nb_iter)
     while len(nd.find_objects(eroded)) != 1 and nb_iter >= 0:
         nb_iter -= 1
-        eroded = nd.binary_erosion(tmp, iterations=nb_iter, structure = structure)
-
+        if structure != None:
+            eroded = nd.binary_erosion(tmp, iterations=nb_iter, structure = structure)
+        else:
+            eroded = nd.binary_erosion(tmp, iterations=nb_iter)
     return eroded, i, bb
 
 
@@ -822,6 +829,7 @@ def build_seeds_from_previous_segmentation(label_image, output_image, parameters
         voxelsize = parameters.voxelsize
     else:    
         seeds.voxelsize = seg.voxelsize
+    print(f"{voxelsize=}")
     imsave(output_image, seeds)
 
     return
@@ -3992,10 +4000,12 @@ def new_membrane_sanity_check(segmentation_image, previous_segmentation, datafra
 
     #reverse correspondences dictionary to make cell_id mapping easier
     corr_rev = {value: key for key, value_list in correspondences.items() for value in value_list}
+    print(f"{parameters.voxelsize=}")
     if parameters.voxelsize != None:
         voxelsize = parameters.voxelsize
     else:
-        voxelsize = gt_image.voxelsize
+        voxelsize = curr_seg.voxelsize
+    print(f"{voxelsize=}")
     # get labels of cells that have divided between the previous and current time point and make sure there are only combinations of two
     newly_div_cells = [value for value in correspondences.values() if len(value) > 1]
     newly_div_cell_pairs = []
@@ -4007,7 +4017,7 @@ def new_membrane_sanity_check(segmentation_image, previous_segmentation, datafra
                             key in newly_div_cell_pairs]
 
     # calculate volume_ratios for all cells, subset for cells that have divided 
-    volume_ratios_all_current, volumes_all_current = membranes.volume_ratio_after_closing(interfaces, mapper)
+    volume_ratios_all_current, volumes_all_current = membranes.volume_ratio_after_closing(interfaces, mapper, voxelsize)
     volume_ratios_new = {key: value for key, value in volume_ratios_all_current.items() if key in new_membrane_ids}
 
 

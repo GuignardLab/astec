@@ -105,7 +105,7 @@ def extract_touching_surfaces(watershed_labels):
 
 
 
-def volume_ratio_after_closing(interface_image, mapper, voxel_size = (1, 0.173, 0.173), iterations = 1):
+def volume_ratio_after_closing(interface_image, mapper, voxelsize, iterations = 1):
     
     '''
     calculate ratio of the volumes of each interface before and after using scipy.ndimage.binary_closing 
@@ -121,18 +121,19 @@ def volume_ratio_after_closing(interface_image, mapper, voxel_size = (1, 0.173, 
     volumes = {}
 
     # test if all values are equal
-    if len(set(voxel_size)) > 1:
-           
+    if len(set(voxelsize)) > 1:
+        print(f"{voxelsize=}")
         # create 3D kernel for dilation which takes the anisotropy of the image into account
-        z_dim, y_dim, x_dim = voxel_size
+        x_dim, y_dim, z_dim = voxelsize
            
         # use scaling factor to find the smallest possible ellipsoid
-        semiaxes = np.array([1/z_dim, 1/y_dim, 1/x_dim])*np.max(voxel_size)
+        semiaxes = np.array([1/z_dim, 1/y_dim, 1/x_dim])*np.max(voxelsize)
         shape = [int(c) for c in np.ceil(semiaxes*2+1)]
         structure = rg.ellipsoid(shape, semiaxes)
         increment = np.ceil(iterations * np.max(semiaxes)).astype(int)
     else:
         structure = None
+        increment = 1
     # calculate bounding boxes for all cells, dilate bounding box by amount needied for the binary closing
     incremented_b_boxes = calculate_incremented_bounding_boxes(interface_image, increment = increment)
     
