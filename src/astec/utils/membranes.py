@@ -21,7 +21,13 @@ def calculate_incremented_bounding_boxes(watershed_labels, increment = 1):
     Returns: 
         incremented_b_boxes (): A list of tuples, with 3 slices each. Bounding boxes are incremented by one voxel in each dimension. Labels correspond to the indexes of the bounding box.
     """
-
+    # in case 1 is the background, set it to 0
+    zero_count = np.count_nonzero(watershed_labels == 0)
+    one_count = np.count_nonzero(watershed_labels == 1)
+     
+    if one_count > zero_count:
+        watershed_labels[watershed_labels == 1] = 0
+        
     #calculate bounding boxes
     b_boxes = find_objects(watershed_labels)
     z_max, x_max, y_max = watershed_labels.shape
@@ -252,48 +258,3 @@ def update_correspondences_dictionary(correspondences, changed_cells):
         else:
             new_correspondences[mother_cell] = correspondences[mother_cell]
     return new_correspondences
-
-
-    # old (from Gesa but was not compatible with the new output after volume decrease correction)
-    # all_uncertain_cells = [x for m in uncertain_false_pairs for x in m]
-    # all_new_cells = [x for m in new_false_pairs for x in m]
-    # for key in correspondences.keys():
-    #     #this will find newly divided cells that we want to merge and use the smaller label
-    #     daughters = correspondences[key]
-    #     merge = [n for n in daughters if n in all_new_cells]
-    #     progeny = tuple(daughters)
-    #     if len(merge) > 0:
-            
-    #         if set(merge) == set(daughters):
-    #             new_progeny = [np.min(daughters)]
-    #         else:
-    #             not_in_merge = list(set(daughters).difference(set(merge)) )
-    #             new_progeny = [np.min(merge)] + not_in_merge
-
-    #         new_correspondences[key] = new_progeny
-        
-    #     elif [cells for cells in all_uncertain_cells if cells in progeny]:
-    #         cells = [cells for cells in all_uncertain_cells if cells in progeny]
-    #         all_cc_cells = [connected_cells for connected_cells in cc_list if cells[0] in connected_cells]
-    #         #find volumes for cells to place the new merged cell in place of the largest fragment in the lineage
-    #         volumes_cells = {id: volume for id, volume in volumes.items() if id in all_cc_cells[0]}
-    #         largest_vol_id = [id for id, value in volumes_cells.items() if value == max(volumes_cells.values())]
-
-    #         #all cells should be in the respective set in cc_list, so it is sufficient to query for the first entry
-    #         new_id = [min(connected_cells) for connected_cells in cc_list if cells[0] in connected_cells]
-    #         if (len(progeny) == 1) and (largest_vol_id[0] in progeny):
-    #             new_correspondences[key] = new_id
-    #         elif len(progeny) > 1:
-    #             #if largest_vol_id[0] in progeny:
-    #             pair_containing_new_id = [list(pair) for pair in uncertain_false_pairs if new_id[0] in pair]
-    #             removed_cells = [cell for cell in pair_containing_new_id[0] if cell not in new_id]
-    #             new_id_list = [cell for cell in progeny if cell not in removed_cells]
-    #             if (not new_id[0] in new_id_list) and (largest_vol_id[0] in progeny):
-    #                 new_id_list.append(new_id[0])
-    #             new_id_list.sort()
-    #             new_correspondences[key] = new_id_list
-    #     else:
-    #         #if there are no changes we just use the original values
-    #         new_correspondences[key] = correspondences[key]
-
-    # return new_correspondences
