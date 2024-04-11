@@ -5,10 +5,6 @@ from scipy.ndimage import find_objects
 from skimage.morphology import binary_dilation
 import networkx as nx
 import raster_geometry as rg
-import os
-import pandas as pd
-import pickle
-
 
 
 def calculate_incremented_bounding_boxes(watershed_labels, increment = 1):
@@ -180,7 +176,7 @@ def find_connected_components(false_pairs_list):
     return cc_list
 
 
-def merge_labels_with_false_membranes(false_pairs_list, original_watershed_labels, correspondences):
+def merge_labels_with_false_membranes(false_pairs_list, original_watershed_labels, selected_seeds, correspondences):
     
     """combine labels that are seperated by interfaces that are detected as false membranes
     Args:
@@ -204,13 +200,14 @@ def merge_labels_with_false_membranes(false_pairs_list, original_watershed_label
         for label in cell_set:
             mother = [key for key, value in correspondences.items() if label in value][0]
             merged_watershed[merged_watershed == label] = smallest_id
+            selected_seeds[selected_seeds == label] = smallest_id
             changed_cells[mother] = smallest_id
             # update correspondences, while not just replacing the old with new, but keeping sibling relationships
             old_daugthers = correspondences[mother]
             new_daughters = [smallest_id if x == label else x for x in old_daugthers]
             # in case we merged both of the daughter (pretty likely) we reduce the list using a set transformation
             correspondences[mother] = list(set(new_daughters))
-    return merged_watershed, changed_cells
+    return merged_watershed, selected_seeds, changed_cells
 
 def translate_cell_pair_to_previous (cell_pair, reversed_correspondences):
     return tuple(sorted([reversed_correspondences[cell_pair[0]], reversed_correspondences[cell_pair[1]]]))

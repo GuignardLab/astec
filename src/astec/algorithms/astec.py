@@ -933,7 +933,10 @@ def calculate_h_by_measuring_h_range_for_two_seeds_in_all_cells(raw_intensity_im
                 if len(labels_in_cell) != 2:
                     monitoring.to_log_and_console(f"Something is wrong with cell {label}, it was called dividing but the current time point does not have 2 seeds with the predicted parameters.")
                 # this works because we know that there will only be two labels (otherwise this cell wouldnt have been classified as diving)
+                # TODO this does not seem to work - a dividing cell pair was asigned the same label after division
+                print(f"{labels_in_cell=}")
                 for i, old_label in enumerate(labels_in_cell):
+                    print(f"{old_label=}", f"{new_labels[i]=}")
                     labels = np.where(labels == old_label, new_labels[i], labels)
                 # then map the new labels onto the old for coherent labeling
                 full_seed_image[box] = np.where(labels > 0, labels, full_seed_image[box])
@@ -1132,7 +1135,6 @@ def _volume_decrease_correction(astec_name,
                                 segmentation_from_selection, 
                                 selected_seeds, 
                                 membrane_image, 
-                                results_division, 
                                 correspondences, 
                                 parameters, 
                                 experiment):
@@ -1179,8 +1181,14 @@ def _volume_decrease_correction(astec_name,
     curr_volumes = _compute_volumes(current_segmentation)
 
     # check whole embryo volume (although this has no consequences)
-    prev_embryo_volume = previous_segmentation.size - prev_volumes[1]
-    curr_embryo_volume = current_segmentation.size - curr_volumes[1]
+    if 0 in set(np.unique(previous_segmentation)):
+        prev_embryo_volume = previous_segmentation.size - prev_volumes[0]
+    else:
+        prev_embryo_volume = previous_segmentation.size - prev_volumes[1]
+    if 0 in set(np.unique(current_segmentation)):
+        curr_embryo_volume = current_segmentation.size - curr_volumes[0]
+    else:
+        curr_embryo_volume = current_segmentation.size - curr_volumes[1]
     volume_ratio = 1.0 - prev_embryo_volume / curr_embryo_volume
     if -parameters.volume_ratio_tolerance <= volume_ratio <= parameters.volume_ratio_tolerance:
         pass
@@ -1229,7 +1237,9 @@ def _volume_decrease_correction(astec_name,
             # finding the two offspring cells --> should I just append both cells in the cells_with_volume_loss dict?
             seeds_to_assign = set([x for x in np.unique(tmp_watershed) if x != 0])
             while len(seeds_to_assign) > 0:
-
+                print(f"{seeds_to_assign=}")
+                # TODO compare volume of siblinbgs and bring them to a similar volume before aasigning seeds
+                # erosion of the bigger one? Or skipping the bigger one in the first rounds of assignment
                 input_seg_image = current_segmentation[box]
                 # create masks of +1 voxel around the daughter cells to understand which original cells the labels in tmp_watershed are touching
                 if round == 0:
@@ -1240,42 +1250,67 @@ def _volume_decrease_correction(astec_name,
                 # creates sets of what touches daughter cell a and set of what touches b
                 touching_cell_a = set(np.unique(tmp_watershed[dil_mask_cell_a]))
                 touching_cell_b = set(np.unique(tmp_watershed[dil_mask_cell_b]))
-                unique_to_a = touching_cell_a.difference(touching_cell_b)
-                unique_to_b = touching_cell_b.difference(touching_cell_a)
-                touching_both = touching_cell_a.intersection(touching_cell_b)
-
-                if len(unique_to_a) == 0 & len(unique_to_b) == 0 & len(touching_both) == 0:
+                all_unique_to_a = touching_cell_a.difference(touching_cell_b)
+                unique_to_a = all_unique_to_a.intersection(set(seeds_to_assign))
+                all_unique_to_b = touching_cell_b.difference(touching_cell_a)
+                unique_to_b = all_unique_to_b.intersection(set(seeds_to_assign))
+                all_touching_both = touching_cell_a.intersection(touching_cell_b)
+                touching_both = all_touching_both.intersection(set(seeds_to_assign))
+                if (round == 0) and (len(unique_to_a) == 0) and (len(unique_to_b) == 0) and (len(touching_both) == 0):
                     monitoring.to_log_and_console(f"       ... found no extra seeds for divided cell {cell}, seeding remains unchanged despite volume loss", 2)
                     break
+                # TODO make this cut-off and input parameter so the user can change it in case cells divide very asymmetrically
+                # if the volumes of the two daughters are more than 10% different, we skip one cell until the volumes have become more similar
+                vol_a = np.sum(mask_cell_a)
+                vol_b = np.sum(mask_cell_b)
+
+                if vol_a > vol_b * 1.1 and len(unique_to_b) != 0:
+                    skip_a = True
+                    print("skipping a")
+                else:
+                    print("test a")
+                    skip_a = False
+                if vol_b > vol_a * 1.1 and len(unique_to_a) != 0:
+                    skip_b = True
+                    print("skipping b")
+                else:
+                    skip_b = False
+                    print("test b")
+                print(f"{unique_to_a=}")
                 # assign clear cases, decide doubles based on surface volume
                 for unique_seed in unique_to_a:
-                    if unique_seed in seeds_to_assign:
+                    if unique_seed in seeds_to_assign and skip_a == False:
+                        print(f"adding seed {unique_seed} to {siblings[0]}")
                         full_seed_image[box][labels == unique_seed] = siblings[0]
                         mask_cell_a[tmp_watershed == unique_seed] = True
                         # remove from list of all labels
                         seeds_to_assign.remove(unique_seed)
                 for unique_seed in unique_to_b:
-                    if unique_seed in seeds_to_assign:
+                    if unique_seed in seeds_to_assign and skip_b == False:
+                        print(f"adding seed {unique_seed} to {siblings[1]}")
                         full_seed_image[box][labels == unique_seed] = siblings[1]
                         mask_cell_b[tmp_watershed == unique_seed] = True
                         # remove from list of all labels
                         seeds_to_assign.remove(unique_seed)
 
-                if len(touching_both) > 0:
+                if len(touching_both) > 0 and skip_a == False and skip_b == False:
                     for double_seed in touching_both:
                         if double_seed in seeds_to_assign:
+                            print(f"adding double seed {double_seed}")
                             #measure touching surface volume, assign to daughter cell with bigger shared volume
                             vol_with_a = np.sum(np.logical_and(tmp_watershed == double_seed, dil_mask_cell_a))
                             vol_with_b = np.sum(np.logical_and(tmp_watershed == double_seed, dil_mask_cell_b))
                             if vol_with_a > vol_with_b:
+                                print(f"adding to {siblings[0]}")
                                 full_seed_image[box][labels == double_seed] = siblings[0]
                                 mask_cell_a[tmp_watershed == double_seed] = True
                             else:
+                                print(f"adding to {siblings[1]}")
                                 full_seed_image[box][labels == double_seed] = siblings[1]
                                 mask_cell_b[tmp_watershed == double_seed] = True 
                             seeds_to_assign.remove(double_seed)
-
                 round += 1
+                print(f"{round=}")
 
     if change_in_seeds == 0:
         monitoring.to_log_and_console('    .. no changes in seeds, do not recompute segmentation', 2)
@@ -1296,6 +1331,7 @@ def _volume_decrease_correction(astec_name,
         else:    
             voxelsize = full_seed_image.voxelsize
         print(f"{voxelsize=}")
+        print(f" saving new seed image in {corr_selected_seeds=}")
         imsave(corr_selected_seeds, SpatialImage(full_seed_image, voxelsize=voxelsize).astype(np.uint16))
         del full_seed_image
 
@@ -1311,8 +1347,7 @@ def _volume_decrease_correction_check(astec_name,
                                         cells_with_volume_loss, 
                                         correspondences,
                                         parameters,
-                                        experiment,
-                                        results_division, 
+                                        experiment, 
                                         segmentation_from_selection,
                                         path_to_previous_seeds, 
                                         selected_seeds):
@@ -1334,7 +1369,8 @@ def _volume_decrease_correction_check(astec_name,
     
     # if the cell is still too small and has not divided, insert the seed from previous
     for cell in cells_with_volume_loss:
-        if results_division[cell][-1] == 1:
+        siblings = correspondences[cell]
+        if len(siblings) == 1:
             current_seed_image[seeds_from_previous == cell] = cell
     
     if parameters.voxelsize != None:
@@ -1355,7 +1391,7 @@ def _volume_decrease_correction_check(astec_name,
 
 ########################################################################################
 #
-# Morphosnake correction for cell whoch have a volume decrease
+# Morphosnake correction for cells which experience a volume decrease
 # due to background infiltration
 #
 ########################################################################################
@@ -1928,7 +1964,6 @@ def astec_process(previous_time, current_time, lineage_tree_information, experim
     # original astec: there is no smoothing of the membrane image
     #
     if not os.path.isfile(segmentation_from_previous) or monitoring.forceResultsToBeBuilt is True:
-        print(f"input for watershed is: {membrane_image=}")
         mars.watershed(deformed_seeds, membrane_image, segmentation_from_previous, parameters)
 
     #
@@ -1966,7 +2001,8 @@ def astec_process(previous_time, current_time, lineage_tree_information, experim
     # cells = list(np.unique(first_segmentation))
     # cells.remove(1)
     #bounding_boxes = dict(list(zip(list(range(1, max(cells) + 1)), nd.find_objects(first_segmentation))))
-    del first_segmentation
+    
+    #del first_segmentation
 
     #
     # for each cell and a collection of h values,
@@ -2111,10 +2147,15 @@ def astec_process(previous_time, current_time, lineage_tree_information, experim
         #path where the dataframe containing membranes metrics is stored
         membranes_df_path = os.path.join(astec_dir, "volume_ratio_membranes.pkl")
         #call membrane sanity check and return path to merged image (in tmp folder) and updated correspondences dictionary
-        merged_segmentation, correspondences = new_membrane_sanity_check(input_segmentation, previous_segmentation, 
-                                                                        membranes_df_path, experiment, parameters, 
-                                                                        correspondences, current_time)
-        
+        merged_segmentation, selected_seeds, correspondences = new_membrane_sanity_check(input_segmentation, 
+                                                                                         previous_segmentation, 
+                                                                                         selected_seeds,
+                                                                                         membranes_df_path, 
+                                                                                         experiment, 
+                                                                                         parameters, 
+                                                                                         correspondences, 
+                                                                                         current_time)
+                        
         #set input for next step to be the merged output of this step
         input_segmentation = merged_segmentation
 
@@ -2151,7 +2192,6 @@ def astec_process(previous_time, current_time, lineage_tree_information, experim
                                                                               input_segmentation, 
                                                                               selected_seeds, 
                                                                               membrane_image, 
-                                                                              results_division, 
                                                                               correspondences, 
                                                                               parameters,
                                                                               experiment)
@@ -2164,7 +2204,6 @@ def astec_process(previous_time, current_time, lineage_tree_information, experim
                                                                                     correspondences,
                                                                                     parameters,
                                                                                     experiment,
-                                                                                    results_division, 
                                                                                     input_segmentation, 
                                                                                     path_to_previous_seeds, 
                                                                                     selected_seeds)    
@@ -2533,7 +2572,14 @@ def astec_control(experiment, parameters):
     ###############
     # 2ND MODIFICATION FOR MEMBRANE SANITY CHECK STARTS HERE (2/2)
 
-def new_membrane_sanity_check(segmentation_image, previous_segmentation, dataframe_path, experiment, parameters, correspondences, current_time):
+def new_membrane_sanity_check(segmentation_image, 
+                              previous_segmentation, 
+                              selected_seeds, 
+                              dataframe_path, 
+                              experiment, 
+                              parameters, 
+                              correspondences, 
+                              current_time):
 
     """
     Function that looks at all new membranes in cells thate have divided and decides whether 
@@ -2584,8 +2630,9 @@ def new_membrane_sanity_check(segmentation_image, previous_segmentation, datafra
         sys.exit(1)
 
 
-    # load segmentation image
+    # load segmentation image and current seeds (they need to be updated for downstream volume decrease correction)
     curr_seg = imread(segmentation_image)
+    updated_seeds = imread(selected_seeds)
     # find interfaces between all cells
     interfaces, mapper = membranes.extract_touching_surfaces(curr_seg)
 
@@ -2715,13 +2762,18 @@ def new_membrane_sanity_check(segmentation_image, previous_segmentation, datafra
                                                 new_dirname=experiment.astec_dir.get_tmp_directory(),
                                                 new_extension=experiment.result_image_suffix)
     
+    merged_seeds_name = common.add_suffix(selected_seeds, "_after_sanity_check_t" + str('{:03d}'.format(current_time)),
+                                                new_dirname=experiment.astec_dir.get_tmp_directory(),
+                                                new_extension=experiment.result_image_suffix)
+    
     if (len(newly_div_cell_pairs) == 0) & (len(uncertain_membrane_ids) == 0):
         monitoring.to_log_and_console('      .. found no new or uncertain cell membranes: not running membrane sanity check', 2)
         # save dataframe in main directory
         gt_volumes_df.to_pickle(dataframe_path)
         # save image here with new name to keep track that it went through the membrane sanity check
         imsave(merged_segmentation_name, SpatialImage(curr_seg, voxelsize=voxelsize).astype(np.uint16))
-        return merged_segmentation_name, correspondences
+        imsave(merged_seeds_name, SpatialImage(updated_seeds, voxelsize=voxelsize).astype(np.uint16))
+        return merged_segmentation_name, merged_seeds_name, correspondences
     
     else:
         monitoring.to_log_and_console('      .. found dividing cells or uncertain membranes: running membrane sanity check', 2)
@@ -2741,17 +2793,20 @@ def new_membrane_sanity_check(segmentation_image, previous_segmentation, datafra
         if len(false_pairs_list) > 0:
             monitoring.to_log_and_console('      .. fusing cell pairs:' + f"{false_pairs_list}", 2)
             # merge cells that are seperated by false membranes in the segmentation image
-            merged_segmentation, changed_cells = membranes.merge_labels_with_false_membranes(false_pairs_list, 
+            merged_segmentation, updated_seeds, changed_cells = membranes.merge_labels_with_false_membranes(false_pairs_list, 
                                                                                                       curr_seg, 
+                                                                                                      updated_seeds,
                                                                                                       correspondences)
             # output will first be saved in tmp and copied to main in astec_process as final result of membrane sanity check
             imsave(merged_segmentation_name, SpatialImage(merged_segmentation, voxelsize=voxelsize).astype(np.uint16))
+            imsave(merged_seeds_name, SpatialImage(updated_seeds, voxelsize=voxelsize).astype(np.uint16))
             correspondences = membranes.update_correspondences_dictionary(correspondences,
                                                                             changed_cells
                                                                             )
         else:
             monitoring.to_log_and_console('      .. did not find false membranes, not fusing any cell pairs', 2)
             imsave(merged_segmentation_name, SpatialImage(curr_seg, voxelsize=voxelsize).astype(np.uint16))
+            imsave(merged_seeds_name, SpatialImage(updated_seeds, voxelsize=voxelsize).astype(np.uint16))
         mem_id_add = passed_new_membranes
         append_df = pd.DataFrame(index = list(range (0, len(mem_id_add))), 
                                 columns = ["mem_id", "cells", "time_point", "mem_lineage_id", 
@@ -2820,5 +2875,5 @@ def new_membrane_sanity_check(segmentation_image, previous_segmentation, datafra
         gt_volumes_df = pd.concat([gt_volumes_df, append_df])
         gt_volumes_df.reset_index(drop = True, inplace = True)
         gt_volumes_df.to_pickle(dataframe_path)
-        return merged_segmentation_name, correspondences
+        return merged_segmentation_name, merged_seeds_name, correspondences
     
