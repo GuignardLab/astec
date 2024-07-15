@@ -113,7 +113,7 @@ def _launch_inline_cmd(command_line, monitoring=None):
 ############################################################
 
 def applyTrsf(the_image, res_image, the_transformation=None, template_image=None, res_transformation=None,
-               voxel_size=None, dimensions=None, interpolation_mode='linear', cell_based_sigma=0.0,
+               voxel_size=None, floating_voxel = None, dimensions=None, interpolation_mode='linear', cell_based_sigma=0.0,
                monitoring=None):
     """
 
@@ -179,6 +179,23 @@ def applyTrsf(the_image, res_image, the_transformation=None, template_image=None
             _write_error_msg("\t Exiting", monitoring)
             sys.exit(1)
 
+    if floating_voxel is not None and voxel_size is not None:
+        if type(floating_voxel) == int or type(floating_voxel) == float:
+            command_line += " -floating-voxel "+str(floating_voxel) + " " + str(floating_voxel) + " " + str(floating_voxel)
+        elif type(floating_voxel) == tuple or type(floating_voxel) == list:
+            if len(floating_voxel) == 3:
+                command_line += " -floating-voxel "+str(floating_voxel[0]) + " " + str(floating_voxel[1]) + " " + str(floating_voxel[2])
+            else:
+                _write_error_msg(proc + ": unhandled length for floating image voxel size'" + str(len(floating_voxel)) + "'", monitoring)
+                _write_error_msg("\t Exiting", monitoring)
+                sys.exit(1)
+        else:
+            _write_error_msg(proc + ": unhandled type for floating image voxel size'" + str(type(floating_voxel)) + "'", monitoring)
+            _write_error_msg("\t Exiting", monitoring)
+            sys.exit(1)
+
+            
+
     if dimensions is not None:
         if type(dimensions) == tuple or type(dimensions) == list:
             if len(dimensions) == 3:
@@ -191,7 +208,7 @@ def applyTrsf(the_image, res_image, the_transformation=None, template_image=None
             _write_error_msg(proc + ": unhandled type for dimensions '" + str(type(dimensions)) + "'", monitoring)
             _write_error_msg("\t Exiting", monitoring)
             sys.exit(1)
-
+    print(f"{command_line=}")
     _launch_inline_cmd(command_line, monitoring=monitoring)
 
     return
@@ -462,9 +479,9 @@ def apply_transformation(the_image, res_image, the_transformation=None,
     :return: no returned value if return_image = False
             if return_image = True, return the result image as an spatial image
     """
-
+    print(f"{voxel_size=}")
     applyTrsf(the_image, res_image, the_transformation=the_transformation, template_image=template_image,
-              res_transformation=res_transformation, voxel_size=voxel_size, dimensions=dimensions,
+              res_transformation=res_transformation, voxel_size=voxel_size, floating_voxel = voxel_size, dimensions=dimensions,
               interpolation_mode=interpolation_mode, cell_based_sigma=cell_based_sigma, monitoring=monitoring)
 
     # interpolation may put '0' values in segmentation images

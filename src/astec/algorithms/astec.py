@@ -342,7 +342,20 @@ class AstecParameters(mars.WatershedParameters, MorphoSnakeParameters):
         doc += "\t 'daughter' cells will not have a lineage\n"
         self.doc['minimum_volume_unseeded_cell'] = doc
         self.minimum_volume_unseeded_cell = 100
+        #
+        #
+        #determines whether we will try to find a cavity 
+        #critical for early mouse embryos, strictly do not use if cell volumes naturally differ a lot
+        doc = "\t Blastocyst cavity detection\n"
+        doc += "\t - 'cell' with volume larger than cut_off is given the background label and consider the cavity\n"
+        self.doc['blastocyst_cavity_detection'] = doc
+        self.blastocyst_cavity_detection = False
 
+        #the cut_off (x median volume) from which a cell will be detected at the blastocyst cavity
+        doc = "\t Blastocyst cavity detection cut_off\n"
+        doc += "\t - 'cell' with volume larger than cut_off is given the background label and consider the cavity\n"
+        self.doc['cavity_vol_cut_off'] = doc
+        self.cavity_vol_cut_off = 3
         #
         # magic values for the volume checking
         # - volume_minimal_value is in voxel units
@@ -457,7 +470,10 @@ class AstecParameters(mars.WatershedParameters, MorphoSnakeParameters):
 
         self.varprint('minimum_volume_unseeded_cell', self.minimum_volume_unseeded_cell,
                       self.doc['minimum_volume_unseeded_cell'])
-
+        
+        self.varprint('blastocyst_cavity_detection', self.blastocyst_cavity_detection, self.doc['blastocyst_cavity_detection'])
+        self.varprint('cavity_vol_cut_off', self.cavity_vol_cut_off, self.doc['cavity_vol_cut_off'])
+        
         self.varprint('volume_ratio_tolerance', self.volume_ratio_tolerance, self.doc['volume_ratio_tolerance'])
         self.varprint('volume_ratio_threshold', self.volume_ratio_threshold, self.doc['volume_ratio_threshold'])
         self.varprint('volume_minimal_value', self.volume_minimal_value, self.doc['volume_minimal_value'])
@@ -511,7 +527,12 @@ class AstecParameters(mars.WatershedParameters, MorphoSnakeParameters):
 
         self.varwrite(logfile, 'minimum_volume_unseeded_cell', self.minimum_volume_unseeded_cell,
                       self.doc['minimum_volume_unseeded_cell'])
-
+        
+        self.varwrite(logfile, 'blastocyst_cavity_detection', self.blastocyst_cavity_detection,
+                      self.doc['blastocyst_cavity_detection'])
+        self.varwrite(logfile, 'cavity_vol_cut_off', self.cavity_vol_cut_off,
+                      self.doc['cavity_vol_cut_off'])
+        
         self.varwrite(logfile, 'volume_ratio_tolerance', self.volume_ratio_tolerance,
                       self.doc['volume_ratio_tolerance'])
         self.varwrite(logfile, 'volume_ratio_threshold', self.volume_ratio_threshold,
@@ -594,6 +615,11 @@ class AstecParameters(mars.WatershedParameters, MorphoSnakeParameters):
 
         self.minimum_volume_unseeded_cell = self.read_parameter(parameters, 'minimum_volume_unseeded_cell',
                                                                 self.minimum_volume_unseeded_cell)
+        
+        self.blastocyst_cavity_detection = self.read_parameter(parameters, 'blastocyst_cavity_detection',
+                                                                self.blastocyst_cavity_detection)
+        self.cavity_vol_cut_off = self.read_parameter(parameters, 'cavity_vol_cut_off',
+                                                                self.cavity_vol_cut_off)
 
         self.volume_ratio_tolerance = self.read_parameter(parameters, 'volume_ratio_tolerance',
                                                           self.volume_ratio_tolerance)
@@ -673,30 +699,34 @@ def _erode_cell(parameters):
     tmp, iterations, bb, i, voxelsize = parameters
     nb_iter = iterations
     
-    if len(set(voxelsize)) > 1:
-        # create 3D kernel for erosion which takes the anisotropy of the image into account
-        x_dim, y_dim, z_dim = voxelsize
-        # use scaling factor to find the smallest possible ellipsoid
-        semiaxes = np.array([1/z_dim, 1/y_dim, 1/x_dim])*np.max(voxelsize)
-        shape = [int(c) for c in np.ceil(semiaxes*2+1)]
-        structure = rg.ellipsoid(shape, semiaxes)
+    # here we make sure that seeds of which we skip the erosion still make it into the seed image
+    if nb_iter == 0:
+        eroded = tmp
     else:
-        structure = None
-    
-    eroded = nd.binary_erosion(tmp, iterations=nb_iter, structure = structure)
-    #making sure that we never remove a seed completely
-    while list(np.unique(eroded)) == [False] and nb_iter >= 2:
-            nb_iter -= 1
-            eroded = nd.binary_erosion(tmp, iterations=nb_iter, structure = structure)
-    if list(np.unique(eroded)) == [False] and nb_iter == 1:
-        #if one anisotropic iteration is too much, try at least one isotropic iteration
-        if structure != None:
-            eroded = nd.binary_erosion(tmp, iterations=nb_iter, structure = None)
-            if list(np.unique(eroded)) == [False]:
-                eroded = tmp
+        if len(set(voxelsize)) > 1:
+            # create 3D kernel for erosion which takes the anisotropy of the image into account
+            x_dim, y_dim, z_dim = voxelsize
+            # use scaling factor to find the smallest possible ellipsoid
+            semiaxes = np.array([1/z_dim, 1/y_dim, 1/x_dim])*np.max(voxelsize)
+            shape = [int(c) for c in np.ceil(semiaxes*2+1)]
+            structure = rg.ellipsoid(shape, semiaxes)
         else:
-            eroded = tmp
-            print("not eroding this seed due to loss of seed in a single iteration")
+            structure = None
+        
+        eroded = nd.binary_erosion(tmp, iterations=nb_iter, structure = structure)
+        #making sure that we never remove a seed completely
+        while list(np.unique(eroded)) == [False] and nb_iter >= 2:
+                nb_iter -= 1
+                eroded = nd.binary_erosion(tmp, iterations=nb_iter, structure = structure)
+        if list(np.unique(eroded)) == [False] and nb_iter == 1:
+            #if one anisotropic iteration is too much, try at least one isotropic iteration
+            if structure is not None:
+                eroded = nd.binary_erosion(tmp, iterations=nb_iter, structure = None)
+                if list(np.unique(eroded)) == [False]:
+                    eroded = tmp
+            else:
+                eroded = tmp
+                print("not eroding this seed due to loss of seed in a single iteration")
 
     return eroded, i, bb
 
@@ -752,8 +782,11 @@ def build_seeds_from_previous_segmentation(label_image, output_image, parameters
             else:
                 mapping.append((tmp, parameters.previous_seg_erosion_cell_iterations, bboxes[i - 1], i, voxelsize))
         else:
-            monitoring.to_log_and_console('     .. skip cell ' + str(i) + ', volume (' + str(size_cell) + ') <= '
-                                          + str(parameters.previous_seg_erosion_cell_min_size), 2)
+            #adaptation by Gesa: we need to also send seeds we skip through this function, otherwise we loose them in the following
+            if i != 1:
+                mapping.append((tmp, 0, bboxes[i - 1], i, voxelsize))
+                monitoring.to_log_and_console('     .. skip cell ' + str(i) + ', volume (' + str(size_cell) + ') <= '
+                                            + str(parameters.previous_seg_erosion_cell_min_size), 2)
 
     outputs = pool.map(_erode_cell, mapping)
     pool.close()
@@ -762,7 +795,7 @@ def build_seeds_from_previous_segmentation(label_image, output_image, parameters
     seeds = np.zeros_like(seg)
     for eroded, i, bb in outputs:
         seeds[bb][eroded] = i
-
+    print(f"{np.unique(seeds)=}")
     if parameters.voxelsize != None:
         voxelsize = parameters.voxelsize
     else:    
@@ -1070,6 +1103,38 @@ def _update_lineage_properties(lineage_tree_information, correspondences, previo
     return lineage_tree_information
 
 
+def cavity_correction(input_segmentation, seed_image_path, output_segmentation, correspondences, parameters):
+    monitoring.to_log_and_console(f"    .. running cavity detection ..", 1)
+    input_segmentation = imread(input_segmentation)
+    volumes = _compute_volumes(input_segmentation)
+    seed_image = imread(seed_image_path)
+    median_volume = np.median([v for k, v in volumes.items() if k > 1])
+    bg_label = min(volumes.keys())
+    print(f"{volumes=}")
+    print(f"{median_volume=}")
+    print(f"{parameters.cavity_vol_cut_off * median_volume=}")
+    cavity_labels = [k for k, v in volumes.items() if v >= (parameters.cavity_vol_cut_off * median_volume)]
+    if cavity_labels:
+        corr_rev = {value: key for key, value_list in correspondences.items() for value in value_list}
+        for label in cavity_labels:
+            if label > 1:
+                input_segmentation[input_segmentation == label] = bg_label
+                seed_image[seed_image == label] = bg_label
+                monitoring.to_log_and_console(f"    .. detected cavity: changing cell {label} to background", 1)
+                # update correspondences
+                if label in set(correspondences.keys()):
+                    del correspondences[label]
+                else:
+                    mother_key = corr_rev[label]
+                    correspondences[mother_key].remove(label)
+    else:
+        monitoring.to_log_and_console(f"    .. did not detect cavity: no changes", 1)
+        
+    imsave(output_segmentation, SpatialImage(input_segmentation))
+    imsave(seed_image_path, SpatialImage(seed_image))
+
+    return output_segmentation
+
 ########################################################################################
 #
 #
@@ -1232,19 +1297,33 @@ def _volume_decrease_correction(astec_name,
         elif len(siblings) == 2:
             # iteratively assign seeds to the two daughter cells, even if just one cell lost volume, to make sure the new watershed doesnt leak
             # run a watershed on the labels image just to see which daughter cell the seed will belong to, later we only copy the seed
-            tmp_watershed = nd.watershed_ift(intensity_seed_image[box], labels)
+            #mars.watershed(labels, intensity_seed_image[box], "/Users/gesaloof/Desktop/dev/woon_second_batch/stack8/test_tmp_watershed.tif", parameters)
+            from skimage.segmentation import watershed as skwatershed
+            tmp_watershed = skwatershed(intensity_seed_image[box], labels)
+            print("labels: ", np.unique(labels), "label_vol: ", np.sum(labels > 0))
+            print("seeds vs watershed: ", labels == tmp_watershed, np.unique(labels == tmp_watershed))
+            from tifffile import imwrite
+            #tmp_watershed = imread("/Users/gesaloof/Desktop/dev/woon_second_batch/stack8/test_tmp_watershed.tif")
+
             round = 0
             # finding the two offspring cells --> should I just append both cells in the cells_with_volume_loss dict?
             seeds_to_assign = set([x for x in np.unique(tmp_watershed) if x != 0])
-            while len(seeds_to_assign) > 0:
-                print(f"{seeds_to_assign=}")
+            while seeds_to_assign:
+                #print(f"{seeds_to_assign=}")
                 # TODO compare volume of siblinbgs and bring them to a similar volume before aasigning seeds
                 # erosion of the bigger one? Or skipping the bigger one in the first rounds of assignment
                 input_seg_image = current_segmentation[box]
                 # create masks of +1 voxel around the daughter cells to understand which original cells the labels in tmp_watershed are touching
                 if round == 0:
+                    print("recalc masks")
                     mask_cell_a = input_seg_image == siblings[0]
                     mask_cell_b = input_seg_image == siblings[1]
+                    imwrite("/Users/gesaloof/Desktop/dev/woon_second_batch/stack8/input_int_im_boxed.tif", intensity_seed_image[box])
+                    imwrite("/Users/gesaloof/Desktop/dev/woon_second_batch/stack8/test_mask_a.tif", SpatialImage(mask_cell_a))
+                    imwrite("/Users/gesaloof/Desktop/dev/woon_second_batch/stack8/test_mask_b.tif", SpatialImage(mask_cell_b))
+                    imwrite("/Users/gesaloof/Desktop/dev/woon_second_batch/stack8/test_tmp_watershed.tif", SpatialImage(tmp_watershed))
+
+                    print(np.unique(mask_cell_a))
                 dil_mask_cell_a = nd.binary_dilation(mask_cell_a)
                 dil_mask_cell_b = nd.binary_dilation(mask_cell_b)
                 # creates sets of what touches daughter cell a and set of what touches b
@@ -1256,13 +1335,18 @@ def _volume_decrease_correction(astec_name,
                 unique_to_b = all_unique_to_b.intersection(set(seeds_to_assign))
                 all_touching_both = touching_cell_a.intersection(touching_cell_b)
                 touching_both = all_touching_both.intersection(set(seeds_to_assign))
+                # TODO test whether there are seeds in seeds_to_assign that arent in the unique or touching both sets
+                all_seeds = touching_both.union(unique_to_a.union(unique_to_b))
+                print(f"{len(seeds_to_assign)=}", f"{len(all_seeds)=}")
+                #print(f"diff between assign and all: {seeds_to_assign.difference(all_seeds)}")
                 if (round == 0) and (len(unique_to_a) == 0) and (len(unique_to_b) == 0) and (len(touching_both) == 0):
                     monitoring.to_log_and_console(f"       ... found no extra seeds for divided cell {cell}, seeding remains unchanged despite volume loss", 2)
                     break
-                # TODO make this cut-off and input parameter so the user can change it in case cells divide very asymmetrically
-                # if the volumes of the two daughters are more than 10% different, we skip one cell until the volumes have become more similar
+                # TODO make this cut-off and input parameter so the user can change it in case cells actually divide very asymmetrically
+                # if the volumes of the two daughters are more than 10% different, we skip one cell until the volumes have become more similar, then we add seeds to both
                 vol_a = np.sum(mask_cell_a)
                 vol_b = np.sum(mask_cell_b)
+                print(f"{vol_a=} {vol_b=}")
 
                 if vol_a > vol_b * 1.1 and len(unique_to_b) != 0:
                     skip_a = True
@@ -1277,22 +1361,38 @@ def _volume_decrease_correction(astec_name,
                     skip_b = False
                     print("test b")
                 print(f"{unique_to_a=}")
+                print(f"{unique_to_b=}")
+                print(f"{touching_both=}")
+
+                #TODO check all lists --> case where both unique lists are empty but I still get stuck here, why?
+
                 # assign clear cases, decide doubles based on surface volume
-                for unique_seed in unique_to_a:
-                    if unique_seed in seeds_to_assign and skip_a == False:
+                if skip_a == False:
+                    for unique_seed in unique_to_a:
+                        print(f"{np.unique(tmp_watershed)=}")
                         print(f"adding seed {unique_seed} to {siblings[0]}")
+                        print(unique_seed in np.unique(tmp_watershed))
                         full_seed_image[box][labels == unique_seed] = siblings[0]
-                        mask_cell_a[tmp_watershed == unique_seed] = True
+                        #mask_cell_a[tmp_watershed == unique_seed] = True
+                        mask_cell_a = np.where(tmp_watershed == unique_seed, True, mask_cell_a)
+                        print(f"changed mask: {np.sum(mask_cell_a)=}")
+                        print(np.sum(tmp_watershed == unique_seed), np.sum((tmp_watershed == unique_seed) & (mask_cell_a)))
                         # remove from list of all labels
                         seeds_to_assign.remove(unique_seed)
-                for unique_seed in unique_to_b:
-                    if unique_seed in seeds_to_assign and skip_b == False:
+                if skip_b == False:
+                    for unique_seed in unique_to_b:
+                        print(f"{np.unique(tmp_watershed)=}")
                         print(f"adding seed {unique_seed} to {siblings[1]}")
+                        print(unique_seed in np.unique(tmp_watershed))
                         full_seed_image[box][labels == unique_seed] = siblings[1]
-                        mask_cell_b[tmp_watershed == unique_seed] = True
+                        #mask_cell_b[tmp_watershed == unique_seed] = True
+                        mask_cell_b = np.where(tmp_watershed == unique_seed, True, mask_cell_b)
+                        print(f"changed mask: {np.sum(mask_cell_b)=}")
+
                         # remove from list of all labels
                         seeds_to_assign.remove(unique_seed)
 
+                # TODO re-think whether both skips need to be false?
                 if len(touching_both) > 0 and skip_a == False and skip_b == False:
                     for double_seed in touching_both:
                         if double_seed in seeds_to_assign:
@@ -1874,7 +1974,6 @@ def astec_process(previous_time, current_time, lineage_tree_information, experim
     membrane_image = reconstruction.build_reconstructed_image(current_time, experiment,
                                                               parameters.membrane_reconstruction,
                                                               previous_time=previous_time)
-    print(f"{membrane_image=}")
 
     if membrane_image is None:
         monitoring.to_log_and_console("    .. " + proc + ": no membrane image was found/built for time "
@@ -1911,6 +2010,10 @@ def astec_process(previous_time, current_time, lineage_tree_information, experim
     deformed_segmentation = common.add_suffix(astec_name, '_deformed_segmentation_from_previous',
                                               new_dirname=experiment.astec_dir.get_tmp_directory(),
                                               new_extension=experiment.default_image_suffix)
+    if parameters.voxelsize != None:
+        voxelsize = (1, 1, 1)
+    else:    
+        voxelsize = None
 
     if not os.path.isfile(deformed_segmentation) or monitoring.forceResultsToBeBuilt is True:
         deformation = reconstruction.get_deformation_from_current_to_previous(current_time, experiment,
@@ -1919,7 +2022,7 @@ def astec_process(previous_time, current_time, lineage_tree_information, experim
         if deformation is None:
             monitoring.to_log_and_console("    .. " + proc + ": error when getting deformation field")
             return False
-        cpp_wrapping.apply_transformation(previous_segmentation, deformed_segmentation, deformation,
+        cpp_wrapping.apply_transformation(previous_segmentation, deformed_segmentation, deformation, voxel_size=voxelsize,
                                           interpolation_mode='nearest', monitoring=monitoring)
 
     if parameters.previous_seg_method.lower() == "deform_then_erode":
@@ -1940,7 +2043,7 @@ def astec_process(previous_time, current_time, lineage_tree_information, experim
             deformation = reconstruction.get_deformation_from_current_to_previous(current_time, experiment,
                                                                                   parameters.membrane_reconstruction,
                                                                                   previous_time)
-            cpp_wrapping.apply_transformation(eroded_seeds, deformed_seeds, deformation,
+            cpp_wrapping.apply_transformation(eroded_seeds, deformed_seeds, deformation, voxel_size=voxelsize,
                                               interpolation_mode='nearest', monitoring=monitoring)
     else:
         monitoring.to_log_and_console("    .. " + proc + ": unknown method '" + str(parameters.previous_seg_method)
@@ -2132,15 +2235,47 @@ def astec_process(previous_time, current_time, lineage_tree_information, experim
         lineage_tree_information = _update_lineage_properties(lineage_tree_information, correspondences, previous_time,
                                                               current_time, experiment)
         return lineage_tree_information
-    
+    ###############
+    ###############
+    ###############
+    ###############
+    # Modification to detect cavity in mouse blastocysts (Gesa, 12.07.24)
+    input_segmentation = segmentation_from_selection
+        
+
+    if parameters.blastocyst_cavity_detection == True:
+        print(f"{parameters.blastocyst_cavity_detection=}")
+        output_segmentation = common.add_suffix(astec_name, '_cavity_corrected_segmentation',
+                                                        new_dirname=experiment.astec_dir.get_tmp_directory(),
+                                                        new_extension=experiment.default_image_suffix)
+        print("running cavity detection")
+        cavity_corrected_segmentation = cavity_correction(input_segmentation, 
+                                                          selected_seeds, 
+                                                          output_segmentation,
+                                                          correspondences, 
+                                                          parameters)
+        # copy results from temporary folder to main folder
+        imcopy(cavity_corrected_segmentation, astec_image)
+
+        lineage_tree_information = _update_volume_properties(lineage_tree_information, astec_image,
+                                                          current_time, experiment)
+        
+        lineage_tree_information = _update_lineage_properties(lineage_tree_information, correspondences, previous_time,
+                                                           current_time, experiment)
+        input_segmentation = cavity_corrected_segmentation
+
+    ###############
+    ###############
+    ###############
+    ###############
+
+
     
     ###############
     ###############
     ###############
     ###############
     # 1ST MODIFICATION FOR MEMBRANE SANITY CHECK STARTS HERE (1/2)
-
-    input_segmentation = segmentation_from_selection
 
     if parameters.membrane_sanity_check == True:
 
@@ -2771,9 +2906,9 @@ def new_membrane_sanity_check(segmentation_image,
         # save dataframe in main directory
         gt_volumes_df.to_pickle(dataframe_path)
         # save image here with new name to keep track that it went through the membrane sanity check
-        imsave(merged_segmentation_name, SpatialImage(curr_seg, voxelsize=voxelsize).astype(np.uint16))
-        imsave(merged_seeds_name, SpatialImage(updated_seeds, voxelsize=voxelsize).astype(np.uint16))
-        return merged_segmentation_name, merged_seeds_name, correspondences
+        #imsave(merged_segmentation_name, SpatialImage(curr_seg, voxelsize=voxelsize).astype(np.uint16))
+        #imsave(merged_seeds_name, SpatialImage(selected_seeds, voxelsize=voxelsize).astype(np.uint16))
+        return segmentation_image, selected_seeds, correspondences
     
     else:
         monitoring.to_log_and_console('      .. found dividing cells or uncertain membranes: running membrane sanity check', 2)

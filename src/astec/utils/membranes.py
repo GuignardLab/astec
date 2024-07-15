@@ -196,16 +196,20 @@ def merge_labels_with_false_membranes(false_pairs_list, original_watershed_label
     #find mother_cell id for each cell, if there are several use the smallest id for the merged cell
     for cell_set in cc_list:
         list_of_mothers = [key for key, value in correspondences.items() if len(set(value).intersection(cell_set)) > 0]
+        #TODO use reversed corr here and further down as well
         smallest_id = min(list_of_mothers)
+        #TODO should this be one the labels of the daughters instead? this way we can make sure to not have this value assigned to another cell already
         for label in cell_set:
             mother = [key for key, value in correspondences.items() if label in value][0]
+            #TODO only change if label != smallest_id
+            #TODO use bounding boxes
             merged_watershed[merged_watershed == label] = smallest_id
             selected_seeds[selected_seeds == label] = smallest_id
             changed_cells[mother] = smallest_id
             # update correspondences, while not just replacing the old with new, but keeping sibling relationships
             old_daugthers = correspondences[mother]
             new_daughters = [smallest_id if x == label else x for x in old_daugthers]
-            # in case we merged both of the daughter (pretty likely) we reduce the list using a set transformation
+            # in case we merged both of the daughters (pretty likely) we reduce the list using a set transformation
             correspondences[mother] = list(set(new_daughters))
     return merged_watershed, selected_seeds, changed_cells
 
