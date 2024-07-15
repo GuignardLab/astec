@@ -1129,11 +1129,322 @@ def cavity_correction(input_segmentation, seed_image_path, output_segmentation, 
                     correspondences[mother_key].remove(label)
     else:
         monitoring.to_log_and_console(f"    .. did not detect cavity: no changes", 1)
-        
+
     imsave(output_segmentation, SpatialImage(input_segmentation))
     imsave(seed_image_path, SpatialImage(seed_image))
 
     return output_segmentation
+
+
+    ###############
+    ###############
+    ###############
+    ###############
+    # 2ND MODIFICATION FOR MEMBRANE SANITY CHECK STARTS HERE (2/2)
+
+def new_membrane_sanity_check(segmentation_image, 
+                              previous_segmentation, 
+                              selected_seeds, 
+                              dataframe_path, 
+                              experiment, 
+                              parameters, 
+                              correspondences, 
+                              current_time):
+
+    """
+    Function that looks at all new membranes in cells thate have divided and decides whether 
+    they should be respected as true membranes, or whether neighbouring cells should be merged.
+    This decision is based on the measure "volume_ratio" that describes the ratio of membrane volume before and
+    after binary_closing which is supposed to assess their "noisyness". The cut-off for the volume ratio depends on the distribution of membranes in the
+    ground truth image, which is used as entry point for the astec_astec pipeline.
+    
+    Args:
+        segmentation_image (str): path to labels image of the current time point
+        previous_segmentation (str): path to the image that the segmentation propagatio starts. All membranes in this images are
+                                considered correct (ground truth). When loaded this is a 3D array.
+        correspondences (dict): Dictionary that maps the labels of the segmentation of t-1 
+                                to the labels of the current time point. If cells divided, two labels will be mapped to t-1.
+        current_time (int): time point of the time-lapse that is being processed.
+        stringency_factor (int): factor for how strict the cut-off for membrane sanity should be calculated. 
+                                cut_off = median(volume_ratios of ground truth membranes) + stringency_factor * std(volume_ratios of ground truth membranes)
+        gt_time_frame (int or None): number of time points that should be considered for 
+                                    calculating the cut-off for the membrane sanity check
+        
+    returns:
+        segmentation_image (ndarray): Merged or original segmentation image.  
+        correspondences (dict): Dictionary that maps the labels of the segmentation of t-1 
+                                to the labels of the current time point. If cells divided, two labels will be mapped to t-1.
+                                This dictionary is updated if cells were fused.
+                        
+   
+    """
+    ################ TODO!
+    # Make sure the dataframe stays correct even if I repeat a time frame in the middle and the df is already created
+    # it seems to be working, but better double check again
+
+
+    proc = "_membrane_sanity_check"
+
+    #
+    # parameter type checking
+    #
+
+    if not isinstance(experiment, common.Experiment):
+        monitoring.to_log_and_console(str(proc) + ": unexpected type for 'experiment' variable: "
+                                      + str(type(experiment)))
+        sys.exit(1)
+
+    if not isinstance(parameters, AstecParameters):
+        monitoring.to_log_and_console(str(proc) + ": unexpected type for 'parameters' variable: "
+                                      + str(type(parameters)))
+        sys.exit(1)
+
+
+    # load segmentation image and current seeds (they need to be updated for downstream volume decrease correction)
+    curr_seg = imread(segmentation_image)
+    updated_seeds = imread(selected_seeds)
+    # find interfaces between all cells
+    interfaces, mapper = membranes.extract_touching_surfaces(curr_seg)
+
+    #reverse correspondences dictionary to make cell_id mapping easier
+    corr_rev = {value: key for key, value_list in correspondences.items() for value in value_list}
+    if parameters.voxelsize != None:
+        voxelsize = parameters.voxelsize
+    else:
+        voxelsize = curr_seg.voxelsize
+    # get labels of cells that have divided between the previous and current time point and make sure there are only combinations of two
+    newly_div_cells = [value for value in correspondences.values() if len(value) > 1]
+    newly_div_cell_pairs = []
+    for pair in newly_div_cells:
+        newly_div_cell_pairs = newly_div_cell_pairs + list(combinations(pair, 2))
+
+    # derive newly created membrane ids from new cell pairs
+    new_membrane_ids = [value for key, value in mapper.items() if
+                            key in newly_div_cell_pairs]
+
+    # calculate volume_ratios for all cells, subset for cells that have divided 
+    volume_ratios_all_current, volumes_all_current = membranes.volume_ratio_after_closing(interfaces, mapper, voxelsize)
+    volume_ratios_new = {key: value for key, value in volume_ratios_all_current.items() if key in new_membrane_ids}
+
+
+    ################ adapt this to 0 or 1 as background or remove?  
+    if 0 in new_membrane_ids:
+        print("    !! weird case: background label in dividing cells")
+        sys.exit(0)
+    stable_membrane_ids = set(np.unique(interfaces)).difference(set(new_membrane_ids))
+    if 0 in stable_membrane_ids:
+        stable_membrane_ids.remove(0)
+        
+    # load or create dataframe that has metrics of all true membranes
+    if not os.path.isfile(dataframe_path):
+        
+        # load previous image that was processed, since if there was no dataframe constructed yet, 
+        # this will be the first image and therefore considered ground truth (gt)
+        gt_image = imread(previous_segmentation)
+
+        # calculate volumes for ground truth
+        gt_interfaces, gt_mapper = membranes.extract_touching_surfaces(gt_image)
+        gt_true_membranes_volumes, gt_volumes = membranes.volume_ratio_after_closing(gt_interfaces, gt_mapper, voxelsize)
+        # create dataframe with ground truth metrics
+        gt_volumes_df = pd.DataFrame(columns = ["mem_id", "cells"])
+        gt_volumes_df["mem_id"] = gt_mapper.values()
+        gt_volumes_df["cells"] = gt_mapper.keys()
+        gt_volumes_df["time_point"] = current_time - 1
+        gt_volumes_df["mem_lineage_id"] = gt_mapper.values()
+        # create extra dataframes with volume ratios/ volumes and  membrane ids to make sure we don't mix up values
+        add_vol_ratio_df = pd.DataFrame.from_dict(gt_true_membranes_volumes, orient = "index", columns = ["mem_volume_ratio"])
+        gt_volumes_df = gt_volumes_df.join(add_vol_ratio_df, on = "mem_id")
+        add_vol_df = pd.DataFrame.from_dict(gt_volumes, orient = "index", columns = ["volume"])
+        gt_volumes_df = gt_volumes_df.join(add_vol_df, on = "mem_id")
+        gt_volumes_df["membrane_classification"] = True
+        gt_volumes_df["new_contact"] = False
+        gt_volumes_df["cut_off"] = None
+    # if the dataframe already exists, just load it        
+    else:
+        gt_volumes_df = pd.read_pickle(dataframe_path)
+
+    # add stable membranes (stable_membrane_ids) from current time point to ground truth
+    mem_id_add = list(stable_membrane_ids)
+    former_uncertain_pairs = list(gt_volumes_df.loc[(gt_volumes_df["membrane_classification"] == "uncertain") & (gt_volumes_df["time_point"] == current_time-1)]["cells"])
+    
+    
+    previous_cell_pairs = set(gt_volumes_df.loc[gt_volumes_df["time_point"] == current_time-1]["cells"])
+    max_lineage_id = gt_volumes_df["mem_lineage_id"].astype(int).max()
+
+    append_df = pd.DataFrame(index = list(range (0, len(mem_id_add))), 
+                            columns = ["mem_id", "cells", "time_point", "mem_lineage_id", "mem_volume_ratio", 
+                                        "volume", "membrane_classification", "new_contact", "cut_off"])
+    index = 0
+    for mem_id in mem_id_add:
+        append_df["mem_id"][index] = mem_id
+        cell_pair = [k for k, v in mapper.items() if v == mem_id][0]
+        append_df["cells"][index] = cell_pair
+        append_df["time_point"][index] = current_time
+        append_df["mem_volume_ratio"][index] = [v for k, v in volume_ratios_all_current.items() if k == mem_id][0]
+        append_df["volume"][index] = [v for k, v in volumes_all_current.items() if k == mem_id][0]
+
+        # convert to id's from the previous time point
+        pair_in_prev_ids = membranes.translate_cell_pair_to_previous(cell_pair, corr_rev)
+        if pair_in_prev_ids in former_uncertain_pairs:
+            append_df["membrane_classification"][index] = "uncertain"
+        else:
+            append_df["membrane_classification"][index] = True
+        if pair_in_prev_ids in previous_cell_pairs:
+            append_df["new_contact"][index] = False
+            mem_lineage = gt_volumes_df.loc[(gt_volumes_df["time_point"] == current_time-1) & 
+                                            (gt_volumes_df["cells"] == pair_in_prev_ids)]["mem_lineage_id"].values[0]
+            append_df["mem_lineage_id"][index] = mem_lineage
+        else:
+            append_df["new_contact"][index] = True
+            max_lineage_id += 1
+            append_df["mem_lineage_id"][index] = max_lineage_id
+        append_df["cut_off"][index] = None
+        index += 1
+    gt_volumes_df = pd.concat([gt_volumes_df, append_df])
+    gt_volumes_df.reset_index(drop = True, inplace = True)
+
+    # sliding window for n time points that are used for calculating the volume_ratio cut-off from ground truth
+    
+    if not parameters.gt_time_frame == None:    
+        lower_time_limit = current_time - parameters.gt_time_frame
+    
+    if (not parameters.gt_time_frame == None) and (experiment.first_time_point < lower_time_limit):  
+        considered_gt_membranes = gt_volumes_df.loc[gt_volumes_df["time_point"] > lower_time_limit]
+    # if the above condition is not true, we want to consider all gt membranes in the current gt dataframe
+    else:
+        considered_gt_membranes = gt_volumes_df
+
+    considered_gt_membranes_certain = considered_gt_membranes.loc[considered_gt_membranes["membrane_classification"] == True]
+
+    # calculate interfaces and volumes of considered gt membranes and find cut-off value for volume ratio 
+    median_gt = considered_gt_membranes_certain["mem_volume_ratio"].median()
+    std_gt = considered_gt_membranes_certain["mem_volume_ratio"].std()
+    cut_off = float(median_gt + parameters.stringency_factor * std_gt)
+    cut_off_grey_zone = float(median_gt + ((parameters.stringency_factor/2) * std_gt))
+
+    # start sanity check only if any cells were called dividing or uncertain
+    uncertain_membrane_ids = list(gt_volumes_df.loc[(gt_volumes_df["membrane_classification"] == "uncertain") 
+                                                    & (gt_volumes_df["time_point"] == current_time)]["mem_id"])
+
+    merged_segmentation_name = common.add_suffix(segmentation_image, "_after_sanity_check_t" + str('{:03d}'.format(current_time)),
+                                                new_dirname=experiment.astec_dir.get_tmp_directory(),
+                                                new_extension=experiment.result_image_suffix)
+    
+    merged_seeds_name = common.add_suffix(selected_seeds, "_after_sanity_check_t" + str('{:03d}'.format(current_time)),
+                                                new_dirname=experiment.astec_dir.get_tmp_directory(),
+                                                new_extension=experiment.result_image_suffix)
+    
+    if (len(newly_div_cell_pairs) == 0) & (len(uncertain_membrane_ids) == 0):
+        monitoring.to_log_and_console('      .. found no new or uncertain cell membranes: not running membrane sanity check', 2)
+        # save dataframe in main directory
+        gt_volumes_df.to_pickle(dataframe_path)
+        # save image here with new name to keep track that it went through the membrane sanity check
+        #imsave(merged_segmentation_name, SpatialImage(curr_seg, voxelsize=voxelsize).astype(np.uint16))
+        #imsave(merged_seeds_name, SpatialImage(selected_seeds, voxelsize=voxelsize).astype(np.uint16))
+        return segmentation_image, selected_seeds, correspondences
+    
+    else:
+        monitoring.to_log_and_console('      .. found dividing cells or uncertain membranes: running membrane sanity check', 2)
+        volume_ratios_uncertain = {key: value for key, value in volume_ratios_all_current.items() if key in uncertain_membrane_ids}
+        
+        # define which membranes are false and merge pairs of cells that are connected through that membrane
+        new_for_fusion =  [mem_id for mem_id, volume in volume_ratios_new.items() if volume > cut_off]
+        uncertain_for_fusion = [mem_id for mem_id, volume in volume_ratios_uncertain.items() if volume > cut_off]
+
+        passed_new_membranes =  [mem_id for mem_id, volume in volume_ratios_new.items() if volume <= cut_off]
+        passed_uncertain_membranes = [mem_id for mem_id, volume in volume_ratios_uncertain.items() if volume <= cut_off] 
+
+        # find pairs of cells that should be fused
+        new_false_pairs = [key for key, value in mapper.items() if value in new_for_fusion]
+        uncertain_false_pairs =  [key for key, value in mapper.items() if value in uncertain_for_fusion]
+        false_pairs_list = new_false_pairs + uncertain_false_pairs
+        if len(false_pairs_list) > 0:
+            monitoring.to_log_and_console('      .. fusing cell pairs:' + f"{false_pairs_list}", 2)
+            # merge cells that are seperated by false membranes in the segmentation image
+            merged_segmentation, updated_seeds, changed_cells = membranes.merge_labels_with_false_membranes(false_pairs_list, 
+                                                                                                      curr_seg, 
+                                                                                                      updated_seeds,
+                                                                                                      correspondences)
+            # output will first be saved in tmp and copied to main in astec_process as final result of membrane sanity check
+            imsave(merged_segmentation_name, SpatialImage(merged_segmentation, voxelsize=voxelsize).astype(np.uint16))
+            imsave(merged_seeds_name, SpatialImage(updated_seeds, voxelsize=voxelsize).astype(np.uint16))
+            correspondences = membranes.update_correspondences_dictionary(correspondences,
+                                                                            changed_cells
+                                                                            )
+        else:
+            monitoring.to_log_and_console('      .. did not find false membranes, not fusing any cell pairs', 2)
+            imsave(merged_segmentation_name, SpatialImage(curr_seg, voxelsize=voxelsize).astype(np.uint16))
+            imsave(merged_seeds_name, SpatialImage(updated_seeds, voxelsize=voxelsize).astype(np.uint16))
+        mem_id_add = passed_new_membranes
+        append_df = pd.DataFrame(index = list(range (0, len(mem_id_add))), 
+                                columns = ["mem_id", "cells", "time_point", "mem_lineage_id", 
+                                            "mem_volume_ratio", "volume", "membrane_classification", "new_contact", "cut_off"])
+        index = 0
+        for mem_id in mem_id_add:
+            append_df["mem_id"][index] = mem_id
+            cell_pair = [k for k, v in mapper.items() if v == mem_id][0]
+            append_df["cells"][index] = cell_pair
+            append_df["time_point"][index] = current_time
+            mem_volume_ratio =  [v for k, v in volume_ratios_all_current.items() if k == mem_id][0]
+            append_df["mem_volume_ratio"][index] = mem_volume_ratio
+            append_df["volume"][index] = [v for k, v in volumes_all_current.items() if k == mem_id][0]
+            
+            if mem_volume_ratio >= cut_off_grey_zone:
+                append_df["membrane_classification"][index] = "uncertain"
+            else:
+                append_df["membrane_classification"][index] = True
+
+            append_df["new_contact"][index] = True
+            max_lineage_id += 1
+            append_df["mem_lineage_id"][index] = max_lineage_id
+                
+            append_df["cut_off"][index] = (cut_off_grey_zone, cut_off)
+            index += 1
+        gt_volumes_df = pd.concat([gt_volumes_df, append_df])
+        gt_volumes_df.reset_index(drop = True, inplace = True)
+        
+        # add new membranes that are classified as false --> dividing cells will be fused
+        mem_id_add = new_for_fusion
+        append_df = pd.DataFrame(index = list(range (0, len(mem_id_add))), 
+                                columns = ["mem_id", "cells", "time_point", "mem_lineage_id", 
+                                            "mem_volume_ratio", "volume", "membrane_classification", "new_contact", "cut_off"])
+        index = 0
+        for mem_id in mem_id_add:
+            append_df["mem_id"][index] = mem_id
+            cell_pair = [k for k, v in mapper.items() if v == mem_id][0]
+            append_df["cells"][index] = cell_pair            
+            append_df["time_point"][index] = current_time
+            mem_volume_ratio =  [v for k, v in volume_ratios_all_current.items() if k == mem_id][0]
+            append_df["mem_volume_ratio"][index] = mem_volume_ratio
+            append_df["volume"][index] = [v for k, v in volumes_all_current.items() if k == mem_id][0]
+            append_df["membrane_classification"][index] = False
+            append_df["new_contact"][index] = True
+            max_lineage_id += 1
+            append_df["mem_lineage_id"][index] = max_lineage_id
+            append_df["cut_off"][index] = (cut_off_grey_zone, cut_off)
+            index += 1
+        
+        # correct entries for uncertain membranes (from before)
+        for mem_id in uncertain_for_fusion:
+            index = gt_volumes_df.loc[(gt_volumes_df["mem_id"] == mem_id) 
+                                              & (gt_volumes_df["time_point"] == current_time)].index[0]
+            gt_volumes_df["membrane_classification"][index] = False
+            gt_volumes_df["cut_off"][index] = (cut_off_grey_zone, cut_off)
+            pair_in_prev_ids = membranes.translate_cell_pair_to_previous(cell_pair, corr_rev)
+
+        for mem_id in passed_uncertain_membranes:
+            index = gt_volumes_df.loc[(gt_volumes_df["mem_id"] == mem_id) \
+                                              & (gt_volumes_df["time_point"] == current_time)].index[0]
+            if gt_volumes_df["mem_volume_ratio"][index] < cut_off_grey_zone:
+                gt_volumes_df["membrane_classification"][index] = True
+            gt_volumes_df["cut_off"][index] = (cut_off_grey_zone, cut_off)
+
+        # concatenate and save dataframe in main directory
+        gt_volumes_df = pd.concat([gt_volumes_df, append_df])
+        gt_volumes_df.reset_index(drop = True, inplace = True)
+        gt_volumes_df.to_pickle(dataframe_path)
+        return merged_segmentation_name, merged_seeds_name, correspondences
+
 
 ########################################################################################
 #
@@ -1300,8 +1611,6 @@ def _volume_decrease_correction(astec_name,
             #mars.watershed(labels, intensity_seed_image[box], "/Users/gesaloof/Desktop/dev/woon_second_batch/stack8/test_tmp_watershed.tif", parameters)
             from skimage.segmentation import watershed as skwatershed
             tmp_watershed = skwatershed(intensity_seed_image[box], labels)
-            print("labels: ", np.unique(labels), "label_vol: ", np.sum(labels > 0))
-            print("seeds vs watershed: ", labels == tmp_watershed, np.unique(labels == tmp_watershed))
             from tifffile import imwrite
             #tmp_watershed = imread("/Users/gesaloof/Desktop/dev/woon_second_batch/stack8/test_tmp_watershed.tif")
 
@@ -1315,15 +1624,8 @@ def _volume_decrease_correction(astec_name,
                 input_seg_image = current_segmentation[box]
                 # create masks of +1 voxel around the daughter cells to understand which original cells the labels in tmp_watershed are touching
                 if round == 0:
-                    print("recalc masks")
                     mask_cell_a = input_seg_image == siblings[0]
                     mask_cell_b = input_seg_image == siblings[1]
-                    imwrite("/Users/gesaloof/Desktop/dev/woon_second_batch/stack8/input_int_im_boxed.tif", intensity_seed_image[box])
-                    imwrite("/Users/gesaloof/Desktop/dev/woon_second_batch/stack8/test_mask_a.tif", SpatialImage(mask_cell_a))
-                    imwrite("/Users/gesaloof/Desktop/dev/woon_second_batch/stack8/test_mask_b.tif", SpatialImage(mask_cell_b))
-                    imwrite("/Users/gesaloof/Desktop/dev/woon_second_batch/stack8/test_tmp_watershed.tif", SpatialImage(tmp_watershed))
-
-                    print(np.unique(mask_cell_a))
                 dil_mask_cell_a = nd.binary_dilation(mask_cell_a)
                 dil_mask_cell_b = nd.binary_dilation(mask_cell_b)
                 # creates sets of what touches daughter cell a and set of what touches b
@@ -1335,10 +1637,6 @@ def _volume_decrease_correction(astec_name,
                 unique_to_b = all_unique_to_b.intersection(set(seeds_to_assign))
                 all_touching_both = touching_cell_a.intersection(touching_cell_b)
                 touching_both = all_touching_both.intersection(set(seeds_to_assign))
-                # TODO test whether there are seeds in seeds_to_assign that arent in the unique or touching both sets
-                all_seeds = touching_both.union(unique_to_a.union(unique_to_b))
-                print(f"{len(seeds_to_assign)=}", f"{len(all_seeds)=}")
-                #print(f"diff between assign and all: {seeds_to_assign.difference(all_seeds)}")
                 if (round == 0) and (len(unique_to_a) == 0) and (len(unique_to_b) == 0) and (len(touching_both) == 0):
                     monitoring.to_log_and_console(f"       ... found no extra seeds for divided cell {cell}, seeding remains unchanged despite volume loss", 2)
                     break
@@ -1346,49 +1644,29 @@ def _volume_decrease_correction(astec_name,
                 # if the volumes of the two daughters are more than 10% different, we skip one cell until the volumes have become more similar, then we add seeds to both
                 vol_a = np.sum(mask_cell_a)
                 vol_b = np.sum(mask_cell_b)
-                print(f"{vol_a=} {vol_b=}")
 
                 if vol_a > vol_b * 1.1 and len(unique_to_b) != 0:
                     skip_a = True
-                    print("skipping a")
                 else:
-                    print("test a")
                     skip_a = False
                 if vol_b > vol_a * 1.1 and len(unique_to_a) != 0:
                     skip_b = True
-                    print("skipping b")
                 else:
                     skip_b = False
-                    print("test b")
-                print(f"{unique_to_a=}")
-                print(f"{unique_to_b=}")
-                print(f"{touching_both=}")
-
-                #TODO check all lists --> case where both unique lists are empty but I still get stuck here, why?
 
                 # assign clear cases, decide doubles based on surface volume
                 if skip_a == False:
                     for unique_seed in unique_to_a:
-                        print(f"{np.unique(tmp_watershed)=}")
-                        print(f"adding seed {unique_seed} to {siblings[0]}")
-                        print(unique_seed in np.unique(tmp_watershed))
                         full_seed_image[box][labels == unique_seed] = siblings[0]
                         #mask_cell_a[tmp_watershed == unique_seed] = True
                         mask_cell_a = np.where(tmp_watershed == unique_seed, True, mask_cell_a)
-                        print(f"changed mask: {np.sum(mask_cell_a)=}")
-                        print(np.sum(tmp_watershed == unique_seed), np.sum((tmp_watershed == unique_seed) & (mask_cell_a)))
                         # remove from list of all labels
                         seeds_to_assign.remove(unique_seed)
                 if skip_b == False:
                     for unique_seed in unique_to_b:
-                        print(f"{np.unique(tmp_watershed)=}")
-                        print(f"adding seed {unique_seed} to {siblings[1]}")
-                        print(unique_seed in np.unique(tmp_watershed))
                         full_seed_image[box][labels == unique_seed] = siblings[1]
                         #mask_cell_b[tmp_watershed == unique_seed] = True
                         mask_cell_b = np.where(tmp_watershed == unique_seed, True, mask_cell_b)
-                        print(f"changed mask: {np.sum(mask_cell_b)=}")
-
                         # remove from list of all labels
                         seeds_to_assign.remove(unique_seed)
 
@@ -1396,21 +1674,17 @@ def _volume_decrease_correction(astec_name,
                 if len(touching_both) > 0 and skip_a == False and skip_b == False:
                     for double_seed in touching_both:
                         if double_seed in seeds_to_assign:
-                            print(f"adding double seed {double_seed}")
                             #measure touching surface volume, assign to daughter cell with bigger shared volume
                             vol_with_a = np.sum(np.logical_and(tmp_watershed == double_seed, dil_mask_cell_a))
                             vol_with_b = np.sum(np.logical_and(tmp_watershed == double_seed, dil_mask_cell_b))
                             if vol_with_a > vol_with_b:
-                                print(f"adding to {siblings[0]}")
                                 full_seed_image[box][labels == double_seed] = siblings[0]
                                 mask_cell_a[tmp_watershed == double_seed] = True
                             else:
-                                print(f"adding to {siblings[1]}")
                                 full_seed_image[box][labels == double_seed] = siblings[1]
                                 mask_cell_b[tmp_watershed == double_seed] = True 
                             seeds_to_assign.remove(double_seed)
                 round += 1
-                print(f"{round=}")
 
     if change_in_seeds == 0:
         monitoring.to_log_and_console('    .. no changes in seeds, do not recompute segmentation', 2)
@@ -1430,8 +1704,6 @@ def _volume_decrease_correction(astec_name,
             voxelsize = parameters.voxelsize
         else:    
             voxelsize = full_seed_image.voxelsize
-        print(f"{voxelsize=}")
-        print(f" saving new seed image in {corr_selected_seeds=}")
         imsave(corr_selected_seeds, SpatialImage(full_seed_image, voxelsize=voxelsize).astype(np.uint16))
         del full_seed_image
 
@@ -1477,7 +1749,6 @@ def _volume_decrease_correction_check(astec_name,
         voxelsize = parameters.voxelsize
     else:    
         voxelsize = current_seed_image.voxelsize
-        print(f"{voxelsize=}")
     imsave(selected_seeds, SpatialImage(current_seed_image, voxelsize=voxelsize).astype(np.uint16))
     del current_seed_image
 
@@ -2701,314 +2972,3 @@ def astec_control(experiment, parameters):
 
     return
 
-    ###############
-    ###############
-    ###############
-    ###############
-    # 2ND MODIFICATION FOR MEMBRANE SANITY CHECK STARTS HERE (2/2)
-
-def new_membrane_sanity_check(segmentation_image, 
-                              previous_segmentation, 
-                              selected_seeds, 
-                              dataframe_path, 
-                              experiment, 
-                              parameters, 
-                              correspondences, 
-                              current_time):
-
-    """
-    Function that looks at all new membranes in cells thate have divided and decides whether 
-    they should be respected as true membranes, or whether neighbouring cells should be merged.
-    This decision is based on the measure "volume_ratio" that describes the ratio of membrane volume before and
-    after binary_closing which is supposed to assess their "noisyness". The cut-off for the volume ratio depends on the distribution of membranes in the
-    ground truth image, which is used as entry point for the astec_astec pipeline.
-    
-    Args:
-        segmentation_image (str): path to labels image of the current time point
-        previous_segmentation (str): path to the image that the segmentation propagatio starts. All membranes in this images are
-                                considered correct (ground truth). When loaded this is a 3D array.
-        correspondences (dict): Dictionary that maps the labels of the segmentation of t-1 
-                                to the labels of the current time point. If cells divided, two labels will be mapped to t-1.
-        current_time (int): time point of the time-lapse that is being processed.
-        stringency_factor (int): factor for how strict the cut-off for membrane sanity should be calculated. 
-                                cut_off = median(volume_ratios of ground truth membranes) + stringency_factor * std(volume_ratios of ground truth membranes)
-        gt_time_frame (int or None): number of time points that should be considered for 
-                                    calculating the cut-off for the membrane sanity check
-        
-    returns:
-        segmentation_image (ndarray): Merged or original segmentation image.  
-        correspondences (dict): Dictionary that maps the labels of the segmentation of t-1 
-                                to the labels of the current time point. If cells divided, two labels will be mapped to t-1.
-                                This dictionary is updated if cells were fused.
-                        
-   
-    """
-    ################ TODO!
-    # Make sure the dataframe stays correct even if I repeat a time frame in the middle and the df is already created
-    # it seems to be working, but better double check again
-
-
-    proc = "_membrane_sanity_check"
-
-    #
-    # parameter type checking
-    #
-
-    if not isinstance(experiment, common.Experiment):
-        monitoring.to_log_and_console(str(proc) + ": unexpected type for 'experiment' variable: "
-                                      + str(type(experiment)))
-        sys.exit(1)
-
-    if not isinstance(parameters, AstecParameters):
-        monitoring.to_log_and_console(str(proc) + ": unexpected type for 'parameters' variable: "
-                                      + str(type(parameters)))
-        sys.exit(1)
-
-
-    # load segmentation image and current seeds (they need to be updated for downstream volume decrease correction)
-    curr_seg = imread(segmentation_image)
-    updated_seeds = imread(selected_seeds)
-    # find interfaces between all cells
-    interfaces, mapper = membranes.extract_touching_surfaces(curr_seg)
-
-    #reverse correspondences dictionary to make cell_id mapping easier
-    corr_rev = {value: key for key, value_list in correspondences.items() for value in value_list}
-    print(f"{parameters.voxelsize=}")
-    if parameters.voxelsize != None:
-        voxelsize = parameters.voxelsize
-    else:
-        voxelsize = curr_seg.voxelsize
-    print(f"{voxelsize=}")
-    # get labels of cells that have divided between the previous and current time point and make sure there are only combinations of two
-    newly_div_cells = [value for value in correspondences.values() if len(value) > 1]
-    newly_div_cell_pairs = []
-    for pair in newly_div_cells:
-        newly_div_cell_pairs = newly_div_cell_pairs + list(combinations(pair, 2))
-
-    # derive newly created membrane ids from new cell pairs
-    new_membrane_ids = [value for key, value in mapper.items() if
-                            key in newly_div_cell_pairs]
-
-    # calculate volume_ratios for all cells, subset for cells that have divided 
-    volume_ratios_all_current, volumes_all_current = membranes.volume_ratio_after_closing(interfaces, mapper, voxelsize)
-    volume_ratios_new = {key: value for key, value in volume_ratios_all_current.items() if key in new_membrane_ids}
-
-
-    ################ adapt this to 0 or 1 as background or remove?  
-    if 0 in new_membrane_ids:
-        print("    !! weird case: background label in dividing cells")
-        sys.exit(0)
-    stable_membrane_ids = set(np.unique(interfaces)).difference(set(new_membrane_ids))
-    if 0 in stable_membrane_ids:
-        stable_membrane_ids.remove(0)
-        
-    # load or create dataframe that has metrics of all true membranes
-    if not os.path.isfile(dataframe_path):
-        
-        # load previous image that was processed, since if there was no dataframe constructed yet, 
-        # this will be the first image and therefore considered ground truth (gt)
-        gt_image = imread(previous_segmentation)
-
-        # calculate volumes for ground truth
-        gt_interfaces, gt_mapper = membranes.extract_touching_surfaces(gt_image)
-        gt_true_membranes_volumes, gt_volumes = membranes.volume_ratio_after_closing(gt_interfaces, gt_mapper, voxelsize)
-        # create dataframe with ground truth metrics
-        gt_volumes_df = pd.DataFrame(columns = ["mem_id", "cells"])
-        gt_volumes_df["mem_id"] = gt_mapper.values()
-        gt_volumes_df["cells"] = gt_mapper.keys()
-        gt_volumes_df["time_point"] = current_time - 1
-        gt_volumes_df["mem_lineage_id"] = gt_mapper.values()
-        # create extra dataframes with volume ratios/ volumes and  membrane ids to make sure we don't mix up values
-        add_vol_ratio_df = pd.DataFrame.from_dict(gt_true_membranes_volumes, orient = "index", columns = ["mem_volume_ratio"])
-        gt_volumes_df = gt_volumes_df.join(add_vol_ratio_df, on = "mem_id")
-        add_vol_df = pd.DataFrame.from_dict(gt_volumes, orient = "index", columns = ["volume"])
-        gt_volumes_df = gt_volumes_df.join(add_vol_df, on = "mem_id")
-        gt_volumes_df["membrane_classification"] = True
-        gt_volumes_df["new_contact"] = False
-        gt_volumes_df["cut_off"] = None
-    # if the dataframe already exists, just load it        
-    else:
-        gt_volumes_df = pd.read_pickle(dataframe_path)
-
-    # add stable membranes (stable_membrane_ids) from current time point to ground truth
-    mem_id_add = list(stable_membrane_ids)
-    former_uncertain_pairs = list(gt_volumes_df.loc[(gt_volumes_df["membrane_classification"] == "uncertain") & (gt_volumes_df["time_point"] == current_time-1)]["cells"])
-    
-    
-    previous_cell_pairs = set(gt_volumes_df.loc[gt_volumes_df["time_point"] == current_time-1]["cells"])
-    max_lineage_id = gt_volumes_df["mem_lineage_id"].astype(int).max()
-
-    append_df = pd.DataFrame(index = list(range (0, len(mem_id_add))), 
-                            columns = ["mem_id", "cells", "time_point", "mem_lineage_id", "mem_volume_ratio", 
-                                        "volume", "membrane_classification", "new_contact", "cut_off"])
-    index = 0
-    for mem_id in mem_id_add:
-        append_df["mem_id"][index] = mem_id
-        cell_pair = [k for k, v in mapper.items() if v == mem_id][0]
-        append_df["cells"][index] = cell_pair
-        append_df["time_point"][index] = current_time
-        append_df["mem_volume_ratio"][index] = [v for k, v in volume_ratios_all_current.items() if k == mem_id][0]
-        append_df["volume"][index] = [v for k, v in volumes_all_current.items() if k == mem_id][0]
-
-        # convert to id's from the previous time point
-        pair_in_prev_ids = membranes.translate_cell_pair_to_previous(cell_pair, corr_rev)
-        if pair_in_prev_ids in former_uncertain_pairs:
-            append_df["membrane_classification"][index] = "uncertain"
-        else:
-            append_df["membrane_classification"][index] = True
-        if pair_in_prev_ids in previous_cell_pairs:
-            append_df["new_contact"][index] = False
-            mem_lineage = gt_volumes_df.loc[(gt_volumes_df["time_point"] == current_time-1) & 
-                                            (gt_volumes_df["cells"] == pair_in_prev_ids)]["mem_lineage_id"].values[0]
-            append_df["mem_lineage_id"][index] = mem_lineage
-        else:
-            append_df["new_contact"][index] = True
-            max_lineage_id += 1
-            append_df["mem_lineage_id"][index] = max_lineage_id
-        append_df["cut_off"][index] = None
-        index += 1
-    gt_volumes_df = pd.concat([gt_volumes_df, append_df])
-    gt_volumes_df.reset_index(drop = True, inplace = True)
-
-    # sliding window for n time points that are used for calculating the volume_ratio cut-off from ground truth
-    
-    if not parameters.gt_time_frame == None:    
-        lower_time_limit = current_time - parameters.gt_time_frame
-    
-    if (not parameters.gt_time_frame == None) and (experiment.first_time_point < lower_time_limit):  
-        considered_gt_membranes = gt_volumes_df.loc[gt_volumes_df["time_point"] > lower_time_limit]
-    # if the above condition is not true, we want to consider all gt membranes in the current gt dataframe
-    else:
-        considered_gt_membranes = gt_volumes_df
-
-    considered_gt_membranes_certain = considered_gt_membranes.loc[considered_gt_membranes["membrane_classification"] == True]
-
-    # calculate interfaces and volumes of considered gt membranes and find cut-off value for volume ratio 
-    median_gt = considered_gt_membranes_certain["mem_volume_ratio"].median()
-    std_gt = considered_gt_membranes_certain["mem_volume_ratio"].std()
-    cut_off = float(median_gt + parameters.stringency_factor * std_gt)
-    cut_off_grey_zone = float(median_gt + ((parameters.stringency_factor/2) * std_gt))
-
-    # start sanity check only if any cells were called dividing or uncertain
-    uncertain_membrane_ids = list(gt_volumes_df.loc[(gt_volumes_df["membrane_classification"] == "uncertain") 
-                                                    & (gt_volumes_df["time_point"] == current_time)]["mem_id"])
-
-    merged_segmentation_name = common.add_suffix(segmentation_image, "_after_sanity_check_t" + str('{:03d}'.format(current_time)),
-                                                new_dirname=experiment.astec_dir.get_tmp_directory(),
-                                                new_extension=experiment.result_image_suffix)
-    
-    merged_seeds_name = common.add_suffix(selected_seeds, "_after_sanity_check_t" + str('{:03d}'.format(current_time)),
-                                                new_dirname=experiment.astec_dir.get_tmp_directory(),
-                                                new_extension=experiment.result_image_suffix)
-    
-    if (len(newly_div_cell_pairs) == 0) & (len(uncertain_membrane_ids) == 0):
-        monitoring.to_log_and_console('      .. found no new or uncertain cell membranes: not running membrane sanity check', 2)
-        # save dataframe in main directory
-        gt_volumes_df.to_pickle(dataframe_path)
-        # save image here with new name to keep track that it went through the membrane sanity check
-        #imsave(merged_segmentation_name, SpatialImage(curr_seg, voxelsize=voxelsize).astype(np.uint16))
-        #imsave(merged_seeds_name, SpatialImage(selected_seeds, voxelsize=voxelsize).astype(np.uint16))
-        return segmentation_image, selected_seeds, correspondences
-    
-    else:
-        monitoring.to_log_and_console('      .. found dividing cells or uncertain membranes: running membrane sanity check', 2)
-        volume_ratios_uncertain = {key: value for key, value in volume_ratios_all_current.items() if key in uncertain_membrane_ids}
-        
-        # define which membranes are false and merge pairs of cells that are connected through that membrane
-        new_for_fusion =  [mem_id for mem_id, volume in volume_ratios_new.items() if volume > cut_off]
-        uncertain_for_fusion = [mem_id for mem_id, volume in volume_ratios_uncertain.items() if volume > cut_off]
-
-        passed_new_membranes =  [mem_id for mem_id, volume in volume_ratios_new.items() if volume <= cut_off]
-        passed_uncertain_membranes = [mem_id for mem_id, volume in volume_ratios_uncertain.items() if volume <= cut_off] 
-
-        # find pairs of cells that should be fused
-        new_false_pairs = [key for key, value in mapper.items() if value in new_for_fusion]
-        uncertain_false_pairs =  [key for key, value in mapper.items() if value in uncertain_for_fusion]
-        false_pairs_list = new_false_pairs + uncertain_false_pairs
-        if len(false_pairs_list) > 0:
-            monitoring.to_log_and_console('      .. fusing cell pairs:' + f"{false_pairs_list}", 2)
-            # merge cells that are seperated by false membranes in the segmentation image
-            merged_segmentation, updated_seeds, changed_cells = membranes.merge_labels_with_false_membranes(false_pairs_list, 
-                                                                                                      curr_seg, 
-                                                                                                      updated_seeds,
-                                                                                                      correspondences)
-            # output will first be saved in tmp and copied to main in astec_process as final result of membrane sanity check
-            imsave(merged_segmentation_name, SpatialImage(merged_segmentation, voxelsize=voxelsize).astype(np.uint16))
-            imsave(merged_seeds_name, SpatialImage(updated_seeds, voxelsize=voxelsize).astype(np.uint16))
-            correspondences = membranes.update_correspondences_dictionary(correspondences,
-                                                                            changed_cells
-                                                                            )
-        else:
-            monitoring.to_log_and_console('      .. did not find false membranes, not fusing any cell pairs', 2)
-            imsave(merged_segmentation_name, SpatialImage(curr_seg, voxelsize=voxelsize).astype(np.uint16))
-            imsave(merged_seeds_name, SpatialImage(updated_seeds, voxelsize=voxelsize).astype(np.uint16))
-        mem_id_add = passed_new_membranes
-        append_df = pd.DataFrame(index = list(range (0, len(mem_id_add))), 
-                                columns = ["mem_id", "cells", "time_point", "mem_lineage_id", 
-                                            "mem_volume_ratio", "volume", "membrane_classification", "new_contact", "cut_off"])
-        index = 0
-        for mem_id in mem_id_add:
-            append_df["mem_id"][index] = mem_id
-            cell_pair = [k for k, v in mapper.items() if v == mem_id][0]
-            append_df["cells"][index] = cell_pair
-            append_df["time_point"][index] = current_time
-            mem_volume_ratio =  [v for k, v in volume_ratios_all_current.items() if k == mem_id][0]
-            append_df["mem_volume_ratio"][index] = mem_volume_ratio
-            append_df["volume"][index] = [v for k, v in volumes_all_current.items() if k == mem_id][0]
-            
-            if mem_volume_ratio >= cut_off_grey_zone:
-                append_df["membrane_classification"][index] = "uncertain"
-            else:
-                append_df["membrane_classification"][index] = True
-
-            append_df["new_contact"][index] = True
-            max_lineage_id += 1
-            append_df["mem_lineage_id"][index] = max_lineage_id
-                
-            append_df["cut_off"][index] = (cut_off_grey_zone, cut_off)
-            index += 1
-        gt_volumes_df = pd.concat([gt_volumes_df, append_df])
-        gt_volumes_df.reset_index(drop = True, inplace = True)
-        
-        # add new membranes that are classified as false --> dividing cells will be fused
-        mem_id_add = new_for_fusion
-        append_df = pd.DataFrame(index = list(range (0, len(mem_id_add))), 
-                                columns = ["mem_id", "cells", "time_point", "mem_lineage_id", 
-                                            "mem_volume_ratio", "volume", "membrane_classification", "new_contact", "cut_off"])
-        index = 0
-        for mem_id in mem_id_add:
-            append_df["mem_id"][index] = mem_id
-            cell_pair = [k for k, v in mapper.items() if v == mem_id][0]
-            append_df["cells"][index] = cell_pair            
-            append_df["time_point"][index] = current_time
-            mem_volume_ratio =  [v for k, v in volume_ratios_all_current.items() if k == mem_id][0]
-            append_df["mem_volume_ratio"][index] = mem_volume_ratio
-            append_df["volume"][index] = [v for k, v in volumes_all_current.items() if k == mem_id][0]
-            append_df["membrane_classification"][index] = False
-            append_df["new_contact"][index] = True
-            max_lineage_id += 1
-            append_df["mem_lineage_id"][index] = max_lineage_id
-            append_df["cut_off"][index] = (cut_off_grey_zone, cut_off)
-            index += 1
-        
-        # correct entries for uncertain membranes (from before)
-        for mem_id in uncertain_for_fusion:
-            index = gt_volumes_df.loc[(gt_volumes_df["mem_id"] == mem_id) 
-                                              & (gt_volumes_df["time_point"] == current_time)].index[0]
-            gt_volumes_df["membrane_classification"][index] = False
-            gt_volumes_df["cut_off"][index] = (cut_off_grey_zone, cut_off)
-            pair_in_prev_ids = membranes.translate_cell_pair_to_previous(cell_pair, corr_rev)
-
-        for mem_id in passed_uncertain_membranes:
-            index = gt_volumes_df.loc[(gt_volumes_df["mem_id"] == mem_id) \
-                                              & (gt_volumes_df["time_point"] == current_time)].index[0]
-            if gt_volumes_df["mem_volume_ratio"][index] < cut_off_grey_zone:
-                gt_volumes_df["membrane_classification"][index] = True
-            gt_volumes_df["cut_off"][index] = (cut_off_grey_zone, cut_off)
-
-        # concatenate and save dataframe in main directory
-        gt_volumes_df = pd.concat([gt_volumes_df, append_df])
-        gt_volumes_df.reset_index(drop = True, inplace = True)
-        gt_volumes_df.to_pickle(dataframe_path)
-        return merged_segmentation_name, merged_seeds_name, correspondences
-    

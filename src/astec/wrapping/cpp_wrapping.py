@@ -208,7 +208,6 @@ def applyTrsf(the_image, res_image, the_transformation=None, template_image=None
             _write_error_msg(proc + ": unhandled type for dimensions '" + str(type(dimensions)) + "'", monitoring)
             _write_error_msg("\t Exiting", monitoring)
             sys.exit(1)
-    print(f"{command_line=}")
     _launch_inline_cmd(command_line, monitoring=monitoring)
 
     return
@@ -479,7 +478,6 @@ def apply_transformation(the_image, res_image, the_transformation=None,
     :return: no returned value if return_image = False
             if return_image = True, return the result image as an spatial image
     """
-    print(f"{voxel_size=}")
     applyTrsf(the_image, res_image, the_transformation=the_transformation, template_image=template_image,
               res_transformation=res_transformation, voxel_size=voxel_size, floating_voxel = voxel_size, dimensions=dimensions,
               interpolation_mode=interpolation_mode, cell_based_sigma=cell_based_sigma, monitoring=monitoring)

@@ -124,7 +124,6 @@ def volume_ratio_after_closing(interface_image, mapper, voxelsize, iterations = 
 
     # test if all values are equal
     if len(set(voxelsize)) > 1:
-        print(f"{voxelsize=}")
         # create 3D kernel for dilation which takes the anisotropy of the image into account
         x_dim, y_dim, z_dim = voxelsize
            
@@ -235,7 +234,6 @@ def update_correspondences_dictionary(correspondences, changed_cells):
                 if len(cut_correspondences) == 1: # because if there is just one, the necessary change was already doine during the merging
                     new_correspondences[mother_cell] = correspondences[mother_cell]
                 else:
-                    print(f"{len(cut_correspondences)=}")
                     len_daughters = [len(daughter_list) for daughter_list in cut_correspondences.values()]
                     # check whether any of those mothers have divided and not been merged
                     if max(len_daughters) == 1 and len(len_daughters) > 1:
