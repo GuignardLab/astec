@@ -12,6 +12,7 @@ from itertools import combinations
 from skimage.morphology import h_minima, ball
 import pickle as pkl
 import raster_geometry as rg
+from skimage.segmentation import watershed as skwatershed
 
 import astec.utils.common as common
 import astec.utils.ace as ace
@@ -967,9 +968,7 @@ def calculate_h_by_measuring_h_range_for_two_seeds_in_all_cells(raw_intensity_im
                     monitoring.to_log_and_console(f"Something is wrong with cell {label}, it was called dividing but the current time point does not have 2 seeds with the predicted parameters.")
                 # this works because we know that there will only be two labels (otherwise this cell wouldnt have been classified as diving)
                 # TODO this does not seem to work - a dividing cell pair was asigned the same label after division
-                print(f"{labels_in_cell=}")
                 for i, old_label in enumerate(labels_in_cell):
-                    print(f"{old_label=}", f"{new_labels[i]=}")
                     labels = np.where(labels == old_label, new_labels[i], labels)
                 # then map the new labels onto the old for coherent labeling
                 full_seed_image[box] = np.where(labels > 0, labels, full_seed_image[box])
@@ -1011,8 +1010,6 @@ def find_appropriate_number_of_seeds(h_n_seeds_dictionary, abs_tau):
         h_diff = h_top - h_bottom
     else:
         h_diff = 0
-    print(f"{h_diff=}")
-    print(f"{abs_tau=}")
     if h_diff > abs_tau:
         n_seeds = 2
         h_value = h_top
@@ -1035,7 +1032,6 @@ def find_appropriate_number_of_seeds(h_n_seeds_dictionary, abs_tau):
 
 def _compute_volumes(im):
     """
-
     :param im:
     :return:
     """
@@ -1608,18 +1604,11 @@ def _volume_decrease_correction(astec_name,
         elif len(siblings) == 2:
             # iteratively assign seeds to the two daughter cells, even if just one cell lost volume, to make sure the new watershed doesnt leak
             # run a watershed on the labels image just to see which daughter cell the seed will belong to, later we only copy the seed
-            #mars.watershed(labels, intensity_seed_image[box], "/Users/gesaloof/Desktop/dev/woon_second_batch/stack8/test_tmp_watershed.tif", parameters)
-            from skimage.segmentation import watershed as skwatershed
             tmp_watershed = skwatershed(intensity_seed_image[box], labels)
-            from tifffile import imwrite
-            #tmp_watershed = imread("/Users/gesaloof/Desktop/dev/woon_second_batch/stack8/test_tmp_watershed.tif")
-
             round = 0
             # finding the two offspring cells --> should I just append both cells in the cells_with_volume_loss dict?
             seeds_to_assign = set([x for x in np.unique(tmp_watershed) if x != 0])
             while seeds_to_assign:
-                #print(f"{seeds_to_assign=}")
-                # TODO compare volume of siblinbgs and bring them to a similar volume before aasigning seeds
                 # erosion of the bigger one? Or skipping the bigger one in the first rounds of assignment
                 input_seg_image = current_segmentation[box]
                 # create masks of +1 voxel around the daughter cells to understand which original cells the labels in tmp_watershed are touching
@@ -1645,6 +1634,7 @@ def _volume_decrease_correction(astec_name,
                 vol_a = np.sum(mask_cell_a)
                 vol_b = np.sum(mask_cell_b)
 
+                # compare volume of siblinbgs and bring them to a similar volume before aasigning seeds
                 if vol_a > vol_b * 1.1 and len(unique_to_b) != 0:
                     skip_a = True
                 else:
