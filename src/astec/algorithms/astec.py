@@ -1106,9 +1106,6 @@ def cavity_correction(input_segmentation, seed_image_path, output_segmentation, 
     seed_image = imread(seed_image_path)
     median_volume = np.median([v for k, v in volumes.items() if k > 1])
     bg_label = min(volumes.keys())
-    print(f"{volumes=}")
-    print(f"{median_volume=}")
-    print(f"{parameters.cavity_vol_cut_off * median_volume=}")
     cavity_labels = [k for k, v in volumes.items() if v >= (parameters.cavity_vol_cut_off * median_volume)]
     if cavity_labels:
         corr_rev = {value: key for key, value_list in correspondences.items() for value in value_list}
@@ -1119,17 +1116,17 @@ def cavity_correction(input_segmentation, seed_image_path, output_segmentation, 
                 monitoring.to_log_and_console(f"    .. detected cavity: changing cell {label} to background", 1)
                 # update correspondences
                 if label in set(correspondences.keys()):
-                    del correspondences[label]
+                    correspondences[label] = [] # we need to find a way to allow apoptosis or the dissapearing of the "cavity cell"
                 else:
                     mother_key = corr_rev[label]
                     correspondences[mother_key].remove(label)
-    else:
+    elif cavity_labels == False or cavity_labels == [1]:
         monitoring.to_log_and_console(f"    .. did not detect cavity: no changes", 1)
 
     imsave(output_segmentation, SpatialImage(input_segmentation))
     imsave(seed_image_path, SpatialImage(seed_image))
 
-    return output_segmentation
+    return output_segmentation, correspondences
 
 
     ###############
@@ -1490,7 +1487,7 @@ def _volume_diagnosis(prev_volumes, curr_volumes, correspondences, volume_decrea
                     cells_with_volume_loss[mother_c] = daughters_c
             else:
                 monitoring.to_log_and_console('    ' + proc + ': cell ' + str(mother_c)
-                                          + ' has an anomalie in the number of daughter cells (more than 2)', 2)
+                                          + ' has an anomalie in the number of daughter cells (none, or more than 2)', 2)
                 
     return cells_with_volume_loss
 
@@ -2510,7 +2507,7 @@ def astec_process(previous_time, current_time, lineage_tree_information, experim
                                                         new_dirname=experiment.astec_dir.get_tmp_directory(),
                                                         new_extension=experiment.default_image_suffix)
         print("running cavity detection")
-        cavity_corrected_segmentation = cavity_correction(input_segmentation, 
+        cavity_corrected_segmentation, correspondences = cavity_correction(input_segmentation, 
                                                           selected_seeds, 
                                                           output_segmentation,
                                                           correspondences, 
