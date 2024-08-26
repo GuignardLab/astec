@@ -831,13 +831,17 @@ def calculate_h_by_measuring_h_range_for_two_seeds_in_all_cells(raw_intensity_im
     """
     Function to determine for each cell in the embryo whether it has divided between the current and previous time point.
 
-    params:
-    raw_intensity_image = current time raw intensity image
-    int_image_for_h_min = current time intensity image after pre-processing
-    segmentation_image = eroded and transformed segmentation from t-1
-    output_path = path where the full seed image will be saved
+    args:
+        raw_intensity_image (str): path to current time raw intensity image
+        int_image_for_h_min (str): path to current time intensity image after pre-processing
+        segmentation_image (str): path to eroded and transformed segmentation from t-1
+        output_path (str): path to where the full seed image will be saved
     
-    
+    returns:
+        results_dict (dict): Dictionary that maps a h-value to each cell
+        correspondences (dict): Dictionary that maps the labels of the segmentation of t-1 
+                                to the labels of the current time point. If cells divided, two labels will be mapped to t-1.
+                        
     """
     #load images:
     intensity_image = imread(raw_intensity_image)
@@ -989,11 +993,23 @@ def calculate_h_by_measuring_h_range_for_two_seeds_in_all_cells(raw_intensity_im
     imsave(output_path, SpatialImage(full_seed_image))
     return results_dict, correspondences           
 
-def count_seeds_in_cell_area(labels, cell_area, label):
-    # only count seeds fully enclosed in the cell area prediction from previous segmentation
-    # find labels inside and outside of the cell, make sure to only count labels that are only insde and remove background
-    seeds_inside = set(np.unique(labels[cell_area == label]))
-    seeds_outside = set(np.unique(labels[cell_area != label]))
+def count_seeds_in_cell_area(seeds, cell_area, label):
+    '''
+    Function to count seeds which are fully enclosed in the cell area prediction from previous segmentation
+
+    args: 
+        seeds (ndarray): seeds image with labelled seeds
+        cell_area (ndarray): segmentation image where only the desired cell is labelled
+        label (int): Label of the cell that is examined
+
+    returns:
+        count (int): Number of seeds in cell area 
+    
+    '''
+    
+    # find seeds inside and outside of the cell, make sure to only count seeds that are only insde and remove background
+    seeds_inside = set(np.unique(seeds[cell_area == label]))
+    seeds_outside = set(np.unique(seeds[cell_area != label]))
     fully_enclosed_seeds = seeds_inside.difference(seeds_outside)
     count = len(fully_enclosed_seeds)
     if 0 in fully_enclosed_seeds:
@@ -1001,6 +1017,17 @@ def count_seeds_in_cell_area(labels, cell_area, label):
     return count
 
 def find_appropriate_number_of_seeds(h_n_seeds_dictionary, abs_tau):
+    '''
+    Function to determine whether a cell has divided or not
+    args: 
+        h_n_seeds_dictionary (dict): Dictionary that maps h values to the number of seeds 
+        abs_tau (int): absolute tau = tau percentage of the dynamic range (98%) of the input image
+
+    returns:
+        h_value: Chosen h-value (int)
+        n_seeds: number of seeds the cells will have with the given h-value (int)
+    
+    '''
     # for each label: calculate the range of h-values that result in two seeds and compare it to tau (absolute value)
 
     two_seeds_list = [h for h, n in h_n_seeds_dictionary.items() if n == 2]
@@ -1100,7 +1127,21 @@ def _update_lineage_properties(lineage_tree_information, correspondences, previo
 
 
 def cavity_correction(input_segmentation, seed_image_path, output_segmentation, correspondences, parameters):
-    monitoring.to_log_and_console(f"    .. running cavity detection ..", 1)
+    '''
+    Function to detect the blastocyst cavity (for mouse or other mammalian embryos) and add it to the background
+    args:
+        input_segmentation (str): Path to input segmentation image
+        seed_image_path (str): Path to seed image
+        output_segmentation (str): Path to where the output segmentation with corrected cavity is supposed to be saved
+        correspondences (dict): Dictionary that maps the labels of the segmentation of t-1 
+                                to the labels of the current time point. If cells divided, two labels will be mapped to t-1.
+        parameters:
+
+    returns:
+        output_segmentation (str): Path to where the results are saved
+        correspondences (str): Same as above, with corrected cavity (removed from dai=ughter cells)
+        
+    '''
     input_segmentation = imread(input_segmentation)
     volumes = _compute_volumes(input_segmentation)
     seed_image = imread(seed_image_path)
@@ -1151,7 +1192,7 @@ def new_membrane_sanity_check(segmentation_image,
     after binary_closing which is supposed to assess their "noisyness". The cut-off for the volume ratio depends on the distribution of membranes in the
     ground truth image, which is used as entry point for the astec_astec pipeline.
     
-    Args:
+    args:
         segmentation_image (str): path to labels image of the current time point
         previous_segmentation (str): path to the image that the segmentation propagatio starts. All membranes in this images are
                                 considered correct (ground truth). When loaded this is a 3D array.
@@ -1456,10 +1497,15 @@ def _volume_diagnosis(prev_volumes, curr_volumes, correspondences, volume_decrea
     If cells lost more than 30% of volume they will be added to a list. In case of cell divisions, total daughter cell volume will be compared
     to the mother's volume.
 
-    params:
-    prev_volumes: dictionary mother_cell_id: volume
-    prev_volumes: dictionary daughter_cell_id: volume
-    correspondences: dictionary with information about lineage mother:[daughter(s)]
+    args:
+        prev_volumes: dictionary mother_cell_id: volume
+        prev_volumes: dictionary daughter_cell_id: volume
+        correspondences: dictionary with information about lineage mother:[daughter(s)]
+    
+    returns:
+        cells_with_volume_loss (dict): Dictionary that contains the cells that have lost volume 
+                                    and their respective mother cells: dict{mother:[daughter(s)]}
+
     
     """
     proc = "_volume_diagnosis"
@@ -1512,18 +1558,20 @@ def _volume_decrease_correction(astec_name,
     Function that adds extra seeds to cell that have significantly decreased in volume compared to the previous time point
     In this case we recompute seeds with h=1 and add all seeds that are fully enclosed in the predicted cell area    
     
-    params:
-    astec_name: base name for the output images
-    intensity_seed_image: input image for h_min search (finding seeds for watershed)
-    previous_segmentation: final segmentation from t-1
-    segmentation_from_previous: segmentation from watershed on eroded and deformed seeds from t-1
-    segmentation_from_selection: segmentation from watershed on seeds determined by h-min in current time point
-    selected_seeds: seeds used to generate segmentation from selection
-    membrane_image: input image for watershed
-    results_division: dictionary mother_cell_id: [h_value, number of daughters]
-    correspondences: dictionary with information about lineage mother:[daughter(s)]
-    parameters
-    experiment
+    args:
+        astec_name: base name for the output images
+        intensity_seed_image: input image for h_min search (finding seeds for watershed)
+        previous_segmentation: final segmentation from t-1
+        segmentation_from_previous: segmentation from watershed on eroded and deformed seeds from t-1
+        segmentation_from_selection: segmentation from watershed on seeds determined by h-min in current time point
+        selected_seeds: seeds used to generate segmentation from selection
+        membrane_image: input image for watershed
+        results_division: dictionary mother_cell_id: [h_value, number of daughters]
+        correspondences: dictionary with information about lineage mother:[daughter(s)]
+        parameters
+        experiment
+    returns:
+    
     """
 
     proc = "_volume_decrease_correction"
@@ -1711,9 +1759,26 @@ def _volume_decrease_correction_check(astec_name,
                                         path_to_previous_seeds, 
                                         selected_seeds):
     """
-    Function to test whether the reseeding has resulted in a sufficiently increased cell volume. 
+    Function to test whether the reseeding of the volume_decrease_correction has resulted in a sufficiently increased cell volume. 
     If not, the seeds for this cell will be replaced by the eroded and deformed seed from the previous segmentation.
-    This will be done only for cells that have not divided, because otherwise the division will be lost.
+    This will be done only for cells that have not divided, because otherwise the division would be lost.
+
+    args:
+        astec_name (str): Current name for astec output image (segementation)
+        membrane_image (str): Path to current membrane image
+        previous_segmentation (str): Path to segmentation image from t-1
+        cells_with_volume_loss (dict):
+        correspondences (dict): Dictionary that maps the labels of the segmentation of t-1 
+                                to the labels of the current time point. If cells divided, two labels will be mapped to t-1.
+        parameters:
+        experiment: 
+        segmentation_from_selection (str): Path to current segmentation image
+        path_to_previous_seeds (str): Path to seed image with seeds from previous (eroded and deformed cells from t-1)
+        selected_seeds (str): Path to seed image 
+
+    returns:
+        segmentation_from_corr_selection (str): Path to sementation image after correction
+        selected_seeds (str): Path to seed image after correction
 
     """
     previous_segmentation  = imread(previous_segmentation)
