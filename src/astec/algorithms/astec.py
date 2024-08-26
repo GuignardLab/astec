@@ -680,6 +680,7 @@ class AstecParameters(mars.WatershedParameters, MorphoSnakeParameters):
 #
 
 def _erode_cell(parameters):
+    # TODO make this optional and not solely dependend on the voxel_size
     """
 
     :param parameters:
@@ -727,7 +728,6 @@ def _erode_cell(parameters):
                     eroded = tmp
             else:
                 eroded = tmp
-                print("not eroding this seed due to loss of seed in a single iteration")
 
     return eroded, i, bb
 
@@ -796,12 +796,10 @@ def build_seeds_from_previous_segmentation(label_image, output_image, parameters
     seeds = np.zeros_like(seg)
     for eroded, i, bb in outputs:
         seeds[bb][eroded] = i
-    print(f"{np.unique(seeds)=}")
     if parameters.voxelsize != None:
         voxelsize = parameters.voxelsize
     else:    
         seeds.voxelsize = seg.voxelsize
-    print(f"{voxelsize=}")
     imsave(output_image, seeds)
 
     return
@@ -2567,11 +2565,10 @@ def astec_process(previous_time, current_time, lineage_tree_information, experim
         
 
     if parameters.blastocyst_cavity_detection == True:
-        print(f"{parameters.blastocyst_cavity_detection=}")
         output_segmentation = common.add_suffix(astec_name, '_cavity_corrected_segmentation',
                                                         new_dirname=experiment.astec_dir.get_tmp_directory(),
                                                         new_extension=experiment.default_image_suffix)
-        print("running cavity detection")
+        monitoring.to_log_and_console("         ...running cavity detection")
         cavity_corrected_segmentation, correspondences = cavity_correction(input_segmentation, 
                                                           selected_seeds, 
                                                           output_segmentation,
