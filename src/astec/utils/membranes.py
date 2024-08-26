@@ -9,13 +9,14 @@ import raster_geometry as rg
 
 def calculate_incremented_bounding_boxes(watershed_labels, increment = 1):
 
-    """ calculate incremented bounding boxes
-    Args:
+    """
+    Function that calculates incremented bounding boxes based on the ndimage find_objects function
+    args:
         watershed_labels(array): labelled image of cell positions
         increment (int): factor by how much bounding boxes should be incremented
 
-    Returns: 
-        incremented_b_boxes (): A list of tuples, with 3 slices each. Bounding boxes are incremented by one voxel in each dimension. Labels correspond to the indexes of the bounding box.
+    returns: 
+        incremented_b_boxes (slice objects): A list of tuples, with 3 slices each. Bounding boxes are incremented by one voxel in each dimension. Labels correspond to the indexes of the bounding box.
     """
     # in case 1 is the background, set it to 0
     zero_count = np.count_nonzero(watershed_labels == 0)
@@ -43,11 +44,12 @@ def calculate_incremented_bounding_boxes(watershed_labels, increment = 1):
 
 def extract_touching_surfaces(watershed_labels):
     
-    """ find membranes between all predicted cells (based on watershed labels)
-    Args:
+    """ 
+    Function that finds membranes between all predicted cells (based on the cell segmentation after watershed)
+    args:
         watershed_labels (3d array): watershed labels as 3D matrix of interegers, where 0 is background
 
-    Returns:
+    returns:
         membrane_labels (3D array): 3D matrix of integers, showing all overlapping membranes
         mapp_mem (dict): dictionary that maps membrane id to tuples of neighboring cells, as labelled in watershed image
 
@@ -110,13 +112,18 @@ def extract_touching_surfaces(watershed_labels):
 def volume_ratio_after_closing(interface_image, mapper, voxelsize, iterations = 1):
     
     '''
-    calculate ratio of the volumes of each interface before and after using scipy.ndimage.binary_closing 
-    --> volume increase points to abrupt shape changes in membrane = not an actual membrane
-    Args:
+    Funcrtion that calculates the ratio of the volumes of each interface before and after using scipy.ndimage.binary_closing 
+    --> volume increase points to abrupt shape changes in membrane which point to the mebrane being build on noise rather than actual signal, 
+    hence not an actual membrane
+    args:
         interface_image
         mapper (dict): dictionary mapping each membrane to the pair of cells it seperates: {(label cell1, label cell2) : membrane_id}
         appr_int_scale(tuple): voxel_size in order z, y, x
         iterations (int): how many times should the closing algorithm be applied
+
+    returns:
+        volume_ratios (dict): Mapping each membrane label to the volume ratio calculated below.
+        volumes (dict): Mappping each membrane to their original input volume
     '''
     
     volume_ratios = {}
@@ -159,10 +166,12 @@ def volume_ratio_after_closing(interface_image, mapper, voxelsize, iterations = 
 
 def find_connected_components(false_pairs_list): 
     
-    """find connected components among pairs of cells to be merged, create sets of labels that are to be merged into one cell
-    Args:
+    """
+    Function that finds connected components among pairs of cells that are to be merged, 
+    it then creates sets of labels that are going to be merged into one cell
+    args:
         false_labels_list (list): list with all pairs of cells that need to be merged
-    Returns:
+    returns:
         cc_list (list): list of sets of cells that are to be merged
     """
 
@@ -177,14 +186,15 @@ def find_connected_components(false_pairs_list):
 
 def merge_labels_with_false_membranes(false_pairs_list, original_watershed_labels, selected_seeds, correspondences):
     
-    """combine labels that are seperated by interfaces that are detected as false membranes
-    Args:
+    """
+    Function to combine labels that are seperated by interfaces that are detected as false membranes
+    args:
         false_labels_list (list): list with all pairs of cells that need to be merged
-        original_watershed_labels(array): array of integers, labelled image
-        output_name(str): name for saving the new watershed image with merged cells
+        original_watershed_labels (array): array of integers, labelled image
+        output_name (str): name for saving the new watershed image with merged cells
         
-    Returns:
-        merged_watershed (3D array): new image with merged cells, according to labels in merging_dictionary
+    returns:
+        merged_watershed (3D ndarray): new image with merged cells, according to labels in merging_dictionary
     """
     
     #find connected components among cells that need to be merged (group all labels for merging into one big cell)
@@ -219,7 +229,17 @@ def translate_cell_pair_to_previous (cell_pair, reversed_correspondences):
 
 def update_correspondences_dictionary(correspondences, changed_cells):
     ''' 
-    update correspondences dictionary to remove mothers that have the same daughters (important for downstream compatibility)
+    Function that updates correspondences dictionary to remove mothers that have the same daughters (important for downstream compatibility).
+    This phenomena is a potential side effect of merging cells.
+
+    args:
+        correspondences (dict): Dictionary that maps the labels of the segmentation of t-1 
+                                to the labels of the current time point. If cells divided, two labels will be mapped to t-1.
+        changed_cells (dict): Dictionary that maps mother to daughters cells for cells that where changed from the 
+                                original segmentation through merging across a membrane that was determined as noise
+
+    returns:
+        new_correspondences (dict): As above but with changed entries for daughters that where merged
 
     ''' 
 
