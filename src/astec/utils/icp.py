@@ -4,6 +4,7 @@ import numpy as np
 from sklearn.neighbors import NearestNeighbors
 
 import astec.utils.common as common
+
 monitoring = common.Monitoring()
 
 
@@ -12,6 +13,7 @@ monitoring = common.Monitoring()
 # transformations
 #
 ########################################################################################
+
 
 def _rotation_matrix_from_quaternion(qr):
     rot = np.zeros((3, 3))
@@ -35,14 +37,19 @@ def _rotation_matrix_from_quaternion(qr):
 #
 ########################################################################################
 
+
 def _ls_rigid_transformation(ref=None, flo=None):
     # compute the transformation that brings floating points onto the reference ones
     proc = "_ls_rigid_transformation"
     if ref.shape[0] != 4 or flo.shape[0] != 4:
-        monitoring.to_log_and_console(str(proc) + ": input matrices should be of shape[0]==4 (array of 4D points)")
+        monitoring.to_log_and_console(
+            str(proc) + ": input matrices should be of shape[0]==4 (array of 4D points)"
+        )
         return None
     if ref.shape[1] != flo.shape[1]:
-        monitoring.to_log_and_console(str(proc) + ": input matrices should have equal shape[1]")
+        monitoring.to_log_and_console(
+            str(proc) + ": input matrices should have equal shape[1]"
+        )
         return None
 
     # barycenters
@@ -64,13 +71,13 @@ def _ls_rigid_transformation(ref=None, flo=None):
     a = np.zeros((4, 4))
     for i in range(ref.shape[1]):
         a[0, 1:] = cflo[:3, i] - cref[:3, i]
-        a[1, 2] = - (cflo[2, i] + cref[2, i])
+        a[1, 2] = -(cflo[2, i] + cref[2, i])
         a[1, 3] = cflo[1, i] + cref[1, i]
-        a[2, 3] = - (cflo[0, i] + cref[0, i])
-        a[1:, 0] = - a[0, 1:]
-        a[2, 1] = - a[1, 2]
-        a[3, 1] = - a[1, 3]
-        a[3, 2] = - a[2, 3]
+        a[2, 3] = -(cflo[0, i] + cref[0, i])
+        a[1:, 0] = -a[0, 1:]
+        a[2, 1] = -a[1, 2]
+        a[3, 1] = -a[1, 3]
+        a[3, 2] = -a[2, 3]
         sum_ata += np.matmul(a.T, a)
 
     # eigen values and vectors
@@ -92,10 +99,14 @@ def _ls_similitude_transformation(ref=None, flo=None):
     # compute the transformation that brings floating points onto the reference ones
     proc = "_ls_rigid_transformation"
     if ref.shape[0] != 4 or flo.shape[0] != 4:
-        monitoring.to_log_and_console(str(proc) + ": input matrices should be of shape[0]==4 (array of 4D points)")
+        monitoring.to_log_and_console(
+            str(proc) + ": input matrices should be of shape[0]==4 (array of 4D points)"
+        )
         return None
     if ref.shape[1] != flo.shape[1]:
-        monitoring.to_log_and_console(str(proc) + ": input matrices should have equal shape[1]")
+        monitoring.to_log_and_console(
+            str(proc) + ": input matrices should have equal shape[1]"
+        )
         return None
 
     # barycenters
@@ -123,13 +134,13 @@ def _ls_similitude_transformation(ref=None, flo=None):
     a = np.zeros((4, 4))
     for i in range(ref.shape[1]):
         a[0, 1:] = cflo[:3, i] - cref[:3, i]
-        a[1, 2] = - (cflo[2, i] + cref[2, i])
+        a[1, 2] = -(cflo[2, i] + cref[2, i])
         a[1, 3] = cflo[1, i] + cref[1, i]
-        a[2, 3] = - (cflo[0, i] + cref[0, i])
-        a[1:, 0] = - a[0, 1:]
-        a[2, 1] = - a[1, 2]
-        a[3, 1] = - a[1, 3]
-        a[3, 2] = - a[2, 3]
+        a[2, 3] = -(cflo[0, i] + cref[0, i])
+        a[1:, 0] = -a[0, 1:]
+        a[2, 1] = -a[1, 2]
+        a[3, 1] = -a[1, 3]
+        a[3, 2] = -a[2, 3]
         sum_ata += np.matmul(a.T, a)
 
     # eigen values and vectors
@@ -160,10 +171,14 @@ def _ls_affine_transformation(ref=None, flo=None):
     # compute the transformation that brings floating points onto the reference ones
     proc = "_ls_rigid_transformation"
     if ref.shape[0] != 4 or flo.shape[0] != 4:
-        monitoring.to_log_and_console(str(proc) + ": input matrices should be of shape[0]==4 (array of 4D points)")
+        monitoring.to_log_and_console(
+            str(proc) + ": input matrices should be of shape[0]==4 (array of 4D points)"
+        )
         return None
     if ref.shape[1] != flo.shape[1]:
-        monitoring.to_log_and_console(str(proc) + ": input matrices should have equal shape[1]")
+        monitoring.to_log_and_console(
+            str(proc) + ": input matrices should have equal shape[1]"
+        )
         return None
 
     # barycenters
@@ -206,10 +221,14 @@ def _ls_transformation(ref=None, flo=None, transformation_type="affine"):
     proc = "_ls_transformation"
 
     if ref.shape[0] != 4 or flo.shape[0] != 4:
-        monitoring.to_log_and_console(str(proc) + ": input matrices should be of shape[0]==4 (array of 4D points)")
+        monitoring.to_log_and_console(
+            str(proc) + ": input matrices should be of shape[0]==4 (array of 4D points)"
+        )
         return None
     if ref.shape[1] != flo.shape[1]:
-        monitoring.to_log_and_console(str(proc) + ": input matrices should have equal shape[1]")
+        monitoring.to_log_and_console(
+            str(proc) + ": input matrices should have equal shape[1]"
+        )
         return None
 
     if transformation_type == "rigid":
@@ -218,12 +237,19 @@ def _ls_transformation(ref=None, flo=None, transformation_type="affine"):
         return _ls_similitude_transformation(ref=ref, flo=flo)
     elif transformation_type == "affine":
         return _ls_affine_transformation(ref=ref, flo=flo)
-    monitoring.to_log_and_console(str(proc) + ": unknown transformation type '" + str(transformation_type) + "'")
+    monitoring.to_log_and_console(
+        str(proc) + ": unknown transformation type '" + str(transformation_type) + "'"
+    )
     return None
 
 
-def _lts_transformation(ref=None, flo=None, transformation_type="affine", retained_fraction=0.75, verbose=False):
-
+def _lts_transformation(
+    ref=None,
+    flo=None,
+    transformation_type="affine",
+    retained_fraction=0.75,
+    verbose=False,
+):
     proc = "_lts_transformation"
     tol_r = 1e-4
     tol_t = 1e-4
@@ -231,10 +257,14 @@ def _lts_transformation(ref=None, flo=None, transformation_type="affine", retain
     iteration = 0
 
     if ref.shape[0] != 4 or flo.shape[0] != 4:
-        monitoring.to_log_and_console(str(proc) + ": input matrices should be of shape[0]==4 (array of 4D points)")
+        monitoring.to_log_and_console(
+            str(proc) + ": input matrices should be of shape[0]==4 (array of 4D points)"
+        )
         return None
     if ref.shape[1] != flo.shape[1]:
-        monitoring.to_log_and_console(str(proc) + ": input matrices should have equal shape[1]")
+        monitoring.to_log_and_console(
+            str(proc) + ": input matrices should have equal shape[1]"
+        )
         return None
 
     mat = _ls_transformation(ref=ref, flo=flo, transformation_type=transformation_type)
@@ -256,7 +286,9 @@ def _lts_transformation(ref=None, flo=None, transformation_type="affine", retain
         for i in range(retained_points):
             nref[:, i] = ref[:, sort_index[i]]
             nflo[:, i] = flo[:, sort_index[i]]
-        mat = _ls_transformation(ref=nref, flo=nflo, transformation_type=transformation_type)
+        mat = _ls_transformation(
+            ref=nref, flo=nflo, transformation_type=transformation_type
+        )
         del nref
         del nflo
 
@@ -265,7 +297,16 @@ def _lts_transformation(ref=None, flo=None, transformation_type="affine", retain
         eps_r = math.sqrt(np.sum(dmat[:3, :3]))
         eps_t = math.sqrt(np.sum(dmat[:3, 3]))
         if verbose:
-            msg = "   lts #" + str(iteration) + ": " + "eps_r = " + str(eps_r) + " - " + "eps_t = " + str(eps_t)
+            msg = (
+                "   lts #"
+                + str(iteration)
+                + ": "
+                + "eps_r = "
+                + str(eps_r)
+                + " - "
+                + "eps_t = "
+                + str(eps_t)
+            )
             monitoring.to_log_and_console(msg, 2)
         if (eps_r < tol_r and eps_t < tol_t) or iteration >= max_iterations:
             return mat
@@ -281,7 +322,15 @@ def _lts_transformation(ref=None, flo=None, transformation_type="affine", retain
 #
 ########################################################################################
 
-def icp(ref=None, flo=None, transformation_type="affine", estimation="lts", retained_fraction=0.75, verbose=False):
+
+def icp(
+    ref=None,
+    flo=None,
+    transformation_type="affine",
+    estimation="lts",
+    retained_fraction=0.75,
+    verbose=False,
+):
     """
     Iterative Closest Point procedure
     Parameters
@@ -326,7 +375,7 @@ def icp(ref=None, flo=None, transformation_type="affine", estimation="lts", reta
     lflo[:3, :] = flo
 
     #
-    nbrs = NearestNeighbors(n_neighbors=1, algorithm='kd_tree').fit(lref.T)
+    nbrs = NearestNeighbors(n_neighbors=1, algorithm="kd_tree").fit(lref.T)
 
     while True:
         pmat = copy.deepcopy(mat)
@@ -352,12 +401,24 @@ def icp(ref=None, flo=None, transformation_type="affine", estimation="lts", reta
 
         # compute incremental transformation and compose it with previous one
         if estimation == "ls":
-            imat = _ls_transformation(sref, sflo, transformation_type=transformation_type)
+            imat = _ls_transformation(
+                sref, sflo, transformation_type=transformation_type
+            )
         elif estimation == "lts":
-            imat = _lts_transformation(sref, sflo, transformation_type=transformation_type,
-                                       retained_fraction=retained_fraction, verbose=False)
+            imat = _lts_transformation(
+                sref,
+                sflo,
+                transformation_type=transformation_type,
+                retained_fraction=retained_fraction,
+                verbose=False,
+            )
         else:
-            print(proc + ": unknown transformation type '" + str(transformation_type) + "'")
+            print(
+                proc
+                + ": unknown transformation type '"
+                + str(transformation_type)
+                + "'"
+            )
             return None
         mat = np.matmul(imat, pmat)
 
@@ -366,7 +427,16 @@ def icp(ref=None, flo=None, transformation_type="affine", estimation="lts", reta
         eps_r = math.sqrt(np.sum(dmat[:3, :3]))
         eps_t = math.sqrt(np.sum(dmat[:3, 3]))
         if verbose:
-            print(" icp #" + str(iteration) + ": " + "eps_r = " + str(eps_r) + " - " + "eps_t = " + str(eps_t))
+            print(
+                " icp #"
+                + str(iteration)
+                + ": "
+                + "eps_r = "
+                + str(eps_r)
+                + " - "
+                + "eps_t = "
+                + str(eps_t)
+            )
         if (eps_r < tol_r and eps_t < tol_t) or iteration >= max_iterations:
             return mat
         iteration += 1

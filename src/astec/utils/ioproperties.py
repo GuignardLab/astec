@@ -1,4 +1,3 @@
-
 import os
 
 import numpy as np
@@ -7,7 +6,6 @@ import xml.etree.ElementTree as ElementTree
 
 
 class ToyMonitoring(object):
-
     def __init__(self):
         self.verbose = -1
         self.debug = 0
@@ -19,8 +17,8 @@ class ToyMonitoring(object):
 
     def to_log(self, text):
         if self.log_filename is not None:
-            with open(self.log_filename, 'a') as logfile:
-                logfile.write(text+'\n')
+            with open(self.log_filename, "a") as logfile:
+                logfile.write(text + "\n")
 
     def to_log_and_console(self, text, verboseness=0):
         if self.verbose >= verboseness or self.debug > 0:
@@ -29,9 +27,11 @@ class ToyMonitoring(object):
 
 
 import pkg_resources
+
 try:
-    dist = pkg_resources.get_distribution('astec')
+    dist = pkg_resources.get_distribution("astec")
     from astec.utils import common
+
     monitoring = common.Monitoring()
 except pkg_resources.DistributionNotFound:
     monitoring = ToyMonitoring()
@@ -60,81 +60,151 @@ except pkg_resources.DistributionNotFound:
 #
 ########################################################################################
 
-keydictionary = {'lineage': {'output_key': 'cell_lineage',
-                             'input_keys': ['lineage_tree', 'lin_tree', 'Lineage tree', 'cell_lineage']},
-                 'h_min': {'output_key': 'cell_h_min',
-                           'input_keys': ['cell_h_min', 'h_mins_information']},
-                 'volume': {'output_key': 'cell_volume',
-                            'input_keys': ['cell_volume', 'volumes_information', 'volumes information', 'vol']},
-                 'surface': {'output_key': 'cell_surface',
-                             'input_keys': ['cell_surface', 'cell surface']},
-                 'compactness': {'output_key': 'cell_compactness',
-                                 'input_keys': ['cell_compactness', 'Cell Compactness', 'compacity',
-                                                'cell_sphericity']},
-                 'sigma': {'output_key': 'cell_sigma',
-                           'input_keys': ['cell_sigma', 'sigmas_information', 'sigmas']},
-                 'label_in_time': {'output_key': 'cell_labels_in_time',
-                                   'input_keys': ['cell_labels_in_time', 'Cells labels in time', 'time_labels']},
-                 'barycenter': {'output_key': 'cell_barycenter',
-                                'input_keys': ['cell_barycenter', 'Barycenters', 'barycenters']},
-                 'fate': {'output_key': 'cell_fate',
-                          'input_keys': ['cell_fate', 'Fate']},
-                 'fate2': {'output_key': 'cell_fate_2',
-                           'input_keys': ['cell_fate_2', 'Fate2']},
-                 'fate3': {'output_key': 'cell_fate_3',
-                           'input_keys': ['cell_fate_3', 'Fate3']},
-                 'fate4': {'output_key': 'cell_fate_4',
-                           'input_keys': ['cell_fate_4', 'Fate4']},
-                 'all-cells': {'output_key': 'all_cells',
-                               'input_keys': ['all_cells', 'All Cells', 'All_Cells', 'all cells', 'tot_cells']},
-                 'principal-value': {'output_key': 'cell_principal_values',
-                                     'input_keys': ['cell_principal_values', 'Principal values']},
-                 'apicobasal-length': {'output_key': 'cell_apicobasal_length',
-                                     'input_keys': ['cell_apicobasal_length']},
-                 'name': {'output_key': 'cell_name',
-                          'input_keys': ['cell_name', 'Names', 'names', 'cell_names']},
-                 'contact': {'output_key': 'cell_contact_surface',
-                             'input_keys': ['cell_contact_surface', 'cell_cell_contact_information']},
-                 'contact-edge': {'output_key': 'cell_contact_edge',
-                             'input_keys': ['cell_contact_edge']},
-                 'contact-edge-length': {'output_key': 'cell_contact_edge_length',
-                             'input_keys': ['cell_contact_edge_length']},
-                 'contact-edge-segment': {'output_key': 'cell_contact_edge_segment',
-                             'input_keys': ['cell_contact_edge_segment']},
-                 'history': {'output_key': 'cell_history',
-                             'input_keys': ['cell_history', 'Cells history', 'cell_life', 'life']},
-                 'principal-vector': {'output_key': 'cell_principal_vectors',
-                                      'input_keys': ['cell_principal_vectors', 'Principal vectors']},
-                 'name-score': {'output_key': 'cell_naming_score',
-                                'input_keys': ['cell_naming_score', 'Scores', 'scores']},
-                 'problems': {'output_key': 'problematic_cells',
-                              'input_keys': ['problematic_cells']},
-                 'urchin_apicobasal_length': {'output_key': 'urchin_cell_apicobasal_length',
-                              'input_keys': ['urchin_cell_apicobasal_length']},
-                 'urchin_apicobasal_segment': {'output_key': 'urchin_cell_apicobasal_segment',
-                              'input_keys': ['urchin_cell_apicobasal_segment']},
-                 'urchin_adjacency': {'output_key': 'urchin_cell_adjacency',
-                                       'input_keys': ['urchin_cell_adjacency']},
-                 'urchin_apical_surface': {'output_key': 'urchin_apical_surface',
-                              'input_keys': ['urchin_apical_surface']},
-                 'urchin_apical_surface_barycenter': {'output_key': 'urchin_apical_surface_barycenter',
-                              'input_keys': ['urchin_apical_surface_barycenter']},
-                 'urchin_basal_surface': {'output_key': 'urchin_basal_surface',
-                              'input_keys': ['urchin_basal_surface']},
-                 'urchin_basal_surface_barycenter': {'output_key': 'urchin_basal_surface_barycenter',
-                              'input_keys': ['urchin_basal_surface_barycenter']},
-                 'urchin_apical_contact_edge_length': {'output_key': 'urchin_apical_contact_edge_length',
-                              'input_keys': ['urchin_apical_contact_edge_length']},
-                 'urchin_apical_contact_edge_segment': {'output_key': 'urchin_apical_contact_edge_segment',
-                              'input_keys': ['urchin_apical_contact_edge_segment']},
-                 'urchin_basal_contact_edge_length': {'output_key': 'urchin_basal_contact_edge_length',
-                              'input_keys': ['urchin_basal_contact_edge_length']},
-                 'urchin_basal_contact_edge_segment': {'output_key': 'urchin_basal_contact_edge_segment',
-                              'input_keys': ['urchin_basal_contact_edge_segment']},
-                 'urchin_vegetal_distance': {'output_key': 'urchin_vegetal_distance',
-                              'input_keys': ['urchin_vegetal_distance']},
-                 'unknown': {'output_key': 'unknown_key',
-                             'input_keys': ['unknown_key']}}
+keydictionary = {
+    "lineage": {
+        "output_key": "cell_lineage",
+        "input_keys": ["lineage_tree", "lin_tree", "Lineage tree", "cell_lineage"],
+    },
+    "h_min": {
+        "output_key": "cell_h_min",
+        "input_keys": ["cell_h_min", "h_mins_information"],
+    },
+    "volume": {
+        "output_key": "cell_volume",
+        "input_keys": [
+            "cell_volume",
+            "volumes_information",
+            "volumes information",
+            "vol",
+        ],
+    },
+    "surface": {
+        "output_key": "cell_surface",
+        "input_keys": ["cell_surface", "cell surface"],
+    },
+    "compactness": {
+        "output_key": "cell_compactness",
+        "input_keys": [
+            "cell_compactness",
+            "Cell Compactness",
+            "compacity",
+            "cell_sphericity",
+        ],
+    },
+    "sigma": {
+        "output_key": "cell_sigma",
+        "input_keys": ["cell_sigma", "sigmas_information", "sigmas"],
+    },
+    "label_in_time": {
+        "output_key": "cell_labels_in_time",
+        "input_keys": ["cell_labels_in_time", "Cells labels in time", "time_labels"],
+    },
+    "barycenter": {
+        "output_key": "cell_barycenter",
+        "input_keys": ["cell_barycenter", "Barycenters", "barycenters"],
+    },
+    "fate": {"output_key": "cell_fate", "input_keys": ["cell_fate", "Fate"]},
+    "fate2": {"output_key": "cell_fate_2", "input_keys": ["cell_fate_2", "Fate2"]},
+    "fate3": {"output_key": "cell_fate_3", "input_keys": ["cell_fate_3", "Fate3"]},
+    "fate4": {"output_key": "cell_fate_4", "input_keys": ["cell_fate_4", "Fate4"]},
+    "all-cells": {
+        "output_key": "all_cells",
+        "input_keys": ["all_cells", "All Cells", "All_Cells", "all cells", "tot_cells"],
+    },
+    "principal-value": {
+        "output_key": "cell_principal_values",
+        "input_keys": ["cell_principal_values", "Principal values"],
+    },
+    "apicobasal-length": {
+        "output_key": "cell_apicobasal_length",
+        "input_keys": ["cell_apicobasal_length"],
+    },
+    "name": {
+        "output_key": "cell_name",
+        "input_keys": ["cell_name", "Names", "names", "cell_names"],
+    },
+    "contact": {
+        "output_key": "cell_contact_surface",
+        "input_keys": ["cell_contact_surface", "cell_cell_contact_information"],
+    },
+    "contact-edge": {
+        "output_key": "cell_contact_edge",
+        "input_keys": ["cell_contact_edge"],
+    },
+    "contact-edge-length": {
+        "output_key": "cell_contact_edge_length",
+        "input_keys": ["cell_contact_edge_length"],
+    },
+    "contact-edge-segment": {
+        "output_key": "cell_contact_edge_segment",
+        "input_keys": ["cell_contact_edge_segment"],
+    },
+    "history": {
+        "output_key": "cell_history",
+        "input_keys": ["cell_history", "Cells history", "cell_life", "life"],
+    },
+    "principal-vector": {
+        "output_key": "cell_principal_vectors",
+        "input_keys": ["cell_principal_vectors", "Principal vectors"],
+    },
+    "name-score": {
+        "output_key": "cell_naming_score",
+        "input_keys": ["cell_naming_score", "Scores", "scores"],
+    },
+    "problems": {
+        "output_key": "problematic_cells",
+        "input_keys": ["problematic_cells"],
+    },
+    "urchin_apicobasal_length": {
+        "output_key": "urchin_cell_apicobasal_length",
+        "input_keys": ["urchin_cell_apicobasal_length"],
+    },
+    "urchin_apicobasal_segment": {
+        "output_key": "urchin_cell_apicobasal_segment",
+        "input_keys": ["urchin_cell_apicobasal_segment"],
+    },
+    "urchin_adjacency": {
+        "output_key": "urchin_cell_adjacency",
+        "input_keys": ["urchin_cell_adjacency"],
+    },
+    "urchin_apical_surface": {
+        "output_key": "urchin_apical_surface",
+        "input_keys": ["urchin_apical_surface"],
+    },
+    "urchin_apical_surface_barycenter": {
+        "output_key": "urchin_apical_surface_barycenter",
+        "input_keys": ["urchin_apical_surface_barycenter"],
+    },
+    "urchin_basal_surface": {
+        "output_key": "urchin_basal_surface",
+        "input_keys": ["urchin_basal_surface"],
+    },
+    "urchin_basal_surface_barycenter": {
+        "output_key": "urchin_basal_surface_barycenter",
+        "input_keys": ["urchin_basal_surface_barycenter"],
+    },
+    "urchin_apical_contact_edge_length": {
+        "output_key": "urchin_apical_contact_edge_length",
+        "input_keys": ["urchin_apical_contact_edge_length"],
+    },
+    "urchin_apical_contact_edge_segment": {
+        "output_key": "urchin_apical_contact_edge_segment",
+        "input_keys": ["urchin_apical_contact_edge_segment"],
+    },
+    "urchin_basal_contact_edge_length": {
+        "output_key": "urchin_basal_contact_edge_length",
+        "input_keys": ["urchin_basal_contact_edge_length"],
+    },
+    "urchin_basal_contact_edge_segment": {
+        "output_key": "urchin_basal_contact_edge_segment",
+        "input_keys": ["urchin_basal_contact_edge_segment"],
+    },
+    "urchin_vegetal_distance": {
+        "output_key": "urchin_vegetal_distance",
+        "input_keys": ["urchin_vegetal_distance"],
+    },
+    "unknown": {"output_key": "unknown_key", "input_keys": ["unknown_key"]},
+}
 
 
 def _normalize_dictionary_keys(inputdict):
@@ -153,8 +223,8 @@ def _normalize_dictionary_keys(inputdict):
         foundkey = False
         for k in keydictionary:
             # print "       compare '" + str(tmpkey) + "' with '" + str(k) + "'"
-            if inputkey in keydictionary[k]['input_keys']:
-                outputkey = keydictionary[k]['output_key']
+            if inputkey in keydictionary[k]["input_keys"]:
+                outputkey = keydictionary[k]["output_key"]
                 # monitoring.to_log_and_console("   ... recognized key '" + str(outputkey) + "'", 4)
                 #
                 # update if key already exists, else just create the dictionary entry
@@ -170,17 +240,25 @@ def _normalize_dictionary_keys(inputdict):
 
 
 def get_dictionary_entry(inputdict, keystring):
-    proc = 'get_dictionary_entry'
+    proc = "get_dictionary_entry"
     if keystring not in keydictionary:
-        monitoring.to_log_and_console(str(proc) + ": keystring must be in " + str(list(keydictionary.keys())), 1)
+        monitoring.to_log_and_console(
+            str(proc) + ": keystring must be in " + str(list(keydictionary.keys())), 1
+        )
         return {}
-    for k in keydictionary[keystring]['input_keys']:
+    for k in keydictionary[keystring]["input_keys"]:
         if k in inputdict:
             return inputdict[k]
     else:
-        monitoring.to_log_and_console(str(proc) + ": '" + str(keystring) + "' was not found in input dictionary", 1)
-        monitoring.to_log_and_console("    keys were: " + str(list(inputdict.keys())), 1)
+        monitoring.to_log_and_console(
+            str(proc) + ": '" + str(keystring) + "' was not found in input dictionary",
+            1,
+        )
+        monitoring.to_log_and_console(
+            "    keys were: " + str(list(inputdict.keys())), 1
+        )
         return {}
+
 
 ########################################################################################
 #
@@ -198,14 +276,14 @@ def get_dictionary_entry(inputdict, keystring):
 
 
 def _indent(elem, level=0):
-    i = "\n" + level*"  "
+    i = "\n" + level * "  "
     if len(elem):
         if not elem.text or not elem.text.strip():
             elem.text = i + "  "
         if not elem.tail or not elem.tail.strip():
             elem.tail = i
         for elem in elem:
-            _indent(elem, level+1)
+            _indent(elem, level + 1)
         if not elem.tail or not elem.tail.strip():
             elem.tail = i
     else:
@@ -269,6 +347,7 @@ def _indent(elem, level=0):
 #
 ########################################################################################
 
+
 def _set_xml_element_text(element, value):
     """
 
@@ -292,7 +371,6 @@ def _set_xml_element_text(element, value):
             _dict2xml(element, k, value[k])
 
     elif type(value) == list:
-
         #
         # empty list
         #
@@ -329,7 +407,7 @@ def _set_xml_element_text(element, value):
             for i in range(len(value)):
                 # text += str(list(value[i]))
                 text += repr(list(value[i]))
-                if i < len(value)-1:
+                if i < len(value) - 1:
                     text += ", "
                     if i > 0 and i % 10 == 0:
                         text += "\n  "
@@ -338,8 +416,12 @@ def _set_xml_element_text(element, value):
             del text
 
         else:
-            monitoring.to_log_and_console(proc + ": error, element list type ('" + str(type(value[0]))
-                                          + "') not handled yet")
+            monitoring.to_log_and_console(
+                proc
+                + ": error, element list type ('"
+                + str(type(value[0]))
+                + "') not handled yet"
+            )
 
     #
     # 'barycenter', 'cell_history'
@@ -362,8 +444,12 @@ def _set_xml_element_text(element, value):
         element.text = repr(value)
 
     else:
-        monitoring.to_log_and_console(proc + ": element type '" + str(type(value))
-                                      + "' not handled yet, uncomplete translation")
+        monitoring.to_log_and_console(
+            proc
+            + ": element type '"
+            + str(type(value))
+            + "' not handled yet, uncomplete translation"
+        )
 
 
 #
@@ -384,11 +470,11 @@ def _dict2xml(parent, tag, value):
     # integers can not be XML tags
     #
     if type(tag) in (int, np.int64):
-        child = ElementTree.Element('cell', attrib={'cell-id': str(tag)})
+        child = ElementTree.Element("cell", attrib={"cell-id": str(tag)})
     else:
         mn_type, name = _get_morphonet_type_name(str(tag))
         if mn_type is not None:
-            child = ElementTree.Element(name, attrib={'mn_type': str(mn_type)})
+            child = ElementTree.Element(name, attrib={"mn_type": str(mn_type)})
         else:
             child = ElementTree.Element(str(tag))
 
@@ -403,7 +489,7 @@ def _dict2xml(parent, tag, value):
 #
 
 
-def dict2xml(dictionary, defaultroottag='data'):
+def dict2xml(dictionary, defaultroottag="data"):
     """
 
     :param dictionary:
@@ -414,7 +500,9 @@ def dict2xml(dictionary, defaultroottag='data'):
     proc = "dict2xml"
 
     if type(dictionary) is not dict:
-        monitoring.to_log_and_console(proc + ": error, input is of type '" + str(type(dictionary)) + "'")
+        monitoring.to_log_and_console(
+            proc + ": error, input is of type '" + str(type(dictionary)) + "'"
+        )
         return None
 
     #
@@ -424,13 +512,11 @@ def dict2xml(dictionary, defaultroottag='data'):
     #
 
     if len(dictionary) == 1:
-
         roottag = list(dictionary.keys())[0]
         root = ElementTree.Element(roottag)
         _set_xml_element_text(root, dictionary[roottag])
 
     elif len(dictionary) > 1:
-
         root = ElementTree.Element(defaultroottag)
         for k, v in dictionary.items():
             _dict2xml(root, k, v)
@@ -460,7 +546,6 @@ def _set_dictionary_value(root):
     """
 
     if len(root) == 0:
-
         #
         # pas de branche, on renvoie la valeur
         #
@@ -472,20 +557,18 @@ def _set_dictionary_value(root):
             return eval(root.text)
 
     else:
-
         dictionary = {}
 
         for child in root:
-
             # print("child.tag=" + str(child.tag))
             # print "len(child)=" + str(len(child))
             # print "child.text=" + str(child.text)
 
             key = child.tag
-            if child.tag == 'cell':
-                key = np.int64(child.attrib['cell-id'])
-            elif 'mn_type' in child.attrib:
-                key = 'morphonet_' + child.attrib['mn_type'] + "_" + str(child.tag)
+            if child.tag == "cell":
+                key = np.int64(child.attrib["cell-id"])
+            elif "mn_type" in child.attrib:
+                key = "morphonet_" + child.attrib["mn_type"] + "_" + str(child.tag)
             dictionary[key] = _set_dictionary_value(child)
 
     return dictionary
@@ -505,24 +588,34 @@ def xml2dict(tree):
     dictionary = {}
 
     for k, v in keydictionary.items():
-
-        if root.tag == v['output_key']:
-            monitoring.to_log_and_console("   ... " + proc + ": process root.tag = '" + str(root.tag) + "'", 3)
+        if root.tag == v["output_key"]:
+            monitoring.to_log_and_console(
+                "   ... " + proc + ": process root.tag = '" + str(root.tag) + "'", 3
+            )
             dictionary[str(root.tag)] = _set_dictionary_value(root)
             break
     else:
         for child in root:
-            monitoring.to_log_and_console("   ... " + proc + ": process child.tag = '" + str(child.tag) + "'", 3)
+            monitoring.to_log_and_console(
+                "   ... " + proc + ": process child.tag = '" + str(child.tag) + "'", 3
+            )
             value = _set_dictionary_value(child)
             if value is None:
-                monitoring.to_log_and_console("       " + proc + ": empty property '" + str(child.tag) + "' ?! "
-                                              + " ... skip it", 1)
+                monitoring.to_log_and_console(
+                    "       "
+                    + proc
+                    + ": empty property '"
+                    + str(child.tag)
+                    + "' ?! "
+                    + " ... skip it",
+                    1,
+                )
             else:
                 key = child.tag
-                if child.tag == 'cell':
-                    key = np.int64(child.attrib['cell-id'])
-                elif 'mn_type' in child.attrib:
-                    key = 'morphonet_' + child.attrib['mn_type'] + "_" + str(child.tag)
+                if child.tag == "cell":
+                    key = np.int64(child.attrib["cell-id"])
+                elif "mn_type" in child.attrib:
+                    key = "morphonet_" + child.attrib["mn_type"] + "_" + str(child.tag)
                 dictionary[key] = value
 
     return dictionary
@@ -539,6 +632,7 @@ def xml2dict(tree):
 # update dictionary from what has been read
 #
 
+
 def _update_read_dictionary(propertiesdict, tmpdict, filename):
     """
 
@@ -554,20 +648,32 @@ def _update_read_dictionary(propertiesdict, tmpdict, filename):
 
         for k in keydictionary:
             # print "       compare '" + str(tmpkey) + "' with '" + str(k) + "'"
-            if tmpkey in keydictionary[k]['input_keys']:
-                outputkey = keydictionary[k]['output_key']
-                monitoring.to_log_and_console("   ... recognized key '" + str(outputkey) + "'", 2)
+            if tmpkey in keydictionary[k]["input_keys"]:
+                outputkey = keydictionary[k]["output_key"]
+                monitoring.to_log_and_console(
+                    "   ... recognized key '" + str(outputkey) + "'", 2
+                )
                 #
                 # update if key already exists, else just create the dictionary entry
                 #
                 if outputkey in propertiesdict:
-                    if type(propertiesdict[outputkey]) is dict and type(tmpdict[tmpkey]) is dict:
+                    if (
+                        type(propertiesdict[outputkey]) is dict
+                        and type(tmpdict[tmpkey]) is dict
+                    ):
                         propertiesdict[outputkey].update(tmpdict[tmpkey])
-                    elif type(propertiesdict[outputkey]) is list and type(tmpdict[tmpkey]) is list:
+                    elif (
+                        type(propertiesdict[outputkey]) is list
+                        and type(tmpdict[tmpkey]) is list
+                    ):
                         propertiesdict[outputkey] += tmpdict[tmpkey]
                     else:
-                        monitoring.to_log_and_console(proc + ": error, can not update property '" + str(outputkey)
-                                                      + "'")
+                        monitoring.to_log_and_console(
+                            proc
+                            + ": error, can not update property '"
+                            + str(outputkey)
+                            + "'"
+                        )
                 else:
                     propertiesdict[outputkey] = tmpdict[tmpkey]
                 foundkey = True
@@ -581,13 +687,17 @@ def _update_read_dictionary(propertiesdict, tmpdict, filename):
         # no key was found
         # it is assumed it's a lineage tree: add some test here ?
         #
-        monitoring.to_log_and_console("   ... assume '" + str(filename) + "' is a lineage", 1)
-        outputkey = keydictionary['lineage']['output_key']
+        monitoring.to_log_and_console(
+            "   ... assume '" + str(filename) + "' is a lineage", 1
+        )
+        outputkey = keydictionary["lineage"]["output_key"]
         if outputkey in propertiesdict:
             if type(propertiesdict[outputkey]) is dict and type(tmpdict) is dict:
                 propertiesdict[outputkey].update(tmpdict)
             else:
-                monitoring.to_log_and_console(proc + ": error, can not update property '" + str(outputkey) + "'")
+                monitoring.to_log_and_console(
+                    proc + ": error, can not update property '" + str(outputkey) + "'"
+                )
         else:
             propertiesdict[outputkey] = tmpdict
 
@@ -595,7 +705,9 @@ def _update_read_dictionary(propertiesdict, tmpdict, filename):
         #
         # some unknown keys were found
         #
-        monitoring.to_log_and_console("   ... unrecognized key(s) are '" + str(unknownkeys) + "'", 1)
+        monitoring.to_log_and_console(
+            "   ... unrecognized key(s) are '" + str(unknownkeys) + "'", 1
+        )
 
         # previous behavior: use keydictionary['unknown']['output_key'] as key
         # for *one* unknown property
@@ -630,6 +742,7 @@ def _update_read_dictionary(propertiesdict, tmpdict, filename):
 # fix it
 #
 
+
 def _set_types_from_xml(propertiesdict):
     """
 
@@ -640,22 +753,29 @@ def _set_types_from_xml(propertiesdict):
     if propertiesdict == {}:
         return {}
 
-    if 'cell_barycenter' in propertiesdict:
+    if "cell_barycenter" in propertiesdict:
         monitoring.to_log_and_console("   ... translate types of 'cell_barycenter'", 3)
-        for c in propertiesdict['cell_barycenter']:
-            propertiesdict['cell_barycenter'][c] = np.array(propertiesdict['cell_barycenter'][c])
+        for c in propertiesdict["cell_barycenter"]:
+            propertiesdict["cell_barycenter"][c] = np.array(
+                propertiesdict["cell_barycenter"][c]
+            )
 
-    if 'cell_history' in propertiesdict:
+    if "cell_history" in propertiesdict:
         monitoring.to_log_and_console("   ... translate types of 'cell_history'", 3)
-        for c in propertiesdict['cell_history']:
-            propertiesdict['cell_history'][c] = np.array(propertiesdict['cell_history'][c])
+        for c in propertiesdict["cell_history"]:
+            propertiesdict["cell_history"][c] = np.array(
+                propertiesdict["cell_history"][c]
+            )
 
-    if 'cell_principal_vectors' in propertiesdict:
-        monitoring.to_log_and_console("   ... translate types of 'cell_principal_vectors'", 3)
-        for c in propertiesdict['cell_principal_vectors']:
-            for v in range(len(propertiesdict['cell_principal_vectors'][c])):
-                propertiesdict['cell_principal_vectors'][c][v] \
-                    = np.array(propertiesdict['cell_principal_vectors'][c][v])
+    if "cell_principal_vectors" in propertiesdict:
+        monitoring.to_log_and_console(
+            "   ... translate types of 'cell_principal_vectors'", 3
+        )
+        for c in propertiesdict["cell_principal_vectors"]:
+            for v in range(len(propertiesdict["cell_principal_vectors"][c])):
+                propertiesdict["cell_principal_vectors"][c][v] = np.array(
+                    propertiesdict["cell_principal_vectors"][c][v]
+                )
 
     return propertiesdict
 
@@ -663,6 +783,7 @@ def _set_types_from_xml(propertiesdict):
 #
 #
 #
+
 
 def _read_xml_file(filename, propertiesdict):
     monitoring.to_log_and_console("... reading '" + str(filename) + "'", 1)
@@ -677,9 +798,10 @@ def _read_xml_file(filename, propertiesdict):
 #
 #
 
+
 def _read_pkl_file(filename, propertiesdict):
     monitoring.to_log_and_console("... reading '" + str(filename) + "'", 1)
-    inputfile = open(filename, 'rb')
+    inputfile = open(filename, "rb")
     tmpdict = pkl.load(inputfile)
     inputfile.close()
     propertiesdict = _update_read_dictionary(propertiesdict, tmpdict, filename)
@@ -691,6 +813,7 @@ def _read_pkl_file(filename, propertiesdict):
 #
 #
 
+
 def read_dictionary(inputfilenames, inputpropertiesdict={}):
     """
 
@@ -698,7 +821,7 @@ def read_dictionary(inputfilenames, inputpropertiesdict={}):
     :param inputpropertiesdict:
     :return:
     """
-    proc = 'read_dictionary'
+    proc = "read_dictionary"
 
     if inputfilenames is None:
         monitoring.to_log_and_console(proc + ": error, no input files")
@@ -712,7 +835,9 @@ def read_dictionary(inputfilenames, inputpropertiesdict={}):
 
     if type(inputfilenames) == str:
         if not os.path.isfile(inputfilenames):
-            monitoring.to_log_and_console(proc + ": error, file '" + str(inputfilenames) + "' does not exist")
+            monitoring.to_log_and_console(
+                proc + ": error, file '" + str(inputfilenames) + "' does not exist"
+            )
             return propertiesdict
 
         if inputfilenames.endswith("xml") is True:
@@ -721,7 +846,12 @@ def read_dictionary(inputfilenames, inputpropertiesdict={}):
         elif inputfilenames.endswith("pkl") is True:
             propertiesdict = _read_pkl_file(inputfilenames, propertiesdict)
         else:
-            monitoring.to_log_and_console(proc + ": error: extension not recognized for '" + str(inputfilenames) + "'")
+            monitoring.to_log_and_console(
+                proc
+                + ": error: extension not recognized for '"
+                + str(inputfilenames)
+                + "'"
+            )
 
         propertiesdict = _normalize_dictionary_keys(propertiesdict)
         return propertiesdict
@@ -735,9 +865,10 @@ def read_dictionary(inputfilenames, inputpropertiesdict={}):
     #
 
     for filename in inputfilenames:
-
         if not os.path.isfile(filename):
-            monitoring.to_log_and_console(proc + ": error, file '" + str(filename) + "' does not exist")
+            monitoring.to_log_and_console(
+                proc + ": error, file '" + str(filename) + "' does not exist"
+            )
             continue
 
         if filename.endswith("xml") is True:
@@ -754,9 +885,10 @@ def read_dictionary(inputfilenames, inputpropertiesdict={}):
     #
 
     for filename in inputfilenames:
-
         if not os.path.isfile(filename):
-            monitoring.to_log_and_console(proc + ": error, file '" + str(filename) + "' does not exist")
+            monitoring.to_log_and_console(
+                proc + ": error, file '" + str(filename) + "' does not exist"
+            )
             continue
 
         if filename.endswith("pkl") is True:
@@ -767,12 +899,14 @@ def read_dictionary(inputfilenames, inputpropertiesdict={}):
     #
 
     for filename in inputfilenames:
-        if filename[len(filename) - 3:len(filename)] == "xml":
+        if filename[len(filename) - 3 : len(filename)] == "xml":
             continue
-        elif filename[len(filename) - 3:len(filename)] == "pkl":
+        elif filename[len(filename) - 3 : len(filename)] == "pkl":
             continue
         else:
-            monitoring.to_log_and_console(proc + ": error: extension not recognized for '" + str(filename) + "'")
+            monitoring.to_log_and_console(
+                proc + ": error: extension not recognized for '" + str(filename) + "'"
+            )
 
     propertiesdict = _normalize_dictionary_keys(propertiesdict)
     return propertiesdict
@@ -785,10 +919,10 @@ def write_dictionary(inputfilename, inputpropertiesdict):
     :param inputpropertiesdict:
     :return:
     """
-    proc = 'write_dictionary'
+    proc = "write_dictionary"
 
     if inputfilename.endswith("pkl") is True:
-        lineagefile = open(inputfilename, 'wb')
+        lineagefile = open(inputfilename, "wb")
         pkl.dump(inputpropertiesdict, lineagefile)
         lineagefile.close()
     elif inputfilename.endswith("xml") is True:
@@ -798,8 +932,13 @@ def write_dictionary(inputfilename, inputpropertiesdict):
     elif inputfilename.endswith("tlp") is True:
         write_tlp_file(inputfilename, inputpropertiesdict)
     else:
-        monitoring.to_log_and_console(str(proc) + ": error when writing lineage file. Extension not recognized for '"
-                                      + os.path.basename(inputfilename) + "'", 1)
+        monitoring.to_log_and_console(
+            str(proc)
+            + ": error when writing lineage file. Extension not recognized for '"
+            + os.path.basename(inputfilename)
+            + "'",
+            1,
+        )
     return
 
 
@@ -809,14 +948,15 @@ def write_dictionary(inputfilename, inputpropertiesdict):
 #
 ########################################################################################
 
+
 def _get_morphonet_type_name(key):
     mn_type = None
-    if key[:10] == 'morphonet_' or key[:10] == 'selection_':
-        if key[10:20] == 'selection_':
-            mn_type = 'selection'
+    if key[:10] == "morphonet_" or key[:10] == "selection_":
+        if key[10:20] == "selection_":
+            mn_type = "selection"
             name = key[20:]
-        elif key[10:16] == 'float_':
-            mn_type = 'float'
+        elif key[10:16] == "float_":
+            mn_type = "float"
             name = key[16:]
         else:
             name = key[10:]
@@ -827,7 +967,7 @@ def _get_morphonet_type_name(key):
 
 def write_morphonet_selection(d, time_digits_for_cell_id=4, directory=None):
     proc = "write_morphonet_selection"
-    div = int(10 ** time_digits_for_cell_id)
+    div = int(10**time_digits_for_cell_id)
     for key in d:
         if not isinstance(key, str):
             # print("skip key '" + str(key) + "', not a string")
@@ -835,27 +975,29 @@ def write_morphonet_selection(d, time_digits_for_cell_id=4, directory=None):
         if len(key) < 10:
             # print("skip key '" + str(key) + "', too short")
             continue
-        if key[:9] != 'selection' and key[:9] != 'morphonet':
+        if key[:9] != "selection" and key[:9] != "morphonet":
             # print("skip key '" + str(key) + "', not a selection")
             continue
 
         mn_type, name = _get_morphonet_type_name(key)
 
         # print("write key '" + str(key) + "'")
-        filename = name + '.txt'
+        filename = name + ".txt"
         if directory is not None and isinstance(directory, str):
             if not os.path.isdir(directory):
                 if not os.path.exists(directory):
                     os.makedirs(directory)
                 else:
-                    monitoring.to_log_and_console(proc + ": '" + str(directory) + "' is not a directory ?!")
+                    monitoring.to_log_and_console(
+                        proc + ": '" + str(directory) + "' is not a directory ?!"
+                    )
             if os.path.isdir(directory):
                 filename = os.path.join(directory, filename)
         f = open(filename, "w")
         f.write("# " + str(name) + "\n")
-        if mn_type == 'float':
+        if mn_type == "float":
             f.write("type:float\n")
-        elif mn_type == 'selection':
+        elif mn_type == "selection":
             f.write("type:selection\n")
         else:
             f.write("type:float\n")
@@ -893,6 +1035,7 @@ def write_morphonet_selection(d, time_digits_for_cell_id=4, directory=None):
 #
 ########################################################################################
 
+
 def write_tlp_file(tlpfilename, dictionary):
     """
 
@@ -906,8 +1049,8 @@ def write_tlp_file(tlpfilename, dictionary):
     #
     # is there a lineage
     #
-    if keydictionary['lineage']['output_key'] in dictionary:
-        lineage = dictionary[keydictionary['lineage']['output_key']]
+    if keydictionary["lineage"]["output_key"] in dictionary:
+        lineage = dictionary[keydictionary["lineage"]["output_key"]]
     else:
         monitoring.to_log_and_console(proc + ": no lineage was found.")
         return
@@ -916,12 +1059,14 @@ def write_tlp_file(tlpfilename, dictionary):
     # open file
     #
     f = open(tlpfilename, "w")
-    f.write("(tlp \"2.0\"\n")
+    f.write('(tlp "2.0"\n')
 
     #
     # write nodes = lineage.keys() + lineage.values()
     #
-    nodes = set(lineage.keys()).union(set([v for values in list(lineage.values()) for v in values]))
+    nodes = set(lineage.keys()).union(
+        set([v for values in list(lineage.values()) for v in values])
+    )
     f.write("(nodes ")
     for n in nodes:
         f.write(str(n) + " ")
@@ -939,59 +1084,83 @@ def write_tlp_file(tlpfilename, dictionary):
     #
     # write node ids
     #
-    f.write("(property 0 int \"id\"\n")
-    f.write("\t(default \"0\" \"0\")\n")
+    f.write('(property 0 int "id"\n')
+    f.write('\t(default "0" "0")\n')
     for node in nodes:
-        f.write("\t(node " + str(node) + str(" \"") + str(node) + "\")\n")
+        f.write("\t(node " + str(node) + str(' "') + str(node) + '")\n')
     f.write(")\n")
 
     #
     #
     #
     for p in dictionary:
-        if p == keydictionary['lineage']['output_key']:
+        if p == keydictionary["lineage"]["output_key"]:
             pass
-        elif p == keydictionary['all-cells']['output_key']:
+        elif p == keydictionary["all-cells"]["output_key"]:
             pass
         #
         # property as single double
         #
-        elif p == keydictionary['volume']['output_key'] or p == keydictionary['surface']['output_key'] \
-                or p == keydictionary['apicobasal-length']['output_key'] \
-                or p == keydictionary['compactness']['output_key']:
+        elif (
+            p == keydictionary["volume"]["output_key"]
+            or p == keydictionary["surface"]["output_key"]
+            or p == keydictionary["apicobasal-length"]["output_key"]
+            or p == keydictionary["compactness"]["output_key"]
+        ):
             prop = dictionary[p]
             default = np.median(list(prop.values()))
-            f.write("(property 0 double \"" + str(p) + "\"\n")
-            f.write("\t(default \"" + str(default) + "\" \"0\")\n")
+            f.write('(property 0 double "' + str(p) + '"\n')
+            f.write('\t(default "' + str(default) + '" "0")\n')
             for node in nodes:
-                f.write("\t(node " + str(node) + str(" \"") + str(prop.get(node, default)) + "\")\n")
+                f.write(
+                    "\t(node "
+                    + str(node)
+                    + str(' "')
+                    + str(prop.get(node, default))
+                    + '")\n'
+                )
             f.write(")\n")
         #
         # property as string
         #
-        elif p == keydictionary['fate']['output_key'] or p == keydictionary['fate2']['output_key'] \
-                or p == keydictionary['fate3']['output_key'] or p == keydictionary['fate4']['output_key'] \
-                or p == keydictionary['name']['output_key']:
+        elif (
+            p == keydictionary["fate"]["output_key"]
+            or p == keydictionary["fate2"]["output_key"]
+            or p == keydictionary["fate3"]["output_key"]
+            or p == keydictionary["fate4"]["output_key"]
+            or p == keydictionary["name"]["output_key"]
+        ):
             prop = dictionary[p]
-            f.write("(property 0 string \"" + str(p) + "\"\n")
-            f.write("\t(default \"" + "no string" + "\" \"0\")\n")
+            f.write('(property 0 string "' + str(p) + '"\n')
+            f.write('\t(default "' + "no string" + '" "0")\n')
             for node in nodes:
-                f.write("\t(node " + str(node) + str(" \"") + str(prop.get(node, "no string")) + "\")\n")
+                f.write(
+                    "\t(node "
+                    + str(node)
+                    + str(' "')
+                    + str(prop.get(node, "no string"))
+                    + '")\n'
+                )
             f.write(")\n")
         #
         #
         #
-        elif p == keydictionary['h_min']['output_key'] or p == keydictionary['sigma']['output_key'] \
-                or p == keydictionary['label_in_time']['output_key'] \
-                or p == keydictionary['barycenter']['output_key'] \
-                or p == keydictionary['principal-value']['output_key'] \
-                or p == keydictionary['contact']['output_key'] \
-                or p == keydictionary['history']['output_key'] \
-                or p == keydictionary['principal-vector']['output_key'] \
-                or p == keydictionary['name-score']['output_key']:
+        elif (
+            p == keydictionary["h_min"]["output_key"]
+            or p == keydictionary["sigma"]["output_key"]
+            or p == keydictionary["label_in_time"]["output_key"]
+            or p == keydictionary["barycenter"]["output_key"]
+            or p == keydictionary["principal-value"]["output_key"]
+            or p == keydictionary["contact"]["output_key"]
+            or p == keydictionary["history"]["output_key"]
+            or p == keydictionary["principal-vector"]["output_key"]
+            or p == keydictionary["name-score"]["output_key"]
+        ):
             pass
         else:
-            monitoring.to_log_and_console(proc + ": property '" + str(p) + "' not handled yet for writing.")
+            monitoring.to_log_and_console(
+                proc + ": property '" + str(p) + "' not handled yet for writing."
+            )
 
     #
     # close file

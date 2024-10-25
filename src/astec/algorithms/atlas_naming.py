@@ -35,54 +35,64 @@ _instrumented_ = False
 
 
 class NamingParameters(uatlasd.DivisionParameters):
-
     ############################################################
     #
     # initialisation
     #
     ############################################################
 
-    def __init__(self, prefix='naming_'):
-
+    def __init__(self, prefix="naming_"):
         if "doc" not in self.__dict__:
             self.doc = {}
 
         uatlasd.DivisionParameters.__init__(self, prefix=[prefix, "atlas_"])
 
         doc = "\t Input property file to be named. Must contain lineage, volumes and contact surfaces\n"
-        doc += "\t as well as some input names (one time point should be entirely named)."
-        self.doc['inputFile'] = doc
+        doc += (
+            "\t as well as some input names (one time point should be entirely named)."
+        )
+        self.doc["inputFile"] = doc
         self.inputFile = []
         doc = "\t Output property file."
-        self.doc['outputFile'] = doc
+        self.doc["outputFile"] = doc
         self.outputFile = None
 
         #
         #
         #
-        doc = "\t Method to name the daughters after a division. Distances are computed\n"
+        doc = (
+            "\t Method to name the daughters after a division. Distances are computed\n"
+        )
         doc += "\t between the couple of daughters as well as the couple of switched\n"
         doc += "\t daughters and all the atlas divisions.\n"
-        doc += "\t - 'mean': choose the couple of names that yield the minimal average \n"
+        doc += (
+            "\t - 'mean': choose the couple of names that yield the minimal average \n"
+        )
         doc += "\t   distance over all the atlases. \n"
         doc += "\t - 'minimum': choose the couple of names that yield a minimal distance.\n"
         doc += "\t   It comes to name after the closest atlas (for this division).\n"
         doc += "\t - 'sum': same as 'mean' \n"
         doc += "\t - 'majority': for each choice, order the distances in increasing order\n"
         doc += "\t   then compute the cumulated sum over the n first elements (so the first\n"
-        doc += "\t   is the minimum distance, and the last one is the average over all\n"
+        doc += (
+            "\t   is the minimum distance, and the last one is the average over all\n"
+        )
         doc += "\t   atlases). Counts then the number of times when a choice is better than\n"
-        doc += "\t   the switched one, and choose the name couple with majority choices."
-        self.doc['selection_method'] = doc
-        self.selection_method = 'mean'
+        doc += (
+            "\t   the switched one, and choose the name couple with majority choices."
+        )
+        self.doc["selection_method"] = doc
+        self.selection_method = "mean"
 
         doc = "\t Minimum number of atlases required to assess naming confidence. If there is not enough atlases\n"
         doc += "\t in the database for the aimed division, naming is not assessed."
-        self.doc['confidence_atlases_nmin'] = doc
+        self.doc["confidence_atlases_nmin"] = doc
         self.confidence_atlases_nmin = 2
         doc = "\t Percentage of atlases used to assess naming confidence. If the percentage is less than\n"
-        doc += "\t 'confidence_atlases_nmin', 'confidence_atlases_nmin' atlases are used."
-        self.doc['confidence_atlases_percentage'] = doc
+        doc += (
+            "\t 'confidence_atlases_nmin', 'confidence_atlases_nmin' atlases are used."
+        )
+        self.doc["confidence_atlases_percentage"] = doc
         self.confidence_atlases_percentage = 50
 
         #
@@ -90,14 +100,16 @@ class NamingParameters(uatlasd.DivisionParameters):
         # names will be deleted, and tried to be rebuilt
         doc = "\t Input property file to be tested (must include cell names).\n"
         doc += "\t A 64-cells time point is searched and the embryo is renamed from\n"
-        doc += "\t this given time point. Comparison between new names and actual ones\n"
+        doc += (
+            "\t this given time point. Comparison between new names and actual ones\n"
+        )
         doc += "\t are reported.\n"
         doc += "\t If given, 'inputFile' is ignored.\n"
-        self.doc['testFile'] = doc
+        self.doc["testFile"] = doc
         self.testFile = None
         doc = "\t If True, some diagnosis are conducted on the property file to\n"
         doc += "\t be named or to be tested.\n"
-        self.doc['test_diagnosis'] = doc
+        self.doc["test_diagnosis"] = doc
         self.test_diagnosis = False
 
     ############################################################
@@ -108,23 +120,31 @@ class NamingParameters(uatlasd.DivisionParameters):
 
     def print_parameters(self):
         print("")
-        print('#')
-        print('# NamingParameters')
-        print('#')
+        print("#")
+        print("# NamingParameters")
+        print("#")
         print("")
 
         uatlasd.DivisionParameters.print_parameters(self)
 
-        self.varprint('inputFile', self.inputFile, self.doc.get('inputFile', None))
-        self.varprint('outputFile', self.outputFile, self.doc.get('outputFile', None))
+        self.varprint("inputFile", self.inputFile, self.doc.get("inputFile", None))
+        self.varprint("outputFile", self.outputFile, self.doc.get("outputFile", None))
 
-        self.varprint('selection_method', self.selection_method, self.doc.get('selection_method', None))
+        self.varprint(
+            "selection_method",
+            self.selection_method,
+            self.doc.get("selection_method", None),
+        )
 
-        self.varprint('confidence_atlases_nmin', self.confidence_atlases_nmin)
-        self.varprint('confidence_atlases_percentage', self.confidence_atlases_percentage)
+        self.varprint("confidence_atlases_nmin", self.confidence_atlases_nmin)
+        self.varprint(
+            "confidence_atlases_percentage", self.confidence_atlases_percentage
+        )
 
-        self.varprint('testFile', self.testFile, self.doc.get('testFile', None))
-        self.varprint('test_diagnosis', self.test_diagnosis, self.doc.get('test_diagnosis', None))
+        self.varprint("testFile", self.testFile, self.doc.get("testFile", None))
+        self.varprint(
+            "test_diagnosis", self.test_diagnosis, self.doc.get("test_diagnosis", None)
+        )
         print("")
 
     def write_parameters_in_file(self, logfile):
@@ -136,23 +156,47 @@ class NamingParameters(uatlasd.DivisionParameters):
 
         uatlasd.DivisionParameters.write_parameters_in_file(self, logfile)
 
-        self.varwrite(logfile, 'inputFile', self.inputFile, self.doc.get('inputFile', None))
-        self.varwrite(logfile, 'outputFile', self.outputFile, self.doc.get('outputFile', None))
+        self.varwrite(
+            logfile, "inputFile", self.inputFile, self.doc.get("inputFile", None)
+        )
+        self.varwrite(
+            logfile, "outputFile", self.outputFile, self.doc.get("outputFile", None)
+        )
 
-        self.varwrite(logfile, 'selection_method', self.selection_method, self.doc.get('selection_method', None))
+        self.varwrite(
+            logfile,
+            "selection_method",
+            self.selection_method,
+            self.doc.get("selection_method", None),
+        )
 
-        self.varwrite(logfile, 'confidence_atlases_nmin', self.confidence_atlases_nmin,
-                      self.doc.get('confidence_atlases_nmin', None))
-        self.varwrite(logfile, 'confidence_atlases_percentage', self.confidence_atlases_percentage,
-                      self.doc.get('confidence_atlases_percentage', None))
+        self.varwrite(
+            logfile,
+            "confidence_atlases_nmin",
+            self.confidence_atlases_nmin,
+            self.doc.get("confidence_atlases_nmin", None),
+        )
+        self.varwrite(
+            logfile,
+            "confidence_atlases_percentage",
+            self.confidence_atlases_percentage,
+            self.doc.get("confidence_atlases_percentage", None),
+        )
 
-        self.varwrite(logfile, 'testFile', self.testFile, self.doc.get('testFile', None))
-        self.varwrite(logfile, 'test_diagnosis', self.test_diagnosis, self.doc.get('test_diagnosis', None))
+        self.varwrite(
+            logfile, "testFile", self.testFile, self.doc.get("testFile", None)
+        )
+        self.varwrite(
+            logfile,
+            "test_diagnosis",
+            self.test_diagnosis,
+            self.doc.get("test_diagnosis", None),
+        )
 
         logfile.write("\n")
 
     def write_parameters(self, log_file_name):
-        with open(log_file_name, 'a') as logfile:
+        with open(log_file_name, "a") as logfile:
             self.write_parameters_in_file(logfile)
         return
 
@@ -164,24 +208,34 @@ class NamingParameters(uatlasd.DivisionParameters):
 
     def update_from_parameters(self, parameters):
         uatlasd.DivisionParameters.update_from_parameters(self, parameters)
-        self.inputFile = self.read_parameter(parameters, 'inputFile', self.inputFile)
-        self.outputFile = self.read_parameter(parameters, 'outputFile', self.outputFile)
+        self.inputFile = self.read_parameter(parameters, "inputFile", self.inputFile)
+        self.outputFile = self.read_parameter(parameters, "outputFile", self.outputFile)
 
-        self.selection_method = self.read_parameter(parameters, 'selection_method', self.selection_method)
+        self.selection_method = self.read_parameter(
+            parameters, "selection_method", self.selection_method
+        )
 
-        self.confidence_atlases_nmin = self.read_parameter(parameters, 'confidence_atlases_nmin',
-                                                           self.confidence_atlases_nmin)
-        self.confidence_atlases_percentage = self.read_parameter(parameters, 'confidence_atlases_percentage',
-                                                                 self.confidence_atlases_percentage)
+        self.confidence_atlases_nmin = self.read_parameter(
+            parameters, "confidence_atlases_nmin", self.confidence_atlases_nmin
+        )
+        self.confidence_atlases_percentage = self.read_parameter(
+            parameters,
+            "confidence_atlases_percentage",
+            self.confidence_atlases_percentage,
+        )
 
-        self.testFile = self.read_parameter(parameters, 'testFile', self.testFile)
-        self.test_diagnosis = self.read_parameter(parameters, 'test_diagnosis', self.test_diagnosis)
+        self.testFile = self.read_parameter(parameters, "testFile", self.testFile)
+        self.test_diagnosis = self.read_parameter(
+            parameters, "test_diagnosis", self.test_diagnosis
+        )
 
     def update_from_parameter_file(self, parameter_file):
         if parameter_file is None:
             return
         if not os.path.isfile(parameter_file):
-            monitoring.to_log_and_console("Error: '" + parameter_file + "' is not a valid file. Exiting.")
+            monitoring.to_log_and_console(
+                "Error: '" + parameter_file + "' is not a valid file. Exiting."
+            )
             sys.exit(1)
 
         parameters = common.load_source(parameter_file)
@@ -194,6 +248,7 @@ class NamingParameters(uatlasd.DivisionParameters):
 #
 ########################################################################################
 
+
 def _build_test_set(prop, time_digits_for_cell_id=4, ncells=64):
     #
     # from an already named embryo, delete names except at one time point
@@ -203,18 +258,25 @@ def _build_test_set(prop, time_digits_for_cell_id=4, ncells=64):
     #
     # copy dictionary
     #
-    returned_prop = {'cell_lineage': copy.deepcopy(prop['cell_lineage']), 'cell_name': copy.deepcopy(prop['cell_name']),
-                     'cell_contact_surface': copy.deepcopy(prop['cell_contact_surface']),
-                     'cell_volume': copy.deepcopy(prop['cell_volume'])}
+    returned_prop = {
+        "cell_lineage": copy.deepcopy(prop["cell_lineage"]),
+        "cell_name": copy.deepcopy(prop["cell_name"]),
+        "cell_contact_surface": copy.deepcopy(prop["cell_contact_surface"]),
+        "cell_volume": copy.deepcopy(prop["cell_volume"]),
+    }
 
     #
     # get cells to count cells per time point
     #
-    lineage = returned_prop['cell_lineage']
-    cells = list(set(lineage.keys()).union(set([v for values in list(lineage.values()) for v in values])))
+    lineage = returned_prop["cell_lineage"]
+    cells = list(
+        set(lineage.keys()).union(
+            set([v for values in list(lineage.values()) for v in values])
+        )
+    )
     cells = sorted(cells)
 
-    div = 10 ** time_digits_for_cell_id
+    div = 10**time_digits_for_cell_id
     ncells_per_time = np.zeros((max(cells) // div) + 1)
     for c in cells:
         t = int(c) // div
@@ -225,10 +287,14 @@ def _build_test_set(prop, time_digits_for_cell_id=4, ncells=64):
     #
     indices = np.where(np.array(ncells_per_time == ncells))[0]
     if len(indices) == 0:
-        monitoring.to_log_and_console(str(proc) + ": there is no time point with #cells=" + str(ncells))
+        monitoring.to_log_and_console(
+            str(proc) + ": there is no time point with #cells=" + str(ncells)
+        )
         indices = np.where(np.array(ncells_per_time > ncells))[0]
         if len(indices) == 0:
-            monitoring.to_log_and_console(str(proc) + ": there is no time point with #cells>" + str(ncells))
+            monitoring.to_log_and_console(
+                str(proc) + ": there is no time point with #cells>" + str(ncells)
+            )
             for t in range(len(ncells_per_time)):
                 if ncells_per_time[t] == 0:
                     continue
@@ -242,10 +308,10 @@ def _build_test_set(prop, time_digits_for_cell_id=4, ncells=64):
 
     monitoring.to_log_and_console(str(proc) + ": rename from time point " + str(draw))
 
-    cells = list(returned_prop['cell_name'].keys())
+    cells = list(returned_prop["cell_name"].keys())
     for c in cells:
         if int(c) // div != draw:
-            del returned_prop['cell_name'][c]
+            del returned_prop["cell_name"][c]
 
     return returned_prop
 
@@ -262,49 +328,69 @@ def _test_naming(prop, reference_prop, discrepancies):
     sisters_errors = {}
     other_errors = {}
     division_errors = {}
-    key_list = sorted(prop['cell_name'].keys())
+    key_list = sorted(prop["cell_name"].keys())
     for k in key_list:
-        if k not in reference_prop['cell_name']:
-            monitoring.to_log_and_console("\t weird, key " + str(k) + " is not in reference properties")
-        elif prop['cell_name'][k] != reference_prop['cell_name'][k]:
+        if k not in reference_prop["cell_name"]:
+            monitoring.to_log_and_console(
+                "\t weird, key " + str(k) + " is not in reference properties"
+            )
+        elif prop["cell_name"][k] != reference_prop["cell_name"][k]:
             #
             # named as its sister
             #
-            if reference_prop['cell_name'][k] == uname.get_sister_name(prop['cell_name'][k]):
-                if prop['cell_name'][k] not in sisters_errors:
-                    sisters_errors[prop['cell_name'][k]] = 1
-                    msg = "cell_name[" + str(k) + "]=" + str(prop['cell_name'][k]) + " is named as its sister "
-                    msg += str(reference_prop['cell_name'][k])
-                    if uname.get_mother_name(prop['cell_name'][k]) in discrepancies:
+            if reference_prop["cell_name"][k] == uname.get_sister_name(
+                prop["cell_name"][k]
+            ):
+                if prop["cell_name"][k] not in sisters_errors:
+                    sisters_errors[prop["cell_name"][k]] = 1
+                    msg = (
+                        "cell_name["
+                        + str(k)
+                        + "]="
+                        + str(prop["cell_name"][k])
+                        + " is named as its sister "
+                    )
+                    msg += str(reference_prop["cell_name"][k])
+                    if uname.get_mother_name(prop["cell_name"][k]) in discrepancies:
                         msg += ", division is incoherent among references"
                     monitoring.to_log_and_console("\t " + msg)
                 else:
-                    sisters_errors[prop['cell_name'][k]] += 1
-                indexed_name = uname.get_mother_name(prop['cell_name'][k])
+                    sisters_errors[prop["cell_name"][k]] += 1
+                indexed_name = uname.get_mother_name(prop["cell_name"][k])
                 division_errors[indexed_name] = division_errors.get(indexed_name, 0) + 1
             #
             # other errors
             #
             else:
-                if prop['cell_name'][k] not in other_errors:
-                    other_errors[prop['cell_name'][k]] = 1
-                    msg = "cell_name[" + str(k) + "]=" + str(prop['cell_name'][k]) + " is not equal to reference name "
-                    msg += str(reference_prop['cell_name'][k])
+                if prop["cell_name"][k] not in other_errors:
+                    other_errors[prop["cell_name"][k]] = 1
+                    msg = (
+                        "cell_name["
+                        + str(k)
+                        + "]="
+                        + str(prop["cell_name"][k])
+                        + " is not equal to reference name "
+                    )
+                    msg += str(reference_prop["cell_name"][k])
                     msg += " for cell " + str(k)
-                    if uname.get_mother_name(prop['cell_name'][k]) in discrepancies:
+                    if uname.get_mother_name(prop["cell_name"][k]) in discrepancies:
                         msg += ", division is incoherent among references"
                     monitoring.to_log_and_console("\t " + msg)
                 else:
-                    other_errors[prop['cell_name'][k]] += 1
+                    other_errors[prop["cell_name"][k]] += 1
 
     #
     # keep trace of the test result as a selection
     #
-    keyleaveoneout = 'morphonet_selection_leave_one_out_errors'
-    lineage = prop['cell_lineage']
-    name = prop['cell_name']
+    keyleaveoneout = "morphonet_selection_leave_one_out_errors"
+    lineage = prop["cell_lineage"]
+    name = prop["cell_name"]
     prop[keyleaveoneout] = {}
-    cells = list(set(lineage.keys()).union(set([v for values in list(lineage.values()) for v in values])))
+    cells = list(
+        set(lineage.keys()).union(
+            set([v for values in list(lineage.values()) for v in values])
+        )
+    )
 
     for c in cells:
         if c not in name:
@@ -334,17 +420,23 @@ def _test_naming(prop, reference_prop, discrepancies):
 
     name_missing = {}
     reference_name = {}
-    key_list = sorted(reference_prop['cell_name'].keys())
+    key_list = sorted(reference_prop["cell_name"].keys())
     for k in key_list:
-        indexed_name = reference_prop['cell_name'][k]
+        indexed_name = reference_prop["cell_name"][k]
         reference_name[indexed_name] = reference_name.get(indexed_name, 0) + 1
-        if k not in prop['cell_name']:
-            if reference_prop['cell_name'][k] not in name_missing:
-                name_missing[reference_prop['cell_name'][k]] = 1
-                msg = "reference cell_name[" + str(k) + "]=" + str(reference_prop['cell_name'][k]) + " is not found"
+        if k not in prop["cell_name"]:
+            if reference_prop["cell_name"][k] not in name_missing:
+                name_missing[reference_prop["cell_name"][k]] = 1
+                msg = (
+                    "reference cell_name["
+                    + str(k)
+                    + "]="
+                    + str(reference_prop["cell_name"][k])
+                    + " is not found"
+                )
                 monitoring.to_log_and_console("\t " + msg)
             else:
-                name_missing[reference_prop['cell_name'][k]] += 1
+                name_missing[reference_prop["cell_name"][k]] += 1
 
     division_count = 0
     for k in division_errors:
@@ -356,15 +448,33 @@ def _test_naming(prop, reference_prop, discrepancies):
     for k in name_missing:
         missing_count += name_missing[k]
 
-    msg = "ground-truth cells = " + str(len(reference_prop['cell_name'])) + " --- "
+    msg = "ground-truth cells = " + str(len(reference_prop["cell_name"])) + " --- "
     msg += "ground-truth names = " + str(len(reference_name)) + " --- "
-    msg += "tested cells = " + str(len(prop['cell_name'])) + " --- "
+    msg += "tested cells = " + str(len(prop["cell_name"])) + " --- "
     msg += "retrieved names = " + str(len(reference_name) - len(name_missing)) + "\n"
-    msg += "\t missing cell names = " + str(missing_count) + " for " + str(len(name_missing)) + " names --- \n"
-    msg += "\t division errors in lineage = " + str(division_count) + " for " + str(len(division_errors)) + " names \n"
+    msg += (
+        "\t missing cell names = "
+        + str(missing_count)
+        + " for "
+        + str(len(name_missing))
+        + " names --- \n"
+    )
+    msg += (
+        "\t division errors in lineage = "
+        + str(division_count)
+        + " for "
+        + str(len(division_errors))
+        + " names \n"
+    )
     if len(division_errors) > 0:
         msg += "\t    division errors = " + str(sorted(division_errors.keys())) + "\n"
-    msg += "\t other errors in lineage = " + str(other_count) + " for " + str(len(other_errors)) + " names --- \n"
+    msg += (
+        "\t other errors in lineage = "
+        + str(other_count)
+        + " for "
+        + str(len(other_errors))
+        + " names --- \n"
+    )
     if len(other_errors) > 0:
         msg += "\t    other errors = " + str(sorted(other_errors.keys())) + "\n"
     monitoring.to_log_and_console("summary" + ": " + msg)
@@ -377,8 +487,8 @@ def _test_naming(prop, reference_prop, discrepancies):
 def _test_unequal_divisions(prop, atlases):
     proc = "_test_unequal_divisions"
 
-    lineage = prop['cell_lineage']
-    name = prop['cell_name']
+    lineage = prop["cell_lineage"]
+    name = prop["cell_name"]
 
     divisions = atlases.get_divisions()
     adivisions = atlases.get_unequal_divisions()
@@ -398,7 +508,10 @@ def _test_unequal_divisions(prop, atlases):
         #
         # here we've got an unequal named division
         #
-        if lineage[m][0] not in prop['cell_volume'] or lineage[m][1] not in prop['cell_volume']:
+        if (
+            lineage[m][0] not in prop["cell_volume"]
+            or lineage[m][1] not in prop["cell_volume"]
+        ):
             msg = "weird, either " + str(lineage[m][0])
             msg += " or " + str(lineage[m][1]) + " is not in 'cell_volume' dictionary"
             monitoring.to_log_and_console(proc + ": " + msg)
@@ -406,18 +519,22 @@ def _test_unequal_divisions(prop, atlases):
 
         tests += [m]
 
-        if prop['cell_volume'][lineage[m][0]] > prop['cell_volume'][lineage[m][1]]:
+        if prop["cell_volume"][lineage[m][0]] > prop["cell_volume"][lineage[m][1]]:
             if adivisions[name[m]][0] != name[lineage[m][0]]:
                 errors += [m]
-        elif prop['cell_volume'][lineage[m][1]] > prop['cell_volume'][lineage[m][0]]:
+        elif prop["cell_volume"][lineage[m][1]] > prop["cell_volume"][lineage[m][0]]:
             if adivisions[name[m]][0] != name[lineage[m][1]]:
                 errors += [m]
 
     if len(errors) > 0:
         error_names = [name[m] for m in errors]
-        keyunequal = 'morphonet_selection_unequal_division_errors'
+        keyunequal = "morphonet_selection_unequal_division_errors"
         prop[keyunequal] = {}
-        cells = list(set(lineage.keys()).union(set([v for values in list(lineage.values()) for v in values])))
+        cells = list(
+            set(lineage.keys()).union(
+                set([v for values in list(lineage.values()) for v in values])
+            )
+        )
         for c in cells:
             if c not in name:
                 continue
@@ -436,18 +553,50 @@ def _test_unequal_divisions(prop, atlases):
             msg = "    - division of cell " + str(m) + " (" + str(name[m]) + ") "
             monitoring.to_log_and_console(msg)
             if name[lineage[m][0]] == adivisions[name[m]][0]:
-                msg = str(name[lineage[m][0]]) + " / " + str(name[lineage[m][1]]) + " = "
-                msg += str(prop['cell_volume'][lineage[m][0]]) + " / " + str(prop['cell_volume'][lineage[m][1]])
-                msg += " = {:.4f}".format(prop['cell_volume'][lineage[m][0]] / prop['cell_volume'][lineage[m][1]])
+                msg = (
+                    str(name[lineage[m][0]]) + " / " + str(name[lineage[m][1]]) + " = "
+                )
+                msg += (
+                    str(prop["cell_volume"][lineage[m][0]])
+                    + " / "
+                    + str(prop["cell_volume"][lineage[m][1]])
+                )
+                msg += " = {:.4f}".format(
+                    prop["cell_volume"][lineage[m][0]]
+                    / prop["cell_volume"][lineage[m][1]]
+                )
             else:
-                msg = str(name[lineage[m][1]]) + " / " + str(name[lineage[m][0]]) + " = "
-                msg += str(prop['cell_volume'][lineage[m][1]]) + " / " + str(prop['cell_volume'][lineage[m][0]])
-                msg += " = {:.4f}".format(prop['cell_volume'][lineage[m][1]] / prop['cell_volume'][lineage[m][0]])
+                msg = (
+                    str(name[lineage[m][1]]) + " / " + str(name[lineage[m][0]]) + " = "
+                )
+                msg += (
+                    str(prop["cell_volume"][lineage[m][1]])
+                    + " / "
+                    + str(prop["cell_volume"][lineage[m][0]])
+                )
+                msg += " = {:.4f}".format(
+                    prop["cell_volume"][lineage[m][1]]
+                    / prop["cell_volume"][lineage[m][0]]
+                )
             monitoring.to_log_and_console("      " + msg)
             for r in divisions[name[m]]:
-                msg = str(r) + ": " + str(adivisions[name[m]][0]) + " / " + str(adivisions[name[m]][1]) + " = "
-                msg += str(volumes[adivisions[name[m]][0]][r]) + " / " + str(volumes[adivisions[name[m]][1]][r])
-                msg += " = {:.4f}".format(volumes[adivisions[name[m]][0]][r] / volumes[adivisions[name[m]][1]][r])
+                msg = (
+                    str(r)
+                    + ": "
+                    + str(adivisions[name[m]][0])
+                    + " / "
+                    + str(adivisions[name[m]][1])
+                    + " = "
+                )
+                msg += (
+                    str(volumes[adivisions[name[m]][0]][r])
+                    + " / "
+                    + str(volumes[adivisions[name[m]][1]][r])
+                )
+                msg += " = {:.4f}".format(
+                    volumes[adivisions[name[m]][0]][r]
+                    / volumes[adivisions[name[m]][1]][r]
+                )
                 monitoring.to_log_and_console("        - " + msg)
     monitoring.to_log_and_console("---------------------------------------")
 
@@ -460,6 +609,7 @@ def _test_unequal_divisions(prop, atlases):
 #
 ########################################################################################
 
+
 def _get_branch_length(cell, lineage):
     length = 0
     c = cell
@@ -469,8 +619,15 @@ def _get_branch_length(cell, lineage):
     return length
 
 
-def _get_neighborhoods(mother, immediate_daughters, prop, embryo, parameters, delay_from_division=0,
-                       time_digits_for_cell_id=4):
+def _get_neighborhoods(
+    mother,
+    immediate_daughters,
+    prop,
+    embryo,
+    parameters,
+    delay_from_division=0,
+    time_digits_for_cell_id=4,
+):
     """
 
     Parameters
@@ -491,7 +648,7 @@ def _get_neighborhoods(mother, immediate_daughters, prop, embryo, parameters, de
     """
     proc = "_get_neighborhoods"
 
-    lineage = prop['cell_lineage']
+    lineage = prop["cell_lineage"]
     reverse_lineage = {v: k for k, values in lineage.items() for v in values}
     #
     # since we change daughters, use a copy of immediate_daughters
@@ -541,8 +698,8 @@ def _get_neighborhoods(mother, immediate_daughters, prop, embryo, parameters, de
             break
 
     contact = {}
-    div = 10 ** time_digits_for_cell_id
-    half_id = prop['cell_name'][mother][-1]
+    div = 10**time_digits_for_cell_id
+    half_id = prop["cell_name"][mother][-1]
 
     for index, d in enumerate(daughters):
         #
@@ -556,21 +713,30 @@ def _get_neighborhoods(mother, immediate_daughters, prop, embryo, parameters, de
         #
         contact[index] = {}
 
-        for c in prop['cell_contact_surface'][d]:
+        for c in prop["cell_contact_surface"][d]:
             if int(c) % div == 1 or int(c) % div == 0:
-                contact[index]['background'] = contact[index].get('background', 0) + prop['cell_contact_surface'][d][c]
-            elif c in prop['cell_name']:
+                contact[index]["background"] = (
+                    contact[index].get("background", 0)
+                    + prop["cell_contact_surface"][d][c]
+                )
+            elif c in prop["cell_name"]:
                 if parameters.differentiate_other_half:
-                    contact[index][prop['cell_name'][c]] = prop['cell_contact_surface'][d][c]
+                    contact[index][prop["cell_name"][c]] = prop["cell_contact_surface"][
+                        d
+                    ][c]
                 else:
-                    if prop['cell_name'][c][-1] == half_id:
-                        contact[index][prop['cell_name'][c]] = prop['cell_contact_surface'][d][c]
+                    if prop["cell_name"][c][-1] == half_id:
+                        contact[index][prop["cell_name"][c]] = prop[
+                            "cell_contact_surface"
+                        ][d][c]
                     else:
-                        contact[index]['other-half'] = contact[index].get('other-half', 0) + \
-                                                       prop['cell_contact_surface'][d][c]
+                        contact[index]["other-half"] = (
+                            contact[index].get("other-half", 0)
+                            + prop["cell_contact_surface"][d][c]
+                        )
             elif c in daughters:
                 if c != d:
-                    contact[index]['sister'] = prop['cell_contact_surface'][d][c]
+                    contact[index]["sister"] = prop["cell_contact_surface"][d][c]
                 else:
                     msg = ": weird, cell " + str(c) + " is in its contact surfaces"
                     monitoring.to_log_and_console(str(proc) + msg)
@@ -579,11 +745,13 @@ def _get_neighborhoods(mother, immediate_daughters, prop, embryo, parameters, de
                 # cell without name, find a named ancestor
                 #
                 cell = c
-                while cell in reverse_lineage and cell not in prop['cell_name']:
+                while cell in reverse_lineage and cell not in prop["cell_name"]:
                     cell = reverse_lineage[cell]
-                if cell in prop['cell_name']:
-                    contact[index][prop['cell_name'][cell]] = contact[index].get(prop['cell_name'][cell], 0) + \
-                                                           prop['cell_contact_surface'][d][c]
+                if cell in prop["cell_name"]:
+                    contact[index][prop["cell_name"][cell]] = (
+                        contact[index].get(prop["cell_name"][cell], 0)
+                        + prop["cell_contact_surface"][d][c]
+                    )
                 else:
                     msg = ": unable to find a named ancestor for cell " + str(c)
                     msg += ". Skip naming of cells " + str(immediate_daughters)
@@ -594,8 +762,12 @@ def _get_neighborhoods(mother, immediate_daughters, prop, embryo, parameters, de
     # normalize the neighborhoods
     #
     for i in contact:
-        contact[i] = uatlasc.neighborhood_normalization(contact[i], embryo, int(daughters[0]) // div,
-                                                        cell_normalization=parameters.cell_normalization)
+        contact[i] = uatlasc.neighborhood_normalization(
+            contact[i],
+            embryo,
+            int(daughters[0]) // div,
+            cell_normalization=parameters.cell_normalization,
+        )
     return contact
 
 
@@ -603,10 +775,10 @@ def _print_neighborhood(neighborhood, start=""):
     neighbors = sorted(list(neighborhood.keys()))
     n = 0
     txt = start + "{"
-    if 'background' in neighbors:
-        txt += "'background': {:.3f}, ".format(neighborhood['background'])
+    if "background" in neighbors:
+        txt += "'background': {:.3f}, ".format(neighborhood["background"])
         n += 1
-        neighbors.remove('background')
+        neighbors.remove("background")
     for i, neigh in enumerate(neighbors):
         txt += str(neigh) + ": {:.3f}".format(neighborhood[neigh])
         n += 1
@@ -620,8 +792,18 @@ def _print_neighborhood(neighborhood, start=""):
             txt = "      "
 
 
-def _compute_distances(mother, daughters, prop, embryo, atlases, parameters, delay_from_division=0,
-                       homogenize_neighborhood=False, time_digits_for_cell_id=4, debug=False):
+def _compute_distances(
+    mother,
+    daughters,
+    prop,
+    embryo,
+    atlases,
+    parameters,
+    delay_from_division=0,
+    homogenize_neighborhood=False,
+    time_digits_for_cell_id=4,
+    debug=False,
+):
     """
 
     Parameters
@@ -650,66 +832,96 @@ def _compute_distances(mother, daughters, prop, embryo, atlases, parameters, del
     proc = "_compute_distances"
 
     divisions = atlases.get_divisions()
-    if prop['cell_name'][mother] not in divisions:
-        msg = ": no reference neighborhoods for division of '" + str(prop['cell_name'][mother]) + "'"
+    if prop["cell_name"][mother] not in divisions:
+        msg = (
+            ": no reference neighborhoods for division of '"
+            + str(prop["cell_name"][mother])
+            + "'"
+        )
         msg += ". Can not name cells " + str(daughters)
         msg += " from mother cell " + str(mother)
         monitoring.to_log_and_console(str(proc) + msg, 4)
         return None
 
-    neighborhoods = atlases.get_cell_neighborhood(delay_from_division=delay_from_division)
-    daughter_names = uname.get_daughter_names(prop['cell_name'][mother])
+    neighborhoods = atlases.get_cell_neighborhood(
+        delay_from_division=delay_from_division
+    )
+    daughter_names = uname.get_daughter_names(prop["cell_name"][mother])
 
     #
     # returned the normalized neighborhood
     #
-    contacts = _get_neighborhoods(mother, daughters, prop, embryo, parameters, delay_from_division=delay_from_division,
-                                  time_digits_for_cell_id=time_digits_for_cell_id)
+    contacts = _get_neighborhoods(
+        mother,
+        daughters,
+        prop,
+        embryo,
+        parameters,
+        delay_from_division=delay_from_division,
+        time_digits_for_cell_id=time_digits_for_cell_id,
+    )
     #
     # contacts[0] = contact vector for daughters[0]
     # contacts[1] = contact vector for daughters[1]
     # contacts[i]['sister'] is the contact surface of the sister
     #
     if contacts is None:
-        msg = ": can not extract contact vector for division of '" + str(prop['cell_name'][mother]) + "'"
+        msg = (
+            ": can not extract contact vector for division of '"
+            + str(prop["cell_name"][mother])
+            + "'"
+        )
         msg += ". Can not name cells " + str(daughters)
         msg += " from mother cell " + str(mother)
         monitoring.to_log_and_console(str(proc) + msg, 4)
         return None
 
-    mother_generation = int(prop['cell_name'][mother].split('.')[0][1:])
-    daughter_neighborhoods = {0: copy.deepcopy(neighborhoods[daughter_names[0]]),
-                              1: copy.deepcopy(neighborhoods[daughter_names[1]])}
+    mother_generation = int(prop["cell_name"][mother].split(".")[0][1:])
+    daughter_neighborhoods = {
+        0: copy.deepcopy(neighborhoods[daughter_names[0]]),
+        1: copy.deepcopy(neighborhoods[daughter_names[1]]),
+    }
     if homogenize_neighborhood:
-        new_neighborhoods = uneighborhood.build_same_contact_surfaces(daughter_neighborhoods, [0, 1],
-                                                                      celltobeexcluded=daughter_names,
-                                                                      maximal_generation=mother_generation)
+        new_neighborhoods = uneighborhood.build_same_contact_surfaces(
+            daughter_neighborhoods,
+            [0, 1],
+            celltobeexcluded=daughter_names,
+            maximal_generation=mother_generation,
+        )
         for n in new_neighborhoods:
             daughter_neighborhoods[n] = copy.deepcopy(new_neighborhoods[n])
 
     if debug:
         monitoring.to_log_and_console("Distance computation:")
         msg = "- Neighborhood of cell '"
-        if daughters[0] in prop['cell_name']:
-            msg += str(prop['cell_name'][daughters[0]])
+        if daughters[0] in prop["cell_name"]:
+            msg += str(prop["cell_name"][daughters[0]])
         else:
             msg += str(daughters[0])
         monitoring.to_log_and_console(msg + "' in embryo to be tested is: ")
         _print_neighborhood(contacts[0], start="   ")
         msg = "- Neighborhood of cell '"
-        if daughters[1] in prop['cell_name']:
-            msg += str(prop['cell_name'][daughters[1]])
+        if daughters[1] in prop["cell_name"]:
+            msg += str(prop["cell_name"][daughters[1]])
         else:
             msg += str(daughters[1])
         monitoring.to_log_and_console(msg + "' in embryo to be tested is: ")
         _print_neighborhood(contacts[1], start="   ")
 
-        monitoring.to_log_and_console("- Neighborhoods of cell '" + str(daughter_names[0]) + "' in atlases are: ")
+        monitoring.to_log_and_console(
+            "- Neighborhoods of cell '" + str(daughter_names[0]) + "' in atlases are: "
+        )
         for r in sorted(daughter_neighborhoods[0].keys()):
-            _print_neighborhood(daughter_neighborhoods[0][r], start="   " + str(r) + ": ")
-        monitoring.to_log_and_console("- Neighborhoods of cell '" + str(daughter_names[1]) + "' in atlases are: ")
+            _print_neighborhood(
+                daughter_neighborhoods[0][r], start="   " + str(r) + ": "
+            )
+        monitoring.to_log_and_console(
+            "- Neighborhoods of cell '" + str(daughter_names[1]) + "' in atlases are: "
+        )
         for r in sorted(daughter_neighborhoods[1].keys()):
-            _print_neighborhood(daughter_neighborhoods[1][r], start="   " + str(r) + ": ")
+            _print_neighborhood(
+                daughter_neighborhoods[1][r], start="   " + str(r) + ": "
+            )
 
     innersurfaces = []
     if parameters.exclude_inner_surfaces:
@@ -722,12 +934,12 @@ def _compute_distances(mother, daughters, prop, embryo, atlases, parameters, del
         # i = 1: test (contacts[1], contacts[0]) <-> (daughter_names[0], daughter_names[1])
         #
         if i == 0:
-            if 'sister' in contacts[0]:
-                contacts[0][daughter_names[1]] = contacts[0]['sister']
-                del contacts[0]['sister']
-            if 'sister' in contacts[1]:
-                contacts[1][daughter_names[0]] = contacts[1]['sister']
-                del contacts[1]['sister']
+            if "sister" in contacts[0]:
+                contacts[0][daughter_names[1]] = contacts[0]["sister"]
+                del contacts[0]["sister"]
+            if "sister" in contacts[1]:
+                contacts[1][daughter_names[0]] = contacts[1]["sister"]
+                del contacts[1]["sister"]
         else:
             if daughter_names[1] in contacts[0]:
                 contacts[0][daughter_names[0]] = contacts[0][daughter_names[1]]
@@ -738,44 +950,53 @@ def _compute_distances(mother, daughters, prop, embryo, atlases, parameters, del
         #
         #
         #
-        for ref in divisions[prop['cell_name'][mother]]:
+        for ref in divisions[prop["cell_name"][mother]]:
             if i == 0:
                 ic0 = 0
                 ic1 = 1
             else:
                 ic0 = 1
                 ic1 = 0
-            scores[i][ref] = uatlasd.division_distance(daughter_neighborhoods[0][ref], daughter_neighborhoods[1][ref],
-                                                       contacts[ic0], contacts[ic1], change_contact_surfaces=True,
-                                                       innersurfaces=innersurfaces)
+            scores[i][ref] = uatlasd.division_distance(
+                daughter_neighborhoods[0][ref],
+                daughter_neighborhoods[1][ref],
+                contacts[ic0],
+                contacts[ic1],
+                change_contact_surfaces=True,
+                innersurfaces=innersurfaces,
+            )
 
     if debug:
         for i in scores:
             msg = "- distance of ("
             if i == 0:
-                if daughters[0] in prop['cell_name']:
-                    msg += str(prop['cell_name'][daughters[0]])
+                if daughters[0] in prop["cell_name"]:
+                    msg += str(prop["cell_name"][daughters[0]])
                 else:
                     msg += str(daughters[0])
                 msg += ", "
-                if daughters[1] in prop['cell_name']:
-                    msg += str(prop['cell_name'][daughters[1]])
+                if daughters[1] in prop["cell_name"]:
+                    msg += str(prop["cell_name"][daughters[1]])
                 else:
                     msg += str(daughters[1])
             elif i == 1:
-                if daughters[1] in prop['cell_name']:
-                    msg += str(prop['cell_name'][daughters[1]])
+                if daughters[1] in prop["cell_name"]:
+                    msg += str(prop["cell_name"][daughters[1]])
                 else:
                     msg += str(daughters[1])
                 msg += ", "
-                if daughters[0] in prop['cell_name']:
-                    msg += str(prop['cell_name'][daughters[0]])
+                if daughters[0] in prop["cell_name"]:
+                    msg += str(prop["cell_name"][daughters[0]])
                 else:
                     msg += str(daughters[0])
-            msg += ") <-> (" + str(daughter_names[0]) + ", " + str(daughter_names[1]) + ")"
+            msg += (
+                ") <-> (" + str(daughter_names[0]) + ", " + str(daughter_names[1]) + ")"
+            )
             monitoring.to_log_and_console(msg)
             for r in sorted(scores[i].keys()):
-                monitoring.to_log_and_console("   - atlas " + str(r) + ": " + str(scores[i][r]))
+                monitoring.to_log_and_console(
+                    "   - atlas " + str(r) + ": " + str(scores[i][r])
+                )
     return scores
 
 
@@ -785,6 +1006,7 @@ def _compute_distances(mother, daughters, prop, embryo, atlases, parameters, del
 #
 ########################################################################################
 
+
 def _get_ordered_means(distance):
     mean0 = []
     mean1 = []
@@ -792,7 +1014,7 @@ def _get_ordered_means(distance):
         if i == 0:
             mean0 += [v]
         else:
-            mean0 += [mean0[i-1] + v]
+            mean0 += [mean0[i - 1] + v]
     for i, v in enumerate(sorted(distance[1].values())):
         if i == 0:
             mean1 += [v]
@@ -829,7 +1051,9 @@ def _get_name(daughters, daughter_names, distance, parameters, debug=False):
     proc = "_get_name"
 
     if len(distance[0]) != len(distance[1]):
-        monitoring.to_log_and_console(str(proc) + ": weird, atlases number are different")
+        monitoring.to_log_and_console(
+            str(proc) + ": weird, atlases number are different"
+        )
 
     # distance is a dictionary of dictionary
     # distance[d in 0,1][ref name]
@@ -847,26 +1071,45 @@ def _get_name(daughters, daughter_names, distance, parameters, debug=False):
     count1less0 = len(mean1) - count0less1
 
     if debug:
-        msg = "\t - " + str(count0less1) + " naming choices (" + str(daughters[0]) + ", " + str(daughters[1]) + ") = ("
+        msg = (
+            "\t - "
+            + str(count0less1)
+            + " naming choices ("
+            + str(daughters[0])
+            + ", "
+            + str(daughters[1])
+            + ") = ("
+        )
         msg += daughter_names[0] + ", " + daughter_names[1] + ") = ["
         for i, v in enumerate(mean0):
             msg += "{:1.4f}".format(v)
-            if i < len(mean0)-1:
+            if i < len(mean0) - 1:
                 msg += ", "
         msg += "]"
         msg += " - sum = {:.4f}".format(np.sum(mean0))
         monitoring.to_log_and_console(msg)
-        msg = "\t - " + str(count1less0) + " naming choices (" + str(daughters[1]) + ", " + str(daughters[0]) + ") = ("
+        msg = (
+            "\t - "
+            + str(count1less0)
+            + " naming choices ("
+            + str(daughters[1])
+            + ", "
+            + str(daughters[0])
+            + ") = ("
+        )
         msg += daughter_names[0] + ", " + daughter_names[1] + ") = ["
         for i, v in enumerate(mean1):
             msg += "{:1.4f}".format(v)
-            if i < len(mean1)-1:
+            if i < len(mean1) - 1:
                 msg += ", "
         msg += "]"
         msg += " - sum = {:.4f}".format(np.sum(mean1))
         monitoring.to_log_and_console(msg)
 
-    if parameters.selection_method.lower() == 'minimum' or parameters.selection_method.lower() == 'min':
+    if (
+        parameters.selection_method.lower() == "minimum"
+        or parameters.selection_method.lower() == "min"
+    ):
         #
         # renvoie le tuple (ref, value) avec la valeur minimale
         #
@@ -882,8 +1125,11 @@ def _get_name(daughters, daughter_names, distance, parameters, debug=False):
             natlas = count1less0
         return name, natlas
 
-    if parameters.selection_method.lower() == 'sum' or parameters.selection_method.lower() == 'mean' \
-            or parameters.selection_method.lower() == 'average':
+    if (
+        parameters.selection_method.lower() == "sum"
+        or parameters.selection_method.lower() == "mean"
+        or parameters.selection_method.lower() == "average"
+    ):
         mean0 = statistics.mean([distance[0][a] for a in distance[0]])
         mean1 = statistics.mean([distance[1][a] for a in distance[1]])
         if mean0 <= mean1:
@@ -896,8 +1142,10 @@ def _get_name(daughters, daughter_names, distance, parameters, debug=False):
             natlas = count1less0
         return name, natlas
 
-    if parameters.selection_method.lower() == 'majority':
-        if count0less1 > count1less0 or (count0less1 == count1less0 and np.sum(mean0) <= np.sum(mean1)):
+    if parameters.selection_method.lower() == "majority":
+        if count0less1 > count1less0 or (
+            count0less1 == count1less0 and np.sum(mean0) <= np.sum(mean1)
+        ):
             name[daughters[0]] = daughter_names[0]
             name[daughters[1]] = daughter_names[1]
             natlas = count0less1
@@ -907,8 +1155,12 @@ def _get_name(daughters, daughter_names, distance, parameters, debug=False):
             natlas = count1less0
         return name, natlas
 
-    monitoring.to_log_and_console(str(proc) + ": selection method '" + str(parameters.selection_method) +
-                                  "' not handled yet")
+    monitoring.to_log_and_console(
+        str(proc)
+        + ": selection method '"
+        + str(parameters.selection_method)
+        + "' not handled yet"
+    )
     return name, 0
 
 
@@ -918,22 +1170,28 @@ def _get_name(daughters, daughter_names, distance, parameters, debug=False):
 #
 ########################################################################################
 
+
 def _propagate_name_along_branch(prop, cell, keylist):
     proc = "_propagate_name_along_branch"
-    lineage = prop['cell_lineage']
-    if cell not in prop['cell_name']:
+    lineage = prop["cell_lineage"]
+    if cell not in prop["cell_name"]:
         return
     c = cell
     while c in lineage and len(lineage[c]) == 1:
         nc = lineage[c][0]
-        if nc in prop['cell_name']:
-            if prop['cell_name'][nc] != prop['cell_name'][c]:
-                msg = ": weird, cell " + str(nc) + " is named " + str(prop['cell_name'][nc])
-                msg += ", but should be named " + str(prop['cell_name'][c])
+        if nc in prop["cell_name"]:
+            if prop["cell_name"][nc] != prop["cell_name"][c]:
+                msg = (
+                    ": weird, cell "
+                    + str(nc)
+                    + " is named "
+                    + str(prop["cell_name"][nc])
+                )
+                msg += ", but should be named " + str(prop["cell_name"][c])
                 msg += " as its mother"
                 monitoring.to_log_and_console(str(proc) + msg)
         else:
-            prop['cell_name'][nc] = prop['cell_name'][c]
+            prop["cell_name"][nc] = prop["cell_name"][c]
             for k in keylist:
                 prop[k][nc] = prop[k][c]
         c = nc
@@ -943,41 +1201,49 @@ def _propagate_name_along_branch(prop, cell, keylist):
 def _propagate_naming(prop, embryo, atlases, parameters, time_digits_for_cell_id=4):
     proc = "_propagate_naming"
 
-    if 'cell_lineage' not in prop:
-        monitoring.to_log_and_console(str(proc) + ": 'cell_lineage' was not in dictionary")
+    if "cell_lineage" not in prop:
+        monitoring.to_log_and_console(
+            str(proc) + ": 'cell_lineage' was not in dictionary"
+        )
         return None
 
-    if 'cell_contact_surface' not in prop:
-        monitoring.to_log_and_console(str(proc) + ": 'cell_contact_surface' was not in dictionary")
+    if "cell_contact_surface" not in prop:
+        monitoring.to_log_and_console(
+            str(proc) + ": 'cell_contact_surface' was not in dictionary"
+        )
         return None
 
-    if 'cell_name' not in prop:
+    if "cell_name" not in prop:
         monitoring.to_log_and_console(str(proc) + ": 'cell_name' was not in dictionary")
         return None
 
     #
     #
     #
-    lineage = prop['cell_lineage']
-    keyagreement = 'morphonet_float_name_choice_agreement'
+    lineage = prop["cell_lineage"]
+    keyagreement = "morphonet_float_name_choice_agreement"
     prop[keyagreement] = {}
 
     #
     # remove empty names
     # leading or trailing spaces
     #
-    cells = list(prop['cell_name'].keys())
+    cells = list(prop["cell_name"].keys())
     for c in cells:
-        if prop['cell_name'][c] == '':
-            del prop['cell_name'][c]
+        if prop["cell_name"][c] == "":
+            del prop["cell_name"][c]
             continue
-        prop['cell_name'][c] = prop['cell_name'][c].strip()
+        prop["cell_name"][c] = prop["cell_name"][c].strip()
 
     #
     #
     #
     reverse_lineage = {v: k for k, values in lineage.items() for v in values}
-    cells = list(set(lineage.keys()).union(set([v for values in list(lineage.values()) for v in values])))
+    cells = list(
+        set(lineage.keys()).union(
+            set([v for values in list(lineage.values()) for v in values])
+        )
+    )
 
     #
     # backward propagation
@@ -985,32 +1251,50 @@ def _propagate_naming(prop, embryo, atlases, parameters, time_digits_for_cell_id
     monitoring.to_log_and_console(str(proc) + ": backward propagation")
     cells = sorted(cells, reverse=True)
     for c in cells:
-        if c not in prop['cell_name']:
+        if c not in prop["cell_name"]:
             continue
         if c not in reverse_lineage:
             continue
         mother = reverse_lineage[c]
         if len(lineage[mother]) == 1:
-            if mother in prop['cell_name']:
-                if prop['cell_name'][mother] != prop['cell_name'][c]:
-                    msg = ": weird, cell " + str(mother) + " is named " + str(prop['cell_name'][mother])
-                    msg += ", but should be named " + str(prop['cell_name'][c])
+            if mother in prop["cell_name"]:
+                if prop["cell_name"][mother] != prop["cell_name"][c]:
+                    msg = (
+                        ": weird, cell "
+                        + str(mother)
+                        + " is named "
+                        + str(prop["cell_name"][mother])
+                    )
+                    msg += ", but should be named " + str(prop["cell_name"][c])
                     msg += " as its single daughter"
                     monitoring.to_log_and_console(str(proc) + msg)
             else:
-                prop['cell_name'][mother] = prop['cell_name'][c]
+                prop["cell_name"][mother] = prop["cell_name"][c]
         elif len(lineage[mother]) == 2:
-            mother_name = uname.get_mother_name(prop['cell_name'][c])
-            if mother in prop['cell_name']:
-                if prop['cell_name'][mother] != mother_name:
-                    msg = ": weird, cell " + str(mother) + " is named " + str(prop['cell_name'][mother])
+            mother_name = uname.get_mother_name(prop["cell_name"][c])
+            if mother in prop["cell_name"]:
+                if prop["cell_name"][mother] != mother_name:
+                    msg = (
+                        ": weird, cell "
+                        + str(mother)
+                        + " is named "
+                        + str(prop["cell_name"][mother])
+                    )
                     msg += ", but should be named " + str(mother_name)
-                    msg += " since one of its daughter is named " + str(prop['cell_name'][c])
+                    msg += " since one of its daughter is named " + str(
+                        prop["cell_name"][c]
+                    )
                     monitoring.to_log_and_console(str(proc) + msg)
             else:
-                prop['cell_name'][mother] = mother_name
+                prop["cell_name"][mother] = mother_name
         else:
-            msg = ": weird, cell " + str(mother) + " has " + str(len(lineage[mother])) + "daughter(s)"
+            msg = (
+                ": weird, cell "
+                + str(mother)
+                + " has "
+                + str(len(lineage[mother]))
+                + "daughter(s)"
+            )
             monitoring.to_log_and_console(str(proc) + msg)
 
     #
@@ -1019,7 +1303,7 @@ def _propagate_naming(prop, embryo, atlases, parameters, time_digits_for_cell_id
     monitoring.to_log_and_console(str(proc) + ": forward propagation")
 
     cells = sorted(cells)
-    div = 10 ** time_digits_for_cell_id
+    div = 10**time_digits_for_cell_id
     cells_per_time = {}
     missing_name = {}
     for c in cells:
@@ -1031,7 +1315,7 @@ def _propagate_naming(prop, embryo, atlases, parameters, time_digits_for_cell_id
             cells_per_time[t] = [c]
         else:
             cells_per_time[t].append(c)
-        if c not in prop['cell_name']:
+        if c not in prop["cell_name"]:
             if t not in missing_name:
                 missing_name[t] = [c]
             else:
@@ -1043,15 +1327,16 @@ def _propagate_naming(prop, embryo, atlases, parameters, time_digits_for_cell_id
     for t in timepoints:
         division_to_be_named = {}
         for c in missing_name[t]:
-
             # already named
-            if c in prop['cell_name']:
+            if c in prop["cell_name"]:
                 continue
             # root of a tree, can not be named
             if c not in reverse_lineage:
                 if c not in cell_not_named:
                     cell_not_named.append(c)
-                monitoring.to_log_and_console(str(proc) + ": weird, cell " + str(c) + " is root of a subtree")
+                monitoring.to_log_and_console(
+                    str(proc) + ": weird, cell " + str(c) + " is root of a subtree"
+                )
                 continue
 
             # get its mother
@@ -1059,7 +1344,9 @@ def _propagate_naming(prop, embryo, atlases, parameters, time_digits_for_cell_id
             # mother not in lineage
             # to account for lineage errors
             if mother not in lineage:
-                monitoring.to_log_and_console(str(proc) + ": weird, cell " + str(mother) + " is not in lineage")
+                monitoring.to_log_and_console(
+                    str(proc) + ": weird, cell " + str(mother) + " is not in lineage"
+                )
                 continue
             # mother not named, can name the cell either
             if mother in cell_not_named:
@@ -1067,7 +1354,7 @@ def _propagate_naming(prop, embryo, atlases, parameters, time_digits_for_cell_id
                     cell_not_named.append(c)
                 continue
             # mother not named, can name the cell either
-            if mother not in prop['cell_name']:
+            if mother not in prop["cell_name"]:
                 if mother not in cell_not_named:
                     cell_not_named.append(mother)
                 if c not in cell_not_named:
@@ -1081,7 +1368,7 @@ def _propagate_naming(prop, embryo, atlases, parameters, time_digits_for_cell_id
             # give name to cells that are only daughter and propagate along branch
             #
             if len(lineage[mother]) == 1:
-                prop['cell_name'][c] = prop['cell_name'][mother]
+                prop["cell_name"][c] = prop["cell_name"][mother]
                 if mother in prop[keyagreement]:
                     prop[keyagreement][c] = prop[keyagreement][mother]
             #
@@ -1092,18 +1379,29 @@ def _propagate_naming(prop, embryo, atlases, parameters, time_digits_for_cell_id
             elif len(lineage[mother]) == 2:
                 daughters = copy.deepcopy(lineage[mother])
                 daughters.remove(c)
-                daughter_names = uname.get_daughter_names(prop['cell_name'][mother])
+                daughter_names = uname.get_daughter_names(prop["cell_name"][mother])
                 #
                 # daughter cell is already named
                 #
-                if daughters[0] in prop['cell_name']:
-                    if prop['cell_name'][daughters[0]] in daughter_names:
-                        daughter_names.remove(prop['cell_name'][daughters[0]])
-                        prop['cell_name'][c] = daughter_names[0]
+                if daughters[0] in prop["cell_name"]:
+                    if prop["cell_name"][daughters[0]] in daughter_names:
+                        daughter_names.remove(prop["cell_name"][daughters[0]])
+                        prop["cell_name"][c] = daughter_names[0]
                     else:
-                        msg = ": weird, cell " + str(daughters[0]) + " is named " + str(prop['cell_name'][daughters[0]])
-                        msg += ", but should be named in " + str(daughter_names) + " since its mother cell "
-                        msg += str(mother) + " is named " + str(prop['cell_name'][mother])
+                        msg = (
+                            ": weird, cell "
+                            + str(daughters[0])
+                            + " is named "
+                            + str(prop["cell_name"][daughters[0]])
+                        )
+                        msg += (
+                            ", but should be named in "
+                            + str(daughter_names)
+                            + " since its mother cell "
+                        )
+                        msg += (
+                            str(mother) + " is named " + str(prop["cell_name"][mother])
+                        )
                         monitoring.to_log_and_console(str(proc) + msg)
                     continue
                 #
@@ -1114,8 +1412,16 @@ def _propagate_naming(prop, embryo, atlases, parameters, time_digits_for_cell_id
                 if mother not in cell_not_named:
                     cell_not_named.append(mother)
                 cell_not_named.append(c)
-                msg = ": weird, cell " + str(mother) + " has " + str(len(lineage[mother])) + " daughter(s)."
-                msg += " Its offspring '" + str(lineage[mother]) + "' will not be named."
+                msg = (
+                    ": weird, cell "
+                    + str(mother)
+                    + " has "
+                    + str(len(lineage[mother]))
+                    + " daughter(s)."
+                )
+                msg += (
+                    " Its offspring '" + str(lineage[mother]) + "' will not be named."
+                )
                 monitoring.to_log_and_console(str(proc) + msg)
 
         if division_to_be_named == {}:
@@ -1126,7 +1432,10 @@ def _propagate_naming(prop, embryo, atlases, parameters, time_digits_for_cell_id
         #
         for mother, daughters in division_to_be_named.items():
             debug = False
-            if parameters.cells_to_be_traced is not None and prop['cell_name'][mother] in parameters.cells_to_be_traced:
+            if (
+                parameters.cells_to_be_traced is not None
+                and prop["cell_name"][mother] in parameters.cells_to_be_traced
+            ):
                 debug = True
             #
             # distance is a dictionary of dictionary
@@ -1135,9 +1444,17 @@ def _propagate_naming(prop, embryo, atlases, parameters, time_digits_for_cell_id
             # d = 1: test (contacts[1], contacts[0]) <-> (daughter_names[0], daughter_names[1])
             # ref name in embryos
             #
-            distance = _compute_distances(mother, daughters, prop, embryo, atlases, parameters,
-                                          delay_from_division=parameters.name_delay_from_division,
-                                          time_digits_for_cell_id=time_digits_for_cell_id, debug=debug)
+            distance = _compute_distances(
+                mother,
+                daughters,
+                prop,
+                embryo,
+                atlases,
+                parameters,
+                delay_from_division=parameters.name_delay_from_division,
+                time_digits_for_cell_id=time_digits_for_cell_id,
+                debug=debug,
+            )
             if debug:
                 monitoring.to_log_and_console("Naming distance = " + str(distance))
             if distance is None:
@@ -1150,17 +1467,27 @@ def _propagate_naming(prop, embryo, atlases, parameters, time_digits_for_cell_id
                 monitoring.to_log_and_console(str(proc) + ": " + msg)
                 continue
 
-            daughter_names = uname.get_daughter_names(prop['cell_name'][mother])
-            name, natlas = _get_name(daughters, daughter_names, distance, parameters, debug=debug)
+            daughter_names = uname.get_daughter_names(prop["cell_name"][mother])
+            name, natlas = _get_name(
+                daughters, daughter_names, distance, parameters, debug=debug
+            )
 
             for c in name:
                 if name[c] is not None:
-                    prop['cell_name'][c] = name[c]
+                    prop["cell_name"][c] = name[c]
             if 0 < natlas < len(distance[0]):
                 for c in name:
-                    prop[keyagreement][c] = natlas/len(distance[0])
-                msg = "partial agreement to name division of cell " + str(prop['cell_name'][mother])
-                msg += ": " + str(natlas) + " over " + str(len(distance[0])) + " means of ordered distances"
+                    prop[keyagreement][c] = natlas / len(distance[0])
+                msg = "partial agreement to name division of cell " + str(
+                    prop["cell_name"][mother]
+                )
+                msg += (
+                    ": "
+                    + str(natlas)
+                    + " over "
+                    + str(len(distance[0]))
+                    + " means of ordered distances"
+                )
                 monitoring.to_log_and_console(str(proc) + ": " + msg)
 
     if len(prop[keyagreement]) == 0:
@@ -1174,6 +1501,7 @@ def _propagate_naming(prop, embryo, atlases, parameters, time_digits_for_cell_id
 # evaluation procedure
 #
 ########################################################################################
+
 
 def _get_evaluation(given_names, daughter_names, distance, parameters, debug=False):
     proc = "_get_evaluation"
@@ -1195,7 +1523,9 @@ def _get_evaluation(given_names, daughter_names, distance, parameters, debug=Fal
 
     sorted_dist = sorted(dist, key=lambda v: v[0])
 
-    natlas = int(round(parameters.confidence_atlases_percentage * len(sorted_dist) / 100.0))
+    natlas = int(
+        round(parameters.confidence_atlases_percentage * len(sorted_dist) / 100.0)
+    )
     if parameters.confidence_atlases_nmin > 0:
         natlas = max(parameters.confidence_atlases_nmin, natlas)
     if natlas <= 0 or len(sorted_dist) < natlas:
@@ -1214,33 +1544,41 @@ def _get_evaluation(given_names, daughter_names, distance, parameters, debug=Fal
 def _evaluate_naming(prop, embryo, atlases, parameters, time_digits_for_cell_id=4):
     proc = "_evaluate_naming"
 
-    if 'cell_lineage' not in prop:
-        monitoring.to_log_and_console(str(proc) + ": 'cell_lineage' was not in dictionary")
+    if "cell_lineage" not in prop:
+        monitoring.to_log_and_console(
+            str(proc) + ": 'cell_lineage' was not in dictionary"
+        )
         return None
 
-    if 'cell_contact_surface' not in prop:
-        monitoring.to_log_and_console(str(proc) + ": 'cell_contact_surface' was not in dictionary")
+    if "cell_contact_surface" not in prop:
+        monitoring.to_log_and_console(
+            str(proc) + ": 'cell_contact_surface' was not in dictionary"
+        )
         return None
 
-    if 'cell_name' not in prop:
+    if "cell_name" not in prop:
         monitoring.to_log_and_console(str(proc) + ": 'cell_name' was not in dictionary")
         return None
 
     #
     # initialize 'morphonet_float_name_choice_certainty'
     #
-    keymindistance = 'morphonet_float_name_choice_min_distance'
-    hkeymindistance = 'morphonet_float_name_choice_min_distance_homogeneize'
+    keymindistance = "morphonet_float_name_choice_min_distance"
+    hkeymindistance = "morphonet_float_name_choice_min_distance_homogeneize"
     prop[keymindistance] = {}
     prop[hkeymindistance] = {}
 
     #
     #
     #
-    lineage = prop['cell_lineage']
+    lineage = prop["cell_lineage"]
     reverse_lineage = {v: k for k, values in lineage.items() for v in values}
-    cells = list(set(lineage.keys()).union(set([v for values in list(lineage.values()) for v in values])))
-    names = prop['cell_name']
+    cells = list(
+        set(lineage.keys()).union(
+            set([v for values in list(lineage.values()) for v in values])
+        )
+    )
+    names = prop["cell_name"]
 
     #
     # forward propagation
@@ -1248,7 +1586,7 @@ def _evaluate_naming(prop, embryo, atlases, parameters, time_digits_for_cell_id=
     monitoring.to_log_and_console(str(proc) + ": forward propagation")
 
     cells = sorted(cells)
-    div = 10 ** time_digits_for_cell_id
+    div = 10**time_digits_for_cell_id
     cells_per_time = {}
     for c in cells:
         t = int(c) // div
@@ -1279,7 +1617,9 @@ def _evaluate_naming(prop, embryo, atlases, parameters, time_digits_for_cell_id=
             # mother not in lineage
             # to account for lineage errors
             if mother not in lineage:
-                monitoring.to_log_and_console(str(proc) + ": weird, cell " + str(mother) + " is not in lineage")
+                monitoring.to_log_and_console(
+                    str(proc) + ": weird, cell " + str(mother) + " is not in lineage"
+                )
                 continue
 
             if len(lineage[mother]) == 1:
@@ -1292,7 +1632,13 @@ def _evaluate_naming(prop, embryo, atlases, parameters, time_digits_for_cell_id=
                 continue
 
             if len(lineage[mother]) > 2:
-                msg = ": weird, cell " + str(mother) + " divides in " + str(len(lineage[mother])) + " cells "
+                msg = (
+                    ": weird, cell "
+                    + str(mother)
+                    + " divides in "
+                    + str(len(lineage[mother]))
+                    + " cells "
+                )
                 monitoring.to_log_and_console(str(proc) + msg)
                 continue
 
@@ -1312,21 +1658,35 @@ def _evaluate_naming(prop, embryo, atlases, parameters, time_digits_for_cell_id=
             #
             # certainty are probabilities (in [0, 1])
             #
-            debug = isinstance(parameters.cells_to_be_traced, list) and \
-                    prop['cell_name'][mother] in parameters.cells_to_be_traced
+            debug = (
+                isinstance(parameters.cells_to_be_traced, list)
+                and prop["cell_name"][mother] in parameters.cells_to_be_traced
+            )
 
-            daughter_names = uname.get_daughter_names(prop['cell_name'][mother])
+            daughter_names = uname.get_daughter_names(prop["cell_name"][mother])
             given_names = [names[daughters[0]], names[daughters[1]]]
 
             if debug:
-                msg = "===== un-homogenized neighborhood for division of " + str(prop['cell_name'][mother])
+                msg = "===== un-homogenized neighborhood for division of " + str(
+                    prop["cell_name"][mother]
+                )
                 monitoring.to_log_and_console(msg)
-            distance = _compute_distances(mother, daughters, prop, embryo, atlases, parameters,
-                                          delay_from_division=parameters.confidence_delay_from_division,
-                                          time_digits_for_cell_id=time_digits_for_cell_id, debug=debug)
+            distance = _compute_distances(
+                mother,
+                daughters,
+                prop,
+                embryo,
+                atlases,
+                parameters,
+                delay_from_division=parameters.confidence_delay_from_division,
+                time_digits_for_cell_id=time_digits_for_cell_id,
+                debug=debug,
+            )
             if distance is None:
                 continue
-            mindist, difference = _get_evaluation(given_names, daughter_names, distance, parameters, debug=debug)
+            mindist, difference = _get_evaluation(
+                given_names, daughter_names, distance, parameters, debug=debug
+            )
 
             mean0, mean1 = _get_ordered_means(distance)
             count0less1 = sum([1 for i in zip(mean0, mean1) if i[0] <= i[1]])
@@ -1335,8 +1695,16 @@ def _evaluate_naming(prop, embryo, atlases, parameters, time_digits_for_cell_id=
                     natlas = count0less1
                 else:
                     natlas = len(distance[0]) - count0less1
-                msg = "partial agreement to evaluate division of cell " + str(prop['cell_name'][mother])
-                msg += ": " + str(natlas) + " over " + str(len(distance[0])) + " means of ordered distances"
+                msg = "partial agreement to evaluate division of cell " + str(
+                    prop["cell_name"][mother]
+                )
+                msg += (
+                    ": "
+                    + str(natlas)
+                    + " over "
+                    + str(len(distance[0]))
+                    + " means of ordered distances"
+                )
                 msg += " (with un-homogenized neighborhood)"
                 monitoring.to_log_and_console(str(proc) + ": " + msg)
 
@@ -1346,7 +1714,7 @@ def _evaluate_naming(prop, embryo, atlases, parameters, time_digits_for_cell_id=
                 prop[keymindistance][d] = mindist
             if debug:
                 msg = "----- naming assessment with un-homogenized neighborhood for division of "
-                msg += str(prop['cell_name'][mother])
+                msg += str(prop["cell_name"][mother])
                 monitoring.to_log_and_console(msg)
                 msg = "      difference = " + str(difference)
                 monitoring.to_log_and_console(msg)
@@ -1354,16 +1722,28 @@ def _evaluate_naming(prop, embryo, atlases, parameters, time_digits_for_cell_id=
                 monitoring.to_log_and_console(msg)
 
             if debug:
-                msg = "===== homogenized neighborhood for division of " + str(prop['cell_name'][mother])
+                msg = "===== homogenized neighborhood for division of " + str(
+                    prop["cell_name"][mother]
+                )
                 monitoring.to_log_and_console(msg)
-            hdistance = _compute_distances(mother, daughters, prop, embryo, atlases, parameters,
-                                           delay_from_division=parameters.confidence_delay_from_division,
-                                           homogenize_neighborhood=True,
-                                           time_digits_for_cell_id=time_digits_for_cell_id, debug=debug)
+            hdistance = _compute_distances(
+                mother,
+                daughters,
+                prop,
+                embryo,
+                atlases,
+                parameters,
+                delay_from_division=parameters.confidence_delay_from_division,
+                homogenize_neighborhood=True,
+                time_digits_for_cell_id=time_digits_for_cell_id,
+                debug=debug,
+            )
 
             if hdistance is None:
                 continue
-            hmindist, hdifference = _get_evaluation(given_names, daughter_names, hdistance, parameters, debug=debug)
+            hmindist, hdifference = _get_evaluation(
+                given_names, daughter_names, hdistance, parameters, debug=debug
+            )
 
             mean0, mean1 = _get_ordered_means(hdistance)
             count0less1 = sum([1 for i in zip(mean0, mean1) if i[0] <= i[1]])
@@ -1372,8 +1752,16 @@ def _evaluate_naming(prop, embryo, atlases, parameters, time_digits_for_cell_id=
                     natlas = count0less1
                 else:
                     natlas = len(distance[0]) - count0less1
-                msg = "partial agreement to evaluate division of cell " + str(prop['cell_name'][mother])
-                msg += ": " + str(natlas) + " over " + str(len(distance[0])) + " means of ordered distances"
+                msg = "partial agreement to evaluate division of cell " + str(
+                    prop["cell_name"][mother]
+                )
+                msg += (
+                    ": "
+                    + str(natlas)
+                    + " over "
+                    + str(len(distance[0]))
+                    + " means of ordered distances"
+                )
                 msg += " (with homogenized neighborhood)"
                 monitoring.to_log_and_console(str(proc) + ": " + msg)
 
@@ -1383,7 +1771,7 @@ def _evaluate_naming(prop, embryo, atlases, parameters, time_digits_for_cell_id=
                 prop[hkeymindistance][d] = hmindist
             if debug:
                 msg = "----- naming assessment with homogenized neighborhood for division of "
-                msg += str(prop['cell_name'][mother])
+                msg += str(prop["cell_name"][mother])
                 monitoring.to_log_and_console(msg)
                 msg = "      difference = " + str(hdifference)
                 monitoring.to_log_and_console(msg)
@@ -1399,12 +1787,22 @@ def _evaluate_naming(prop, embryo, atlases, parameters, time_digits_for_cell_id=
 #
 ########################################################################################
 
+
 def _naming_diagnosis(prop, filename, parameters, time_digits_for_cell_id=4):
     diagnosis.monitoring.copy(monitoring)
-    monitoring.to_log_and_console("============================================================")
+    monitoring.to_log_and_console(
+        "============================================================"
+    )
     monitoring.to_log_and_console("===== diagnosis on '" + str(filename) + "'")
-    diagnosis.diagnosis(prop, features=['name'], parameters=parameters, time_digits_for_cell_id=time_digits_for_cell_id)
-    monitoring.to_log_and_console("============================================================")
+    diagnosis.diagnosis(
+        prop,
+        features=["name"],
+        parameters=parameters,
+        time_digits_for_cell_id=time_digits_for_cell_id,
+    )
+    monitoring.to_log_and_console(
+        "============================================================"
+    )
 
 
 def naming_process(experiment, parameters):
@@ -1415,13 +1813,19 @@ def naming_process(experiment, parameters):
     #
 
     if not isinstance(experiment, common.Experiment):
-        monitoring.to_log_and_console(str(proc) + ": unexpected type for 'experiment' variable: "
-                                      + str(type(experiment)))
+        monitoring.to_log_and_console(
+            str(proc)
+            + ": unexpected type for 'experiment' variable: "
+            + str(type(experiment))
+        )
         sys.exit(1)
 
     if not isinstance(parameters, NamingParameters):
-        monitoring.to_log_and_console(str(proc) + ": unexpected type for 'parameters' variable: "
-                                      + str(type(parameters)))
+        monitoring.to_log_and_console(
+            str(proc)
+            + ": unexpected type for 'parameters' variable: "
+            + str(type(parameters))
+        )
         sys.exit(1)
 
     time_digits_for_cell_id = experiment.get_time_digits_for_cell_id()
@@ -1433,7 +1837,11 @@ def naming_process(experiment, parameters):
     # should we clean reference here?
     #
     atlases = uatlasd.DivisionAtlases(parameters=parameters)
-    atlases.add_atlases(parameters.atlasFiles, parameters, time_digits_for_cell_id=time_digits_for_cell_id)
+    atlases.add_atlases(
+        parameters.atlasFiles,
+        parameters,
+        time_digits_for_cell_id=time_digits_for_cell_id,
+    )
     atlases.build_division_atlases(parameters)
 
     #
@@ -1444,32 +1852,49 @@ def naming_process(experiment, parameters):
     discrepancies = {}
 
     if parameters.testFile is not None:
-        reference_prop = ioproperties.read_dictionary(parameters.testFile, inputpropertiesdict={})
+        reference_prop = ioproperties.read_dictionary(
+            parameters.testFile, inputpropertiesdict={}
+        )
         if parameters.test_diagnosis:
-            _naming_diagnosis(reference_prop, parameters.testFile, parameters,
-                              time_digits_for_cell_id=time_digits_for_cell_id)
-        prop = _build_test_set(reference_prop, time_digits_for_cell_id=time_digits_for_cell_id, ncells=64)
+            _naming_diagnosis(
+                reference_prop,
+                parameters.testFile,
+                parameters,
+                time_digits_for_cell_id=time_digits_for_cell_id,
+            )
+        prop = _build_test_set(
+            reference_prop, time_digits_for_cell_id=time_digits_for_cell_id, ncells=64
+        )
         if prop is None:
             monitoring.to_log_and_console(str(proc) + ": error when building test set")
             sys.exit(1)
     elif parameters.inputFile is not None:
-        prop = ioproperties.read_dictionary(parameters.inputFile, inputpropertiesdict={})
+        prop = ioproperties.read_dictionary(
+            parameters.inputFile, inputpropertiesdict={}
+        )
         if parameters.test_diagnosis:
-            _naming_diagnosis(prop, parameters.inputFile, parameters, time_digits_for_cell_id=time_digits_for_cell_id)
+            _naming_diagnosis(
+                prop,
+                parameters.inputFile,
+                parameters,
+                time_digits_for_cell_id=time_digits_for_cell_id,
+            )
 
     if prop == {}:
         monitoring.to_log_and_console(str(proc) + ": no properties?!")
         sys.exit(1)
 
-    if 'cell_name' not in prop:
-        monitoring.to_log_and_console(str(proc) + ": no 'cell_name' in input dictionary")
+    if "cell_name" not in prop:
+        monitoring.to_log_and_console(
+            str(proc) + ": no 'cell_name' in input dictionary"
+        )
         sys.exit(1)
 
     # clean from empty names
-    cells = list(prop['cell_name'].keys())
+    cells = list(prop["cell_name"].keys())
     for c in cells:
-        if prop['cell_name'][c] == '':
-            del prop['cell_name'][c]
+        if prop["cell_name"][c] == "":
+            del prop["cell_name"][c]
 
     #
     # build an atlas from the embryo to be named,
@@ -1478,13 +1903,27 @@ def naming_process(experiment, parameters):
     embryo = uatlase.Atlas(prop)
     ref_atlases = atlases.get_atlases()
     ref_atlas = atlases.get_reference_atlas()
-    embryo.temporally_align_with(ref_atlases[ref_atlas], time_digits_for_cell_id=time_digits_for_cell_id)
+    embryo.temporally_align_with(
+        ref_atlases[ref_atlas], time_digits_for_cell_id=time_digits_for_cell_id
+    )
 
     #
     # naming propagation
     #
-    prop = _propagate_naming(prop, embryo, atlases, parameters, time_digits_for_cell_id=time_digits_for_cell_id)
-    prop = _evaluate_naming(prop, embryo, atlases, parameters, time_digits_for_cell_id=time_digits_for_cell_id)
+    prop = _propagate_naming(
+        prop,
+        embryo,
+        atlases,
+        parameters,
+        time_digits_for_cell_id=time_digits_for_cell_id,
+    )
+    prop = _evaluate_naming(
+        prop,
+        embryo,
+        atlases,
+        parameters,
+        time_digits_for_cell_id=time_digits_for_cell_id,
+    )
     prop = properties.set_fate_from_names(prop)
     prop = properties.set_color_from_fate(prop)
     #

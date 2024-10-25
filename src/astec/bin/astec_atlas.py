@@ -15,6 +15,7 @@ import astec.algorithms.atlas as aatlas
 import astec.utils.atlas_embryo as uatlase
 import astec.utils.atlas_cell as uatlasc
 import astec.utils.atlas_division as uatlasd
+
 # import astec.utils.contact_figure as ucontactf
 # import astec.utils.properties as properties
 import astec.utils.ioproperties as ioproperties
@@ -42,52 +43,105 @@ def _set_options(my_parser):
     # common parameters
     #
 
-    my_parser.add_argument('-p', '--parameters',
-                           action='store', dest='parameterFile', const=None,
-                           help='python file containing parameters definition')
-    my_parser.add_argument('-e', '--embryo-rep',
-                           action='store', dest='embryo_path', const=None,
-                           help='path to the embryo data')
+    my_parser.add_argument(
+        "-p",
+        "--parameters",
+        action="store",
+        dest="parameterFile",
+        const=None,
+        help="python file containing parameters definition",
+    )
+    my_parser.add_argument(
+        "-e",
+        "--embryo-rep",
+        action="store",
+        dest="embryo_path",
+        const=None,
+        help="path to the embryo data",
+    )
 
     #
     # other options
     #
-    my_parser.add_argument('-write-selection', '--write-selection', '-write-selections', '--write-selections',
-                           action='store_const', dest='write_selection',
-                           default=False, const=True,
-                           help='write out morphonet selection files')
+    my_parser.add_argument(
+        "-write-selection",
+        "--write-selection",
+        "-write-selections",
+        "--write-selections",
+        action="store_const",
+        dest="write_selection",
+        default=False,
+        const=True,
+        help="write out morphonet selection files",
+    )
     #
     # control parameters
     #
 
-    my_parser.add_argument('-k', '--keep-temporary-files',
-                           action='store_const', dest='keepTemporaryFiles',
-                           default=False, const=True,
-                           help='keep temporary files')
+    my_parser.add_argument(
+        "-k",
+        "--keep-temporary-files",
+        action="store_const",
+        dest="keepTemporaryFiles",
+        default=False,
+        const=True,
+        help="keep temporary files",
+    )
 
-    my_parser.add_argument('-f', '--force',
-                           action='store_const', dest='forceResultsToBeBuilt',
-                           default=False, const=True,
-                           help='force building of results')
+    my_parser.add_argument(
+        "-f",
+        "--force",
+        action="store_const",
+        dest="forceResultsToBeBuilt",
+        default=False,
+        const=True,
+        help="force building of results",
+    )
 
-    my_parser.add_argument('-v', '--verbose',
-                           action='count', dest='verbose', default=2,
-                           help='incrementation of verboseness')
-    my_parser.add_argument('-nv', '--no-verbose',
-                           action='store_const', dest='verbose', const=0,
-                           help='no verbose at all')
-    my_parser.add_argument('-d', '--debug',
-                           action='count', dest='debug', default=0,
-                           help='incrementation of debug level')
-    my_parser.add_argument('-nd', '--no-debug',
-                           action='store_const', dest='debug', const=0,
-                           help='no debug information')
+    my_parser.add_argument(
+        "-v",
+        "--verbose",
+        action="count",
+        dest="verbose",
+        default=2,
+        help="incrementation of verboseness",
+    )
+    my_parser.add_argument(
+        "-nv",
+        "--no-verbose",
+        action="store_const",
+        dest="verbose",
+        const=0,
+        help="no verbose at all",
+    )
+    my_parser.add_argument(
+        "-d",
+        "--debug",
+        action="count",
+        dest="debug",
+        default=0,
+        help="incrementation of debug level",
+    )
+    my_parser.add_argument(
+        "-nd",
+        "--no-debug",
+        action="store_const",
+        dest="debug",
+        const=0,
+        help="no debug information",
+    )
 
     msg = "print the list of parameters (with explanations) in the console and exit. "
     msg += "If a parameter file is given, it is taken into account"
-    my_parser.add_argument('-pp', '--print-param',
-                           action='store_const', dest='printParameters',
-                           default=False, const=True, help=msg)
+    my_parser.add_argument(
+        "-pp",
+        "--print-param",
+        action="store_const",
+        dest="printParameters",
+        default=False,
+        const=True,
+        help=msg,
+    )
 
     return
 
@@ -100,7 +154,6 @@ def _set_options(my_parser):
 
 
 def main():
-
     ############################################################
     #
     # generic part
@@ -118,7 +171,7 @@ def main():
     # reading command line arguments
     # and update from command line arguments
     #
-    parser = ArgumentParser(description='contact-atlas')
+    parser = ArgumentParser(description="contact-atlas")
     _set_options(parser)
     args = parser.parse_args()
 
@@ -155,7 +208,9 @@ def main():
     # keep history of command line executions
     # and copy parameter file
     #
-    experiment.update_history_at_start(__file__, start_time, parameter_file, path_to_vt())
+    experiment.update_history_at_start(
+        __file__, start_time, parameter_file, path_to_vt()
+    )
     # experiment.copy_stamped_file(start_time, parameter_file)
 
     #
@@ -215,7 +270,11 @@ def main():
     monitoring.update_execution_time(start_time, end_time)
     experiment.update_history_execution_time(__file__, start_time, end_time)
 
-    monitoring.to_console('Total computation time = ' + str(time.mktime(end_time) - time.mktime(start_time)) + ' s')
+    monitoring.to_console(
+        "Total computation time = "
+        + str(time.mktime(end_time) - time.mktime(start_time))
+        + " s"
+    )
 
 
 #
@@ -225,5 +284,5 @@ def main():
 #
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

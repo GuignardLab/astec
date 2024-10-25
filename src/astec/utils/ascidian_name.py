@@ -1,5 +1,3 @@
-
-
 def get_daughter_names(name):
     #
     # build daughter names from parent name
@@ -12,20 +10,30 @@ def get_daughter_names(name):
     #
 
     # fake returns
-    if name == 'background':
-        return ['background', 'background']
-    if name == 'other-half':
-        return ['other-half', 'other-half']
+    if name == "background":
+        return ["background", "background"]
+    if name == "other-half":
+        return ["other-half", "other-half"]
 
-    abvalue = name.split('.')[0][0]
-    stage = name.split('.')[0][1:]
-    p = name.split('.')[1][0:4]
-    lrvalue = name.split('.')[1][4]
+    abvalue = name.split(".")[0][0]
+    stage = name.split(".")[0][1:]
+    p = name.split(".")[1][0:4]
+    lrvalue = name.split(".")[1][4]
     #
     # build daughter names
     #
-    daughters = [abvalue + str(int(stage) + 1) + "." + '{:0{width}d}'.format(2 * int(p) - 1, width=4) + lrvalue,
-                 abvalue + str(int(stage) + 1) + "." + '{:0{width}d}'.format(2 * int(p), width=4) + lrvalue]
+    daughters = [
+        abvalue
+        + str(int(stage) + 1)
+        + "."
+        + "{:0{width}d}".format(2 * int(p) - 1, width=4)
+        + lrvalue,
+        abvalue
+        + str(int(stage) + 1)
+        + "."
+        + "{:0{width}d}".format(2 * int(p), width=4)
+        + lrvalue,
+    ]
     # print("name = " + str(name) + " -> daughter names = " + str(daughters))
     return daughters
 
@@ -42,15 +50,15 @@ def get_mother_name(name):
     #
 
     # fake returns
-    if name == 'background':
-        return 'background'
-    if name == 'other-half':
-        return 'other-half'
+    if name == "background":
+        return "background"
+    if name == "other-half":
+        return "other-half"
 
-    abvalue = name.split('.')[0][0]
-    stage = name.split('.')[0][1:]
-    p = name.split('.')[1][0:4]
-    lrvalue = name.split('.')[1][4]
+    abvalue = name.split(".")[0][0]
+    stage = name.split(".")[0][1:]
+    p = name.split(".")[1][0:4]
+    lrvalue = name.split(".")[1][4]
     #
     # build parent names
     #
@@ -58,26 +66,26 @@ def get_mother_name(name):
         return None
     parent = abvalue + str(int(stage) - 1) + "."
     if int(p) % 2 == 1:
-        parent += '{:0{width}d}'.format((int(p) + 1) // 2, width=4)
+        parent += "{:0{width}d}".format((int(p) + 1) // 2, width=4)
     else:
-        parent += '{:0{width}d}'.format(int(p) // 2, width=4)
+        parent += "{:0{width}d}".format(int(p) // 2, width=4)
     parent += lrvalue
     # print("name = " + str(name) + " -> parent name = " + str(parent))
     return parent
 
 
 def get_ancestor_name(name, generation):
-    if name == 'background':
-        return 'background'
-    if name == 'other-half':
-        return 'other-half'
-    g = int(name.split('.')[0][1:])
+    if name == "background":
+        return "background"
+    if name == "other-half":
+        return "other-half"
+    g = int(name.split(".")[0][1:])
     if int(generation) > g:
         return None
     if int(generation) == g:
         return name
     n = name
-    for i in range(g-int(generation)):
+    for i in range(g - int(generation)):
         n = get_mother_name(n)
         return n
 
@@ -90,10 +98,10 @@ def get_sister_name(name):
 
 def get_symmetric_name(name):
     symname = name[:-1]
-    if name[-1] == '*':
-        symname += '_'
-    elif name[-1] == '_':
-        symname += '*'
+    if name[-1] == "*":
+        symname += "_"
+    elif name[-1] == "_":
+        symname += "*"
     else:
         return None
     return symname

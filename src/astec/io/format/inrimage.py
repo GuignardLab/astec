@@ -31,8 +31,23 @@ from astec.components.spatial_image import SpatialImage
 
 __all__ = ["read_inriheader", "read_inrimage", "write_inrimage"]
 
-specific_header_keys = ("XDIM", "YDIM", "ZDIM", "VDIM", "TYPE", "PIXSIZE", "SCALE", "CPU", "VX", "VY", "VZ", "TX", "TY",
-                        "TZ", "#GEOMETRY")
+specific_header_keys = (
+    "XDIM",
+    "YDIM",
+    "ZDIM",
+    "VDIM",
+    "TYPE",
+    "PIXSIZE",
+    "SCALE",
+    "CPU",
+    "VX",
+    "VY",
+    "VZ",
+    "TX",
+    "TY",
+    "TZ",
+    "#GEOMETRY",
+)
 
 
 def open_inrifile(filename):
@@ -43,16 +58,20 @@ def open_inrifile(filename):
     proc = "open_inrifile"
     if not os.path.isfile(filename) and os.path.isfile(filename + ".gz"):
         filename = filename + ".gz"
-        print(proc + ": Warning: path to read image has been changed to " + filename + ".")
+        print(
+            proc + ": Warning: path to read image has been changed to " + filename + "."
+        )
     if not os.path.isfile(filename) and os.path.isfile(filename + ".zip"):
         filename = filename + ".zip"
-        print(proc + ": Warning: path to read image has been changed to " + filename + ".")
+        print(
+            proc + ": Warning: path to read image has been changed to " + filename + "."
+        )
     if path.splitext(filename)[1] in (".gz", ".zip"):
-        fzip = gzip.open(filename, 'rb')
+        fzip = gzip.open(filename, "rb")
         f = StringIO(fzip.read())
         fzip.close()
     else:
-        f = open(filename, 'rb')
+        f = open(filename, "rb")
 
     return f
 
@@ -167,7 +186,9 @@ def write_inrimage_to_stream(stream, img):
         info["XDIM"], info["YDIM"], info["ZDIM"] = ("%d" % val for val in img.shape)
         info["VDIM"] = "1"
     else:
-        info["XDIM"], info["YDIM"], info["ZDIM"], info["VDIM"] = ("%d" % val for val in img.shape)
+        info["XDIM"], info["YDIM"], info["ZDIM"], info["VDIM"] = (
+            "%d" % val for val in img.shape
+        )
 
     # image resolution
     res = getattr(img, "voxelsize", (1, 1, 1))
@@ -200,8 +221,8 @@ def write_inrimage_to_stream(stream, img):
         raise UserWarning(msg)
 
     # mandatory else an error occurs when reading image
-    info['#GEOMETRY'] = 'CARTESIAN'
-    info['CPU'] = 'decm'
+    info["#GEOMETRY"] = "CARTESIAN"
+    info["CPU"] = "decm"
 
     # write header
     header = "#INRIMAGE-4#{\n"
@@ -243,13 +264,13 @@ def write_inrimage(filename, img):
      - `filename` (str) - name of the file to read
     """
     # open stream
-    zipped = (path.splitext(filename)[1] in (".gz", ".zip"))
+    zipped = path.splitext(filename)[1] in (".gz", ".zip")
 
     if zipped:
         f = gzip.GzipFile(filename, "wb")
         # f = StringIO()
     else:
-        f = open(filename, 'wb')
+        f = open(filename, "wb")
 
     try:
         write_inrimage_to_stream(f, img)

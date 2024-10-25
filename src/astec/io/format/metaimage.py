@@ -26,17 +26,26 @@ import os
 from os import path
 import numpy as np
 import gzip
+
 # from io import StringIO
 
 from astec.components.spatial_image import SpatialImage
 
 __all__ = ["read_metaimage", "write_metaimage"]
 
-specific_header_keys = ("ObjectType",
-                        "NDims", "DimSize", "ElementNumberOfChannels",
-                        "ElementSize", "ElementSpacing", "ElementType",
-                        "CompressedData", "BinaryDataByteOrderMSB", "BinaryData",
-                        "ElementDataFile")
+specific_header_keys = (
+    "ObjectType",
+    "NDims",
+    "DimSize",
+    "ElementNumberOfChannels",
+    "ElementSize",
+    "ElementSpacing",
+    "ElementType",
+    "CompressedData",
+    "BinaryDataByteOrderMSB",
+    "BinaryData",
+    "ElementDataFile",
+)
 
 
 def open_metaimagefile(filename):
@@ -45,19 +54,25 @@ def open_metaimagefile(filename):
     Manage the gz attribute
     """
     program = "open_metaimagefile"
-    if not os.path.isfile(filename) and os.path.isfile(filename+".gz"):
-        filename = filename+".gz"
-        print("%s: Warning: path to read image has been changed to %s." % (program, filename))
-    if not os.path.isfile(filename) and os.path.isfile(filename+".zip"):
-        filename = filename+".zip"
-        print("%s: Warning: path to read image has been changed to %s." % (program, filename))
+    if not os.path.isfile(filename) and os.path.isfile(filename + ".gz"):
+        filename = filename + ".gz"
+        print(
+            "%s: Warning: path to read image has been changed to %s."
+            % (program, filename)
+        )
+    if not os.path.isfile(filename) and os.path.isfile(filename + ".zip"):
+        filename = filename + ".zip"
+        print(
+            "%s: Warning: path to read image has been changed to %s."
+            % (program, filename)
+        )
     if path.splitext(filename)[1] in (".gz", ".zip"):
-        fzip = gzip.open(filename, 'rb')
+        fzip = gzip.open(filename, "rb")
         # f = StringIO(fzip.read())
         # fzip.close()
         return fzip
     else:
-        f = open(filename, 'rb')
+        f = open(filename, "rb")
 
     return f
 
@@ -69,12 +84,18 @@ def _read_header(f):
 
     prop = {}
     while True:
-        key, val = f.readline().decode('utf8').rstrip('\n\r').split(" = ")
-        if key == 'ElementDataFile':
-            if val == 'LOCAL':
+        key, val = f.readline().decode("utf8").rstrip("\n\r").split(" = ")
+        if key == "ElementDataFile":
+            if val == "LOCAL":
                 break
             else:
-                msg = "unable to read that type of data: '" + str(key) + ' = ' + str(val) + "'"
+                msg = (
+                    "unable to read that type of data: '"
+                    + str(key)
+                    + " = "
+                    + str(val)
+                    + "'"
+                )
                 raise UserWarning(msg)
         else:
             prop[key] = val
@@ -101,7 +122,7 @@ def read_metaimage(filename):
     #
     # find dimensions
     #
-    dim = prop.pop("DimSize").split(' ')
+    dim = prop.pop("DimSize").split(" ")
     if len(dim) == 2:
         xdim = int(dim[0])
         ydim = int(dim[1])
@@ -120,15 +141,15 @@ def read_metaimage(filename):
     # find type
     #
     voxeltype = prop.pop("ElementType")
-    if voxeltype == 'MET_UCHAR':
+    if voxeltype == "MET_UCHAR":
         ntyp = np.dtype(np.uint8)
-    elif voxeltype == 'MET_USHORT':
+    elif voxeltype == "MET_USHORT":
         ntyp = np.dtype(np.uint16)
-    elif voxeltype == 'MET_UINT':
+    elif voxeltype == "MET_UINT":
         ntyp = np.dtype(np.uint32)
-    elif voxeltype == 'MET_FLOAT':
+    elif voxeltype == "MET_FLOAT":
         ntyp = np.dtype(np.float32)
-    elif voxeltype == 'MET_DOUBLE':
+    elif voxeltype == "MET_DOUBLE":
         ntyp = np.dtype(np.float64)
     else:
         msg = "unable to handle such voxel type: 'ElementType = " + str(voxeltype) + "'"
@@ -137,7 +158,7 @@ def read_metaimage(filename):
     #
     # find resolution
     #
-    resolution = prop.pop("ElementSize").split(' ')
+    resolution = prop.pop("ElementSize").split(" ")
     res = []
     for i in range(0, len(resolution)):
         res.append(float(resolution[i]))
@@ -178,23 +199,27 @@ def write_metaimage_to_stream(stream, img):
     #
     if img.ndim == 2:
         info["NDims"] = "3"
-        info["DimSize"] = str(img.shape[0]) + ' ' + str(img.shape[1]) + ' 1'
+        info["DimSize"] = str(img.shape[0]) + " " + str(img.shape[1]) + " 1"
         info["ElementNumberOfChannels"] = "1"
     elif img.ndim == 3:
         info["NDims"] = "3"
-        info["DimSize"] = str(img.shape[0]) + ' ' + str(img.shape[1]) + ' ' + str(img.shape[2])
+        info["DimSize"] = (
+            str(img.shape[0]) + " " + str(img.shape[1]) + " " + str(img.shape[2])
+        )
         info["ElementNumberOfChannels"] = "1"
     elif img.ndim == 4:
         info["NDims"] = "3"
-        info["DimSize"] = str(img.shape[0]) + ' ' + str(img.shape[1]) + ' ' + str(img.shape[2])
+        info["DimSize"] = (
+            str(img.shape[0]) + " " + str(img.shape[1]) + " " + str(img.shape[2])
+        )
         info["ElementNumberOfChannels"] = str(img.shape[2])
 
     #
     # image resolutions
     #
     res = getattr(img, "voxelsize", (1, 1, 1))
-    info["ElementSize"] = str(res[0]) + ' ' + str(res[1]) + ' ' + str(res[2])
-    info["ElementSpacing"] = str(res[0]) + ' ' + str(res[1]) + ' ' + str(res[2])
+    info["ElementSize"] = str(res[0]) + " " + str(res[1]) + " " + str(res[2])
+    info["ElementSpacing"] = str(res[0]) + " " + str(res[1]) + " " + str(res[2])
 
     #
     # data type
@@ -227,7 +252,7 @@ def write_metaimage_to_stream(stream, img):
     #
     # fill header
     #
-    header = ''
+    header = ""
     for k in specific_header_keys:
         try:
             header += "%s = %s\n" % (k, info[k])
@@ -237,7 +262,7 @@ def write_metaimage_to_stream(stream, img):
     #
     # write raw data
     #
-    stream.write(header.encode('utf8'))
+    stream.write(header.encode("utf8"))
     if img.ndim == 2 or img.ndim == 3:
         stream.write(img.tostring("F"))
     # elif img.ndim == 4:
@@ -250,21 +275,21 @@ def write_metaimage_to_stream(stream, img):
 def write_metaimage(filename, img):
     """Write an inrimage zipped or not according to the extension
 
-    .. warning:: if img is not a |SpatialImage|, default values will be used
-                 for the resolution of the image
+     .. warning:: if img is not a |SpatialImage|, default values will be used
+                  for the resolution of the image
 
-   :Parameters:
-     - `img` (|SpatialImage|) - image to write
-     - `filename` (str) - name of the file to read
+    :Parameters:
+      - `img` (|SpatialImage|) - image to write
+      - `filename` (str) - name of the file to read
     """
     # open stream
-    zipped = (path.splitext(filename)[1] in (".gz", ".zip"))
+    zipped = path.splitext(filename)[1] in (".gz", ".zip")
 
     if zipped:
         f = gzip.GzipFile(filename, "wb")
         # f = StringIO()
     else:
-        f = open(filename, 'wb')
+        f = open(filename, "wb")
 
     try:
         write_metaimage_to_stream(f, img)

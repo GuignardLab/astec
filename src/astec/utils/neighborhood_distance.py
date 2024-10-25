@@ -1,4 +1,3 @@
-
 import copy
 import numpy as np
 
@@ -13,6 +12,7 @@ monitoring = common.Monitoring()
 #
 #
 ############################################################
+
 
 def _print_common_neighborhoods(neighborhood0, neighborhood1, title=None):
     #
@@ -47,6 +47,7 @@ def _print_common_neighborhoods(neighborhood0, neighborhood1, title=None):
 #
 ############################################################
 
+
 def _is_ancestor_in_stages(neigh, neighbors_by_stage):
     """
 
@@ -60,10 +61,15 @@ def _is_ancestor_in_stages(neigh, neighbors_by_stage):
 
     """
 
-    if neigh == 'background' or neigh == 'other-half' or isinstance(neigh, int) or isinstance(neigh, np.int64):
+    if (
+        neigh == "background"
+        or neigh == "other-half"
+        or isinstance(neigh, int)
+        or isinstance(neigh, np.int64)
+    ):
         return False
 
-    stage = int(neigh.split('.')[0][1:])
+    stage = int(neigh.split(".")[0][1:])
     stages = list(neighbors_by_stage.keys())
     stages = sorted(stages, key=lambda x: int(x), reverse=True)
 
@@ -79,7 +85,9 @@ def _is_ancestor_in_stages(neigh, neighbors_by_stage):
     return False
 
 
-def build_same_contact_surfaces(neighborhoods, celllist, celltobeexcluded=None, maximal_generation=None, debug=False):
+def build_same_contact_surfaces(
+    neighborhoods, celllist, celltobeexcluded=None, maximal_generation=None, debug=False
+):
     """
 
     Parameters
@@ -115,10 +123,15 @@ def build_same_contact_surfaces(neighborhoods, celllist, celltobeexcluded=None, 
                 # 'background' and 'other-half' are names used for named neighborhood
                 # partially named neighborhood will have cell ids as keys
                 #
-                if n == 'background' or n == 'other-half' or isinstance(n, int) or isinstance(n, np.int64):
+                if (
+                    n == "background"
+                    or n == "other-half"
+                    or isinstance(n, int)
+                    or isinstance(n, np.int64)
+                ):
                     neighbors_by_stage[0] = neighbors_by_stage.get(0, []) + [n]
                     continue
-                stage = int(n.split('.')[0][1:])
+                stage = int(n.split(".")[0][1:])
                 neighbors_by_stage[stage] = neighbors_by_stage.get(stage, []) + [n]
     # suppress duplicate
     for s in neighbors_by_stage:
@@ -153,8 +166,12 @@ def build_same_contact_surfaces(neighborhoods, celllist, celltobeexcluded=None, 
             # - not if the cells are to be excluded
             # - not in case of generic name (eg 'background')
             #
-            max_test = (isinstance(celltobeexcluded, list) and neigh not in celltobeexcluded) and s > 0 and \
-                isinstance(maximal_generation, int) and int(neigh.split('.')[0][1:]) > maximal_generation
+            max_test = (
+                (isinstance(celltobeexcluded, list) and neigh not in celltobeexcluded)
+                and s > 0
+                and isinstance(maximal_generation, int)
+                and int(neigh.split(".")[0][1:]) > maximal_generation
+            )
             if _is_ancestor_in_stages(neigh, neighbors_by_stage) or max_test:
                 #
                 # replace the neighbor by its mother
@@ -164,7 +181,7 @@ def build_same_contact_surfaces(neighborhoods, celllist, celltobeexcluded=None, 
                 mother = uname.get_mother_name(neigh)
                 if debug:
                     print("      replace by mother " + str(mother))
-                previous_stage = int(s)-1
+                previous_stage = int(s) - 1
                 if previous_stage not in neighbors_by_stage:
                     neighbors_by_stage[previous_stage] = []
                 if mother not in neighbors_by_stage[previous_stage]:
@@ -183,7 +200,9 @@ def build_same_contact_surfaces(neighborhoods, celllist, celltobeexcluded=None, 
                             common_neighborhoods[c][r][mother] = 0.0
                         for i in range(2):
                             if d[i] in common_neighborhoods[c][r]:
-                                common_neighborhoods[c][r][mother] += common_neighborhoods[c][r][d[i]]
+                                common_neighborhoods[c][r][
+                                    mother
+                                ] += common_neighborhoods[c][r][d[i]]
                                 del common_neighborhoods[c][r][d[i]]
 
                 #
@@ -218,6 +237,7 @@ def build_same_contact_surfaces(neighborhoods, celllist, celltobeexcluded=None, 
 #
 #
 ############################################################
+
 
 def cell_distance_elements(vect0, vect1, innersurfaces=[]):
     n0 = 0.0
@@ -278,11 +298,11 @@ def cell_distance(neigh0, neigh1, change_contact_surfaces=True, title=None):
         # build a dictionary of one element
         # build_same_contact_surfaces() build a common reference for a list of keys of the dictionary
         #
-        tmp = {'foo': {0: neigh0, 1: neigh1}}
-        vect = build_same_contact_surfaces(tmp, ['foo'])
-        score = _l1_normalized_modulus(vect['foo'][0], vect['foo'][1])
+        tmp = {"foo": {0: neigh0, 1: neigh1}}
+        vect = build_same_contact_surfaces(tmp, ["foo"])
+        score = _l1_normalized_modulus(vect["foo"][0], vect["foo"][1])
         if title is not None:
-            _print_common_neighborhoods(vect['foo'][0], vect['foo'][1], title=title)
+            _print_common_neighborhoods(vect["foo"][0], vect["foo"][1], title=title)
             monitoring.to_log_and_console("\t score = " + str(score) + "\n")
     else:
         score = _l1_normalized_modulus(neigh0, neigh1)

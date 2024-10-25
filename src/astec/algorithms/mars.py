@@ -1,4 +1,3 @@
-
 import os
 import sys
 import time
@@ -30,7 +29,6 @@ monitoring = common.Monitoring()
 
 
 class WatershedParameters(common.PrefixedParameter):
-
     ############################################################
     #
     # initialisation
@@ -38,9 +36,8 @@ class WatershedParameters(common.PrefixedParameter):
     ############################################################
 
     def __init__(self, prefix=None, obj=None):
-
         if prefix is None:
-            prefix = ['watershed_']
+            prefix = ["watershed_"]
         common.PrefixedParameter.__init__(self, prefix=prefix)
 
         if "doc" not in self.__dict__:
@@ -55,10 +52,10 @@ class WatershedParameters(common.PrefixedParameter):
         #
         #
         doc = "\t h-value for the extraction of h-minima (regional minima)\n"
-        self.doc['seed_hmin'] = doc
+        self.doc["seed_hmin"] = doc
         doc = "\t threshold for regional minima labeling (has to be in [1, h] range).\n"
         doc += "\t was introduced for test purposes. Do not use.\n"
-        self.doc['seed_high_threshold'] = doc
+        self.doc["seed_high_threshold"] = doc
         if obj is not None and isinstance(obj, WatershedParameters):
             self.seed_hmin = obj.seed_hmin
             self.seed_high_threshold = obj.seed_high_threshold
@@ -74,15 +71,19 @@ class WatershedParameters(common.PrefixedParameter):
 
     def print_parameters(self):
         print("")
-        print('#')
-        print('# WatershedParameters')
-        print('#')
+        print("#")
+        print("# WatershedParameters")
+        print("#")
         print("")
 
         common.PrefixedParameter.print_parameters(self)
 
-        self.varprint('seed_hmin', self.seed_hmin, self.doc['seed_hmin'])
-        self.varprint('seed_high_threshold', self.seed_high_threshold, self.doc['seed_high_threshold'])
+        self.varprint("seed_hmin", self.seed_hmin, self.doc["seed_hmin"])
+        self.varprint(
+            "seed_high_threshold",
+            self.seed_high_threshold,
+            self.doc["seed_high_threshold"],
+        )
         print("")
 
     def write_parameters_in_file(self, logfile):
@@ -94,13 +95,18 @@ class WatershedParameters(common.PrefixedParameter):
 
         common.PrefixedParameter.write_parameters_in_file(self, logfile)
 
-        self.varwrite(logfile, 'seed_hmin', self.seed_hmin, self.doc['seed_hmin'])
-        self.varwrite(logfile, 'seed_high_threshold', self.seed_high_threshold, self.doc['seed_high_threshold'])
+        self.varwrite(logfile, "seed_hmin", self.seed_hmin, self.doc["seed_hmin"])
+        self.varwrite(
+            logfile,
+            "seed_high_threshold",
+            self.seed_high_threshold,
+            self.doc["seed_high_threshold"],
+        )
         logfile.write("\n")
         return
 
     def write_parameters(self, log_file_name):
-        with open(log_file_name, 'a') as logfile:
+        with open(log_file_name, "a") as logfile:
             self.write_parameters_in_file(logfile)
         return
 
@@ -110,11 +116,12 @@ class WatershedParameters(common.PrefixedParameter):
     #
     ############################################################
     def update_from_parameters(self, parameters):
+        self.seed_hmin = self.read_parameter(parameters, "h_min", self.seed_hmin)
+        self.seed_hmin = self.read_parameter(parameters, "seed_hmin", self.seed_hmin)
 
-        self.seed_hmin = self.read_parameter(parameters, 'h_min', self.seed_hmin)
-        self.seed_hmin = self.read_parameter(parameters, 'seed_hmin', self.seed_hmin)
-
-        self.seed_high_threshold = self.read_parameter(parameters, 'seed_high_threshold', self.seed_high_threshold)
+        self.seed_high_threshold = self.read_parameter(
+            parameters, "seed_high_threshold", self.seed_high_threshold
+        )
 
     def update_from_parameter_file(self, parameter_file):
         if parameter_file is None:
@@ -133,8 +140,8 @@ class WatershedParameters(common.PrefixedParameter):
 #
 #
 
-class SeedEditionParameters(common.PrefixedParameter):
 
+class SeedEditionParameters(common.PrefixedParameter):
     ############################################################
     #
     # initialisation
@@ -142,7 +149,6 @@ class SeedEditionParameters(common.PrefixedParameter):
     ############################################################
 
     def __init__(self, prefix=None):
-
         common.PrefixedParameter.__init__(self, prefix=prefix)
 
         if "doc" not in self.__dict__:
@@ -150,9 +156,11 @@ class SeedEditionParameters(common.PrefixedParameter):
 
         #
         doc = "\t Directory containing the seed edition files\n"
-        self.doc['seed_edition_dir'] = doc
+        self.doc["seed_edition_dir"] = doc
         self.seed_edition_dir = None
-        doc = "\t If run with the '-k' option, temporary files, including the computed\n"
+        doc = (
+            "\t If run with the '-k' option, temporary files, including the computed\n"
+        )
         doc += "\t seeds are kept into a temporary directory, and can be corrected in\n"
         doc += "\t several rounds\n"
         doc += "\t seed_edition_file is a list of list of file names (files being located\n"
@@ -164,9 +172,11 @@ class SeedEditionParameters(common.PrefixedParameter):
         doc += "\t Each line of a 'seeds_to_be_fused_00x.txt' file contains the labels to\n"
         doc += "\t be fused, e.g. '10 4 2 24'. A same label can be found in several lines,\n"
         doc += "\t meaning that all the labels of these lines will be fused. Each line of\n"
-        doc += "\t 'seeds_to_be_created_00x.txt' contains the integer coordinates of a \n"
+        doc += (
+            "\t 'seeds_to_be_created_00x.txt' contains the integer coordinates of a \n"
+        )
         doc += "\t seed to be added.\n"
-        self.doc['seed_edition_file'] = doc
+        self.doc["seed_edition_file"] = doc
         self.seed_edition_file = None
 
     ############################################################
@@ -176,28 +186,42 @@ class SeedEditionParameters(common.PrefixedParameter):
     ############################################################
 
     def print_parameters(self):
-        print('')
-        print('#')
-        print('# SeedEditionParameters ')
-        print('#')
-        print('')
-        self.varprint('seed_edition_dir', self.seed_edition_dir, self.doc['seed_edition_dir'])
-        self.varprint('seed_edition_file', self.seed_edition_file, self.doc['seed_edition_file'])
+        print("")
+        print("#")
+        print("# SeedEditionParameters ")
+        print("#")
+        print("")
+        self.varprint(
+            "seed_edition_dir", self.seed_edition_dir, self.doc["seed_edition_dir"]
+        )
+        self.varprint(
+            "seed_edition_file", self.seed_edition_file, self.doc["seed_edition_file"]
+        )
         print("")
 
     def write_parameters_in_file(self, logfile):
-        logfile.write('\n')
-        logfile.write('#' + '\n')
-        logfile.write('# SeedEditionParameters ' + '\n')
-        logfile.write('#' + '\n')
-        logfile.write('\n')
-        self.varwrite(logfile, 'seed_edition_dir', self.seed_edition_dir, self.doc['seed_edition_dir'])
-        self.varwrite(logfile, 'seed_edition_file', self.seed_edition_file, self.doc['seed_edition_file'])
+        logfile.write("\n")
+        logfile.write("#" + "\n")
+        logfile.write("# SeedEditionParameters " + "\n")
+        logfile.write("#" + "\n")
+        logfile.write("\n")
+        self.varwrite(
+            logfile,
+            "seed_edition_dir",
+            self.seed_edition_dir,
+            self.doc["seed_edition_dir"],
+        )
+        self.varwrite(
+            logfile,
+            "seed_edition_file",
+            self.seed_edition_file,
+            self.doc["seed_edition_file"],
+        )
         logfile.write("\n")
         return
 
     def write_parameters(self, log_file_name):
-        with open(log_file_name, 'a') as logfile:
+        with open(log_file_name, "a") as logfile:
             self.write_parameters_in_file(logfile)
         return
 
@@ -211,14 +235,14 @@ class SeedEditionParameters(common.PrefixedParameter):
         #
         # seed edition parameters
         #
-        if hasattr(parameters, 'seed_edition_dir'):
+        if hasattr(parameters, "seed_edition_dir"):
             if parameters.seed_edition_dir is not None:
                 self.seed_edition_dir = parameters.seed_edition_dir
 
-        if hasattr(parameters, 'seed_edition_file'):
+        if hasattr(parameters, "seed_edition_file"):
             if parameters.seed_edition_file is not None:
                 self.seed_edition_file = parameters.seed_edition_file
-        if hasattr(parameters, 'seed_edition_files'):
+        if hasattr(parameters, "seed_edition_files"):
             if parameters.seed_edition_files is not None:
                 self.seed_edition_file = parameters.seed_edition_files
 
@@ -247,11 +271,19 @@ class SeedEditionParameters(common.PrefixedParameter):
         if type(self.seed_edition_file) is str:
             return 1
         if type(self.seed_edition_file) is list:
-            if len(self.seed_edition_file) == 2 and type(self.seed_edition_file[0]) is str \
-                    and type(self.seed_edition_file[1]) is str:
+            if (
+                len(self.seed_edition_file) == 2
+                and type(self.seed_edition_file[0]) is str
+                and type(self.seed_edition_file[1]) is str
+            ):
                 return 1
             for e in self.seed_edition_file:
-                if type(e) is not list or len(e) != 2 or type(e[0]) is not str or type(e[1]) is not str:
+                if (
+                    type(e) is not list
+                    or len(e) != 2
+                    or type(e[0]) is not str
+                    or type(e[1]) is not str
+                ):
                     return 0
             return len(self.seed_edition_file)
         return 0
@@ -265,18 +297,23 @@ class SeedEditionParameters(common.PrefixedParameter):
             else:
                 return os.path.join(self.seed_edition_dir, self.seed_edition_file), None
         if type(self.seed_edition_file) is list:
-            if len(self.seed_edition_file) == 2 and type(self.seed_edition_file[0]) is str \
-                    and type(self.seed_edition_file[1]) is str:
+            if (
+                len(self.seed_edition_file) == 2
+                and type(self.seed_edition_file[0]) is str
+                and type(self.seed_edition_file[1]) is str
+            ):
                 if self.seed_edition_dir is None:
                     return self.seed_edition_file[0], self.seed_edition_file[1]
                 else:
-                    return os.path.join(self.seed_edition_dir, self.seed_edition_file[0]), \
-                           os.path.join(self.seed_edition_dir, self.seed_edition_file[1])
+                    return os.path.join(
+                        self.seed_edition_dir, self.seed_edition_file[0]
+                    ), os.path.join(self.seed_edition_dir, self.seed_edition_file[1])
             if self.seed_edition_dir is None:
                 return self.seed_edition_file[i][0], self.seed_edition_file[i][1]
             else:
-                return os.path.join(self.seed_edition_dir, self.seed_edition_file[i][0]), \
-                       os.path.join(self.seed_edition_dir, self.seed_edition_file[i][1])
+                return os.path.join(
+                    self.seed_edition_dir, self.seed_edition_file[i][0]
+                ), os.path.join(self.seed_edition_dir, self.seed_edition_file[i][1])
 
 
 #
@@ -284,11 +321,10 @@ class SeedEditionParameters(common.PrefixedParameter):
 #
 #
 #
+
 
 class MarsParameters(WatershedParameters, SeedEditionParameters):
-
     def __init__(self, prefix="mars_"):
-
         if "doc" not in self.__dict__:
             self.doc = {}
 
@@ -302,29 +338,31 @@ class MarsParameters(WatershedParameters, SeedEditionParameters):
         doc += "1. to extract the seeds, through a h-minima computation\n"
         doc += "2. to serve as the elevation image for the watershed\n"
         doc += "\n"
-        self.doc['mars_overview'] = doc
+        self.doc["mars_overview"] = doc
 
         doc = "\t first time point of the series to be processed with\n"
         doc += "\t mars segmentation (in case of a range of image is to\n"
         doc += "\t be processed).\n"
         doc += "\t Default is that only the time point defined par the 'begin'.\n"
         doc += "\t variable is processed.\n"
-        self.doc['first_time_point'] = doc
+        self.doc["first_time_point"] = doc
         self.first_time_point = -1
         doc = "\t last time point of the series to be processed with\n"
         doc += "\t mars segmentation (in case of a range of image is to\n"
         doc += "\t be processed).\n"
-        self.doc['last_time_point'] = doc
+        self.doc["last_time_point"] = doc
         self.last_time_point = -1
 
         WatershedParameters.__init__(self, prefix=prefix)
         SeedEditionParameters.__init__(self, prefix=prefix)
         #
         # reconstruction parameters
-        self.seed_reconstruction = reconstruction.ReconstructionParameters(prefix=[self._prefix, "seed_"],
-                                                                           suffix="_seed")
-        self.membrane_reconstruction = reconstruction.ReconstructionParameters(prefix=[self._prefix, "membrane_"],
-                                                                               suffix="_membrane")
+        self.seed_reconstruction = reconstruction.ReconstructionParameters(
+            prefix=[self._prefix, "seed_"], suffix="_seed"
+        )
+        self.membrane_reconstruction = reconstruction.ReconstructionParameters(
+            prefix=[self._prefix, "membrane_"], suffix="_membrane"
+        )
         self.seed_reconstruction.intensity_sigma = 0.6
         self.membrane_reconstruction.intensity_sigma = 0.15
         return
@@ -337,18 +375,22 @@ class MarsParameters(WatershedParameters, SeedEditionParameters):
 
     def print_parameters(self):
         print("")
-        print('#')
-        print('# MarsParameters')
-        print('#')
+        print("#")
+        print("# MarsParameters")
+        print("#")
         print("")
 
         common.PrefixedParameter.print_parameters(self)
 
-        for line in self.doc['mars_overview'].splitlines():
-            print('# ' + line)
+        for line in self.doc["mars_overview"].splitlines():
+            print("# " + line)
 
-        self.varprint('first_time_point', self.first_time_point, self.doc['first_time_point'])
-        self.varprint('last_time_point', self.last_time_point, self.doc['last_time_point'])
+        self.varprint(
+            "first_time_point", self.first_time_point, self.doc["first_time_point"]
+        )
+        self.varprint(
+            "last_time_point", self.last_time_point, self.doc["last_time_point"]
+        )
         WatershedParameters.print_parameters(self)
         SeedEditionParameters.print_parameters(self)
         self.seed_reconstruction.print_parameters()
@@ -364,12 +406,22 @@ class MarsParameters(WatershedParameters, SeedEditionParameters):
 
         common.PrefixedParameter.write_parameters_in_file(self, logfile)
 
-        for line in self.doc['mars_overview'].splitlines():
-            logfile.write('# ' + line + '\n')
+        for line in self.doc["mars_overview"].splitlines():
+            logfile.write("# " + line + "\n")
 
         common.PrefixedParameter.write_parameters_in_file(self, logfile)
-        self.varwrite(logfile, 'first_time_point', self.first_time_point, self.doc['first_time_point'])
-        self.varwrite(logfile, 'last_time_point', self.last_time_point, self.doc['last_time_point'])
+        self.varwrite(
+            logfile,
+            "first_time_point",
+            self.first_time_point,
+            self.doc["first_time_point"],
+        )
+        self.varwrite(
+            logfile,
+            "last_time_point",
+            self.last_time_point,
+            self.doc["last_time_point"],
+        )
         WatershedParameters.write_parameters_in_file(self, logfile)
         SeedEditionParameters.write_parameters_in_file(self, logfile)
         self.seed_reconstruction.write_parameters_in_file(logfile)
@@ -377,7 +429,7 @@ class MarsParameters(WatershedParameters, SeedEditionParameters):
         return
 
     def write_parameters(self, log_file_name):
-        with open(log_file_name, 'a') as logfile:
+        with open(log_file_name, "a") as logfile:
             self.write_parameters_in_file(logfile)
         return
 
@@ -392,26 +444,34 @@ class MarsParameters(WatershedParameters, SeedEditionParameters):
         #
         #
 
-        self.first_time_point = self.read_parameter(parameters, 'first_time_point', self.first_time_point)
-        self.first_time_point = self.read_parameter(parameters, 'mars_begin', self.first_time_point)
-        self.last_time_point = self.read_parameter(parameters, 'last_time_point', self.last_time_point)
-        self.last_time_point = self.read_parameter(parameters, 'mars_end', self.last_time_point)
+        self.first_time_point = self.read_parameter(
+            parameters, "first_time_point", self.first_time_point
+        )
+        self.first_time_point = self.read_parameter(
+            parameters, "mars_begin", self.first_time_point
+        )
+        self.last_time_point = self.read_parameter(
+            parameters, "last_time_point", self.last_time_point
+        )
+        self.last_time_point = self.read_parameter(
+            parameters, "mars_end", self.last_time_point
+        )
         #
         # reconstruction methods
         # backward compatibility
         #
 
-        if hasattr(parameters, 'mars_method'):
+        if hasattr(parameters, "mars_method"):
             if parameters.mars_method == 1:
-                self.seed_reconstruction.intensity_transformation = 'Identity'
+                self.seed_reconstruction.intensity_transformation = "Identity"
                 self.seed_reconstruction.intensity_enhancement = None
-                self.membrane_reconstruction.intensity_transformation = 'Identity'
+                self.membrane_reconstruction.intensity_transformation = "Identity"
                 self.membrane_reconstruction.intensity_enhancement = None
             elif parameters.mars_method == 2:
                 self.seed_reconstruction.intensity_transformation = None
-                self.seed_reconstruction.intensity_enhancement = 'GACE'
+                self.seed_reconstruction.intensity_enhancement = "GACE"
                 self.membrane_reconstruction.intensity_transformation = None
-                self.membrane_reconstruction.intensity_enhancement = 'GACE'
+                self.membrane_reconstruction.intensity_enhancement = "GACE"
 
         #
         # watershed parameters
@@ -424,14 +484,18 @@ class MarsParameters(WatershedParameters, SeedEditionParameters):
         self.membrane_reconstruction.update_from_parameters(parameters)
 
         # backward compatibility
-        self.seed_reconstruction.intensity_sigma = self.read_parameter(parameters, 'sigma1',
-                                                                       self.seed_reconstruction.intensity_sigma)
-        self.seed_reconstruction.intensity_sigma = self.read_parameter(parameters, 'seed_sigma',
-                                                                       self.seed_reconstruction.intensity_sigma)
-        self.membrane_reconstruction.intensity_sigma = self.read_parameter(parameters, 'sigma2',
-                                                                           self.membrane_reconstruction.intensity_sigma)
-        self.membrane_reconstruction.intensity_sigma = self.read_parameter(parameters, 'membrane_sigma',
-                                                                           self.membrane_reconstruction.intensity_sigma)
+        self.seed_reconstruction.intensity_sigma = self.read_parameter(
+            parameters, "sigma1", self.seed_reconstruction.intensity_sigma
+        )
+        self.seed_reconstruction.intensity_sigma = self.read_parameter(
+            parameters, "seed_sigma", self.seed_reconstruction.intensity_sigma
+        )
+        self.membrane_reconstruction.intensity_sigma = self.read_parameter(
+            parameters, "sigma2", self.membrane_reconstruction.intensity_sigma
+        )
+        self.membrane_reconstruction.intensity_sigma = self.read_parameter(
+            parameters, "membrane_sigma", self.membrane_reconstruction.intensity_sigma
+        )
 
     def update_from_parameter_file(self, parameter_file):
         if parameter_file is None:
@@ -450,8 +514,16 @@ class MarsParameters(WatershedParameters, SeedEditionParameters):
 #
 ########################################################################################
 
-def build_seeds(input_image, difference_image, output_seed_image, experiment, parameters,
-                operation_type='min', check_background_label=False):
+
+def build_seeds(
+    input_image,
+    difference_image,
+    output_seed_image,
+    experiment,
+    parameters,
+    operation_type="min",
+    check_background_label=False,
+):
     """
     Extract regional minima or maxima from an image and label them.
 
@@ -476,24 +548,33 @@ def build_seeds(input_image, difference_image, output_seed_image, experiment, pa
     # variable checking
     #
     if not isinstance(experiment, common.Experiment):
-        monitoring.to_log_and_console(str(proc) + ": unexpected type for 'experiment' variable: "
-                                      + str(type(experiment)))
+        monitoring.to_log_and_console(
+            str(proc)
+            + ": unexpected type for 'experiment' variable: "
+            + str(type(experiment))
+        )
         sys.exit(1)
 
     if isinstance(parameters, WatershedParameters) is False:
         monitoring.to_log_and_console(proc + ": bad type for 'parameters' parameter", 1)
         sys.exit(1)
 
-    if operation_type.lower() == 'min' and input_image is None:
-        monitoring.to_log_and_console(proc + ": null input image for h-min computation", 1)
+    if operation_type.lower() == "min" and input_image is None:
+        monitoring.to_log_and_console(
+            proc + ": null input image for h-min computation", 1
+        )
         sys.exit(1)
 
-    if operation_type.lower() == 'max' and difference_image is None:
-        monitoring.to_log_and_console(proc + ": null difference image for h-max computation", 1)
+    if operation_type.lower() == "max" and difference_image is None:
+        monitoring.to_log_and_console(
+            proc + ": null difference image for h-max computation", 1
+        )
         sys.exit(1)
 
-    if operation_type.lower() != 'min' and operation_type.lower() != 'max':
-        monitoring.to_log_and_console(proc + ": operation type '" + str(operation_type) + "' not handled", 1)
+    if operation_type.lower() != "min" and operation_type.lower() != "max":
+        monitoring.to_log_and_console(
+            proc + ": operation type '" + str(operation_type) + "' not handled", 1
+        )
         sys.exit(1)
 
     #
@@ -509,11 +590,21 @@ def build_seeds(input_image, difference_image, output_seed_image, experiment, pa
         return
 
     if input_image is not None:
-        monitoring.to_log_and_console("    .. seed extraction '" + str(input_image).split(os.path.sep)[-1]
-                                      + "' with h = " + str(parameters.seed_hmin), 2)
+        monitoring.to_log_and_console(
+            "    .. seed extraction '"
+            + str(input_image).split(os.path.sep)[-1]
+            + "' with h = "
+            + str(parameters.seed_hmin),
+            2,
+        )
     else:
-        monitoring.to_log_and_console("    .. seed extraction '" + str(difference_image).split(os.path.sep)[-1]
-                                      + "' with h = " + str(parameters.seed_hmin), 2)
+        monitoring.to_log_and_console(
+            "    .. seed extraction '"
+            + str(difference_image).split(os.path.sep)[-1]
+            + "' with h = "
+            + str(parameters.seed_hmin),
+            2,
+        )
 
     #
     # regional extrema computation
@@ -534,7 +625,13 @@ def build_seeds(input_image, difference_image, output_seed_image, experiment, pa
     seed_preimage = input_image
 
     if not os.path.isfile(seed_preimage):
-        monitoring.to_log_and_console(proc + ": '" + str(seed_preimage).split(os.path.sep)[-1] + "' does not exist", 2)
+        monitoring.to_log_and_console(
+            proc
+            + ": '"
+            + str(seed_preimage).split(os.path.sep)[-1]
+            + "' does not exist",
+            2,
+        )
         monitoring.to_log_and_console("\t Exiting.")
         sys.exit(1)
 
@@ -543,35 +640,61 @@ def build_seeds(input_image, difference_image, output_seed_image, experiment, pa
     #
     hmin = parameters.seed_hmin
     if difference_image is None:
-        local_difference_image = common.add_suffix(seed_preimage, "_seed_diff_h" + str('{:03d}'.format(hmin)),
-                                                   new_dirname=experiment.working_dir.get_tmp_directory(0),
-                                                   new_extension=experiment.default_image_suffix)
+        local_difference_image = common.add_suffix(
+            seed_preimage,
+            "_seed_diff_h" + str("{:03d}".format(hmin)),
+            new_dirname=experiment.working_dir.get_tmp_directory(0),
+            new_extension=experiment.default_image_suffix,
+        )
     else:
         local_difference_image = difference_image
     #
     #
     seeds_input_mem = imread(seed_preimage)
 
-    if operation_type.lower() == 'min':
-        monitoring.to_log_and_console("       extract regional minima '"
-                                      + str(seed_preimage).split(os.path.sep)[-1] + "' with h = " + str(hmin), 2)
-        if not os.path.isfile(local_difference_image) or monitoring.forceResultsToBeBuilt is True:
-            cpp_wrapping.regional_minima(seed_preimage, local_difference_image, h=hmin,
-                                         monitoring=monitoring)
+    if operation_type.lower() == "min":
+        monitoring.to_log_and_console(
+            "       extract regional minima '"
+            + str(seed_preimage).split(os.path.sep)[-1]
+            + "' with h = "
+            + str(hmin),
+            2,
+        )
+        if (
+            not os.path.isfile(local_difference_image)
+            or monitoring.forceResultsToBeBuilt is True
+        ):
+            cpp_wrapping.regional_minima(
+                seed_preimage, local_difference_image, h=hmin, monitoring=monitoring
+            )
     else:
-        monitoring.to_log_and_console("       extract regional maxima '"
-                                      + str(seed_preimage).split(os.path.sep)[-1] + "' with h = " + str(hmin), 2)
-        if not os.path.isfile(local_difference_image) or monitoring.forceResultsToBeBuilt is True:
-            cpp_wrapping.regional_maxima(seed_preimage, local_difference_image, h=hmin,
-                                         monitoring=monitoring)
+        monitoring.to_log_and_console(
+            "       extract regional maxima '"
+            + str(seed_preimage).split(os.path.sep)[-1]
+            + "' with h = "
+            + str(hmin),
+            2,
+        )
+        if (
+            not os.path.isfile(local_difference_image)
+            or monitoring.forceResultsToBeBuilt is True
+        ):
+            cpp_wrapping.regional_maxima(
+                seed_preimage, local_difference_image, h=hmin, monitoring=monitoring
+            )
 
     #
     # check whether the computation succeeds
     #
 
     if not os.path.isfile(local_difference_image):
-        monitoring.to_log_and_console(proc + ": '" + str(local_difference_image).split(os.path.sep)[-1]
-                                      + "' does not exist", 2)
+        monitoring.to_log_and_console(
+            proc
+            + ": '"
+            + str(local_difference_image).split(os.path.sep)[-1]
+            + "' does not exist",
+            2,
+        )
         monitoring.to_log_and_console("\t Exiting.")
         sys.exit(1)
 
@@ -582,16 +705,30 @@ def build_seeds(input_image, difference_image, output_seed_image, experiment, pa
     #
 
     high_threshold = parameters.seed_hmin
-    if parameters.seed_high_threshold is not None and 0 < parameters.seed_high_threshold < parameters.seed_hmin:
+    if (
+        parameters.seed_high_threshold is not None
+        and 0 < parameters.seed_high_threshold < parameters.seed_hmin
+    ):
         high_threshold = parameters.seed_high_threshold
 
-    monitoring.to_log_and_console("       label regional extrema '"
-                                  + str(local_difference_image).split(os.path.sep)[-1] + "' with threshold = "
-                                  + str(high_threshold), 2)
+    monitoring.to_log_and_console(
+        "       label regional extrema '"
+        + str(local_difference_image).split(os.path.sep)[-1]
+        + "' with threshold = "
+        + str(high_threshold),
+        2,
+    )
 
-    if not os.path.isfile(output_seed_image) or monitoring.forceResultsToBeBuilt is True:
-        cpp_wrapping.connected_components(local_difference_image, output_seed_image, high_threshold=high_threshold,
-                                          monitoring=monitoring)
+    if (
+        not os.path.isfile(output_seed_image)
+        or monitoring.forceResultsToBeBuilt is True
+    ):
+        cpp_wrapping.connected_components(
+            local_difference_image,
+            output_seed_image,
+            high_threshold=high_threshold,
+            monitoring=monitoring,
+        )
 
     #
     # check whether the largest connected component has been labeled '1' (background)
@@ -602,19 +739,25 @@ def build_seeds(input_image, difference_image, output_seed_image, experiment, pa
     #
 
     seeds = imread(output_seed_image)
-    del seeds  
+    del seeds
 
     if check_background_label:
-        seeds = imread(output_seed_image)        
+        seeds = imread(output_seed_image)
         labels = list(np.unique(seeds))
         labels.pop(0)
         volumes = nd.sum(np.ones_like(seeds), seeds, index=np.int16(labels))
         indexmax = [i for i, j in enumerate(volumes) if j == max(volumes)]
         if len(indexmax) > 1:
-            monitoring.to_log_and_console("       several regional extrema have a maximal count", 2)
+            monitoring.to_log_and_console(
+                "       several regional extrema have a maximal count", 2
+            )
         if int(labels[indexmax[0]]) != 1:
-            monitoring.to_log_and_console("       relabel seed #" + str(labels[indexmax[0]]) + " into 1 (background)",
-                                          2)
+            monitoring.to_log_and_console(
+                "       relabel seed #"
+                + str(labels[indexmax[0]])
+                + " into 1 (background)",
+                2,
+            )
             newlabel = max(labels) + 1
             seeds[seeds == 1] = newlabel
             seeds[seeds == labels[indexmax[0]]] = 1
@@ -644,8 +787,11 @@ def watershed(seed_image, membrane_image, result_image, parameters):
     #
 
     if not isinstance(parameters, WatershedParameters):
-        monitoring.to_log_and_console(str(proc) + ": unexpected type for 'parameters' variable: "
-                                      + str(type(parameters)))
+        monitoring.to_log_and_console(
+            str(proc)
+            + ": unexpected type for 'parameters' variable: "
+            + str(type(parameters))
+        )
         sys.exit(1)
 
     # smoothing is done in the reconstruction stage
@@ -656,19 +802,31 @@ def watershed(seed_image, membrane_image, result_image, parameters):
     #
 
     if not os.path.isfile(seed_image):
-        monitoring.to_log_and_console("       '" + str(seed_image).split(os.path.sep)[-1] + "' does not exist", 2)
+        monitoring.to_log_and_console(
+            "       '" + str(seed_image).split(os.path.sep)[-1] + "' does not exist", 2
+        )
         monitoring.to_log_and_console("\t Exiting.")
         sys.exit(1)
     if not os.path.isfile(height_image):
-        monitoring.to_log_and_console("       '" + str(height_image).split(os.path.sep)[-1] + "' does not exist", 2)
+        monitoring.to_log_and_console(
+            "       '" + str(height_image).split(os.path.sep)[-1] + "' does not exist",
+            2,
+        )
         monitoring.to_log_and_console("\t Exiting.")
         sys.exit(1)
 
-    monitoring.to_log_and_console("    .. watershed '" + str(height_image).split(os.path.sep)[-1] + "'", 2)
+    monitoring.to_log_and_console(
+        "    .. watershed '" + str(height_image).split(os.path.sep)[-1] + "'", 2
+    )
 
-    if not os.path.isfile(result_image) or monitoring.forceResultsToBeBuilt is True \
-            or (isinstance(parameters, MarsParameters) and parameters.n_seed_editions()) > 0:
-        cpp_wrapping.watershed(seed_image, height_image, result_image, monitoring=monitoring)
+    if (
+        not os.path.isfile(result_image)
+        or monitoring.forceResultsToBeBuilt is True
+        or (isinstance(parameters, MarsParameters) and parameters.n_seed_editions()) > 0
+    ):
+        cpp_wrapping.watershed(
+            seed_image, height_image, result_image, monitoring=monitoring
+        )
 
     return
 
@@ -695,13 +853,23 @@ def _seed_correction(seed_image, corrected_seed_image, parameters):
     ofile = corrected_seed_image
     for i in range(parameters.n_seed_editions()):
         fusion, seeds = parameters.seed_edition(i)
-        monitoring.to_log_and_console("       correction ['" + str(fusion).split(os.path.sep)[-1] + "', '"
-                                      + str(seeds).split(os.path.sep)[-1] + "']", 2)
+        monitoring.to_log_and_console(
+            "       correction ['"
+            + str(fusion).split(os.path.sep)[-1]
+            + "', '"
+            + str(seeds).split(os.path.sep)[-1]
+            + "']",
+            2,
+        )
         if not os.path.isfile(fusion):
-            monitoring.to_log_and_console("       ... '" + str(fusion) + "' is not a valid file, skip it.")
+            monitoring.to_log_and_console(
+                "       ... '" + str(fusion) + "' is not a valid file, skip it."
+            )
             fusion = None
         if not os.path.isfile(seeds):
-            monitoring.to_log_and_console("       ... '" + str(seeds) + "' is not a valid file, skip it.")
+            monitoring.to_log_and_console(
+                "       ... '" + str(seeds) + "' is not a valid file, skip it."
+            )
             seeds = None
         cpp_wrapping.mc_seed_edit(ifile, ofile, fusion, seeds, monitoring=monitoring)
         ifile = ofile
@@ -709,7 +877,9 @@ def _seed_correction(seed_image, corrected_seed_image, parameters):
     return corrected_seed_image
 
 
-def _mars_watershed(template_image, input_seed_image, membrane_image, mars_image, experiment, parameters):
+def _mars_watershed(
+    template_image, input_seed_image, membrane_image, mars_image, experiment, parameters
+):
     """
 
     :param template_image: fused image name, to name the other images after it
@@ -728,8 +898,11 @@ def _mars_watershed(template_image, input_seed_image, membrane_image, mars_image
     #
 
     if not isinstance(experiment, common.Experiment):
-        monitoring.to_log_and_console(str(proc) + ": unexpected type for 'experiment' variable: "
-                                      + str(type(experiment)))
+        monitoring.to_log_and_console(
+            str(proc)
+            + ": unexpected type for 'experiment' variable: "
+            + str(type(experiment))
+        )
         sys.exit(1)
 
     #
@@ -739,21 +912,33 @@ def _mars_watershed(template_image, input_seed_image, membrane_image, mars_image
     # - hysteresis thresholding
     #
 
-    seed_image = common.add_suffix(template_image, "_seed_h" + str('{:03d}'.format(parameters.seed_hmin)),
-                                   new_dirname=experiment.working_dir.get_tmp_directory(0),
-                                   new_extension=experiment.default_image_suffix)
+    seed_image = common.add_suffix(
+        template_image,
+        "_seed_h" + str("{:03d}".format(parameters.seed_hmin)),
+        new_dirname=experiment.working_dir.get_tmp_directory(0),
+        new_extension=experiment.default_image_suffix,
+    )
 
     if not os.path.isfile(seed_image) or monitoring.forceResultsToBeBuilt is True:
-        build_seeds(input_seed_image, None, seed_image, experiment, parameters, check_background_label=True)
+        build_seeds(
+            input_seed_image,
+            None,
+            seed_image,
+            experiment,
+            parameters,
+            check_background_label=True,
+        )
 
     #
     # seed correction (if any)
     #
 
-    corrected_seed_image = common.add_suffix(template_image, "_seed_h"
-                                             + str('{:03d}'.format(parameters.seed_hmin)) + "_corrected",
-                                             new_dirname=experiment.working_dir.get_tmp_directory(0),
-                                             new_extension=experiment.default_image_suffix)
+    corrected_seed_image = common.add_suffix(
+        template_image,
+        "_seed_h" + str("{:03d}".format(parameters.seed_hmin)) + "_corrected",
+        new_dirname=experiment.working_dir.get_tmp_directory(0),
+        new_extension=experiment.default_image_suffix,
+    )
     result_seed_image = _seed_correction(seed_image, corrected_seed_image, parameters)
 
     #
@@ -778,7 +963,9 @@ def _volume_diagnosis(mars_image, ncells=10):
     # variable checking
     #
     if not os.path.isfile(mars_image):
-        monitoring.to_log_and_console("    "+proc+": error, '"+str(mars_image)+"' was not found", 2)
+        monitoring.to_log_and_console(
+            "    " + proc + ": error, '" + str(mars_image) + "' was not found", 2
+        )
         return
 
     #
@@ -799,16 +986,26 @@ def _volume_diagnosis(mars_image, ncells=10):
 
     list_for_sort.sort()
 
-    monitoring.to_log_and_console("    .. diagnosis on cell volumes, smallest cells to be looked at", 1)
-    monitoring.to_log_and_console("       mean cell volume = " + str(m) + ", standard deviation = " + str(s), 1)
+    monitoring.to_log_and_console(
+        "    .. diagnosis on cell volumes, smallest cells to be looked at", 1
+    )
+    monitoring.to_log_and_console(
+        "       mean cell volume = " + str(m) + ", standard deviation = " + str(s), 1
+    )
     for i in range(len(labels)):
-        if i <= ncells or list_for_sort[i][0] <= m - 2*s:
-            monitoring.to_log_and_console('       cell #'+'{:3d}'.format(list_for_sort[i][1])+' volume ='
-                                          + '{:10.1f}'.format(list_for_sort[i][0]), 1)
+        if i <= ncells or list_for_sort[i][0] <= m - 2 * s:
+            monitoring.to_log_and_console(
+                "       cell #"
+                + "{:3d}".format(list_for_sort[i][1])
+                + " volume ="
+                + "{:10.1f}".format(list_for_sort[i][0]),
+                1,
+            )
 
     del image
     return
 
+
 ########################################################################################
 #
 #
@@ -821,6 +1018,7 @@ def _volume_diagnosis(mars_image, ncells=10):
 #
 #
 #
+
 
 def mars_process(current_time, experiment, parameters):
     """
@@ -838,13 +1036,19 @@ def mars_process(current_time, experiment, parameters):
     #
 
     if not isinstance(experiment, common.Experiment):
-        monitoring.to_log_and_console(str(proc) + ": unexpected type for 'experiment' variable: "
-                                      + str(type(experiment)))
+        monitoring.to_log_and_console(
+            str(proc)
+            + ": unexpected type for 'experiment' variable: "
+            + str(type(experiment))
+        )
         sys.exit(1)
 
     if not isinstance(parameters, MarsParameters):
-        monitoring.to_log_and_console(str(proc) + ": unexpected type for 'parameters' variable: "
-                                      + str(type(parameters)))
+        monitoring.to_log_and_console(
+            str(proc)
+            + ": unexpected type for 'parameters' variable: "
+            + str(type(parameters))
+        )
         sys.exit(1)
 
     #
@@ -852,22 +1056,35 @@ def mars_process(current_time, experiment, parameters):
     #
     mars_dir = experiment.mars_dir.get_directory(0)
     mars_name = experiment.mars_dir.get_image_name(current_time)
-    mars_image = common.find_file(mars_dir, mars_name, file_type='image', callfrom=proc, local_monitoring=None,
-                                  verbose=False)
+    mars_image = common.find_file(
+        mars_dir,
+        mars_name,
+        file_type="image",
+        callfrom=proc,
+        local_monitoring=None,
+        verbose=False,
+    )
 
     if mars_image is not None:
         mars_image = os.path.join(mars_dir, mars_image)
-        if monitoring.forceResultsToBeBuilt is False and parameters.n_seed_editions() == 0:
-            monitoring.to_log_and_console('    mars image already existing', 2)
+        if (
+            monitoring.forceResultsToBeBuilt is False
+            and parameters.n_seed_editions() == 0
+        ):
+            monitoring.to_log_and_console("    mars image already existing", 2)
             #
             # compute diagnosis anyway
             #
             _volume_diagnosis(mars_image)
             return
         else:
-            monitoring.to_log_and_console('    mars image already existing, but forced', 2)
+            monitoring.to_log_and_console(
+                "    mars image already existing, but forced", 2
+            )
     else:
-        mars_image = os.path.join(mars_dir, mars_name + '.' + experiment.result_image_suffix)
+        mars_image = os.path.join(
+            mars_dir, mars_name + "." + experiment.result_image_suffix
+        )
 
     #
     #
@@ -876,10 +1093,18 @@ def mars_process(current_time, experiment, parameters):
     input_dir = experiment.fusion_dir.get_directory(0)
     input_name = experiment.fusion_dir.get_image_name(current_time)
 
-    input_image = common.find_file(input_dir, input_name, file_type='image', callfrom=proc, local_monitoring=monitoring)
+    input_image = common.find_file(
+        input_dir,
+        input_name,
+        file_type="image",
+        callfrom=proc,
+        local_monitoring=monitoring,
+    )
 
     if input_image is None:
-        monitoring.to_log_and_console("    .. image '" + input_name + "' not found in '" + str(input_dir) + "'", 2)
+        monitoring.to_log_and_console(
+            "    .. image '" + input_name + "' not found in '" + str(input_dir) + "'", 2
+        )
         monitoring.to_log_and_console("       skip time " + str(current_time), 2)
         return
 
@@ -897,25 +1122,37 @@ def mars_process(current_time, experiment, parameters):
 
     reconstruction.monitoring.copy(monitoring)
     monitoring.to_log_and_console("    .. reconstruct membrane image", 2)
-    membrane_image = reconstruction.build_reconstructed_image(current_time, experiment,
-                                                              parameters.membrane_reconstruction)
+    membrane_image = reconstruction.build_reconstructed_image(
+        current_time, experiment, parameters.membrane_reconstruction
+    )
 
     if membrane_image is None or not os.path.isfile(membrane_image):
-        monitoring.to_log_and_console("       '" + str(membrane_image).split(os.path.sep)[-1]
-                                      + "' does not exist", 2)
+        monitoring.to_log_and_console(
+            "       '"
+            + str(membrane_image).split(os.path.sep)[-1]
+            + "' does not exist",
+            2,
+        )
         monitoring.to_log_and_console("\t Exiting.")
         sys.exit(1)
 
-    if parameters.seed_reconstruction.is_equal(parameters.membrane_reconstruction, debug=(monitoring.debug > 0)):
-        monitoring.to_log_and_console("    .. seed image is identical to membrane image", 2)
+    if parameters.seed_reconstruction.is_equal(
+        parameters.membrane_reconstruction, debug=(monitoring.debug > 0)
+    ):
+        monitoring.to_log_and_console(
+            "    .. seed image is identical to membrane image", 2
+        )
         seed_image = membrane_image
     else:
         monitoring.to_log_and_console("    .. reconstruct seed image", 2)
-        seed_image = reconstruction.build_reconstructed_image(current_time, experiment, parameters.seed_reconstruction)
+        seed_image = reconstruction.build_reconstructed_image(
+            current_time, experiment, parameters.seed_reconstruction
+        )
 
     if seed_image is None or not os.path.isfile(seed_image):
-        monitoring.to_log_and_console("       '" + str(seed_image).split(os.path.sep)[-1]
-                                      + "' does not exist", 2)
+        monitoring.to_log_and_console(
+            "       '" + str(seed_image).split(os.path.sep)[-1] + "' does not exist", 2
+        )
         monitoring.to_log_and_console("\t Exiting.")
         sys.exit(1)
 
@@ -923,7 +1160,9 @@ def mars_process(current_time, experiment, parameters):
     # compute the seeded watershed
     #
 
-    _mars_watershed(input_image, seed_image, membrane_image, mars_image, experiment, parameters)
+    _mars_watershed(
+        input_image, seed_image, membrane_image, mars_image, experiment, parameters
+    )
 
     #
     #
@@ -955,13 +1194,19 @@ def mars_control(experiment, parameters):
     #
 
     if not isinstance(experiment, common.Experiment):
-        monitoring.to_log_and_console(str(proc) + ": unexpected type for 'experiment' variable: "
-                                      + str(type(experiment)))
+        monitoring.to_log_and_console(
+            str(proc)
+            + ": unexpected type for 'experiment' variable: "
+            + str(type(experiment))
+        )
         sys.exit(1)
 
     if not isinstance(parameters, MarsParameters):
-        monitoring.to_log_and_console(str(proc) + ": unexpected type for 'parameters' variable: "
-                                      + str(type(parameters)))
+        monitoring.to_log_and_console(
+            str(proc)
+            + ": unexpected type for 'parameters' variable: "
+            + str(type(parameters))
+        )
         sys.exit(1)
 
     #
@@ -977,31 +1222,41 @@ def mars_control(experiment, parameters):
 
     experiment.mars_dir.make_directory()
 
-    monitoring.to_log_and_console('', 1)
+    monitoring.to_log_and_console("", 1)
 
     #
     #
     #
 
     if parameters.first_time_point < 0 or parameters.last_time_point < 0:
-        monitoring.to_log_and_console("... time interval does not seem to be defined in the parameter file")
+        monitoring.to_log_and_console(
+            "... time interval does not seem to be defined in the parameter file"
+        )
         monitoring.to_log_and_console("    set parameters 'begin' and 'end'")
         monitoring.to_log_and_console("\t Exiting")
         sys.exit(1)
 
     if parameters.first_time_point > parameters.last_time_point:
-        monitoring.to_log_and_console("... weird time interval: 'begin' = " + str(parameters.first_time_point)
-                                      + ", 'end' = " + str(parameters.last_time_point))
+        monitoring.to_log_and_console(
+            "... weird time interval: 'begin' = "
+            + str(parameters.first_time_point)
+            + ", 'end' = "
+            + str(parameters.last_time_point)
+        )
 
-    for time_value in range(parameters.first_time_point + experiment.delay_time_point,
-                            parameters.last_time_point + experiment.delay_time_point + 1, experiment.delta_time_point):
-
+    for time_value in range(
+        parameters.first_time_point + experiment.delay_time_point,
+        parameters.last_time_point + experiment.delay_time_point + 1,
+        experiment.delta_time_point,
+    ):
         acquisition_time = experiment.working_dir.timepoint_to_str(time_value)
 
         #
         # start processing
         #
-        monitoring.to_log_and_console('... mars processing of time ' + acquisition_time, 1)
+        monitoring.to_log_and_console(
+            "... mars processing of time " + acquisition_time, 1
+        )
         start_time = time.time()
 
         #
@@ -1012,8 +1267,10 @@ def mars_control(experiment, parameters):
         experiment.mars_dir.set_tmp_directory(time_value)
         experiment.mars_dir.make_tmp_directory()
 
-        if parameters.seed_reconstruction.keep_reconstruction is False \
-                and parameters.membrane_reconstruction.keep_reconstruction is False:
+        if (
+            parameters.seed_reconstruction.keep_reconstruction is False
+            and parameters.membrane_reconstruction.keep_reconstruction is False
+        ):
             experiment.mars_dir.set_rec_directory_to_tmp()
 
         #
@@ -1033,7 +1290,9 @@ def mars_control(experiment, parameters):
         # end processing for a time point
         #
         end_time = time.time()
-        monitoring.to_log_and_console('    computation time = ' + str(end_time - start_time) + ' s', 1)
-        monitoring.to_log_and_console('', 1)
+        monitoring.to_log_and_console(
+            "    computation time = " + str(end_time - start_time) + " s", 1
+        )
+        monitoring.to_log_and_console("", 1)
 
     return

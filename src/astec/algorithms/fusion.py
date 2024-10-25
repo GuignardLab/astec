@@ -1,4 +1,3 @@
-
 import os
 import sys
 import time
@@ -32,7 +31,6 @@ monitoring = common.Monitoring()
 
 
 class FusionParameters(common.PrefixedParameter):
-
     ############################################################
     #
     # initialisation
@@ -50,11 +48,17 @@ class FusionParameters(common.PrefixedParameter):
         doc += "##########################\n"
         doc += "the fusion of the 4 acquisitions follows a number of steps\n"
         doc += "1. Optionally, a slit line correction.\n"
-        doc += "   Some Y lines may appear brighter or darker in the acquisition, which\n"
-        doc += "   may cause artifacts in the reconstructed (ie fused) image, which, in\n"
+        doc += (
+            "   Some Y lines may appear brighter or darker in the acquisition, which\n"
+        )
+        doc += (
+            "   may cause artifacts in the reconstructed (ie fused) image, which, in\n"
+        )
         doc += "   turn, may impair further segmentation steps.\n"
         doc += "2. a change of resolution in the X and Y directions only (Z remains unchanged)\n"
-        doc += "   it allows to decrease the data volume if the new pixel size is larger\n"
+        doc += (
+            "   it allows to decrease the data volume if the new pixel size is larger\n"
+        )
         doc += "   than the acquisition one\n"
         doc += "3. Optionally, a crop of the resampled acquisitions\n"
         doc += "   it allows to decrease the volume of data\n"
@@ -69,7 +73,7 @@ class FusionParameters(common.PrefixedParameter):
         doc += "7. Crop of the fused image\n"
         doc += "   still based on the analysis of a MIP view (in the Z direction)\n"
         doc += "\n"
-        self.doc['fusion_overview'] = doc
+        self.doc["fusion_overview"] = doc
 
         #
         # acquisition parameters
@@ -80,11 +84,13 @@ class FusionParameters(common.PrefixedParameter):
         doc += "\t - 'left': -90 degrees\n"
         doc += "\t gives the rotation (wrt to the Y axis) of the left camera frame of\n"
         doc += "\t stack #0 to be aligned with the the left camera frame of stack #1.\n"
-        self.doc['acquisition_orientation'] = doc
-        self.acquisition_orientation = 'left'
+        self.doc["acquisition_orientation"] = doc
+        self.acquisition_orientation = "left"
 
         doc = "\t possible values are True or False\n"
-        doc += "\t if False, the right camera images are mirrored to make them similar\n"
+        doc += (
+            "\t if False, the right camera images are mirrored to make them similar\n"
+        )
         doc += "\t to left camera images\n"
         doc += "\n"
         doc += "\t To determine the configuration (raw_ori,raw_resolution) (ie ('left',False),\n"
@@ -92,30 +98,36 @@ class FusionParameters(common.PrefixedParameter):
         doc += "\t the fusion for only one time point (by setting 'begin' and 'end' at the same\n"
         doc += "\t value) with a large 'target_resolution'\n"
         doc += "\n"
-        self.doc['acquisition_mirrors'] = doc
+        self.doc["acquisition_mirrors"] = doc
         self.acquisition_mirrors = False
 
         doc = "\t voxel size of acquired images\n"
         doc += "\t example: acquisition_resolution = (.195, .195, 1.)\n"
-        self.doc['acquisition_resolution'] = doc
+        self.doc["acquisition_resolution"] = doc
         self.acquisition_resolution = None
 
         doc = "\t possible values are 'direct' or 'inverse'\n"
         doc += "\t defines where are the high contrasted XZ-sections of the *left* camera\n"
         doc += "\t image of stack0.\n"
-        doc += "\t - 'direct': small z are well contrasted (close to the camera), while\n"
-        doc += "\t     large z are fuzzy. It is useful for direction-dependent weighting\n"
+        doc += (
+            "\t - 'direct': small z are well contrasted (close to the camera), while\n"
+        )
+        doc += (
+            "\t     large z are fuzzy. It is useful for direction-dependent weighting\n"
+        )
         doc += "\t     schemes\n"
         doc += "\t - 'inverse': the other way around\n"
-        doc += "\t Changing 'direct' to 'inverse' (or the other way) implies to change\n"
+        doc += (
+            "\t Changing 'direct' to 'inverse' (or the other way) implies to change\n"
+        )
         doc += "\t 'acquisition_orientation' as well\n"
         doc += "\t using 'acquisition_leftcamera_z_stacking' will set both\n"
         doc += "\t 'acquisition_stack0_leftcamera_z_stacking' and \n"
         doc += "\t 'acquisition_stack0_leftcamera_z_stacking'\n"
-        self.doc['acquisition_stack0_leftcamera_z_stacking'] = doc
-        self.acquisition_stack0_leftcamera_z_stacking = 'direct'
-        self.doc['acquisition_stack1_leftcamera_z_stacking'] = doc
-        self.acquisition_stack1_leftcamera_z_stacking = 'direct'
+        self.doc["acquisition_stack0_leftcamera_z_stacking"] = doc
+        self.acquisition_stack0_leftcamera_z_stacking = "direct"
+        self.doc["acquisition_stack1_leftcamera_z_stacking"] = doc
+        self.acquisition_stack1_leftcamera_z_stacking = "direct"
 
         #
         # Correction of slit lines
@@ -124,15 +136,17 @@ class FusionParameters(common.PrefixedParameter):
         doc += "\t Slit lines are Y lines that appear brighter or darker in the acquisition,\n"
         doc += "\t which may cause artifacts in the reconstructed (ie fused) image, which, in\n"
         doc += "\t turn, may impair further segmentation steps.\n"
-        self.doc['acquisition_slit_line_correction'] = doc
+        self.doc["acquisition_slit_line_correction"] = doc
         self.acquisition_slit_line_correction = False
 
         #
         # fused image parameters
         #
-        doc = "\t Voxel size of the reconstructed image after fusion of the four views.\n"
+        doc = (
+            "\t Voxel size of the reconstructed image after fusion of the four views.\n"
+        )
         doc += "\t Example: target_resolution = 0.3"
-        self.doc['target_resolution'] = doc
+        self.doc["target_resolution"] = doc
         self.target_resolution = (0.3, 0.3, 0.3)
 
         #
@@ -153,14 +167,16 @@ class FusionParameters(common.PrefixedParameter):
         doc += "\t   Finally a weighted linear combination gives the result.\n"
         doc += "\t fusion_preregistration_* and fusion_registration_* parameters control the\n"
         doc += "\t co-registration of two acquisitions. It is either used in the 'direct-fusion'\n"
-        doc += "\t method (to co-register each acquisition onto the first one) or in the\n"
+        doc += (
+            "\t method (to co-register each acquisition onto the first one) or in the\n"
+        )
         doc += "\t 'hierarchical-fusion' method (to co-register couple of opposite acquisitions\n"
         doc += "\t to reconstruct stacks).\n"
         doc += "\t fusion_stack_preregistration_* and fusion_stack_registration_* parameters\n"
         doc += "\t control the co-registration of two stacks. It is only used in the \n"
         doc += "\t 'hierarchical-fusion' method (to co-register the reconstructed stacks).\n"
-        self.doc['fusion_strategy'] = doc
-        self.fusion_strategy = 'direct-fusion'
+        self.doc["fusion_strategy"] = doc
+        self.fusion_strategy = "direct-fusion"
 
         #
         # Cropping of acquisition images (before fusion)
@@ -179,38 +195,50 @@ class FusionParameters(common.PrefixedParameter):
         doc += "\t   'acquisition_cropping_margin_y_0' and 'acquisition_cropping_margin_y_1',\n"
         doc += "\t - 'acquisition_cropping_margin_z' allow to set the two margin values along Z, i.e.\n"
         doc += "\t   'acquisition_cropping_margin_z_0' and 'acquisition_cropping_margin_z_1',\n"
-        self.doc['acquisition_cropping'] = doc
+        self.doc["acquisition_cropping"] = doc
         self.acquisition_cropping = True
 
         doc = "\t Possible values are True or False\n"
         doc += "\t If True, the acquisition images are also cropped along the Z directions.\n"
         doc += "\t Margins are then added to the bounding box\n"
-        self.doc['acquisition_z_cropping'] = doc
+        self.doc["acquisition_z_cropping"] = doc
         self.acquisition_z_cropping = False
 
-        doc = "\t Added margin of the bounding box computed for the cropping of the raw\n"
+        doc = (
+            "\t Added margin of the bounding box computed for the cropping of the raw\n"
+        )
         doc += "\t acquisition image in 'left' X direction.\n"
-        self.doc['acquisition_cropping_margin_x_0'] = doc
+        self.doc["acquisition_cropping_margin_x_0"] = doc
         self.acquisition_cropping_margin_x_0 = 40
-        doc = "\t Added margin of the bounding box computed for the cropping of the raw\n"
+        doc = (
+            "\t Added margin of the bounding box computed for the cropping of the raw\n"
+        )
         doc += "\t acquisition image in 'right' X direction.\n"
-        self.doc['acquisition_cropping_margin_x_1'] = doc
+        self.doc["acquisition_cropping_margin_x_1"] = doc
         self.acquisition_cropping_margin_x_1 = 40
-        doc = "\t Added margin of the bounding box computed for the cropping of the raw\n"
+        doc = (
+            "\t Added margin of the bounding box computed for the cropping of the raw\n"
+        )
         doc += "\t acquisition image in 'left' Y direction.\n"
-        self.doc['acquisition_cropping_margin_y_0'] = doc
+        self.doc["acquisition_cropping_margin_y_0"] = doc
         self.acquisition_cropping_margin_y_0 = 40
-        doc = "\t Added margin of the bounding box computed for the cropping of the raw\n"
+        doc = (
+            "\t Added margin of the bounding box computed for the cropping of the raw\n"
+        )
         doc += "\t acquisition image in 'right' Y direction.\n"
-        self.doc['acquisition_cropping_margin_y_1'] = doc
+        self.doc["acquisition_cropping_margin_y_1"] = doc
         self.acquisition_cropping_margin_y_1 = 40
-        doc = "\t Added margin of the bounding box computed for the cropping of the raw\n"
+        doc = (
+            "\t Added margin of the bounding box computed for the cropping of the raw\n"
+        )
         doc += "\t acquisition image in 'left' Z direction.\n"
-        self.doc['acquisition_cropping_margin_z_0'] = doc
+        self.doc["acquisition_cropping_margin_z_0"] = doc
         self.acquisition_cropping_margin_z_0 = 40
-        doc = "\t Added margin of the bounding box computed for the cropping of the raw\n"
+        doc = (
+            "\t Added margin of the bounding box computed for the cropping of the raw\n"
+        )
         doc += "\t acquisition image in 'right' Z direction.\n"
-        self.doc['acquisition_cropping_margin_z_1'] = doc
+        self.doc["acquisition_cropping_margin_z_1"] = doc
         self.acquisition_cropping_margin_z_1 = 40
 
         #
@@ -222,30 +250,44 @@ class FusionParameters(common.PrefixedParameter):
         #
         self.acquisition_registration = []
 
-        self.acquisition_registration.append(common.RegistrationParameters(prefix=['fusion_preregistration_']))
+        self.acquisition_registration.append(
+            common.RegistrationParameters(prefix=["fusion_preregistration_"])
+        )
         self.acquisition_registration[0].compute_registration = False
-        self.acquisition_registration[0].transformation_type = 'translation'
+        self.acquisition_registration[0].transformation_type = "translation"
 
-        self.acquisition_registration.append(common.RegistrationParameters(prefix=['fusion_registration_']))
+        self.acquisition_registration.append(
+            common.RegistrationParameters(prefix=["fusion_registration_"])
+        )
 
         self.stack_registration = []
 
-        self.stack_registration.append(common.RegistrationParameters(prefix=['fusion_stack_preregistration_']))
+        self.stack_registration.append(
+            common.RegistrationParameters(prefix=["fusion_stack_preregistration_"])
+        )
 
-        self.stack_registration.append(common.RegistrationParameters(prefix=['fusion_stack_registration_']))
-        self.stack_registration[1].transformation_type = 'vectorfield'
+        self.stack_registration.append(
+            common.RegistrationParameters(prefix=["fusion_stack_registration_"])
+        )
+        self.stack_registration[1].transformation_type = "vectorfield"
         self.stack_registration[1].lts_fraction = 1.0
 
         #
         #
         #
         doc = "\t Possible values are True or False\n"
-        doc += "\t If True, XZ-sections XZ-sections of the co-registered image stacks,\n"
-        doc += "\t as well as the weighting function images, are stored in the directory\n"
-        doc += "\t <PATH_EMBRYO>/FUSE/FUSE_<EXP_FUSE>/XZSECTION_<xxxx> where <xxxx> is\n"
+        doc += (
+            "\t If True, XZ-sections XZ-sections of the co-registered image stacks,\n"
+        )
+        doc += (
+            "\t as well as the weighting function images, are stored in the directory\n"
+        )
+        doc += (
+            "\t <PATH_EMBRYO>/FUSE/FUSE_<EXP_FUSE>/XZSECTION_<xxxx> where <xxxx> is\n"
+        )
         doc += "\t the time point index. It provides a direct and efficient means to check\n"
         doc += "\t whether the parameter 'acquisition_leftcamera_z_stacking' is correctly set.\n"
-        self.doc['xzsection_extraction'] = doc
+        self.doc["xzsection_extraction"] = doc
         self.xzsection_extraction = False
 
         #
@@ -256,7 +298,9 @@ class FusionParameters(common.PrefixedParameter):
         doc += "\t Maximum Intensity Projection (MIP) images are automatically thresholded\n"
         doc += "\t (Otsu algorithm) to determine the bounding box of the object of interest.\n"
         doc += "\t Margins are then added to the bounding box\n"
-        doc += "\t - 'fusion_cropping_margin' allow to set the six margin values, i.e.\n"
+        doc += (
+            "\t - 'fusion_cropping_margin' allow to set the six margin values, i.e.\n"
+        )
         doc += "\t   'fusion_cropping_margin_x_0', 'fusion_cropping_margin_x_1',\n"
         doc += "\t   'fusion_cropping_margin_y_0', and 'fusion_cropping_margin_y_1', \n"
         doc += "\t   'fusion_cropping_margin_z_0', and 'fusion_cropping_margin_z_1' \n"
@@ -266,38 +310,38 @@ class FusionParameters(common.PrefixedParameter):
         doc += "\t   'fusion_cropping_margin_y_0' and 'fusion_cropping_margin_y_1',\n"
         doc += "\t - 'fusion_cropping_margin_z' allow to set the two margin values along Z, i.e.\n"
         doc += "\t   'fusion_cropping_margin_z_0' and 'fusion_cropping_margin_z_1',\n"
-        self.doc['fusion_cropping'] = doc
+        self.doc["fusion_cropping"] = doc
         self.fusion_cropping = True
 
         doc = "\t Possible values are True or False\n"
         doc += "\t If True, the fusion image is also cropped along the Z direction.\n"
         doc += "\t Margins are then added to the bounding box\n"
-        self.doc['fusion_z_cropping'] = doc
+        self.doc["fusion_z_cropping"] = doc
         self.fusion_z_cropping = True
 
         doc = "\t Added margin of the bounding box computed for the cropping of the fusion\n"
         doc += "\t image in 'left' X direction.\n"
-        self.doc['fusion_cropping_margin_x_0'] = doc
+        self.doc["fusion_cropping_margin_x_0"] = doc
         self.fusion_cropping_margin_x_0 = 40
         doc = "\t Added margin of the bounding box computed for the cropping of the fusion\n"
         doc += "\t image in 'right' X direction.\n"
-        self.doc['fusion_cropping_margin_x_1'] = doc
+        self.doc["fusion_cropping_margin_x_1"] = doc
         self.fusion_cropping_margin_x_1 = 40
         doc = "\t Added margin of the bounding box computed for the cropping of the fusion\n"
         doc += "\t image in 'left' Y direction.\n"
-        self.doc['fusion_cropping_margin_y_0'] = doc
+        self.doc["fusion_cropping_margin_y_0"] = doc
         self.fusion_cropping_margin_y_0 = 40
         doc = "\t Added margin of the bounding box computed for the cropping of the fusion\n"
         doc += "\t image in 'right' Y direction.\n"
-        self.doc['fusion_cropping_margin_y_1'] = doc
+        self.doc["fusion_cropping_margin_y_1"] = doc
         self.fusion_cropping_margin_y_1 = 40
         doc = "\t Added margin of the bounding box computed for the cropping of the fusion\n"
         doc += "\t image in 'left' Z direction.\n"
-        self.doc['fusion_cropping_margin_z_0'] = doc
+        self.doc["fusion_cropping_margin_z_0"] = doc
         self.fusion_cropping_margin_z_0 = 40
         doc = "\t Added margin of the bounding box computed for the cropping of the fusion\n"
         doc += "\t image in 'right' Z direction.\n"
-        self.doc['fusion_cropping_margin_z_1'] = doc
+        self.doc["fusion_cropping_margin_z_1"] = doc
         self.fusion_cropping_margin_z_1 = 40
 
     ############################################################
@@ -308,143 +352,325 @@ class FusionParameters(common.PrefixedParameter):
 
     def print_parameters(self):
         print("")
-        print('#')
-        print('# FusionParameters')
-        print('#')
+        print("#")
+        print("# FusionParameters")
+        print("#")
         print("")
 
-        for line in self.doc['fusion_overview'].splitlines():
-            print('# ' + line)
+        for line in self.doc["fusion_overview"].splitlines():
+            print("# " + line)
 
         common.PrefixedParameter.print_parameters(self)
 
-        self.varprint('acquisition_orientation', self.acquisition_orientation, self.doc['acquisition_orientation'])
-        self.varprint('acquisition_mirrors', self.acquisition_mirrors, self.doc['acquisition_mirrors'])
-        self.varprint('acquisition_resolution', self.acquisition_resolution, self.doc['acquisition_resolution'])
+        self.varprint(
+            "acquisition_orientation",
+            self.acquisition_orientation,
+            self.doc["acquisition_orientation"],
+        )
+        self.varprint(
+            "acquisition_mirrors",
+            self.acquisition_mirrors,
+            self.doc["acquisition_mirrors"],
+        )
+        self.varprint(
+            "acquisition_resolution",
+            self.acquisition_resolution,
+            self.doc["acquisition_resolution"],
+        )
 
-        self.varprint('acquisition_stack0_leftcamera_z_stacking', self.acquisition_stack0_leftcamera_z_stacking,
-                      self.doc['acquisition_stack0_leftcamera_z_stacking'])
-        self.varprint('acquisition_stack1_leftcamera_z_stacking', self.acquisition_stack1_leftcamera_z_stacking,
-                      self.doc['acquisition_stack1_leftcamera_z_stacking'])
+        self.varprint(
+            "acquisition_stack0_leftcamera_z_stacking",
+            self.acquisition_stack0_leftcamera_z_stacking,
+            self.doc["acquisition_stack0_leftcamera_z_stacking"],
+        )
+        self.varprint(
+            "acquisition_stack1_leftcamera_z_stacking",
+            self.acquisition_stack1_leftcamera_z_stacking,
+            self.doc["acquisition_stack1_leftcamera_z_stacking"],
+        )
 
-        self.varprint('acquisition_slit_line_correction', self.acquisition_slit_line_correction,
-                      self.doc['acquisition_slit_line_correction'])
+        self.varprint(
+            "acquisition_slit_line_correction",
+            self.acquisition_slit_line_correction,
+            self.doc["acquisition_slit_line_correction"],
+        )
 
-        self.varprint('target_resolution', self.target_resolution, self.doc['target_resolution'])
+        self.varprint(
+            "target_resolution", self.target_resolution, self.doc["target_resolution"]
+        )
 
-        self.varprint('fusion_strategy', self.fusion_strategy, self.doc['fusion_strategy'])
+        self.varprint(
+            "fusion_strategy", self.fusion_strategy, self.doc["fusion_strategy"]
+        )
 
-        self.varprint('acquisition_cropping', self.acquisition_cropping, self.doc['acquisition_cropping'])
-        self.varprint('acquisition_z_cropping', self.acquisition_z_cropping, self.doc['acquisition_z_cropping'])
-        self.varprint('acquisition_cropping_margin_x_0', self.acquisition_cropping_margin_x_0,
-                      self.doc['acquisition_cropping_margin_x_0'])
-        self.varprint('acquisition_cropping_margin_x_1', self.acquisition_cropping_margin_x_1,
-                      self.doc['acquisition_cropping_margin_x_1'])
-        self.varprint('acquisition_cropping_margin_y_0', self.acquisition_cropping_margin_y_0,
-                      self.doc['acquisition_cropping_margin_y_0'])
-        self.varprint('acquisition_cropping_margin_y_1', self.acquisition_cropping_margin_y_1,
-                      self.doc['acquisition_cropping_margin_y_1'])
-        self.varprint('acquisition_cropping_margin_z_0', self.acquisition_cropping_margin_z_0,
-                      self.doc['acquisition_cropping_margin_z_0'])
-        self.varprint('acquisition_cropping_margin_z_1', self.acquisition_cropping_margin_z_1,
-                      self.doc['acquisition_cropping_margin_z_1'])
+        self.varprint(
+            "acquisition_cropping",
+            self.acquisition_cropping,
+            self.doc["acquisition_cropping"],
+        )
+        self.varprint(
+            "acquisition_z_cropping",
+            self.acquisition_z_cropping,
+            self.doc["acquisition_z_cropping"],
+        )
+        self.varprint(
+            "acquisition_cropping_margin_x_0",
+            self.acquisition_cropping_margin_x_0,
+            self.doc["acquisition_cropping_margin_x_0"],
+        )
+        self.varprint(
+            "acquisition_cropping_margin_x_1",
+            self.acquisition_cropping_margin_x_1,
+            self.doc["acquisition_cropping_margin_x_1"],
+        )
+        self.varprint(
+            "acquisition_cropping_margin_y_0",
+            self.acquisition_cropping_margin_y_0,
+            self.doc["acquisition_cropping_margin_y_0"],
+        )
+        self.varprint(
+            "acquisition_cropping_margin_y_1",
+            self.acquisition_cropping_margin_y_1,
+            self.doc["acquisition_cropping_margin_y_1"],
+        )
+        self.varprint(
+            "acquisition_cropping_margin_z_0",
+            self.acquisition_cropping_margin_z_0,
+            self.doc["acquisition_cropping_margin_z_0"],
+        )
+        self.varprint(
+            "acquisition_cropping_margin_z_1",
+            self.acquisition_cropping_margin_z_1,
+            self.doc["acquisition_cropping_margin_z_1"],
+        )
 
         for p in self.acquisition_registration:
             p.print_parameters()
         for p in self.stack_registration:
             p.print_parameters()
 
-        self.varprint('xzsection_extraction', self.xzsection_extraction, self.doc['xzsection_extraction'])
+        self.varprint(
+            "xzsection_extraction",
+            self.xzsection_extraction,
+            self.doc["xzsection_extraction"],
+        )
 
-        self.varprint('fusion_cropping', self.fusion_cropping, self.doc['fusion_cropping'])
-        self.varprint('fusion_z_cropping', self.fusion_z_cropping, self.doc['fusion_z_cropping'])
-        self.varprint('fusion_cropping_margin_x_0', self.fusion_cropping_margin_x_0,
-                      self.doc['fusion_cropping_margin_x_0'])
-        self.varprint('fusion_cropping_margin_x_1', self.fusion_cropping_margin_x_1,
-                      self.doc['fusion_cropping_margin_x_1'])
-        self.varprint('fusion_cropping_margin_y_0', self.fusion_cropping_margin_y_0,
-                      self.doc['fusion_cropping_margin_y_0'])
-        self.varprint('fusion_cropping_margin_y_1', self.fusion_cropping_margin_y_1,
-                      self.doc['fusion_cropping_margin_y_1'])
-        self.varprint('fusion_cropping_margin_z_0', self.fusion_cropping_margin_z_0,
-                      self.doc['fusion_cropping_margin_z_0'])
-        self.varprint('fusion_cropping_margin_z_1', self.fusion_cropping_margin_z_1,
-                      self.doc['fusion_cropping_margin_z_1'])
+        self.varprint(
+            "fusion_cropping", self.fusion_cropping, self.doc["fusion_cropping"]
+        )
+        self.varprint(
+            "fusion_z_cropping", self.fusion_z_cropping, self.doc["fusion_z_cropping"]
+        )
+        self.varprint(
+            "fusion_cropping_margin_x_0",
+            self.fusion_cropping_margin_x_0,
+            self.doc["fusion_cropping_margin_x_0"],
+        )
+        self.varprint(
+            "fusion_cropping_margin_x_1",
+            self.fusion_cropping_margin_x_1,
+            self.doc["fusion_cropping_margin_x_1"],
+        )
+        self.varprint(
+            "fusion_cropping_margin_y_0",
+            self.fusion_cropping_margin_y_0,
+            self.doc["fusion_cropping_margin_y_0"],
+        )
+        self.varprint(
+            "fusion_cropping_margin_y_1",
+            self.fusion_cropping_margin_y_1,
+            self.doc["fusion_cropping_margin_y_1"],
+        )
+        self.varprint(
+            "fusion_cropping_margin_z_0",
+            self.fusion_cropping_margin_z_0,
+            self.doc["fusion_cropping_margin_z_0"],
+        )
+        self.varprint(
+            "fusion_cropping_margin_z_1",
+            self.fusion_cropping_margin_z_1,
+            self.doc["fusion_cropping_margin_z_1"],
+        )
         print("")
 
     def write_parameters_in_file(self, logfile):
         logfile.write("" + "\n")
-        logfile.write('#' + "\n")
-        logfile.write('# FusionParameters' + "\n")
-        logfile.write('#' + "\n")
+        logfile.write("#" + "\n")
+        logfile.write("# FusionParameters" + "\n")
+        logfile.write("#" + "\n")
         logfile.write("" + "\n")
 
-        for line in self.doc['fusion_overview'].splitlines():
-            logfile.write('# ' + line + '\n')
+        for line in self.doc["fusion_overview"].splitlines():
+            logfile.write("# " + line + "\n")
 
         common.PrefixedParameter.write_parameters_in_file(self, logfile)
 
-        self.varwrite(logfile, 'acquisition_orientation', self.acquisition_orientation,
-                      self.doc['acquisition_orientation'])
-        self.varwrite(logfile, 'acquisition_mirrors', self.acquisition_mirrors, self.doc['acquisition_mirrors'])
-        self.varwrite(logfile, 'acquisition_resolution', self.acquisition_resolution,
-                      self.doc['acquisition_resolution'])
+        self.varwrite(
+            logfile,
+            "acquisition_orientation",
+            self.acquisition_orientation,
+            self.doc["acquisition_orientation"],
+        )
+        self.varwrite(
+            logfile,
+            "acquisition_mirrors",
+            self.acquisition_mirrors,
+            self.doc["acquisition_mirrors"],
+        )
+        self.varwrite(
+            logfile,
+            "acquisition_resolution",
+            self.acquisition_resolution,
+            self.doc["acquisition_resolution"],
+        )
 
-        self.varwrite(logfile, 'acquisition_stack0_leftcamera_z_stacking',
-                      self.acquisition_stack0_leftcamera_z_stacking,
-                      self.doc['acquisition_stack0_leftcamera_z_stacking'])
-        self.varwrite(logfile, 'acquisition_stack1_leftcamera_z_stacking',
-                      self.acquisition_stack1_leftcamera_z_stacking,
-                      self.doc['acquisition_stack1_leftcamera_z_stacking'])
+        self.varwrite(
+            logfile,
+            "acquisition_stack0_leftcamera_z_stacking",
+            self.acquisition_stack0_leftcamera_z_stacking,
+            self.doc["acquisition_stack0_leftcamera_z_stacking"],
+        )
+        self.varwrite(
+            logfile,
+            "acquisition_stack1_leftcamera_z_stacking",
+            self.acquisition_stack1_leftcamera_z_stacking,
+            self.doc["acquisition_stack1_leftcamera_z_stacking"],
+        )
 
-        self.varwrite(logfile, 'acquisition_slit_line_correction', self.acquisition_slit_line_correction,
-                      self.doc['acquisition_slit_line_correction'])
+        self.varwrite(
+            logfile,
+            "acquisition_slit_line_correction",
+            self.acquisition_slit_line_correction,
+            self.doc["acquisition_slit_line_correction"],
+        )
 
-        self.varwrite(logfile, 'target_resolution', self.target_resolution, self.doc['target_resolution'])
+        self.varwrite(
+            logfile,
+            "target_resolution",
+            self.target_resolution,
+            self.doc["target_resolution"],
+        )
 
-        self.varwrite(logfile, 'fusion_strategy', self.fusion_strategy, self.doc['fusion_strategy'])
+        self.varwrite(
+            logfile,
+            "fusion_strategy",
+            self.fusion_strategy,
+            self.doc["fusion_strategy"],
+        )
 
-        self.varwrite(logfile, 'acquisition_cropping', self.acquisition_cropping, self.doc['acquisition_cropping'])
-        self.varwrite(logfile, 'acquisition_z_cropping', self.acquisition_z_cropping,
-                      self.doc['acquisition_z_cropping'])
-        self.varwrite(logfile, 'acquisition_cropping_margin_x_0', self.acquisition_cropping_margin_x_0,
-                      self.doc['acquisition_cropping_margin_x_0'])
-        self.varwrite(logfile, 'acquisition_cropping_margin_x_1', self.acquisition_cropping_margin_x_1,
-                      self.doc['acquisition_cropping_margin_x_1'])
-        self.varwrite(logfile, 'acquisition_cropping_margin_y_0', self.acquisition_cropping_margin_y_0,
-                      self.doc['acquisition_cropping_margin_y_0'])
-        self.varwrite(logfile, 'acquisition_cropping_margin_y_1', self.acquisition_cropping_margin_y_1,
-                      self.doc['acquisition_cropping_margin_y_1'])
-        self.varwrite(logfile, 'acquisition_cropping_margin_z_0', self.acquisition_cropping_margin_z_0,
-                      self.doc['acquisition_cropping_margin_z_0'])
-        self.varwrite(logfile, 'acquisition_cropping_margin_z_1', self.acquisition_cropping_margin_z_1,
-                      self.doc['acquisition_cropping_margin_z_1'])
+        self.varwrite(
+            logfile,
+            "acquisition_cropping",
+            self.acquisition_cropping,
+            self.doc["acquisition_cropping"],
+        )
+        self.varwrite(
+            logfile,
+            "acquisition_z_cropping",
+            self.acquisition_z_cropping,
+            self.doc["acquisition_z_cropping"],
+        )
+        self.varwrite(
+            logfile,
+            "acquisition_cropping_margin_x_0",
+            self.acquisition_cropping_margin_x_0,
+            self.doc["acquisition_cropping_margin_x_0"],
+        )
+        self.varwrite(
+            logfile,
+            "acquisition_cropping_margin_x_1",
+            self.acquisition_cropping_margin_x_1,
+            self.doc["acquisition_cropping_margin_x_1"],
+        )
+        self.varwrite(
+            logfile,
+            "acquisition_cropping_margin_y_0",
+            self.acquisition_cropping_margin_y_0,
+            self.doc["acquisition_cropping_margin_y_0"],
+        )
+        self.varwrite(
+            logfile,
+            "acquisition_cropping_margin_y_1",
+            self.acquisition_cropping_margin_y_1,
+            self.doc["acquisition_cropping_margin_y_1"],
+        )
+        self.varwrite(
+            logfile,
+            "acquisition_cropping_margin_z_0",
+            self.acquisition_cropping_margin_z_0,
+            self.doc["acquisition_cropping_margin_z_0"],
+        )
+        self.varwrite(
+            logfile,
+            "acquisition_cropping_margin_z_1",
+            self.acquisition_cropping_margin_z_1,
+            self.doc["acquisition_cropping_margin_z_1"],
+        )
 
         for p in self.acquisition_registration:
             p.write_parameters_in_file(logfile)
         for p in self.stack_registration:
             p.write_parameters_in_file(logfile)
 
-        self.varwrite(logfile, 'xzsection_extraction', self.xzsection_extraction, self.doc['xzsection_extraction'])
+        self.varwrite(
+            logfile,
+            "xzsection_extraction",
+            self.xzsection_extraction,
+            self.doc["xzsection_extraction"],
+        )
 
-        self.varwrite(logfile, 'fusion_cropping', self.fusion_cropping, self.doc['fusion_cropping'])
-        self.varwrite(logfile, 'fusion_z_cropping', self.fusion_z_cropping, self.doc['fusion_z_cropping'])
-        self.varwrite(logfile, 'fusion_cropping_margin_x_0', self.fusion_cropping_margin_x_0,
-                      self.doc['fusion_cropping_margin_x_0'])
-        self.varwrite(logfile, 'fusion_cropping_margin_x_1', self.fusion_cropping_margin_x_1,
-                      self.doc['fusion_cropping_margin_x_1'])
-        self.varwrite(logfile, 'fusion_cropping_margin_y_0', self.fusion_cropping_margin_y_0,
-                      self.doc['fusion_cropping_margin_y_0'])
-        self.varwrite(logfile, 'fusion_cropping_margin_y_1', self.fusion_cropping_margin_y_1,
-                      self.doc['fusion_cropping_margin_y_1'])
-        self.varwrite(logfile, 'fusion_cropping_margin_z_0', self.fusion_cropping_margin_z_0,
-                      self.doc['fusion_cropping_margin_z_0'])
-        self.varwrite(logfile, 'fusion_cropping_margin_z_1', self.fusion_cropping_margin_z_1,
-                      self.doc['fusion_cropping_margin_z_1'])
+        self.varwrite(
+            logfile,
+            "fusion_cropping",
+            self.fusion_cropping,
+            self.doc["fusion_cropping"],
+        )
+        self.varwrite(
+            logfile,
+            "fusion_z_cropping",
+            self.fusion_z_cropping,
+            self.doc["fusion_z_cropping"],
+        )
+        self.varwrite(
+            logfile,
+            "fusion_cropping_margin_x_0",
+            self.fusion_cropping_margin_x_0,
+            self.doc["fusion_cropping_margin_x_0"],
+        )
+        self.varwrite(
+            logfile,
+            "fusion_cropping_margin_x_1",
+            self.fusion_cropping_margin_x_1,
+            self.doc["fusion_cropping_margin_x_1"],
+        )
+        self.varwrite(
+            logfile,
+            "fusion_cropping_margin_y_0",
+            self.fusion_cropping_margin_y_0,
+            self.doc["fusion_cropping_margin_y_0"],
+        )
+        self.varwrite(
+            logfile,
+            "fusion_cropping_margin_y_1",
+            self.fusion_cropping_margin_y_1,
+            self.doc["fusion_cropping_margin_y_1"],
+        )
+        self.varwrite(
+            logfile,
+            "fusion_cropping_margin_z_0",
+            self.fusion_cropping_margin_z_0,
+            self.doc["fusion_cropping_margin_z_0"],
+        )
+        self.varwrite(
+            logfile,
+            "fusion_cropping_margin_z_1",
+            self.fusion_cropping_margin_z_1,
+            self.doc["fusion_cropping_margin_z_1"],
+        )
         return
 
     def write_parameters(self, log_file_name):
-        with open(log_file_name, 'a') as logfile:
+        with open(log_file_name, "a") as logfile:
             self.write_parameters_in_file(logfile)
         return
 
@@ -458,153 +684,271 @@ class FusionParameters(common.PrefixedParameter):
         #
         # acquisition parameters
         #
-        self.acquisition_orientation = self.read_parameter(parameters, 'raw_ori', self.acquisition_orientation)
-        self.acquisition_orientation = self.read_parameter(parameters, 'acquisition_orientation',
-                                                           self.acquisition_orientation)
+        self.acquisition_orientation = self.read_parameter(
+            parameters, "raw_ori", self.acquisition_orientation
+        )
+        self.acquisition_orientation = self.read_parameter(
+            parameters, "acquisition_orientation", self.acquisition_orientation
+        )
 
-        self.acquisition_mirrors = self.read_parameter(parameters, 'raw_mirrors', self.acquisition_mirrors)
-        self.acquisition_mirrors = self.read_parameter(parameters, 'acquisition_mirrors', self.acquisition_mirrors)
+        self.acquisition_mirrors = self.read_parameter(
+            parameters, "raw_mirrors", self.acquisition_mirrors
+        )
+        self.acquisition_mirrors = self.read_parameter(
+            parameters, "acquisition_mirrors", self.acquisition_mirrors
+        )
 
-        self.acquisition_stack0_leftcamera_z_stacking = self.read_parameter(parameters,
-                                                                            'raw_leftcamera_z_stacking',
-                                                                            self.acquisition_stack0_leftcamera_z_stacking)
-        self.acquisition_stack0_leftcamera_z_stacking = self.read_parameter(parameters,
-                                                                            'acquisition_leftcamera_z_stacking',
-                                                                            self.acquisition_stack0_leftcamera_z_stacking)
-        self.acquisition_stack1_leftcamera_z_stacking = self.read_parameter(parameters,
-                                                                            'raw_leftcamera_z_stacking',
-                                                                            self.acquisition_stack0_leftcamera_z_stacking)
-        self.acquisition_stack1_leftcamera_z_stacking = self.read_parameter(parameters,
-                                                                            'acquisition_leftcamera_z_stacking',
-                                                                            self.acquisition_stack0_leftcamera_z_stacking)
+        self.acquisition_stack0_leftcamera_z_stacking = self.read_parameter(
+            parameters,
+            "raw_leftcamera_z_stacking",
+            self.acquisition_stack0_leftcamera_z_stacking,
+        )
+        self.acquisition_stack0_leftcamera_z_stacking = self.read_parameter(
+            parameters,
+            "acquisition_leftcamera_z_stacking",
+            self.acquisition_stack0_leftcamera_z_stacking,
+        )
+        self.acquisition_stack1_leftcamera_z_stacking = self.read_parameter(
+            parameters,
+            "raw_leftcamera_z_stacking",
+            self.acquisition_stack0_leftcamera_z_stacking,
+        )
+        self.acquisition_stack1_leftcamera_z_stacking = self.read_parameter(
+            parameters,
+            "acquisition_leftcamera_z_stacking",
+            self.acquisition_stack0_leftcamera_z_stacking,
+        )
 
-        self.acquisition_stack0_leftcamera_z_stacking = self.read_parameter(parameters,
-                                                                            'raw_stack0_leftcamera_z_stacking',
-                                                                            self.acquisition_stack0_leftcamera_z_stacking)
-        self.acquisition_stack0_leftcamera_z_stacking = self.read_parameter(parameters,
-                                                                            'acquisition_stack0_leftcamera_z_stacking',
-                                                                            self.acquisition_stack0_leftcamera_z_stacking)
-        self.acquisition_stack1_leftcamera_z_stacking = self.read_parameter(parameters,
-                                                                            'raw_stack1_leftcamera_z_stacking',
-                                                                            self.acquisition_stack0_leftcamera_z_stacking)
-        self.acquisition_stack1_leftcamera_z_stacking = self.read_parameter(parameters,
-                                                                            'acquisition_stack1_leftcamera_z_stacking',
-                                                                            self.acquisition_stack0_leftcamera_z_stacking)
+        self.acquisition_stack0_leftcamera_z_stacking = self.read_parameter(
+            parameters,
+            "raw_stack0_leftcamera_z_stacking",
+            self.acquisition_stack0_leftcamera_z_stacking,
+        )
+        self.acquisition_stack0_leftcamera_z_stacking = self.read_parameter(
+            parameters,
+            "acquisition_stack0_leftcamera_z_stacking",
+            self.acquisition_stack0_leftcamera_z_stacking,
+        )
+        self.acquisition_stack1_leftcamera_z_stacking = self.read_parameter(
+            parameters,
+            "raw_stack1_leftcamera_z_stacking",
+            self.acquisition_stack0_leftcamera_z_stacking,
+        )
+        self.acquisition_stack1_leftcamera_z_stacking = self.read_parameter(
+            parameters,
+            "acquisition_stack1_leftcamera_z_stacking",
+            self.acquisition_stack0_leftcamera_z_stacking,
+        )
 
-        if hasattr(parameters, 'raw_resolution'):
+        if hasattr(parameters, "raw_resolution"):
             if parameters.raw_resolution is not None:
-                if type(parameters.raw_resolution) is tuple or type(parameters.raw_resolution) is list:
+                if (
+                    type(parameters.raw_resolution) is tuple
+                    or type(parameters.raw_resolution) is list
+                ):
                     if len(parameters.raw_resolution) == 3:
                         self.acquisition_resolution = parameters.raw_resolution
                     else:
                         print("Error in reading parameters")
-                        print("\t 'raw_resolution' has length " + str(len(parameters.raw_resolution)
-                              + " instead of 3."))
+                        print(
+                            "\t 'raw_resolution' has length "
+                            + str(len(parameters.raw_resolution) + " instead of 3.")
+                        )
                         print("\t Exiting.")
                         sys.exit(1)
                 else:
                     print("Error in reading parameters")
-                    print("\t type of 'raw_resolution' (" + str(type(parameters.raw_resolution)
-                          + ") is not handled"))
+                    print(
+                        "\t type of 'raw_resolution' ("
+                        + str(type(parameters.raw_resolution) + ") is not handled")
+                    )
                     print("\t Exiting.")
                     sys.exit(1)
-        elif hasattr(parameters, 'acquisition_resolution'):
+        elif hasattr(parameters, "acquisition_resolution"):
             if parameters.acquisition_resolution is not None:
-                if type(parameters.acquisition_resolution) is tuple or type(parameters.acquisition_resolution) is list:
+                if (
+                    type(parameters.acquisition_resolution) is tuple
+                    or type(parameters.acquisition_resolution) is list
+                ):
                     if len(parameters.acquisition_resolution) == 3:
                         self.acquisition_resolution = parameters.acquisition_resolution
                     else:
                         print("Error in reading parameters")
-                        print("\t 'acquisition_resolution' has length " + str(len(parameters.acquisition_resolution)
-                              + " instead of 3."))
+                        print(
+                            "\t 'acquisition_resolution' has length "
+                            + str(
+                                len(parameters.acquisition_resolution)
+                                + " instead of 3."
+                            )
+                        )
                         print("\t Exiting.")
                         sys.exit(1)
                 else:
                     print("Error in reading parameters")
-                    print("\t type of 'acquisition_resolution' (" + str(type(parameters.acquisition_resolution)
-                          + ") is not handled"))
+                    print(
+                        "\t type of 'acquisition_resolution' ("
+                        + str(
+                            type(parameters.acquisition_resolution) + ") is not handled"
+                        )
+                    )
                     print("\t Exiting.")
                     sys.exit(1)
 
         #
         # correction of slit lines
         #
-        self.acquisition_slit_line_correction = self.read_parameter(parameters, 'acquisition_slit_line_correction',
-                                                                    self.acquisition_slit_line_correction)
+        self.acquisition_slit_line_correction = self.read_parameter(
+            parameters,
+            "acquisition_slit_line_correction",
+            self.acquisition_slit_line_correction,
+        )
 
         #
         # fused image parameters
         #
-        self.target_resolution = self.read_parameter(parameters, 'target_resolution', self.target_resolution)
+        self.target_resolution = self.read_parameter(
+            parameters, "target_resolution", self.target_resolution
+        )
 
         #
         # fusion method
         #
-        self.fusion_strategy = self.read_parameter(parameters, 'fusion_strategy', self.fusion_strategy)
-        self.fusion_strategy = self.read_parameter(parameters, 'fusion_method', self.fusion_strategy)
+        self.fusion_strategy = self.read_parameter(
+            parameters, "fusion_strategy", self.fusion_strategy
+        )
+        self.fusion_strategy = self.read_parameter(
+            parameters, "fusion_method", self.fusion_strategy
+        )
 
         #
         # Cropping of acquisition images (before fusion)
         #
-        self.acquisition_cropping = self.read_parameter(parameters, 'acquisition_cropping', self.acquisition_cropping)
-        self.acquisition_z_cropping = self.read_parameter(parameters, 'acquisition_z_cropping',
-                                                          self.acquisition_z_cropping)
-        self.acquisition_cropping = self.read_parameter(parameters, 'raw_crop', self.acquisition_cropping)
-        self.acquisition_z_cropping = self.read_parameter(parameters, 'raw_z_crop', self.acquisition_z_cropping)
+        self.acquisition_cropping = self.read_parameter(
+            parameters, "acquisition_cropping", self.acquisition_cropping
+        )
+        self.acquisition_z_cropping = self.read_parameter(
+            parameters, "acquisition_z_cropping", self.acquisition_z_cropping
+        )
+        self.acquisition_cropping = self.read_parameter(
+            parameters, "raw_crop", self.acquisition_cropping
+        )
+        self.acquisition_z_cropping = self.read_parameter(
+            parameters, "raw_z_crop", self.acquisition_z_cropping
+        )
 
-        self.acquisition_cropping_margin_x_0 = self.read_parameter(parameters, 'acquisition_cropping_margin',
-                                                                   self.acquisition_cropping_margin_x_0)
-        self.acquisition_cropping_margin_x_0 = self.read_parameter(parameters, 'acquisition_cropping_margin_x',
-                                                                   self.acquisition_cropping_margin_x_0)
-        self.acquisition_cropping_margin_x_0 = self.read_parameter(parameters, 'acquisition_cropping_margin_x_0',
-                                                                   self.acquisition_cropping_margin_x_0)
-        self.acquisition_cropping_margin_x_0 = self.read_parameter(parameters, 'raw_margin_x_0',
-                                                                   self.acquisition_cropping_margin_x_0)
+        self.acquisition_cropping_margin_x_0 = self.read_parameter(
+            parameters,
+            "acquisition_cropping_margin",
+            self.acquisition_cropping_margin_x_0,
+        )
+        self.acquisition_cropping_margin_x_0 = self.read_parameter(
+            parameters,
+            "acquisition_cropping_margin_x",
+            self.acquisition_cropping_margin_x_0,
+        )
+        self.acquisition_cropping_margin_x_0 = self.read_parameter(
+            parameters,
+            "acquisition_cropping_margin_x_0",
+            self.acquisition_cropping_margin_x_0,
+        )
+        self.acquisition_cropping_margin_x_0 = self.read_parameter(
+            parameters, "raw_margin_x_0", self.acquisition_cropping_margin_x_0
+        )
 
-        self.acquisition_cropping_margin_x_1 = self.read_parameter(parameters, 'acquisition_cropping_margin',
-                                                                   self.acquisition_cropping_margin_x_1)
-        self.acquisition_cropping_margin_x_1 = self.read_parameter(parameters, 'acquisition_cropping_margin_x',
-                                                                   self.acquisition_cropping_margin_x_1)
-        self.acquisition_cropping_margin_x_1 = self.read_parameter(parameters, 'acquisition_cropping_margin_x_1',
-                                                                   self.acquisition_cropping_margin_x_1)
-        self.acquisition_cropping_margin_x_1 = self.read_parameter(parameters, 'raw_margin_x_1',
-                                                                   self.acquisition_cropping_margin_x_1)
+        self.acquisition_cropping_margin_x_1 = self.read_parameter(
+            parameters,
+            "acquisition_cropping_margin",
+            self.acquisition_cropping_margin_x_1,
+        )
+        self.acquisition_cropping_margin_x_1 = self.read_parameter(
+            parameters,
+            "acquisition_cropping_margin_x",
+            self.acquisition_cropping_margin_x_1,
+        )
+        self.acquisition_cropping_margin_x_1 = self.read_parameter(
+            parameters,
+            "acquisition_cropping_margin_x_1",
+            self.acquisition_cropping_margin_x_1,
+        )
+        self.acquisition_cropping_margin_x_1 = self.read_parameter(
+            parameters, "raw_margin_x_1", self.acquisition_cropping_margin_x_1
+        )
 
-        self.acquisition_cropping_margin_y_0 = self.read_parameter(parameters, 'acquisition_cropping_margin',
-                                                                   self.acquisition_cropping_margin_y_0)
-        self.acquisition_cropping_margin_y_0 = self.read_parameter(parameters, 'acquisition_cropping_margin_y',
-                                                                   self.acquisition_cropping_margin_y_0)
-        self.acquisition_cropping_margin_y_0 = self.read_parameter(parameters, 'acquisition_cropping_margin_y_0',
-                                                                   self.acquisition_cropping_margin_y_0)
-        self.acquisition_cropping_margin_y_0 = self.read_parameter(parameters, 'raw_margin_y_0',
-                                                                   self.acquisition_cropping_margin_y_0)
+        self.acquisition_cropping_margin_y_0 = self.read_parameter(
+            parameters,
+            "acquisition_cropping_margin",
+            self.acquisition_cropping_margin_y_0,
+        )
+        self.acquisition_cropping_margin_y_0 = self.read_parameter(
+            parameters,
+            "acquisition_cropping_margin_y",
+            self.acquisition_cropping_margin_y_0,
+        )
+        self.acquisition_cropping_margin_y_0 = self.read_parameter(
+            parameters,
+            "acquisition_cropping_margin_y_0",
+            self.acquisition_cropping_margin_y_0,
+        )
+        self.acquisition_cropping_margin_y_0 = self.read_parameter(
+            parameters, "raw_margin_y_0", self.acquisition_cropping_margin_y_0
+        )
 
-        self.acquisition_cropping_margin_y_1 = self.read_parameter(parameters, 'acquisition_cropping_margin',
-                                                                   self.acquisition_cropping_margin_y_1)
-        self.acquisition_cropping_margin_y_1 = self.read_parameter(parameters, 'acquisition_cropping_margin_y',
-                                                                   self.acquisition_cropping_margin_y_1)
-        self.acquisition_cropping_margin_y_1 = self.read_parameter(parameters, 'acquisition_cropping_margin_y_1',
-                                                                   self.acquisition_cropping_margin_y_1)
-        self.acquisition_cropping_margin_y_1 = self.read_parameter(parameters, 'raw_margin_y_1',
-                                                                   self.acquisition_cropping_margin_y_1)
+        self.acquisition_cropping_margin_y_1 = self.read_parameter(
+            parameters,
+            "acquisition_cropping_margin",
+            self.acquisition_cropping_margin_y_1,
+        )
+        self.acquisition_cropping_margin_y_1 = self.read_parameter(
+            parameters,
+            "acquisition_cropping_margin_y",
+            self.acquisition_cropping_margin_y_1,
+        )
+        self.acquisition_cropping_margin_y_1 = self.read_parameter(
+            parameters,
+            "acquisition_cropping_margin_y_1",
+            self.acquisition_cropping_margin_y_1,
+        )
+        self.acquisition_cropping_margin_y_1 = self.read_parameter(
+            parameters, "raw_margin_y_1", self.acquisition_cropping_margin_y_1
+        )
 
-        self.acquisition_cropping_margin_z_0 = self.read_parameter(parameters, 'acquisition_cropping_margin',
-                                                                   self.acquisition_cropping_margin_z_0)
-        self.acquisition_cropping_margin_z_0 = self.read_parameter(parameters, 'acquisition_cropping_margin_z',
-                                                                   self.acquisition_cropping_margin_z_0)
-        self.acquisition_cropping_margin_z_0 = self.read_parameter(parameters, 'acquisition_cropping_margin_z_0',
-                                                                   self.acquisition_cropping_margin_z_0)
-        self.acquisition_cropping_margin_z_0 = self.read_parameter(parameters, 'raw_margin_z_0',
-                                                                   self.acquisition_cropping_margin_z_0)
+        self.acquisition_cropping_margin_z_0 = self.read_parameter(
+            parameters,
+            "acquisition_cropping_margin",
+            self.acquisition_cropping_margin_z_0,
+        )
+        self.acquisition_cropping_margin_z_0 = self.read_parameter(
+            parameters,
+            "acquisition_cropping_margin_z",
+            self.acquisition_cropping_margin_z_0,
+        )
+        self.acquisition_cropping_margin_z_0 = self.read_parameter(
+            parameters,
+            "acquisition_cropping_margin_z_0",
+            self.acquisition_cropping_margin_z_0,
+        )
+        self.acquisition_cropping_margin_z_0 = self.read_parameter(
+            parameters, "raw_margin_z_0", self.acquisition_cropping_margin_z_0
+        )
 
-        self.acquisition_cropping_margin_z_1 = self.read_parameter(parameters, 'acquisition_cropping_margin',
-                                                                   self.acquisition_cropping_margin_z_1)
-        self.acquisition_cropping_margin_z_1 = self.read_parameter(parameters, 'acquisition_cropping_margin_z',
-                                                                   self.acquisition_cropping_margin_z_1)
-        self.acquisition_cropping_margin_z_1 = self.read_parameter(parameters, 'acquisition_cropping_margin_z_1',
-                                                                   self.acquisition_cropping_margin_z_1)
-        self.acquisition_cropping_margin_z_1 = self.read_parameter(parameters, 'raw_margin_z_1',
-                                                                   self.acquisition_cropping_margin_z_1)
+        self.acquisition_cropping_margin_z_1 = self.read_parameter(
+            parameters,
+            "acquisition_cropping_margin",
+            self.acquisition_cropping_margin_z_1,
+        )
+        self.acquisition_cropping_margin_z_1 = self.read_parameter(
+            parameters,
+            "acquisition_cropping_margin_z",
+            self.acquisition_cropping_margin_z_1,
+        )
+        self.acquisition_cropping_margin_z_1 = self.read_parameter(
+            parameters,
+            "acquisition_cropping_margin_z_1",
+            self.acquisition_cropping_margin_z_1,
+        )
+        self.acquisition_cropping_margin_z_1 = self.read_parameter(
+            parameters, "raw_margin_z_1", self.acquisition_cropping_margin_z_1
+        )
 
         #
         # registration parameters
@@ -617,71 +961,106 @@ class FusionParameters(common.PrefixedParameter):
         #
         #
         #
-        self.xzsection_extraction = self.read_parameter(parameters, 'xzsection_extraction', self.xzsection_extraction)
-        self.xzsection_extraction = self.read_parameter(parameters, 'fusion_xzsection_extraction',
-                                                        self.xzsection_extraction)
+        self.xzsection_extraction = self.read_parameter(
+            parameters, "xzsection_extraction", self.xzsection_extraction
+        )
+        self.xzsection_extraction = self.read_parameter(
+            parameters, "fusion_xzsection_extraction", self.xzsection_extraction
+        )
 
         #
         # Cropping of fused image (after fusion)
         #
-        self.fusion_cropping = self.read_parameter(parameters, 'fusion_cropping', self.fusion_cropping)
-        self.fusion_z_cropping = self.read_parameter(parameters, 'fusion_z_cropping', self.fusion_z_cropping)
-        self.fusion_cropping = self.read_parameter(parameters, 'fusion_crop', self.fusion_cropping)
-        self.fusion_z_cropping = self.read_parameter(parameters, 'fusion_z_crop', self.fusion_z_cropping)
+        self.fusion_cropping = self.read_parameter(
+            parameters, "fusion_cropping", self.fusion_cropping
+        )
+        self.fusion_z_cropping = self.read_parameter(
+            parameters, "fusion_z_cropping", self.fusion_z_cropping
+        )
+        self.fusion_cropping = self.read_parameter(
+            parameters, "fusion_crop", self.fusion_cropping
+        )
+        self.fusion_z_cropping = self.read_parameter(
+            parameters, "fusion_z_crop", self.fusion_z_cropping
+        )
 
-        self.fusion_cropping_margin_x_0 = self.read_parameter(parameters, 'fusion_cropping_margin',
-                                                              self.fusion_cropping_margin_x_0)
-        self.fusion_cropping_margin_x_0 = self.read_parameter(parameters, 'fusion_cropping_margin_x',
-                                                              self.fusion_cropping_margin_x_0)
-        self.fusion_cropping_margin_x_0 = self.read_parameter(parameters, 'fusion_cropping_margin_x_0',
-                                                              self.fusion_cropping_margin_x_0)
-        self.fusion_cropping_margin_x_0 = self.read_parameter(parameters, 'fusion_margin_x_0',
-                                                              self.fusion_cropping_margin_x_0)
+        self.fusion_cropping_margin_x_0 = self.read_parameter(
+            parameters, "fusion_cropping_margin", self.fusion_cropping_margin_x_0
+        )
+        self.fusion_cropping_margin_x_0 = self.read_parameter(
+            parameters, "fusion_cropping_margin_x", self.fusion_cropping_margin_x_0
+        )
+        self.fusion_cropping_margin_x_0 = self.read_parameter(
+            parameters, "fusion_cropping_margin_x_0", self.fusion_cropping_margin_x_0
+        )
+        self.fusion_cropping_margin_x_0 = self.read_parameter(
+            parameters, "fusion_margin_x_0", self.fusion_cropping_margin_x_0
+        )
 
-        self.fusion_cropping_margin_x_1 = self.read_parameter(parameters, 'fusion_cropping_margin',
-                                                              self.fusion_cropping_margin_x_1)
-        self.fusion_cropping_margin_x_1 = self.read_parameter(parameters, 'fusion_cropping_margin_x',
-                                                              self.fusion_cropping_margin_x_1)
-        self.fusion_cropping_margin_x_1 = self.read_parameter(parameters, 'fusion_cropping_margin_x_1',
-                                                              self.fusion_cropping_margin_x_1)
-        self.fusion_cropping_margin_x_1 = self.read_parameter(parameters, 'fusion_margin_x_1',
-                                                              self.fusion_cropping_margin_x_1)
+        self.fusion_cropping_margin_x_1 = self.read_parameter(
+            parameters, "fusion_cropping_margin", self.fusion_cropping_margin_x_1
+        )
+        self.fusion_cropping_margin_x_1 = self.read_parameter(
+            parameters, "fusion_cropping_margin_x", self.fusion_cropping_margin_x_1
+        )
+        self.fusion_cropping_margin_x_1 = self.read_parameter(
+            parameters, "fusion_cropping_margin_x_1", self.fusion_cropping_margin_x_1
+        )
+        self.fusion_cropping_margin_x_1 = self.read_parameter(
+            parameters, "fusion_margin_x_1", self.fusion_cropping_margin_x_1
+        )
 
-        self.fusion_cropping_margin_y_0 = self.read_parameter(parameters, 'fusion_cropping_margin',
-                                                              self.fusion_cropping_margin_y_0)
-        self.fusion_cropping_margin_y_0 = self.read_parameter(parameters, 'fusion_cropping_margin_y',
-                                                              self.fusion_cropping_margin_y_0)
-        self.fusion_cropping_margin_y_0 = self.read_parameter(parameters, 'fusion_cropping_margin_y_0',
-                                                              self.fusion_cropping_margin_y_0)
-        self.fusion_cropping_margin_y_0 = self.read_parameter(parameters, 'fusion_margin_y_0',
-                                                              self.fusion_cropping_margin_y_0)
+        self.fusion_cropping_margin_y_0 = self.read_parameter(
+            parameters, "fusion_cropping_margin", self.fusion_cropping_margin_y_0
+        )
+        self.fusion_cropping_margin_y_0 = self.read_parameter(
+            parameters, "fusion_cropping_margin_y", self.fusion_cropping_margin_y_0
+        )
+        self.fusion_cropping_margin_y_0 = self.read_parameter(
+            parameters, "fusion_cropping_margin_y_0", self.fusion_cropping_margin_y_0
+        )
+        self.fusion_cropping_margin_y_0 = self.read_parameter(
+            parameters, "fusion_margin_y_0", self.fusion_cropping_margin_y_0
+        )
 
-        self.fusion_cropping_margin_y_1 = self.read_parameter(parameters, 'fusion_cropping_margin',
-                                                              self.fusion_cropping_margin_y_1)
-        self.fusion_cropping_margin_y_1 = self.read_parameter(parameters, 'fusion_cropping_margin_y',
-                                                              self.fusion_cropping_margin_y_1)
-        self.fusion_cropping_margin_y_1 = self.read_parameter(parameters, 'fusion_cropping_margin_y_1',
-                                                              self.fusion_cropping_margin_y_1)
-        self.fusion_cropping_margin_y_1 = self.read_parameter(parameters, 'fusion_margin_y_1',
-                                                              self.fusion_cropping_margin_y_1)
+        self.fusion_cropping_margin_y_1 = self.read_parameter(
+            parameters, "fusion_cropping_margin", self.fusion_cropping_margin_y_1
+        )
+        self.fusion_cropping_margin_y_1 = self.read_parameter(
+            parameters, "fusion_cropping_margin_y", self.fusion_cropping_margin_y_1
+        )
+        self.fusion_cropping_margin_y_1 = self.read_parameter(
+            parameters, "fusion_cropping_margin_y_1", self.fusion_cropping_margin_y_1
+        )
+        self.fusion_cropping_margin_y_1 = self.read_parameter(
+            parameters, "fusion_margin_y_1", self.fusion_cropping_margin_y_1
+        )
 
-        self.fusion_cropping_margin_z_0 = self.read_parameter(parameters, 'fusion_cropping_margin',
-                                                              self.fusion_cropping_margin_z_0)
-        self.fusion_cropping_margin_z_0 = self.read_parameter(parameters, 'fusion_cropping_margin_z',
-                                                              self.fusion_cropping_margin_z_0)
-        self.fusion_cropping_margin_z_0 = self.read_parameter(parameters, 'fusion_cropping_margin_z_0',
-                                                              self.fusion_cropping_margin_z_0)
-        self.fusion_cropping_margin_z_0 = self.read_parameter(parameters, 'fusion_margin_z_0',
-                                                              self.fusion_cropping_margin_z_0)
+        self.fusion_cropping_margin_z_0 = self.read_parameter(
+            parameters, "fusion_cropping_margin", self.fusion_cropping_margin_z_0
+        )
+        self.fusion_cropping_margin_z_0 = self.read_parameter(
+            parameters, "fusion_cropping_margin_z", self.fusion_cropping_margin_z_0
+        )
+        self.fusion_cropping_margin_z_0 = self.read_parameter(
+            parameters, "fusion_cropping_margin_z_0", self.fusion_cropping_margin_z_0
+        )
+        self.fusion_cropping_margin_z_0 = self.read_parameter(
+            parameters, "fusion_margin_z_0", self.fusion_cropping_margin_z_0
+        )
 
-        self.fusion_cropping_margin_z_1 = self.read_parameter(parameters, 'fusion_cropping_margin',
-                                                              self.fusion_cropping_margin_z_1)
-        self.fusion_cropping_margin_z_1 = self.read_parameter(parameters, 'fusion_cropping_margin_z',
-                                                              self.fusion_cropping_margin_z_1)
-        self.fusion_cropping_margin_z_1 = self.read_parameter(parameters, 'fusion_cropping_margin_z_1',
-                                                              self.fusion_cropping_margin_z_1)
-        self.fusion_cropping_margin_z_1 = self.read_parameter(parameters, 'fusion_margin_z_1',
-                                                              self.fusion_cropping_margin_z_1)
+        self.fusion_cropping_margin_z_1 = self.read_parameter(
+            parameters, "fusion_cropping_margin", self.fusion_cropping_margin_z_1
+        )
+        self.fusion_cropping_margin_z_1 = self.read_parameter(
+            parameters, "fusion_cropping_margin_z", self.fusion_cropping_margin_z_1
+        )
+        self.fusion_cropping_margin_z_1 = self.read_parameter(
+            parameters, "fusion_cropping_margin_z_1", self.fusion_cropping_margin_z_1
+        )
+        self.fusion_cropping_margin_z_1 = self.read_parameter(
+            parameters, "fusion_margin_z_1", self.fusion_cropping_margin_z_1
+        )
 
     def update_from_parameter_file(self, parameter_file):
         if parameter_file is None:
@@ -701,11 +1080,13 @@ class FusionParameters(common.PrefixedParameter):
 ########################################################################################
 
 
-__extension_to_be_converted__ = ['.h5', '.h5.gz', '.tif', '.tiff', '.TIF', '.TIFF']
-__extension_with_resolution__ = ['.inr', '.inr.gz', '.mha', '.mha.gz']
+__extension_to_be_converted__ = [".h5", ".h5.gz", ".tif", ".tiff", ".TIF", ".TIFF"]
+__extension_with_resolution__ = [".inr", ".inr.gz", ".mha", ".mha.gz"]
 
 
-def _read_image_name(data_path, temporary_path, file_name, resolution, default_extension='inr'):
+def _read_image_name(
+    data_path, temporary_path, file_name, resolution, default_extension="inr"
+):
     """
     Read an image. Eventually, unzip a compressed file, and convert the image
     to a format known by executables
@@ -725,9 +1106,8 @@ def _read_image_name(data_path, temporary_path, file_name, resolution, default_e
     f = file_name
     full_name = os.path.join(data_path, f)
 
-    if f[len(f)-4:len(f)] == '.zip':
-
-        prefix = f[0:len(f)-4]
+    if f[len(f) - 4 : len(f)] == ".zip":
+        prefix = f[0 : len(f) - 4]
 
         #
         # maybe the file has already be unzipped
@@ -736,13 +1116,19 @@ def _read_image_name(data_path, temporary_path, file_name, resolution, default_e
         for f in os.listdir(temporary_path):
             if len(f) <= len(prefix):
                 pass
-            if f[0:len(prefix)] == prefix:
-                if f[len(prefix):len(f)] in common.recognized_image_extensions:
+            if f[0 : len(prefix)] == prefix:
+                if f[len(prefix) : len(f)] in common.recognized_image_extensions:
                     file_names.append(f)
 
         if len(file_names) > 1:
-            monitoring.to_log_and_console(proc + ": already several images with name '"
-                                          + str(prefix) + "' were found in '" + str(temporary_path) + "'")
+            monitoring.to_log_and_console(
+                proc
+                + ": already several images with name '"
+                + str(prefix)
+                + "' were found in '"
+                + str(temporary_path)
+                + "'"
+            )
             monitoring.to_log_and_console("\t " + str(file_names))
             monitoring.to_log_and_console("\t Exiting")
             sys.exit(1)
@@ -756,18 +1142,37 @@ def _read_image_name(data_path, temporary_path, file_name, resolution, default_e
             # there are issues with unzip
             # seems to occur when files are zipped with zip 3.0
             #
-            if platform.system() == 'Linux':
-                command_line = 'unzip ' + os.path.join(data_path, f) + ' -d ' + str(temporary_path)
-            elif platform.system() == 'Darwin':
-                command_line = 'tar xvf ' + os.path.join(data_path, f) + ' -C ' + str(temporary_path)
+            if platform.system() == "Linux":
+                command_line = (
+                    "unzip " + os.path.join(data_path, f) + " -d " + str(temporary_path)
+                )
+            elif platform.system() == "Darwin":
+                command_line = (
+                    "tar xvf "
+                    + os.path.join(data_path, f)
+                    + " -C "
+                    + str(temporary_path)
+                )
             else:
-                command_line = 'unzip ' + os.path.join(data_path, f) + ' -d ' + str(temporary_path)
+                command_line = (
+                    "unzip " + os.path.join(data_path, f) + " -d " + str(temporary_path)
+                )
             if monitoring.verbose >= 3 or monitoring.debug > 0:
                 monitoring.to_log("* Launch: " + command_line)
-                with open(monitoring.log_filename, 'a') as logfile:
-                    subprocess.call(command_line, shell=True, stdout=logfile, stderr=subprocess.STDOUT)
+                with open(monitoring.log_filename, "a") as logfile:
+                    subprocess.call(
+                        command_line,
+                        shell=True,
+                        stdout=logfile,
+                        stderr=subprocess.STDOUT,
+                    )
             else:
-                subprocess.call(command_line, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                subprocess.call(
+                    command_line,
+                    shell=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                )
 
             #
             # parsing again the temporay directory
@@ -776,18 +1181,30 @@ def _read_image_name(data_path, temporary_path, file_name, resolution, default_e
             for f in os.listdir(temporary_path):
                 if len(f) <= len(prefix):
                     pass
-                if f[0:len(prefix)] == prefix:
+                if f[0 : len(prefix)] == prefix:
                     file_names.append(f)
 
         if len(file_names) == 0:
-            monitoring.to_log_and_console(proc + ": no image with name '" + str(prefix)
-                                          + "' was found in '" + str(temporary_path) + "'")
+            monitoring.to_log_and_console(
+                proc
+                + ": no image with name '"
+                + str(prefix)
+                + "' was found in '"
+                + str(temporary_path)
+                + "'"
+            )
             monitoring.to_log_and_console("\t Exiting")
             sys.exit(1)
 
         if len(file_names) > 1:
-            monitoring.to_log_and_console(proc + ": several images with name '"
-                                          + str(prefix) + "' were found in '" + str(temporary_path) + "'")
+            monitoring.to_log_and_console(
+                proc
+                + ": several images with name '"
+                + str(prefix)
+                + "' were found in '"
+                + str(temporary_path)
+                + "'"
+            )
             monitoring.to_log_and_console("\t " + str(file_names))
             monitoring.to_log_and_console("\t Exiting")
             sys.exit(1)
@@ -804,28 +1221,43 @@ def _read_image_name(data_path, temporary_path, file_name, resolution, default_e
 
     file_has_been_converted = False
     for extension in __extension_to_be_converted__:
-        if f[len(f)-len(extension):len(f)] == extension:
-            prefix = f[0:len(f) - len(extension)]
+        if f[len(f) - len(extension) : len(f)] == extension:
+            prefix = f[0 : len(f) - len(extension)]
 
             #
             # new file name
             # check whether it has already been converted
             #
-            new_full_name = os.path.join(temporary_path, prefix) + '.' + str(default_extension)
+            new_full_name = (
+                os.path.join(temporary_path, prefix) + "." + str(default_extension)
+            )
             if not os.path.isfile(new_full_name):
                 monitoring.to_log_and_console("    .. converting '" + str(f) + "'", 2)
                 image = imread(full_name)
                 if type(resolution) is tuple and len(resolution) == 3:
                     image.voxelsize = resolution
-                    monitoring.to_log("    * resolution of '" + full_name + "' has been set to "
-                                      + str(image.voxelsize))
+                    monitoring.to_log(
+                        "    * resolution of '"
+                        + full_name
+                        + "' has been set to "
+                        + str(image.voxelsize)
+                    )
                 elif type(resolution) is list and len(resolution) == 3:
                     image.voxelsize = (resolution(0), resolution(1), resolution(2))
-                    monitoring.to_log("    * resolution of '" + full_name + "' has been set to "
-                                      + str(image.voxelsize))
+                    monitoring.to_log(
+                        "    * resolution of '"
+                        + full_name
+                        + "' has been set to "
+                        + str(image.voxelsize)
+                    )
                 else:
-                    monitoring.to_log("    * resolution of '" + full_name + "' is " + str(image.voxelsize)
-                                      + "(default/read values)")
+                    monitoring.to_log(
+                        "    * resolution of '"
+                        + full_name
+                        + "' is "
+                        + str(image.voxelsize)
+                        + "(default/read values)"
+                    )
                 #
                 # remove unzipped file to avoid having two files in the directory
                 # verify that it is not the input file!
@@ -848,7 +1280,7 @@ def _read_image_name(data_path, temporary_path, file_name, resolution, default_e
 
     if file_has_been_converted is False:
         for extension in __extension_with_resolution__:
-            if f[len(f) - len(extension):len(f)] == extension:
+            if f[len(f) - len(extension) : len(f)] == extension:
                 file_has_been_converted = True
                 break
 
@@ -857,18 +1289,34 @@ def _read_image_name(data_path, temporary_path, file_name, resolution, default_e
     #
 
     if file_has_been_converted is False:
-        if (type(resolution) is tuple or type(resolution) is list) and len(resolution) == 3:
-            monitoring.to_log_and_console("    .. changing resolution '" + str(f) + "'", 2)
+        if (type(resolution) is tuple or type(resolution) is list) and len(
+            resolution
+        ) == 3:
+            monitoring.to_log_and_console(
+                "    .. changing resolution '" + str(f) + "'", 2
+            )
             image = imread(full_name)
             if type(resolution) is tuple and len(resolution) == 3:
                 image.voxelsize = resolution
-                monitoring.to_log("    * resolution of '" + full_name + "' has been set to " + str(image.voxelsize))
+                monitoring.to_log(
+                    "    * resolution of '"
+                    + full_name
+                    + "' has been set to "
+                    + str(image.voxelsize)
+                )
             elif type(resolution) is list and len(resolution) == 3:
                 image.voxelsize = (resolution(0), resolution(1), resolution(2))
-                monitoring.to_log("    * resolution of '" + full_name + "' has been set to " + str(image.voxelsize))
+                monitoring.to_log(
+                    "    * resolution of '"
+                    + full_name
+                    + "' has been set to "
+                    + str(image.voxelsize)
+                )
             imsave(full_name, image)
         else:
-            monitoring.to_log("    * resolution of '" + full_name + "' is left unchanged")
+            monitoring.to_log(
+                "    * resolution of '" + full_name + "' is left unchanged"
+            )
 
     return full_name
 
@@ -894,11 +1342,16 @@ def _analyze_data_directory(data_dir):
     #
     for f in os.listdir(data_dir):
         for e in common.recognized_image_extensions:
-            if f[len(f)-len(e):len(f)] == e:
+            if f[len(f) - len(e) : len(f)] == e:
                 if e not in extensions:
                     extensions.append(e)
                     if len(extensions) > 1:
-                        print(proc + ": several image extensions were found in '" + data_dir + "'")
+                        print(
+                            proc
+                            + ": several image extensions were found in '"
+                            + data_dir
+                            + "'"
+                        )
                         print("\t -> " + str(extensions))
                         print("\t Exiting.")
                         sys.exit(1)
@@ -919,12 +1372,12 @@ def _analyze_data_directory(data_dir):
         im = images[0]
         length = len(im) - 1 - len(suffix)
         for i in range(0, 3):
-            if '0' <= im[length-i] <= '9':
+            if "0" <= im[length - i] <= "9":
                 time_length += 1
             else:
                 break
-        prefix = im[0:len(im) - time_length - len(suffix)]
-        time_points = im[len(im) - time_length - len(suffix):len(im) - len(suffix)]
+        prefix = im[0 : len(im) - time_length - len(suffix)]
+        time_points = im[len(im) - time_length - len(suffix) : len(im) - len(suffix)]
         return prefix, time_length, time_points, suffix
 
     #
@@ -943,7 +1396,7 @@ def _analyze_data_directory(data_dir):
             print("\t Exiting.")
             sys.exit(1)
 
-    prefix = ''
+    prefix = ""
     for j in range(0, len(images[0])):
         ok = True
         for i in range(1, len(images)):
@@ -955,7 +1408,7 @@ def _analyze_data_directory(data_dir):
         else:
             break
 
-    suffix = ''
+    suffix = ""
     for j in range(len(images[0]) - 1, -1, -1):
         ok = True
         for i in range(1, len(images)):
@@ -972,7 +1425,14 @@ def _analyze_data_directory(data_dir):
 
     time_points = []
     for i in range(0, len(images)):
-        time_points.append(images[i][len(images[i]) - time_length - len(suffix):len(images[i]) - len(suffix)])
+        time_points.append(
+            images[i][
+                len(images[i])
+                - time_length
+                - len(suffix) : len(images[i])
+                - len(suffix)
+            ]
+        )
 
     return prefix, time_length, time_points, suffix
 
@@ -1003,8 +1463,14 @@ def _crop_bounding_box(the_image, z_crop=False):
     else:
         the_xz_selection = None
         the_zy_selection = None
-    cpp_wrapping.mip_projection_for_crop(the_image, the_xy_selection, the_xz_selection, the_zy_selection, None,
-                                         monitoring)
+    cpp_wrapping.mip_projection_for_crop(
+        the_image,
+        the_xy_selection,
+        the_xz_selection,
+        the_zy_selection,
+        None,
+        monitoring,
+    )
 
     #
     # read input image
@@ -1040,7 +1506,7 @@ def _crop_bounding_box(the_image, z_crop=False):
     # boundingBoxes = nd.find_objects(ccImage, max_label=maxLabel)
     # maxBox = boundingBoxes[int(maxLabel)-1]
     #
-    max_box = nd.find_objects(cc_image, max_label=max_label)[int(max_label)-1]
+    max_box = nd.find_objects(cc_image, max_label=max_label)[int(max_label) - 1]
     del cc_image
 
     zmin = 0
@@ -1082,8 +1548,18 @@ def _crop_bounding_box(the_image, z_crop=False):
     return [max_box[0], max_box[1], slice(zmin, zmax)]
 
 
-def _crop_disk_image(the_image, res_image, the_max_box=None, z_crop=False,
-                     margin_x_0=40, margin_x_1=40, margin_y_0=40, margin_y_1=40, margin_z_0=40, margin_z_1=40):
+def _crop_disk_image(
+    the_image,
+    res_image,
+    the_max_box=None,
+    z_crop=False,
+    margin_x_0=40,
+    margin_x_1=40,
+    margin_y_0=40,
+    margin_y_1=40,
+    margin_z_0=40,
+    margin_z_1=40,
+):
     """
     Crop an image on disk in XY plane
     :param the_image:
@@ -1119,18 +1595,35 @@ def _crop_disk_image(the_image, res_image, the_max_box=None, z_crop=False,
         zmin = max(max_box[2].start - margin_z_0, 0)
         zmax = min(image.shape[2], max_box[2].stop + margin_z_1)
 
-    new_box = (slice(xmin, xmax, None),
-               slice(ymin, ymax, None),
-               slice(zmin, zmax))
+    new_box = (slice(xmin, xmax, None), slice(ymin, ymax, None), slice(zmin, zmax))
 
     new_image = SpatialImage(image[new_box])
     new_image.voxelsize = image.voxelsize
 
     imsave(res_image, new_image)
 
-    monitoring.to_log_and_console("       crop from [0," + str(image.shape[0]) + "]x[0," + str(image.shape[1]) + "]x[0,"
-                                  + str(image.shape[2]) + "] to [" + str(xmin) + "," + str(xmax) + "]x[" + str(ymin)
-                                  + "," + str(ymax) + "]x[" + str(zmin) + "," + str(zmax) + "]", 2)
+    monitoring.to_log_and_console(
+        "       crop from [0,"
+        + str(image.shape[0])
+        + "]x[0,"
+        + str(image.shape[1])
+        + "]x[0,"
+        + str(image.shape[2])
+        + "] to ["
+        + str(xmin)
+        + ","
+        + str(xmax)
+        + "]x["
+        + str(ymin)
+        + ","
+        + str(ymax)
+        + "]x["
+        + str(zmin)
+        + ","
+        + str(zmax)
+        + "]",
+        2,
+    )
 
     return
 
@@ -1143,7 +1636,7 @@ def _crop_disk_image(the_image, res_image, the_max_box=None, z_crop=False,
 
 
 def _axis_rotation_matrix(axis, angle, min_space=None, max_space=None):
-    """ Return the transformation matrix from the axis and angle necessary
+    """Return the transformation matrix from the axis and angle necessary
     this is a rigid transformation (rotation) that preserves the center of
     the field of view
     axis : axis of rotation ("X", "Y" or "Z")
@@ -1161,36 +1654,47 @@ def _axis_rotation_matrix(axis, angle, min_space=None, max_space=None):
 
     centering = np.identity(4)
     if min_space is None and max_space is not None:
-        min_space = np.array([0., 0., 0.])
+        min_space = np.array([0.0, 0.0, 0.0])
 
     if max_space is not None:
-        space_center = (max_space-min_space)/2.
-        offset = -1.*space_center
+        space_center = (max_space - min_space) / 2.0
+        offset = -1.0 * space_center
         centering[:3, 3] = offset
 
     rot = np.identity(4)
     if axis == "X":
-        rot = np.array([[1., 0., 0., 0.],
-                        [0., c, -s, 0.],
-                        [0., s, c, 0.],
-                        [0., 0., 0., 1.]])
+        rot = np.array(
+            [
+                [1.0, 0.0, 0.0, 0.0],
+                [0.0, c, -s, 0.0],
+                [0.0, s, c, 0.0],
+                [0.0, 0.0, 0.0, 1.0],
+            ]
+        )
     elif axis == "Y":
-        rot = np.array([[c,   0., s,  0.],
-                        [0., 1., 0., 0.],
-                        [-s, 0., c, 0.],
-                        [0., 0., 0., 1.]])
+        rot = np.array(
+            [
+                [c, 0.0, s, 0.0],
+                [0.0, 1.0, 0.0, 0.0],
+                [-s, 0.0, c, 0.0],
+                [0.0, 0.0, 0.0, 1.0],
+            ]
+        )
 
     elif axis == "Z":
-        rot = np.array([[c, -s,  0., 0.],
-                        [s, c, 0., 0.],
-                        [0., 0., 1., 0.],
-                        [0., 0., 0., 1.]])
+        rot = np.array(
+            [
+                [c, -s, 0.0, 0.0],
+                [s, c, 0.0, 0.0],
+                [0.0, 0.0, 1.0, 0.0],
+                [0.0, 0.0, 0.0, 1.0],
+            ]
+        )
 
     return d(i(centering), d(rot, centering))
 
 
 def _init_rotation_matrix(axis, angle, ref_center=None, flo_center=None):
-
     if axis not in ["X", "Y", "Z"]:
         raise Exception("Unknown axis : " + str(axis))
     rads = math.radians(angle)
@@ -1199,17 +1703,11 @@ def _init_rotation_matrix(axis, angle, ref_center=None, flo_center=None):
 
     rot = np.identity(3)
     if axis == "X":
-        rot = np.array([[1., 0., 0.],
-                        [0., c, -s],
-                        [0., s, c]])
+        rot = np.array([[1.0, 0.0, 0.0], [0.0, c, -s], [0.0, s, c]])
     elif axis == "Y":
-        rot = np.array([[c, 0., s],
-                        [0., 1., 0.],
-                        [-s, 0., c]])
+        rot = np.array([[c, 0.0, s], [0.0, 1.0, 0.0], [-s, 0.0, c]])
     elif axis == "Z":
-        rot = np.array([[c, -s, 0.],
-                        [s, c, 0.],
-                        [0., 0., 1.]])
+        rot = np.array([[c, -s, 0.0], [s, c, 0.0], [0.0, 0.0, 1.0]])
 
     if ref_center is not None:
         if flo_center is not None:
@@ -1220,7 +1718,7 @@ def _init_rotation_matrix(axis, angle, ref_center=None, flo_center=None):
         if flo_center is not None:
             trs = flo_center - np.dot(rot, flo_center)
         else:
-            trs = np.array[0., 0., 0.]
+            trs = np.array[0.0, 0.0, 0.0]
 
     mat = np.identity(4)
     mat[0:3, 0:3] = rot
@@ -1235,10 +1733,10 @@ def _is_transformation_identity(mat):
     for i in range(mat.shape[0]):
         for j in range(mat.shape[1]):
             if i == j:
-                if mat[i,j] < 1 - err or  1 + err < mat[i,j]:
+                if mat[i, j] < 1 - err or 1 + err < mat[i, j]:
                     is_identity = False
             else:
-                if mat[i, j] < (- err) or err < mat[i, j]:
+                if mat[i, j] < (-err) or err < mat[i, j]:
                     is_identity = False
     return is_identity
 
@@ -1254,25 +1752,25 @@ def _is_transformation_identity(mat):
 def _histogram(image, nbins=256):
     """Return histogram of image.
 
-        Unlike `np.histogram`, this function returns the centers of bins and
-        does not rebin integer arrays. For integer arrays, each integer value has
-        its own bin, which improves speed and intensity-resolution.
+    Unlike `np.histogram`, this function returns the centers of bins and
+    does not rebin integer arrays. For integer arrays, each integer value has
+    its own bin, which improves speed and intensity-resolution.
 
-        Parameters
-        ----------
-        image : array
-        Input image.
-        nbins : int
-        Number of bins used to calculate histogram. This value is ignored for
-        integer arrays.
+    Parameters
+    ----------
+    image : array
+    Input image.
+    nbins : int
+    Number of bins used to calculate histogram. This value is ignored for
+    integer arrays.
 
-        Returns
-        -------
-        hist : array
-        The values of the histogram.
-        bin_centers : array
-        The values at the center of the bins.
-        """
+    Returns
+    -------
+    hist : array
+    The values of the histogram.
+    bin_centers : array
+    The values at the center of the bins.
+    """
 
     proc = "_histogram"
     if not isinstance(image, SpatialImage):
@@ -1292,30 +1790,30 @@ def _histogram(image, nbins=256):
         return hist[idx:], bin_centers[idx:]
     else:
         hist, bin_edges = np.histogram(image.flat, nbins)
-        bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2.
+        bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2.0
         return hist, bin_centers
 
 
 def _threshold_otsu(image, nbins=256):
     """Return threshold value based on Otsu's method.
 
-        Parameters
-        ----------
-        image : array
-        Input image.
-        nbins : int
-        Number of bins used to calculate histogram. This value is ignored for
-        integer arrays.
+    Parameters
+    ----------
+    image : array
+    Input image.
+    nbins : int
+    Number of bins used to calculate histogram. This value is ignored for
+    integer arrays.
 
-        Returns
-        -------
-        threshold : float
-        Threshold value.
+    Returns
+    -------
+    threshold : float
+    Threshold value.
 
-        References
-        ----------
-        .. [1] Wikipedia, http://en.wikipedia.org/wiki/Otsu's_Method
-        """
+    References
+    ----------
+    .. [1] Wikipedia, http://en.wikipedia.org/wiki/Otsu's_Method
+    """
 
     proc = "_threshold_otsu"
     if not isinstance(image, SpatialImage):
@@ -1343,13 +1841,13 @@ def _threshold_otsu(image, nbins=256):
 
 
 def _exp_func(x, length=500, speed=5):
-    """ Decay function used to take into account the remotness to the camera
+    """Decay function used to take into account the remotness to the camera
     x : value to compute
     length : lenght of the function
     speed : speed of the function
     """
 
-    return .1+np.exp(-((np.float32(x)*speed)/length))
+    return 0.1 + np.exp(-((np.float32(x) * speed) / length))
 
 
 def _build_guignard_weighting(image, decreasing_weight_with_z):
@@ -1395,17 +1893,20 @@ def _build_corner_weighting(image, decreasing_weight_with_z):
     # - linear decrease along the x dimension until dimz/2 - dz is reached
     # cz : plans entiers de 1 -> [dimz-cz, dimz-1]
     # dz : decalage vers z=0 a partir de mz=dimz/2
-    cz = int(dimz/8.0)
-    dz = int(dimz/8.0)
-    mz = int(dimz/2.0 + 0.5)
+    cz = int(dimz / 8.0)
+    dz = int(dimz / 8.0)
+    mz = int(dimz / 2.0 + 0.5)
     # partie constante
     for z in range(dimz - cz, dimz):
         mask[:, :, z] = 1.0
     # partie variable
     for z in range(mz - dz, dimz - cz):
-        dx = int((z - float(dimz - cz)) / float((mz - dz) - (dimz - cz)) * float(dimx / 2.0) + 0.5)
+        dx = int(
+            (z - float(dimz - cz)) / float((mz - dz) - (dimz - cz)) * float(dimx / 2.0)
+            + 0.5
+        )
         if dimx - dx > dx:
-            mask[dx:dimx-dx, :, z] = 1.0
+            mask[dx : dimx - dx, :, z] = 1.0
     if decreasing_weight_with_z is True:
         mask = mask[:, :, -1::-1]
     return mask
@@ -1448,8 +1949,12 @@ def _build_uniform_weighting(image):
     return mask
 
 
-def _build_unreg_weighting_image(template_image_name, weighting_image_name, decreasing_weight_with_z=True,
-                                 fusion_weighting='none'):
+def _build_unreg_weighting_image(
+    template_image_name,
+    weighting_image_name,
+    decreasing_weight_with_z=True,
+    fusion_weighting="none",
+):
     """
 
     :param template_image_name:
@@ -1461,25 +1966,49 @@ def _build_unreg_weighting_image(template_image_name, weighting_image_name, decr
     proc = "_build_unreg_weighting_image"
 
     im = imread(template_image_name)
-    if fusion_weighting.lower() == 'none' or fusion_weighting.lower() == 'uniform' \
-            or fusion_weighting.lower() == 'uniform-weighting':
+    if (
+        fusion_weighting.lower() == "none"
+        or fusion_weighting.lower() == "uniform"
+        or fusion_weighting.lower() == "uniform-weighting"
+    ):
         unreg_weight = _build_uniform_weighting(im)
-    elif fusion_weighting.lower() == 'guignard' or fusion_weighting.lower() == 'guignard-weighting':
+    elif (
+        fusion_weighting.lower() == "guignard"
+        or fusion_weighting.lower() == "guignard-weighting"
+    ):
         unreg_weight = _build_guignard_weighting(im, decreasing_weight_with_z)
-    elif fusion_weighting.lower() == 'corner' or fusion_weighting.lower() == 'corner-weighting':
+    elif (
+        fusion_weighting.lower() == "corner"
+        or fusion_weighting.lower() == "corner-weighting"
+    ):
         unreg_weight = _build_corner_weighting(im, decreasing_weight_with_z)
-    elif fusion_weighting.lower() == 'ramp' or fusion_weighting.lower() == 'ramp-weighting':
+    elif (
+        fusion_weighting.lower() == "ramp"
+        or fusion_weighting.lower() == "ramp-weighting"
+    ):
         unreg_weight = _build_ramp_weighting(im, decreasing_weight_with_z)
     else:
-        monitoring.to_log_and_console(str(proc) + ": unknown weighting function, switch to uniform")
+        monitoring.to_log_and_console(
+            str(proc) + ": unknown weighting function, switch to uniform"
+        )
         unreg_weight = _build_uniform_weighting(im)
 
     unreg_weight.voxelsize = im.voxelsize
     imsave(weighting_image_name, unreg_weight)
 
-    if fusion_weighting.lower() == 'corner' or fusion_weighting.lower() == 'corner-weighting':
-        cpp_wrapping.linear_smoothing(weighting_image_name, weighting_image_name, 5.0, real_scale=False,
-                                      filter_type='deriche', border=10, monitoring=monitoring)
+    if (
+        fusion_weighting.lower() == "corner"
+        or fusion_weighting.lower() == "corner-weighting"
+    ):
+        cpp_wrapping.linear_smoothing(
+            weighting_image_name,
+            weighting_image_name,
+            5.0,
+            real_scale=False,
+            filter_type="deriche",
+            border=10,
+            monitoring=monitoring,
+        )
 
     del im
     del unreg_weight
@@ -1492,8 +2021,15 @@ def _build_unreg_weighting_image(template_image_name, weighting_image_name, decr
 #
 ########################################################################################
 
-def _blockmatching(path_ref, path_flo, path_output, path_output_trsf, path_init_trsf=None,
-                   parameters=None):
+
+def _blockmatching(
+    path_ref,
+    path_flo,
+    path_output,
+    path_output_trsf,
+    path_init_trsf=None,
+    parameters=None,
+):
     """
 
     :param path_ref:
@@ -1505,35 +2041,65 @@ def _blockmatching(path_ref, path_flo, path_output, path_output_trsf, path_init_
     :return:
     """
     if parameters is not None:
-        cpp_wrapping.blockmatching(path_ref, path_flo, path_output, path_output_trsf, path_init_trsf=path_init_trsf,
-                                   py_hl=parameters.pyramid_highest_level,
-                                   py_ll=parameters.pyramid_lowest_level,
-                                   transformation_type=parameters.transformation_type,
-                                   elastic_sigma=parameters.elastic_sigma,
-                                   transformation_estimator=parameters.transformation_estimation_type,
-                                   lts_fraction=parameters.lts_fraction,
-                                   fluid_sigma=parameters.fluid_sigma,
-                                   normalization=parameters.normalization,
-                                   monitoring=monitoring)
+        cpp_wrapping.blockmatching(
+            path_ref,
+            path_flo,
+            path_output,
+            path_output_trsf,
+            path_init_trsf=path_init_trsf,
+            py_hl=parameters.pyramid_highest_level,
+            py_ll=parameters.pyramid_lowest_level,
+            transformation_type=parameters.transformation_type,
+            elastic_sigma=parameters.elastic_sigma,
+            transformation_estimator=parameters.transformation_estimation_type,
+            lts_fraction=parameters.lts_fraction,
+            fluid_sigma=parameters.fluid_sigma,
+            normalization=parameters.normalization,
+            monitoring=monitoring,
+        )
     else:
-        cpp_wrapping.blockmatching(path_ref, path_flo, path_output, path_output_trsf, path_init_trsf=path_init_trsf,
-                                   monitoring=monitoring)
+        cpp_wrapping.blockmatching(
+            path_ref,
+            path_flo,
+            path_output,
+            path_output_trsf,
+            path_init_trsf=path_init_trsf,
+            monitoring=monitoring,
+        )
 
 
-def _linear_registration(path_ref, path_flo, path_output, path_output_trsf, path_init_trsf=None,
-                         parameters=None):
+def _linear_registration(
+    path_ref,
+    path_flo,
+    path_output,
+    path_output_trsf,
+    path_init_trsf=None,
+    parameters=None,
+):
     if parameters is not None:
-        cpp_wrapping.linear_registration(path_ref, path_flo, path_output, path_output_trsf, path_init_trsf,
-                                         py_hl=parameters.pyramid_highest_level,
-                                         py_ll=parameters.pyramid_lowest_level,
-                                         transformation_type=parameters.transformation_type,
-                                         transformation_estimator=parameters.transformation_estimation_type,
-                                         lts_fraction=parameters.lts_fraction,
-                                         normalization=parameters.normalization,
-                                         monitoring=monitoring)
+        cpp_wrapping.linear_registration(
+            path_ref,
+            path_flo,
+            path_output,
+            path_output_trsf,
+            path_init_trsf,
+            py_hl=parameters.pyramid_highest_level,
+            py_ll=parameters.pyramid_lowest_level,
+            transformation_type=parameters.transformation_type,
+            transformation_estimator=parameters.transformation_estimation_type,
+            lts_fraction=parameters.lts_fraction,
+            normalization=parameters.normalization,
+            monitoring=monitoring,
+        )
     else:
-        cpp_wrapping.linear_registration(path_ref, path_flo, path_output, path_output_trsf, path_init_trsf,
-                                         monitoring=monitoring)
+        cpp_wrapping.linear_registration(
+            path_ref,
+            path_flo,
+            path_output,
+            path_output_trsf,
+            path_init_trsf,
+            monitoring=monitoring,
+        )
 
 
 ########################################################################################
@@ -1541,6 +2107,7 @@ def _linear_registration(path_ref, path_flo, path_output, path_output_trsf, path
 #
 #
 ########################################################################################
+
 
 def _get_image_shape(template_image_name):
     im = imread(template_image_name)
@@ -1549,7 +2116,9 @@ def _get_image_shape(template_image_name):
     return shape
 
 
-def _extract_xzsection(weight_images, res_images, tmp_fused_image, channel_id, experiment):
+def _extract_xzsection(
+    weight_images, res_images, tmp_fused_image, channel_id, experiment
+):
     """
     Extract XZ sections from registered raw images and weights as well as the fused image
     (before the last crop (if any))
@@ -1564,68 +2133,116 @@ def _extract_xzsection(weight_images, res_images, tmp_fused_image, channel_id, e
     d = experiment.fusion_dir.get_xzsection_directory(channel_id)
 
     if isinstance(weight_images, list) and isinstance(res_images, list):
-
         shape = _get_image_shape(res_images[0])
         options = "-xz " + str(int(shape[1] / 2))
-        name = experiment.get_embryo_name() + "_xy" + format(int(shape[1] / 2), '0>4')
+        name = experiment.get_embryo_name() + "_xy" + format(int(shape[1] / 2), "0>4")
 
-        xzsection = os.path.join(d, name + "_stack0_lc_reg." + experiment.result_image_suffix)
+        xzsection = os.path.join(
+            d, name + "_stack0_lc_reg." + experiment.result_image_suffix
+        )
         cpp_wrapping.ext_image(res_images[0], xzsection, options, monitoring=monitoring)
 
-        xzsection = os.path.join(d, name + "_stack0_rc_reg." + experiment.result_image_suffix)
+        xzsection = os.path.join(
+            d, name + "_stack0_rc_reg." + experiment.result_image_suffix
+        )
         cpp_wrapping.ext_image(res_images[1], xzsection, options, monitoring=monitoring)
 
         if len(res_images) == 4:
-            xzsection = os.path.join(d, name + "_stack1_lc_reg." + experiment.result_image_suffix)
-            cpp_wrapping.ext_image(res_images[2], xzsection, options, monitoring=monitoring)
+            xzsection = os.path.join(
+                d, name + "_stack1_lc_reg." + experiment.result_image_suffix
+            )
+            cpp_wrapping.ext_image(
+                res_images[2], xzsection, options, monitoring=monitoring
+            )
 
-            xzsection = os.path.join(d, name + "_stack1_rc_reg." + experiment.result_image_suffix)
-            cpp_wrapping.ext_image(res_images[3], xzsection, options, monitoring=monitoring)
+            xzsection = os.path.join(
+                d, name + "_stack1_rc_reg." + experiment.result_image_suffix
+            )
+            cpp_wrapping.ext_image(
+                res_images[3], xzsection, options, monitoring=monitoring
+            )
 
-        xzsection = os.path.join(d, name + "_stack0_lc_weight." + experiment.result_image_suffix)
-        cpp_wrapping.ext_image(weight_images[0], xzsection, options, monitoring=monitoring)
+        xzsection = os.path.join(
+            d, name + "_stack0_lc_weight." + experiment.result_image_suffix
+        )
+        cpp_wrapping.ext_image(
+            weight_images[0], xzsection, options, monitoring=monitoring
+        )
 
-        xzsection = os.path.join(d, name + "_stack0_rc_weight." + experiment.result_image_suffix)
-        cpp_wrapping.ext_image(weight_images[1], xzsection, options, monitoring=monitoring)
+        xzsection = os.path.join(
+            d, name + "_stack0_rc_weight." + experiment.result_image_suffix
+        )
+        cpp_wrapping.ext_image(
+            weight_images[1], xzsection, options, monitoring=monitoring
+        )
 
         if len(weight_images) == 4:
-            xzsection = os.path.join(d, name + "_stack1_lc_weight." + experiment.result_image_suffix)
-            cpp_wrapping.ext_image(weight_images[2], xzsection, options, monitoring=monitoring)
+            xzsection = os.path.join(
+                d, name + "_stack1_lc_weight." + experiment.result_image_suffix
+            )
+            cpp_wrapping.ext_image(
+                weight_images[2], xzsection, options, monitoring=monitoring
+            )
 
-            xzsection = os.path.join(d, name + "_stack1_rc_weight." + experiment.result_image_suffix)
-            cpp_wrapping.ext_image(weight_images[3], xzsection, options, monitoring=monitoring)
+            xzsection = os.path.join(
+                d, name + "_stack1_rc_weight." + experiment.result_image_suffix
+            )
+            cpp_wrapping.ext_image(
+                weight_images[3], xzsection, options, monitoring=monitoring
+            )
 
         xzsection = os.path.join(d, name + "_fuse." + experiment.result_image_suffix)
-        cpp_wrapping.ext_image(tmp_fused_image, xzsection, options, monitoring=monitoring)
+        cpp_wrapping.ext_image(
+            tmp_fused_image, xzsection, options, monitoring=monitoring
+        )
 
     elif isinstance(weight_images, dict) and isinstance(res_images, dict):
-
         keylist = list(res_images.keys())
         shape = _get_image_shape(res_images[keylist[0]])
         options = "-xz " + str(int(shape[1] / 2))
-        name = experiment.get_embryo_name() + "_xy" + format(int(shape[1] / 2), '0>4')
+        name = experiment.get_embryo_name() + "_xy" + format(int(shape[1] / 2), "0>4")
 
         for i in res_images:
             if i == 0:
-                xzsection = os.path.join(d, name + "_stack0_lc_reg." + experiment.result_image_suffix)
+                xzsection = os.path.join(
+                    d, name + "_stack0_lc_reg." + experiment.result_image_suffix
+                )
             elif i == 1:
-                xzsection = os.path.join(d, name + "_stack0_rc_reg." + experiment.result_image_suffix)
+                xzsection = os.path.join(
+                    d, name + "_stack0_rc_reg." + experiment.result_image_suffix
+                )
             elif i == 2:
-                xzsection = os.path.join(d, name + "_stack1_lc_reg." + experiment.result_image_suffix)
+                xzsection = os.path.join(
+                    d, name + "_stack1_lc_reg." + experiment.result_image_suffix
+                )
             elif i == 3:
-                xzsection = os.path.join(d, name + "_stack1_rc_reg." + experiment.result_image_suffix)
-            cpp_wrapping.ext_image(res_images[i], xzsection, options, monitoring=monitoring)
+                xzsection = os.path.join(
+                    d, name + "_stack1_rc_reg." + experiment.result_image_suffix
+                )
+            cpp_wrapping.ext_image(
+                res_images[i], xzsection, options, monitoring=monitoring
+            )
 
         for i in res_images:
             if i == 0:
-                xzsection = os.path.join(d, name + "_stack0_lc_weight." + experiment.result_image_suffix)
+                xzsection = os.path.join(
+                    d, name + "_stack0_lc_weight." + experiment.result_image_suffix
+                )
             elif i == 1:
-                xzsection = os.path.join(d, name + "_stack0_rc_weight." + experiment.result_image_suffix)
+                xzsection = os.path.join(
+                    d, name + "_stack0_rc_weight." + experiment.result_image_suffix
+                )
             elif i == 2:
-                xzsection = os.path.join(d, name + "_stack1_lc_weight." + experiment.result_image_suffix)
+                xzsection = os.path.join(
+                    d, name + "_stack1_lc_weight." + experiment.result_image_suffix
+                )
             elif i == 3:
-                xzsection = os.path.join(d, name + "_stack1_rc_weight." + experiment.result_image_suffix)
-            cpp_wrapping.ext_image(weight_images[i], xzsection, options, monitoring=monitoring)
+                xzsection = os.path.join(
+                    d, name + "_stack1_rc_weight." + experiment.result_image_suffix
+                )
+            cpp_wrapping.ext_image(
+                weight_images[i], xzsection, options, monitoring=monitoring
+            )
 
     return
 
@@ -1641,7 +2258,10 @@ def _extract_xzsection(weight_images, res_images, tmp_fused_image, channel_id, e
 # each image is co-registered with the left camera acquisition of stack 30
 #
 
-def _direct_fusion_process(input_image_list, the_image_list, fused_image, experiment, parameters):
+
+def _direct_fusion_process(
+    input_image_list, the_image_list, fused_image, experiment, parameters
+):
     """
 
     :param input_image_list: a list of dictionaries of images to be fused. One list per channel
@@ -1681,13 +2301,19 @@ def _direct_fusion_process(input_image_list, the_image_list, fused_image, experi
     #
 
     if not isinstance(experiment, common.Experiment):
-        monitoring.to_log_and_console(str(proc) + ": unexpected type for 'experiment' variable: "
-                                      + str(type(experiment)))
+        monitoring.to_log_and_console(
+            str(proc)
+            + ": unexpected type for 'experiment' variable: "
+            + str(type(experiment))
+        )
         sys.exit(1)
 
     if not isinstance(parameters, FusionParameters):
-        monitoring.to_log_and_console(str(proc) + ": unexpected type for 'parameters' variable: "
-                                      + str(type(parameters)))
+        monitoring.to_log_and_console(
+            str(proc)
+            + ": unexpected type for 'parameters' variable: "
+            + str(type(parameters))
+        )
         sys.exit(1)
 
     #
@@ -1698,14 +2324,16 @@ def _direct_fusion_process(input_image_list, the_image_list, fused_image, experi
 
     res_image_list = list()
     for c in range(n_channels):
-
         the_images = the_image_list[c]
         res_images = {}
 
         for i in the_images:
-            res_images[i] = common.add_suffix(input_image_list[c][i], "_reg",
-                                                new_dirname=experiment.rawdata_dir.get_tmp_directory(i, c),
-                                                new_extension=experiment.default_image_suffix)
+            res_images[i] = common.add_suffix(
+                input_image_list[c][i],
+                "_reg",
+                new_dirname=experiment.rawdata_dir.get_tmp_directory(i, c),
+                new_extension=experiment.default_image_suffix,
+            )
         res_image_list.append(res_images)
 
     #
@@ -1720,11 +2348,12 @@ def _direct_fusion_process(input_image_list, the_image_list, fused_image, experi
         do_something[i] = False
 
     for c in range(n_channels):
-
         the_images = the_image_list[c]
         res_images = res_image_list[c]
 
-        if not os.path.isfile(os.path.join(experiment.fusion_dir.get_directory(c), fused_image)):
+        if not os.path.isfile(
+            os.path.join(experiment.fusion_dir.get_directory(c), fused_image)
+        ):
             for i in do_something:
                 do_something[i] = True
             break
@@ -1752,15 +2381,24 @@ def _direct_fusion_process(input_image_list, the_image_list, fused_image, experi
     # build the file names after the input file names
     #
     for i in the_image_list[0]:
-        init_trsfs[i] = common.add_suffix(input_image_list[0][i], "_init",
-                                          new_dirname=experiment.rawdata_dir.get_tmp_directory(i, 0),
-                                          new_extension="trsf")
-        prereg_trsfs[i] = common.add_suffix(input_image_list[0][i], "_prereg",
-                                            new_dirname=experiment.rawdata_dir.get_tmp_directory(i, 0),
-                                            new_extension="trsf")
-        res_trsfs[i] = common.add_suffix(input_image_list[0][i], "_reg",
-                                         new_dirname=experiment.rawdata_dir.get_tmp_directory(i, 0),
-                                         new_extension="trsf")
+        init_trsfs[i] = common.add_suffix(
+            input_image_list[0][i],
+            "_init",
+            new_dirname=experiment.rawdata_dir.get_tmp_directory(i, 0),
+            new_extension="trsf",
+        )
+        prereg_trsfs[i] = common.add_suffix(
+            input_image_list[0][i],
+            "_prereg",
+            new_dirname=experiment.rawdata_dir.get_tmp_directory(i, 0),
+            new_extension="trsf",
+        )
+        res_trsfs[i] = common.add_suffix(
+            input_image_list[0][i],
+            "_reg",
+            new_dirname=experiment.rawdata_dir.get_tmp_directory(i, 0),
+            new_extension="trsf",
+        )
 
     #
     # the final image is a weighting sum of the transformed acquisition image
@@ -1775,7 +2413,10 @@ def _direct_fusion_process(input_image_list, the_image_list, fused_image, experi
         weight_images = {}
         cref = c
         for i in range(0, c):
-            if experiment.rawdata_dir.channel[c].fusion_weighting == experiment.rawdata_dir.channel[i].fusion_weighting:
+            if (
+                experiment.rawdata_dir.channel[c].fusion_weighting
+                == experiment.rawdata_dir.channel[i].fusion_weighting
+            ):
                 cref = i
         #
         # check if the weighting mode was used for previous channels (ie weights have already been computed)
@@ -1785,12 +2426,18 @@ def _direct_fusion_process(input_image_list, the_image_list, fused_image, experi
         #
         if cref == c:
             for i in the_image_list[0]:
-                unreg_weight_images[i] = common.add_suffix(input_image_list[c][i], "_init_weight_" + str(c),
-                                                           new_dirname=experiment.rawdata_dir.get_tmp_directory(i, c),
-                                                           new_extension=experiment.default_image_suffix)
-                weight_images[i] = common.add_suffix(input_image_list[c][i], "_weight_" + str(c),
-                                                     new_dirname=experiment.rawdata_dir.get_tmp_directory(i, c),
-                                                     new_extension=experiment.default_image_suffix)
+                unreg_weight_images[i] = common.add_suffix(
+                    input_image_list[c][i],
+                    "_init_weight_" + str(c),
+                    new_dirname=experiment.rawdata_dir.get_tmp_directory(i, c),
+                    new_extension=experiment.default_image_suffix,
+                )
+                weight_images[i] = common.add_suffix(
+                    input_image_list[c][i],
+                    "_weight_" + str(c),
+                    new_dirname=experiment.rawdata_dir.get_tmp_directory(i, c),
+                    new_extension=experiment.default_image_suffix,
+                )
         else:
             unreg_weight_images = unreg_weight_images_list[cref]
             weight_images = weight_images_list[cref]
@@ -1811,13 +2458,18 @@ def _direct_fusion_process(input_image_list, the_image_list, fused_image, experi
 
     monitoring.to_log_and_console("    .. initial transformation", 2)
 
-    if parameters.acquisition_orientation.lower() == 'left':
+    if parameters.acquisition_orientation.lower() == "left":
         default_angle = 270.0
-    elif parameters.acquisition_orientation.lower() == 'right':
+    elif parameters.acquisition_orientation.lower() == "right":
         default_angle = 90.0
     else:
-        monitoring.to_log_and_console(proc + ": unknown acquisition orientation '"
-                                      + str(parameters.acquisition_orientation) + "'", 0)
+        monitoring.to_log_and_console(
+            proc
+            + ": unknown acquisition orientation '"
+            + str(parameters.acquisition_orientation)
+            + "'",
+            0,
+        )
         monitoring.to_log_and_console("Exiting.", 0)
         sys.exit(1)
 
@@ -1830,7 +2482,10 @@ def _direct_fusion_process(input_image_list, the_image_list, fused_image, experi
     ref_center = None
     monitoring.to_log_and_console("       reference image is #" + str(ref_index), 2)
     for i in the_images_keys:
-        if not os.path.isfile(init_trsfs[i]) or monitoring.forceResultsToBeBuilt is True:
+        if (
+            not os.path.isfile(init_trsfs[i])
+            or monitoring.forceResultsToBeBuilt is True
+        ):
             #
             # get image center
             #
@@ -1849,8 +2504,13 @@ def _direct_fusion_process(input_image_list, the_image_list, fused_image, experi
                 angle = 0.0
             else:
                 angle = default_angle
-            monitoring.to_log_and_console("       angle used for '" + init_trsfs[i].split(os.path.sep)[-1]
-                                          + "' is " + str(angle), 2)
+            monitoring.to_log_and_console(
+                "       angle used for '"
+                + init_trsfs[i].split(os.path.sep)[-1]
+                + "' is "
+                + str(angle),
+                2,
+            )
 
             #
             # the initial transformation was computed with _axis_rotation_matrix(). To compute the
@@ -1867,13 +2527,16 @@ def _direct_fusion_process(input_image_list, the_image_list, fused_image, experi
             # _ init_rotation_matrix(axis="Y", angle=angle, ref_center=flo_center, flo_center=flo_center)
             #
 
-            rotation_matrix[i] = _init_rotation_matrix(axis="Y", angle=angle, ref_center=ref_center,
-                                                    flo_center=flo_center)
+            rotation_matrix[i] = _init_rotation_matrix(
+                axis="Y", angle=angle, ref_center=ref_center, flo_center=flo_center
+            )
             np.savetxt(init_trsfs[i], rotation_matrix[i])
         elif os.path.isfile(init_trsfs[i]):
             rotation_matrix[i] = np.loadtxt(init_trsfs[i])
-            print("type(rotation_matrix[" + str(i) + "])=" + str(type(rotation_matrix[i])))
-            print("rotation_matrix["+str(i)+"]="+str(rotation_matrix[i]))
+            print(
+                "type(rotation_matrix[" + str(i) + "])=" + str(type(rotation_matrix[i]))
+            )
+            print("rotation_matrix[" + str(i) + "]=" + str(rotation_matrix[i]))
 
     #
     # process
@@ -1890,7 +2553,6 @@ def _direct_fusion_process(input_image_list, the_image_list, fused_image, experi
     fusion_box = None
 
     for c in range(n_channels):
-
         if n_channels > 1:
             monitoring.to_log_and_console("    .. process channel #" + str(c), 2)
 
@@ -1903,9 +2565,12 @@ def _direct_fusion_process(input_image_list, the_image_list, fused_image, experi
         # ensure that the reference image is processed first
         #
         for i in the_images_keys:
-
-            monitoring.to_log_and_console("    .. process '"
-                                          + the_images[i].split(os.path.sep)[-1] + "' for fusion", 2)
+            monitoring.to_log_and_console(
+                "    .. process '"
+                + the_images[i].split(os.path.sep)[-1]
+                + "' for fusion",
+                2,
+            )
 
             if do_something[i] is False:
                 monitoring.to_log_and_console("       nothing to do", 2)
@@ -1919,14 +2584,26 @@ def _direct_fusion_process(input_image_list, the_image_list, fused_image, experi
                     #
                     # resampling first image
                     #
-                    monitoring.to_log_and_console("       resampling '" + the_images[i].split(os.path.sep)[-1]
-                                                  + "' at " + str(parameters.target_resolution), 2)
-                    if not os.path.isfile(res_images[i]) or monitoring.forceResultsToBeBuilt is True:
-                        cpp_wrapping.apply_transformation(the_images[i], res_images[i], the_transformation=None,
-                                                          template_image=None,
-                                                          voxel_size=parameters.target_resolution,
-                                                          interpolation_mode='linear',
-                                                          monitoring=monitoring)
+                    monitoring.to_log_and_console(
+                        "       resampling '"
+                        + the_images[i].split(os.path.sep)[-1]
+                        + "' at "
+                        + str(parameters.target_resolution),
+                        2,
+                    )
+                    if (
+                        not os.path.isfile(res_images[i])
+                        or monitoring.forceResultsToBeBuilt is True
+                    ):
+                        cpp_wrapping.apply_transformation(
+                            the_images[i],
+                            res_images[i],
+                            the_transformation=None,
+                            template_image=None,
+                            voxel_size=parameters.target_resolution,
+                            interpolation_mode="linear",
+                            monitoring=monitoring,
+                        )
                     else:
                         monitoring.to_log_and_console("       already existing", 2)
                 else:
@@ -1947,31 +2624,69 @@ def _direct_fusion_process(input_image_list, the_image_list, fused_image, experi
             #
             else:
                 if c == 0:
-                    monitoring.to_log_and_console("       co-registering '" + the_images[i].split(os.path.sep)[-1]
-                                                  + "'", 2)
+                    monitoring.to_log_and_console(
+                        "       co-registering '"
+                        + the_images[i].split(os.path.sep)[-1]
+                        + "'",
+                        2,
+                    )
                     #
                     # a two-fold registration, translation then affine, could be preferable
                     #
-                    if not os.path.isfile(res_images[i]) or not os.path.isfile(res_trsfs[i]) \
-                            or monitoring.forceResultsToBeBuilt is True:
-                        if parameters.acquisition_registration[0].compute_registration is True:
-                            _linear_registration(res_images[ref_index], the_images[i], res_images[i],
-                                                 prereg_trsfs[i], init_trsfs[i], parameters.acquisition_registration[0])
-                            _linear_registration(res_images[ref_index], the_images[i], res_images[i],
-                                                 res_trsfs[i], prereg_trsfs[i], parameters.acquisition_registration[1])
+                    if (
+                        not os.path.isfile(res_images[i])
+                        or not os.path.isfile(res_trsfs[i])
+                        or monitoring.forceResultsToBeBuilt is True
+                    ):
+                        if (
+                            parameters.acquisition_registration[0].compute_registration
+                            is True
+                        ):
+                            _linear_registration(
+                                res_images[ref_index],
+                                the_images[i],
+                                res_images[i],
+                                prereg_trsfs[i],
+                                init_trsfs[i],
+                                parameters.acquisition_registration[0],
+                            )
+                            _linear_registration(
+                                res_images[ref_index],
+                                the_images[i],
+                                res_images[i],
+                                res_trsfs[i],
+                                prereg_trsfs[i],
+                                parameters.acquisition_registration[1],
+                            )
                         else:
-                            _linear_registration(res_images[ref_index], the_images[i], res_images[i],
-                                                 res_trsfs[i], init_trsfs[i], parameters.acquisition_registration[1])
+                            _linear_registration(
+                                res_images[ref_index],
+                                the_images[i],
+                                res_images[i],
+                                res_trsfs[i],
+                                init_trsfs[i],
+                                parameters.acquisition_registration[1],
+                            )
                     else:
                         monitoring.to_log_and_console("       already existing", 2)
 
                     #
                     # check whether the registration was successful
                     #
-                    if not os.path.isfile(res_images[i]) or not os.path.isfile(res_trsfs[i]):
-                        monitoring.to_log_and_console(proc + ": error when registering image " + str(i), 0)
-                        monitoring.to_log_and_console("   image " + str(res_images[i]) + " or transformation "
-                                                      + str(res_trsfs[i]) + " is not existing", 0)
+                    if not os.path.isfile(res_images[i]) or not os.path.isfile(
+                        res_trsfs[i]
+                    ):
+                        monitoring.to_log_and_console(
+                            proc + ": error when registering image " + str(i), 0
+                        )
+                        monitoring.to_log_and_console(
+                            "   image "
+                            + str(res_images[i])
+                            + " or transformation "
+                            + str(res_trsfs[i])
+                            + " is not existing",
+                            0,
+                        )
                         monitoring.to_log_and_console("Exiting.", 0)
                         sys.exit(1)
 
@@ -1979,13 +2694,25 @@ def _direct_fusion_process(input_image_list, the_image_list, fused_image, experi
                 # other channels
                 #
                 else:
-                    monitoring.to_log_and_console("       resampling '" + the_images[i].split(os.path.sep)[-1] + "'", 2)
-                    if not os.path.isfile(res_images[i]) or monitoring.forceResultsToBeBuilt is True:
-                        cpp_wrapping.apply_transformation(the_images[i], res_images[i],
-                                                          the_transformation=res_trsfs[i],
-                                                          template_image=res_images[ref_index],
-                                                          voxel_size=None, interpolation_mode='linear',
-                                                          monitoring=monitoring)
+                    monitoring.to_log_and_console(
+                        "       resampling '"
+                        + the_images[i].split(os.path.sep)[-1]
+                        + "'",
+                        2,
+                    )
+                    if (
+                        not os.path.isfile(res_images[i])
+                        or monitoring.forceResultsToBeBuilt is True
+                    ):
+                        cpp_wrapping.apply_transformation(
+                            the_images[i],
+                            res_images[i],
+                            the_transformation=res_trsfs[i],
+                            template_image=res_images[ref_index],
+                            voxel_size=None,
+                            interpolation_mode="linear",
+                            monitoring=monitoring,
+                        )
                     else:
                         monitoring.to_log_and_console("       already existing", 2)
 
@@ -2017,24 +2744,43 @@ def _direct_fusion_process(input_image_list, the_image_list, fused_image, experi
                 # stack 1, right camera
                 decreasing_weight_with_z = False
 
-            if not os.path.isfile(unreg_weight_images[i]) or monitoring.forceResultsToBeBuilt is True:
+            if (
+                not os.path.isfile(unreg_weight_images[i])
+                or monitoring.forceResultsToBeBuilt is True
+            ):
                 #
                 #
                 #
-                _build_unreg_weighting_image(the_images[i], unreg_weight_images[i], decreasing_weight_with_z,
-                                             experiment.rawdata_dir.channel[c].fusion_weighting)
+                _build_unreg_weighting_image(
+                    the_images[i],
+                    unreg_weight_images[i],
+                    decreasing_weight_with_z,
+                    experiment.rawdata_dir.channel[c].fusion_weighting,
+                )
             else:
                 monitoring.to_log_and_console("          already existing", 2)
 
-            monitoring.to_log_and_console("          resampling '" + unreg_weight_images[i].split(os.path.sep)[-1]
-                                          + "'", 2)
+            monitoring.to_log_and_console(
+                "          resampling '"
+                + unreg_weight_images[i].split(os.path.sep)[-1]
+                + "'",
+                2,
+            )
             if i == ref_index:
                 if _is_transformation_identity(rotation_matrix[i]):
-                    if not os.path.isfile(weight_images[i]) or monitoring.forceResultsToBeBuilt is True:
-                        cpp_wrapping.apply_transformation(unreg_weight_images[i], weight_images[i],
-                                                          the_transformation=None, template_image=None,
-                                                          voxel_size=parameters.target_resolution,
-                                                          interpolation_mode='linear', monitoring=monitoring)
+                    if (
+                        not os.path.isfile(weight_images[i])
+                        or monitoring.forceResultsToBeBuilt is True
+                    ):
+                        cpp_wrapping.apply_transformation(
+                            unreg_weight_images[i],
+                            weight_images[i],
+                            the_transformation=None,
+                            template_image=None,
+                            voxel_size=parameters.target_resolution,
+                            interpolation_mode="linear",
+                            monitoring=monitoring,
+                        )
                     else:
                         monitoring.to_log_and_console("       already existing", 2)
                 else:
@@ -2043,12 +2789,19 @@ def _direct_fusion_process(input_image_list, the_image_list, fused_image, experi
                     monitoring.to_log_and_console(msg)
                     sys.exit(1)
             else:
-                if not os.path.isfile(weight_images[i]) or monitoring.forceResultsToBeBuilt is True:
-                    cpp_wrapping.apply_transformation(unreg_weight_images[i], weight_images[i],
-                                                      the_transformation=res_trsfs[i],
-                                                      template_image=res_images[ref_index],
-                                                      voxel_size=None, interpolation_mode='linear',
-                                                      monitoring=monitoring)
+                if (
+                    not os.path.isfile(weight_images[i])
+                    or monitoring.forceResultsToBeBuilt is True
+                ):
+                    cpp_wrapping.apply_transformation(
+                        unreg_weight_images[i],
+                        weight_images[i],
+                        the_transformation=res_trsfs[i],
+                        template_image=res_images[ref_index],
+                        voxel_size=None,
+                        interpolation_mode="linear",
+                        monitoring=monitoring,
+                    )
                 else:
                     monitoring.to_log_and_console("          already existing", 2)
 
@@ -2062,16 +2815,26 @@ def _direct_fusion_process(input_image_list, the_image_list, fused_image, experi
         monitoring.to_log_and_console("    .. combining images", 2)
 
         if parameters.fusion_cropping is True:
-            tmp_fused_image = common.add_suffix(fused_image, "_uncropped_fusion",
-                                                new_dirname=experiment.rawdata_dir.get_tmp_directory(4, c),
-                                                new_extension=experiment.default_image_suffix)
+            tmp_fused_image = common.add_suffix(
+                fused_image,
+                "_uncropped_fusion",
+                new_dirname=experiment.rawdata_dir.get_tmp_directory(4, c),
+                new_extension=experiment.default_image_suffix,
+            )
         else:
-            tmp_fused_image = os.path.join(experiment.fusion_dir.get_directory(c), fused_image)
+            tmp_fused_image = os.path.join(
+                experiment.fusion_dir.get_directory(c), fused_image
+            )
 
-        cpp_wrapping.linear_combination(weight_images, res_images, tmp_fused_image, monitoring=monitoring)
+        cpp_wrapping.linear_combination(
+            weight_images, res_images, tmp_fused_image, monitoring=monitoring
+        )
 
         if not os.path.isfile(tmp_fused_image):
-            monitoring.to_log_and_console(proc + ': fused image (channel #' + str(c) + ') has not been generated', 0)
+            monitoring.to_log_and_console(
+                proc + ": fused image (channel #" + str(c) + ") has not been generated",
+                0,
+            )
             monitoring.to_log_and_console("Exiting.", 0)
             sys.exit(1)
 
@@ -2079,25 +2842,34 @@ def _direct_fusion_process(input_image_list, the_image_list, fused_image, experi
         #
         #
         if parameters.xzsection_extraction is True:
-            _extract_xzsection(weight_images, res_images, tmp_fused_image, c, experiment)
+            _extract_xzsection(
+                weight_images, res_images, tmp_fused_image, c, experiment
+            )
 
         #
         # last crop
         #
         if parameters.fusion_cropping is True:
-
             if c == 0:
-                fusion_box = _crop_bounding_box(tmp_fused_image, z_crop=parameters.fusion_z_cropping)
+                fusion_box = _crop_bounding_box(
+                    tmp_fused_image, z_crop=parameters.fusion_z_cropping
+                )
 
-            monitoring.to_log_and_console("    .. cropping '" + fused_image.split(os.path.sep)[-1], 2)
-            _crop_disk_image(tmp_fused_image, os.path.join(experiment.fusion_dir.get_directory(c), fused_image),
-                             the_max_box=fusion_box, z_crop=parameters.fusion_z_cropping,
-                             margin_x_0=parameters.fusion_cropping_margin_x_0,
-                             margin_x_1=parameters.fusion_cropping_margin_x_1,
-                             margin_y_0=parameters.fusion_cropping_margin_y_0,
-                             margin_y_1=parameters.fusion_cropping_margin_y_1,
-                             margin_z_0=parameters.fusion_cropping_margin_z_0,
-                             margin_z_1=parameters.fusion_cropping_margin_z_1)
+            monitoring.to_log_and_console(
+                "    .. cropping '" + fused_image.split(os.path.sep)[-1], 2
+            )
+            _crop_disk_image(
+                tmp_fused_image,
+                os.path.join(experiment.fusion_dir.get_directory(c), fused_image),
+                the_max_box=fusion_box,
+                z_crop=parameters.fusion_z_cropping,
+                margin_x_0=parameters.fusion_cropping_margin_x_0,
+                margin_x_1=parameters.fusion_cropping_margin_x_1,
+                margin_y_0=parameters.fusion_cropping_margin_y_0,
+                margin_y_1=parameters.fusion_cropping_margin_y_1,
+                margin_z_0=parameters.fusion_cropping_margin_z_0,
+                margin_z_1=parameters.fusion_cropping_margin_z_1,
+            )
     return
 
 
@@ -2108,7 +2880,10 @@ def _direct_fusion_process(input_image_list, the_image_list, fused_image, experi
 # - all acquisitions are fused
 #
 
-def _hierarchical_fusion_process(input_image_list, the_image_list, fused_image, experiment, parameters):
+
+def _hierarchical_fusion_process(
+    input_image_list, the_image_list, fused_image, experiment, parameters
+):
     """
 
     :param input_image_list:
@@ -2123,7 +2898,7 @@ def _hierarchical_fusion_process(input_image_list, the_image_list, fused_image, 
     :param parameters:
     :return:
     """
-    
+
     proc = "_hierarchical_fusion_process"
 
     n_channels = experiment.rawdata_dir.get_number_channels()
@@ -2135,7 +2910,7 @@ def _hierarchical_fusion_process(input_image_list, the_image_list, fused_image, 
         print("- the_image_list = " + str(the_image_list))
         print("- fused_image = " + str(fused_image))
         for c in range(n_channels):
-            experiment.rawdata_dir.channel[c].print_parameters('channel #' + str(c))
+            experiment.rawdata_dir.channel[c].print_parameters("channel #" + str(c))
         print("")
 
     #
@@ -2143,13 +2918,19 @@ def _hierarchical_fusion_process(input_image_list, the_image_list, fused_image, 
     #
 
     if not isinstance(experiment, common.Experiment):
-        monitoring.to_log_and_console(str(proc) + ": unexpected type for 'experiment' variable: "
-                                      + str(type(experiment)))
+        monitoring.to_log_and_console(
+            str(proc)
+            + ": unexpected type for 'experiment' variable: "
+            + str(type(experiment))
+        )
         sys.exit(1)
 
     if not isinstance(parameters, FusionParameters):
-        monitoring.to_log_and_console(str(proc) + ": unexpected type for 'parameters' variable: "
-                                      + str(type(parameters)))
+        monitoring.to_log_and_console(
+            str(proc)
+            + ": unexpected type for 'parameters' variable: "
+            + str(type(parameters))
+        )
         sys.exit(1)
     #
     # list of registered images
@@ -2161,9 +2942,14 @@ def _hierarchical_fusion_process(input_image_list, the_image_list, fused_image, 
         the_images = the_image_list[c]
         res_images = []
         for i in range(0, len(the_images)):
-            res_images.append(common.add_suffix(input_image_list[c][i], "_reg",
-                                                new_dirname=experiment.rawdata_dir.get_tmp_directory(i, c),
-                                                new_extension=experiment.default_image_suffix))
+            res_images.append(
+                common.add_suffix(
+                    input_image_list[c][i],
+                    "_reg",
+                    new_dirname=experiment.rawdata_dir.get_tmp_directory(i, c),
+                    new_extension=experiment.default_image_suffix,
+                )
+            )
         res_image_list.append(res_images)
 
     #
@@ -2176,10 +2962,11 @@ def _hierarchical_fusion_process(input_image_list, the_image_list, fused_image, 
     do_something = [False] * len(input_image_list[0])
 
     for c in range(n_channels):
-
         the_images = the_image_list[c]
         res_images = res_image_list[c]
-        if not os.path.isfile(os.path.join(experiment.fusion_dir.get_directory(c), fused_image)):
+        if not os.path.isfile(
+            os.path.join(experiment.fusion_dir.get_directory(c), fused_image)
+        ):
             do_something = [True] * len(input_image_list[0])
             break
 
@@ -2216,40 +3003,85 @@ def _hierarchical_fusion_process(input_image_list, the_image_list, fused_image, 
 
     for i in range(0, len(the_images)):
         if i == 0 or i == 1:
-            stack_res_images.append(common.add_suffix(input_image_list[0][i], "_reg",
-                                                      new_dirname=experiment.rawdata_dir.get_tmp_directory(i, 0),
-                                                      new_extension=experiment.default_image_suffix))
-            stack_res_trsfs.append(common.add_suffix(input_image_list[0][i], "_reg",
-                                                     new_dirname=experiment.rawdata_dir.get_tmp_directory(i, 0),
-                                                     new_extension="trsf"))
+            stack_res_images.append(
+                common.add_suffix(
+                    input_image_list[0][i],
+                    "_reg",
+                    new_dirname=experiment.rawdata_dir.get_tmp_directory(i, 0),
+                    new_extension=experiment.default_image_suffix,
+                )
+            )
+            stack_res_trsfs.append(
+                common.add_suffix(
+                    input_image_list[0][i],
+                    "_reg",
+                    new_dirname=experiment.rawdata_dir.get_tmp_directory(i, 0),
+                    new_extension="trsf",
+                )
+            )
         else:
-            stack_res_images.append(common.add_suffix(input_image_list[0][i], "_stack_reg",
-                                                      new_dirname=experiment.rawdata_dir.get_tmp_directory(i, 0),
-                                                      new_extension=experiment.default_image_suffix))
-            stack_res_trsfs.append(common.add_suffix(input_image_list[0][i], "_stack_reg",
-                                                     new_dirname=experiment.rawdata_dir.get_tmp_directory(i, 0),
-                                                     new_extension="trsf"))
+            stack_res_images.append(
+                common.add_suffix(
+                    input_image_list[0][i],
+                    "_stack_reg",
+                    new_dirname=experiment.rawdata_dir.get_tmp_directory(i, 0),
+                    new_extension=experiment.default_image_suffix,
+                )
+            )
+            stack_res_trsfs.append(
+                common.add_suffix(
+                    input_image_list[0][i],
+                    "_stack_reg",
+                    new_dirname=experiment.rawdata_dir.get_tmp_directory(i, 0),
+                    new_extension="trsf",
+                )
+            )
 
-        stack_resample_trsfs.append(common.add_suffix(input_image_list[0][i], "_resolutionchange",
-                                                      new_dirname=experiment.rawdata_dir.get_tmp_directory(i, 0),
-                                                      new_extension="trsf"))
+        stack_resample_trsfs.append(
+            common.add_suffix(
+                input_image_list[0][i],
+                "_resolutionchange",
+                new_dirname=experiment.rawdata_dir.get_tmp_directory(i, 0),
+                new_extension="trsf",
+            )
+        )
 
-        res_trsfs.append(common.add_suffix(input_image_list[0][i], "_reg",
-                                           new_dirname=experiment.rawdata_dir.get_tmp_directory(i, 0),
-                                           new_extension="trsf"))
+        res_trsfs.append(
+            common.add_suffix(
+                input_image_list[0][i],
+                "_reg",
+                new_dirname=experiment.rawdata_dir.get_tmp_directory(i, 0),
+                new_extension="trsf",
+            )
+        )
 
-        stack_prereg_trsfs.append(common.add_suffix(input_image_list[0][i], "_stack_prereg",
-                                                    new_dirname=experiment.rawdata_dir.get_tmp_directory(i, 0),
-                                                    new_extension="trsf"))
+        stack_prereg_trsfs.append(
+            common.add_suffix(
+                input_image_list[0][i],
+                "_stack_prereg",
+                new_dirname=experiment.rawdata_dir.get_tmp_directory(i, 0),
+                new_extension="trsf",
+            )
+        )
 
         if i == 0 or i == 1:
-            stack_weight_images.append(common.add_suffix(input_image_list[0][i], "_weight_0",
-                                                         new_dirname=experiment.rawdata_dir.get_tmp_directory(i, 0),
-                                                         new_extension=experiment.default_image_suffix))
+            stack_weight_images.append(
+                common.add_suffix(
+                    input_image_list[0][i],
+                    "_weight_0",
+                    new_dirname=experiment.rawdata_dir.get_tmp_directory(i, 0),
+                    new_extension=experiment.default_image_suffix,
+                )
+            )
         else:
-            stack_weight_images.append(common.add_suffix(input_image_list[0][i], "_stack_weight_0",
-                                                         new_dirname=experiment.rawdata_dir.get_tmp_directory(i, 0),
-                                                         new_extension=experiment.default_image_suffix))
+            stack_weight_images.append(
+                common.add_suffix(
+                    input_image_list[0][i],
+                    "_stack_weight_0",
+                    new_dirname=experiment.rawdata_dir.get_tmp_directory(i, 0),
+                    new_extension=experiment.default_image_suffix,
+                )
+            )
 
     #
     # the final image is a weighting sum of the transformed acquisition image
@@ -2260,19 +3092,32 @@ def _hierarchical_fusion_process(input_image_list, the_image_list, fused_image, 
         weight_images = []
         cref = c
         for i in range(0, c):
-            if experiment.rawdata_dir.channel[c].fusion_weighting == experiment.rawdata_dir.channel[i].fusion_weighting:
+            if (
+                experiment.rawdata_dir.channel[c].fusion_weighting
+                == experiment.rawdata_dir.channel[i].fusion_weighting
+            ):
                 cref = i
         #
         # check if the weighting mode was used for previous channels (ie weights have already been computed)
         #
         if cref == c:
             for i in range(0, len(the_images)):
-                unreg_weight_images.append(common.add_suffix(input_image_list[c][i], "_init_weight_" + str(c),
-                                                             new_dirname=experiment.rawdata_dir.get_tmp_directory(i, c),
-                                                             new_extension=experiment.default_image_suffix))
-                weight_images.append(common.add_suffix(input_image_list[c][i], "_weight_" + str(c),
-                                                       new_dirname=experiment.rawdata_dir.get_tmp_directory(i, c),
-                                                       new_extension=experiment.default_image_suffix))
+                unreg_weight_images.append(
+                    common.add_suffix(
+                        input_image_list[c][i],
+                        "_init_weight_" + str(c),
+                        new_dirname=experiment.rawdata_dir.get_tmp_directory(i, c),
+                        new_extension=experiment.default_image_suffix,
+                    )
+                )
+                weight_images.append(
+                    common.add_suffix(
+                        input_image_list[c][i],
+                        "_weight_" + str(c),
+                        new_dirname=experiment.rawdata_dir.get_tmp_directory(i, c),
+                        new_extension=experiment.default_image_suffix,
+                    )
+                )
         else:
             unreg_weight_images = unreg_weight_images_list[cref]
             weight_images = weight_images_list[cref]
@@ -2286,9 +3131,14 @@ def _hierarchical_fusion_process(input_image_list, the_image_list, fused_image, 
     #
     stack_fused_images = []
     for stack in range(2):
-        stack_fused_images.append(common.add_suffix(fused_image, "_stack_" + str(stack),
-                                                    new_dirname=experiment.rawdata_dir.get_tmp_directory(4, 0),
-                                                    new_extension=experiment.default_image_suffix))
+        stack_fused_images.append(
+            common.add_suffix(
+                fused_image,
+                "_stack_" + str(stack),
+                new_dirname=experiment.rawdata_dir.get_tmp_directory(4, 0),
+                new_extension=experiment.default_image_suffix,
+            )
+        )
 
     #
     # stack #0, co-register acquisitions #0 and #1
@@ -2302,7 +3152,6 @@ def _hierarchical_fusion_process(input_image_list, the_image_list, fused_image, 
     weight_images = weight_images_list[0]
 
     for stack in range(2):
-
         monitoring.to_log_and_console("    .. reconstruct stack #" + str(stack))
 
         #
@@ -2311,10 +3160,14 @@ def _hierarchical_fusion_process(input_image_list, the_image_list, fused_image, 
         #
 
         for j in range(2):
-            i = 2*stack+j
-            r = 2*stack
-            monitoring.to_log_and_console("      .. process '" + the_images[i].split(os.path.sep)[-1] + "' for fusion",
-                                          2)
+            i = 2 * stack + j
+            r = 2 * stack
+            monitoring.to_log_and_console(
+                "      .. process '"
+                + the_images[i].split(os.path.sep)[-1]
+                + "' for fusion",
+                2,
+            )
 
             if do_something[i] is False:
                 monitoring.to_log_and_console("         nothing to do", 2)
@@ -2334,16 +3187,27 @@ def _hierarchical_fusion_process(input_image_list, the_image_list, fused_image, 
                 #
                 # resampling first image
                 #
-                monitoring.to_log_and_console("         resampling '" + the_images[i].split(os.path.sep)[-1]
-                                              + "' at " + str(parameters.target_resolution), 2)
-                if not os.path.isfile(res_images[i]) or monitoring.forceResultsToBeBuilt is True:
-                    cpp_wrapping.apply_transformation(the_images[i], stack_res_images[i],
-                                                      the_transformation=None,
-                                                      template_image=None,
-                                                      res_transformation=stack_resample_trsfs[i],
-                                                      voxel_size=parameters.target_resolution,
-                                                      interpolation_mode='linear',
-                                                      monitoring=monitoring)
+                monitoring.to_log_and_console(
+                    "         resampling '"
+                    + the_images[i].split(os.path.sep)[-1]
+                    + "' at "
+                    + str(parameters.target_resolution),
+                    2,
+                )
+                if (
+                    not os.path.isfile(res_images[i])
+                    or monitoring.forceResultsToBeBuilt is True
+                ):
+                    cpp_wrapping.apply_transformation(
+                        the_images[i],
+                        stack_res_images[i],
+                        the_transformation=None,
+                        template_image=None,
+                        res_transformation=stack_resample_trsfs[i],
+                        voxel_size=parameters.target_resolution,
+                        interpolation_mode="linear",
+                        monitoring=monitoring,
+                    )
                 else:
                     monitoring.to_log_and_console("         already existing", 2)
 
@@ -2353,46 +3217,88 @@ def _hierarchical_fusion_process(input_image_list, the_image_list, fused_image, 
                 # - other channels: resampling with transformation of channel #0
                 #
             else:
-
-                monitoring.to_log_and_console("         co-registering '" + the_images[i].split(os.path.sep)[-1]
-                                              + "'", 2)
+                monitoring.to_log_and_console(
+                    "         co-registering '"
+                    + the_images[i].split(os.path.sep)[-1]
+                    + "'",
+                    2,
+                )
 
                 #
                 # a two-fold registration, translation then affine, could be preferable
                 #
-                if not os.path.isfile(stack_res_images[i]) or not os.path.isfile(stack_res_trsfs[i]) \
-                        or monitoring.forceResultsToBeBuilt is True:
-                    if parameters.acquisition_registration[0].compute_registration is True:
-                        _linear_registration(stack_res_images[r], the_images[i], res_images[i],
-                                             stack_prereg_trsfs[i], None, parameters.acquisition_registration[0])
-                        _linear_registration(stack_res_images[r], the_images[i], stack_res_images[i],
-                                             stack_res_trsfs[i], stack_prereg_trsfs[i],
-                                             parameters.acquisition_registration[1])
+                if (
+                    not os.path.isfile(stack_res_images[i])
+                    or not os.path.isfile(stack_res_trsfs[i])
+                    or monitoring.forceResultsToBeBuilt is True
+                ):
+                    if (
+                        parameters.acquisition_registration[0].compute_registration
+                        is True
+                    ):
+                        _linear_registration(
+                            stack_res_images[r],
+                            the_images[i],
+                            res_images[i],
+                            stack_prereg_trsfs[i],
+                            None,
+                            parameters.acquisition_registration[0],
+                        )
+                        _linear_registration(
+                            stack_res_images[r],
+                            the_images[i],
+                            stack_res_images[i],
+                            stack_res_trsfs[i],
+                            stack_prereg_trsfs[i],
+                            parameters.acquisition_registration[1],
+                        )
                     else:
-                        _linear_registration(stack_res_images[r], the_images[i], stack_res_images[i],
-                                             stack_res_trsfs[i], None, parameters.acquisition_registration[1])
+                        _linear_registration(
+                            stack_res_images[r],
+                            the_images[i],
+                            stack_res_images[i],
+                            stack_res_trsfs[i],
+                            None,
+                            parameters.acquisition_registration[1],
+                        )
                 else:
                     monitoring.to_log_and_console("         already existing", 2)
 
                 #
                 # check whether the registration was successful
                 #
-                if not os.path.isfile(stack_res_images[i]) or not os.path.isfile(stack_res_trsfs[i]):
-                    monitoring.to_log_and_console(proc + ": error when registering image " + str(i), 0)
-                    monitoring.to_log_and_console("   image " + str(stack_res_images[i]) + " or transformation "
-                                                  + str(stack_res_trsfs[i]) + " is not existing", 0)
+                if not os.path.isfile(stack_res_images[i]) or not os.path.isfile(
+                    stack_res_trsfs[i]
+                ):
+                    monitoring.to_log_and_console(
+                        proc + ": error when registering image " + str(i), 0
+                    )
+                    monitoring.to_log_and_console(
+                        "   image "
+                        + str(stack_res_images[i])
+                        + " or transformation "
+                        + str(stack_res_trsfs[i])
+                        + " is not existing",
+                        0,
+                    )
                     monitoring.to_log_and_console("Exiting.", 0)
                     sys.exit(1)
 
         #
         # compute weights
         #
-        monitoring.to_log_and_console("      .. computing weights for stack fusion of stack #" + str(stack), 2)
+        monitoring.to_log_and_console(
+            "      .. computing weights for stack fusion of stack #" + str(stack), 2
+        )
         for j in range(2):
             i = 2 * stack + j
             r = 2 * stack
-            monitoring.to_log_and_console("         process '"
-                                          + the_images[i].split(os.path.sep)[-1] + "' for weight", 2)
+            monitoring.to_log_and_console(
+                "         process '"
+                + the_images[i].split(os.path.sep)[-1]
+                + "' for weight",
+                2,
+            )
 
             decreasing_weight_with_z = None
 
@@ -2412,29 +3318,55 @@ def _hierarchical_fusion_process(input_image_list, the_image_list, fused_image, 
                 # stack 1, right camera
                 decreasing_weight_with_z = False
 
-            if not os.path.isfile(unreg_weight_images[i]) or monitoring.forceResultsToBeBuilt is True:
-                _build_unreg_weighting_image(the_images[i], unreg_weight_images[i], decreasing_weight_with_z,
-                                             experiment.rawdata_dir.channel[0].fusion_weighting)
+            if (
+                not os.path.isfile(unreg_weight_images[i])
+                or monitoring.forceResultsToBeBuilt is True
+            ):
+                _build_unreg_weighting_image(
+                    the_images[i],
+                    unreg_weight_images[i],
+                    decreasing_weight_with_z,
+                    experiment.rawdata_dir.channel[0].fusion_weighting,
+                )
             else:
                 monitoring.to_log_and_console("         already existing", 2)
 
-            monitoring.to_log_and_console("         resampling '" + unreg_weight_images[i].split(os.path.sep)[-1]
-                                          + "'", 2)
+            monitoring.to_log_and_console(
+                "         resampling '"
+                + unreg_weight_images[i].split(os.path.sep)[-1]
+                + "'",
+                2,
+            )
             if j == 0:
-                if not os.path.isfile(stack_weight_images[i]) or monitoring.forceResultsToBeBuilt is True:
-                    cpp_wrapping.apply_transformation(unreg_weight_images[i], stack_weight_images[i],
-                                                      the_transformation=None, template_image=None,
-                                                      voxel_size=parameters.target_resolution,
-                                                      interpolation_mode='linear', monitoring=monitoring)
+                if (
+                    not os.path.isfile(stack_weight_images[i])
+                    or monitoring.forceResultsToBeBuilt is True
+                ):
+                    cpp_wrapping.apply_transformation(
+                        unreg_weight_images[i],
+                        stack_weight_images[i],
+                        the_transformation=None,
+                        template_image=None,
+                        voxel_size=parameters.target_resolution,
+                        interpolation_mode="linear",
+                        monitoring=monitoring,
+                    )
                 else:
                     monitoring.to_log_and_console("         already existing", 2)
             else:
-                if not os.path.isfile(stack_weight_images[i]) or monitoring.forceResultsToBeBuilt is True:
-                    cpp_wrapping.apply_transformation(unreg_weight_images[i], stack_weight_images[i],
-                                                      the_transformation=stack_res_trsfs[i],
-                                                      template_image=stack_res_images[r],
-                                                      voxel_size=None, interpolation_mode='linear',
-                                                      monitoring=monitoring)
+                if (
+                    not os.path.isfile(stack_weight_images[i])
+                    or monitoring.forceResultsToBeBuilt is True
+                ):
+                    cpp_wrapping.apply_transformation(
+                        unreg_weight_images[i],
+                        stack_weight_images[i],
+                        the_transformation=stack_res_trsfs[i],
+                        template_image=stack_res_images[r],
+                        voxel_size=None,
+                        interpolation_mode="linear",
+                        monitoring=monitoring,
+                    )
                 else:
                     monitoring.to_log_and_console("         already existing", 2)
 
@@ -2445,12 +3377,20 @@ def _hierarchical_fusion_process(input_image_list, the_image_list, fused_image, 
         # do not forget to cast the result on 16 bits
         #
 
-        monitoring.to_log_and_console("      .. combining images for stack #" + str(stack), 2)
+        monitoring.to_log_and_console(
+            "      .. combining images for stack #" + str(stack), 2
+        )
 
-        if not os.path.isfile(stack_fused_images[stack]) or monitoring.forceResultsToBeBuilt is True:
-            cpp_wrapping.linear_combination(stack_weight_images[2*stack:2*(stack+1)],
-                                            stack_res_images[2*stack:2*(stack+1)],
-                                            stack_fused_images[stack], monitoring=monitoring)
+        if (
+            not os.path.isfile(stack_fused_images[stack])
+            or monitoring.forceResultsToBeBuilt is True
+        ):
+            cpp_wrapping.linear_combination(
+                stack_weight_images[2 * stack : 2 * (stack + 1)],
+                stack_res_images[2 * stack : 2 * (stack + 1)],
+                stack_fused_images[stack],
+                monitoring=monitoring,
+            )
 
     #
     # stacks #0 and #1 have been reconstructed, now we co-registered them
@@ -2463,11 +3403,15 @@ def _hierarchical_fusion_process(input_image_list, the_image_list, fused_image, 
     monitoring.to_log_and_console("    .. co-registering stack #1 onto stack #0", 2)
     monitoring.to_log_and_console("       initial transformation", 2)
 
-    init_trsfs = common.add_suffix(input_image_list[0][2], "_init", 
-                                   new_dirname=experiment.rawdata_dir.get_tmp_directory(2, 0), new_extension="trsf")
-    if parameters.acquisition_orientation.lower() == 'left':
+    init_trsfs = common.add_suffix(
+        input_image_list[0][2],
+        "_init",
+        new_dirname=experiment.rawdata_dir.get_tmp_directory(2, 0),
+        new_extension="trsf",
+    )
+    if parameters.acquisition_orientation.lower() == "left":
         angle = 270.0
-    elif parameters.acquisition_orientation.lower() == 'right':
+    elif parameters.acquisition_orientation.lower() == "right":
         angle = 90.0
     im = imread(the_images[0])
     ref_center = np.multiply(im.shape[:3], im.voxelsize) / 2.0
@@ -2475,59 +3419,124 @@ def _hierarchical_fusion_process(input_image_list, the_image_list, fused_image, 
     im = imread(the_images[2])
     flo_center = np.multiply(im.shape[:3], im.voxelsize) / 2.0
     del im
-    rotation_matrix = _init_rotation_matrix(axis="Y", angle=angle, ref_center=ref_center, flo_center=flo_center)
+    rotation_matrix = _init_rotation_matrix(
+        axis="Y", angle=angle, ref_center=ref_center, flo_center=flo_center
+    )
     np.savetxt(init_trsfs, rotation_matrix)
     del rotation_matrix
 
     monitoring.to_log_and_console("       registration", 2)
 
-    reg_stack_image = common.add_suffix(fused_image, "_stack_" + str(stack) + "_reg",
-                                        new_dirname=experiment.rawdata_dir.get_tmp_directory(4, 0),
-                                        new_extension=experiment.default_image_suffix)
-    reg_stack_trsf = common.add_suffix(fused_image, "_stack_" + str(stack) + "_reg",
-                                       new_dirname=experiment.rawdata_dir.get_tmp_directory(4, 0),
-                                       new_extension="trsf")
+    reg_stack_image = common.add_suffix(
+        fused_image,
+        "_stack_" + str(stack) + "_reg",
+        new_dirname=experiment.rawdata_dir.get_tmp_directory(4, 0),
+        new_extension=experiment.default_image_suffix,
+    )
+    reg_stack_trsf = common.add_suffix(
+        fused_image,
+        "_stack_" + str(stack) + "_reg",
+        new_dirname=experiment.rawdata_dir.get_tmp_directory(4, 0),
+        new_extension="trsf",
+    )
 
-    if not os.path.isfile(reg_stack_image) or not os.path.isfile(reg_stack_trsf) \
-            or monitoring.forceResultsToBeBuilt is True:
-        if parameters.stack_registration[0].compute_registration is True and \
-                parameters.stack_registration[1].compute_registration is True:
+    if (
+        not os.path.isfile(reg_stack_image)
+        or not os.path.isfile(reg_stack_trsf)
+        or monitoring.forceResultsToBeBuilt is True
+    ):
+        if (
+            parameters.stack_registration[0].compute_registration is True
+            and parameters.stack_registration[1].compute_registration is True
+        ):
             monitoring.to_log_and_console("           registration 1/2", 2)
-            _blockmatching(stack_fused_images[0], stack_fused_images[1], reg_stack_image,
-                           reg_stack_trsf, path_init_trsf=init_trsfs, parameters=parameters.stack_registration[0])
+            _blockmatching(
+                stack_fused_images[0],
+                stack_fused_images[1],
+                reg_stack_image,
+                reg_stack_trsf,
+                path_init_trsf=init_trsfs,
+                parameters=parameters.stack_registration[0],
+            )
             monitoring.to_log_and_console("           registration 2/2", 2)
-            _blockmatching(stack_fused_images[0], stack_fused_images[1], reg_stack_image,
-                           reg_stack_trsf, path_init_trsf=reg_stack_trsf, parameters=parameters.stack_registration[1])
-        elif parameters.stack_registration[0].compute_registration is True and \
-                parameters.stack_registration[1].compute_registration is False:
-            _blockmatching(stack_fused_images[0], stack_fused_images[1], reg_stack_image,
-                            reg_stack_trsf, path_init_trsf=init_trsfs, parameters=parameters.stack_registration[0])
-        elif parameters.stack_registration[0].compute_registration is False and \
-                parameters.stack_registration[1].compute_registration is True:
-            _blockmatching(stack_fused_images[0], stack_fused_images[1], reg_stack_image,
-                           reg_stack_trsf, path_init_trsf=init_trsfs, parameters=parameters.stack_registration[1])
+            _blockmatching(
+                stack_fused_images[0],
+                stack_fused_images[1],
+                reg_stack_image,
+                reg_stack_trsf,
+                path_init_trsf=reg_stack_trsf,
+                parameters=parameters.stack_registration[1],
+            )
+        elif (
+            parameters.stack_registration[0].compute_registration is True
+            and parameters.stack_registration[1].compute_registration is False
+        ):
+            _blockmatching(
+                stack_fused_images[0],
+                stack_fused_images[1],
+                reg_stack_image,
+                reg_stack_trsf,
+                path_init_trsf=init_trsfs,
+                parameters=parameters.stack_registration[0],
+            )
+        elif (
+            parameters.stack_registration[0].compute_registration is False
+            and parameters.stack_registration[1].compute_registration is True
+        ):
+            _blockmatching(
+                stack_fused_images[0],
+                stack_fused_images[1],
+                reg_stack_image,
+                reg_stack_trsf,
+                path_init_trsf=init_trsfs,
+                parameters=parameters.stack_registration[1],
+            )
         else:
-            monitoring.to_log_and_console(proc + ': no registration to be done ?!', 0)
+            monitoring.to_log_and_console(proc + ": no registration to be done ?!", 0)
             monitoring.to_log_and_console("Exiting.", 0)
             sys.exit(1)
 
     monitoring.to_log_and_console("       transform angle 2 data", 2)
 
     i = 2
-    cpp_wrapping.compose_trsf([stack_resample_trsfs[i], reg_stack_trsf], res_trsfs[i], monitoring=monitoring)
-    cpp_wrapping.applyTrsf(the_images[i], res_images[i], the_transformation=res_trsfs[i],
-                           template_image=res_images[0], monitoring=monitoring)
-    cpp_wrapping.applyTrsf(unreg_weight_images[i], weight_images[i], the_transformation=res_trsfs[i],
-                           template_image=res_images[0], monitoring=monitoring)
+    cpp_wrapping.compose_trsf(
+        [stack_resample_trsfs[i], reg_stack_trsf], res_trsfs[i], monitoring=monitoring
+    )
+    cpp_wrapping.applyTrsf(
+        the_images[i],
+        res_images[i],
+        the_transformation=res_trsfs[i],
+        template_image=res_images[0],
+        monitoring=monitoring,
+    )
+    cpp_wrapping.applyTrsf(
+        unreg_weight_images[i],
+        weight_images[i],
+        the_transformation=res_trsfs[i],
+        template_image=res_images[0],
+        monitoring=monitoring,
+    )
 
     monitoring.to_log_and_console("       transform angle 3 data", 2)
 
     i = 3
-    cpp_wrapping.compose_trsf([stack_res_trsfs[i], reg_stack_trsf], res_trsfs[i], monitoring=monitoring)
-    cpp_wrapping.applyTrsf(the_images[i], res_images[i], the_transformation=res_trsfs[i],
-                           template_image=res_images[0], monitoring=monitoring)
-    cpp_wrapping.applyTrsf(unreg_weight_images[i], weight_images[i], the_transformation=res_trsfs[i],
-                           template_image=res_images[0], monitoring=monitoring)
+    cpp_wrapping.compose_trsf(
+        [stack_res_trsfs[i], reg_stack_trsf], res_trsfs[i], monitoring=monitoring
+    )
+    cpp_wrapping.applyTrsf(
+        the_images[i],
+        res_images[i],
+        the_transformation=res_trsfs[i],
+        template_image=res_images[0],
+        monitoring=monitoring,
+    )
+    cpp_wrapping.applyTrsf(
+        unreg_weight_images[i],
+        weight_images[i],
+        the_transformation=res_trsfs[i],
+        template_image=res_images[0],
+        monitoring=monitoring,
+    )
 
     #
     # compute fused image as a linear combination of co-registered images
@@ -2539,16 +3548,23 @@ def _hierarchical_fusion_process(input_image_list, the_image_list, fused_image, 
     monitoring.to_log_and_console("    .. combining images", 2)
 
     if parameters.fusion_cropping is True:
-        tmp_fused_image = common.add_suffix(fused_image, "_uncropped_fusion",
-                                            new_dirname=experiment.rawdata_dir.get_tmp_directory(4, 0),
-                                            new_extension=experiment.default_image_suffix)
+        tmp_fused_image = common.add_suffix(
+            fused_image,
+            "_uncropped_fusion",
+            new_dirname=experiment.rawdata_dir.get_tmp_directory(4, 0),
+            new_extension=experiment.default_image_suffix,
+        )
     else:
-        tmp_fused_image = os.path.join(experiment.fusion_dir.get_directory(0), fused_image)
+        tmp_fused_image = os.path.join(
+            experiment.fusion_dir.get_directory(0), fused_image
+        )
 
-    cpp_wrapping.linear_combination(weight_images, res_images, tmp_fused_image, monitoring=monitoring)
+    cpp_wrapping.linear_combination(
+        weight_images, res_images, tmp_fused_image, monitoring=monitoring
+    )
 
     if not os.path.isfile(tmp_fused_image):
-        monitoring.to_log_and_console(proc + ': fused image has not been generated', 0)
+        monitoring.to_log_and_console(proc + ": fused image has not been generated", 0)
         monitoring.to_log_and_console("Exiting.", 0)
         sys.exit(1)
 
@@ -2562,24 +3578,30 @@ def _hierarchical_fusion_process(input_image_list, the_image_list, fused_image, 
     # last crop
     #
     if parameters.fusion_cropping is True:
+        fusion_box = _crop_bounding_box(
+            tmp_fused_image, z_crop=parameters.fusion_z_cropping
+        )
 
-        fusion_box = _crop_bounding_box(tmp_fused_image, z_crop=parameters.fusion_z_cropping)
-
-        monitoring.to_log_and_console("    .. cropping '" + fused_image.split(os.path.sep)[-1], 2)
-        _crop_disk_image(tmp_fused_image, os.path.join(experiment.fusion_dir.get_directory(0), fused_image),
-                         the_max_box=fusion_box, z_crop=parameters.fusion_z_cropping,
-                         margin_x_0=parameters.fusion_cropping_margin_x_0,
-                         margin_x_1=parameters.fusion_cropping_margin_x_1,
-                         margin_y_0=parameters.fusion_cropping_margin_y_0,
-                         margin_y_1=parameters.fusion_cropping_margin_y_1,
-                         margin_z_0=parameters.fusion_cropping_margin_z_0,
-                         margin_z_1=parameters.fusion_cropping_margin_z_1)
+        monitoring.to_log_and_console(
+            "    .. cropping '" + fused_image.split(os.path.sep)[-1], 2
+        )
+        _crop_disk_image(
+            tmp_fused_image,
+            os.path.join(experiment.fusion_dir.get_directory(0), fused_image),
+            the_max_box=fusion_box,
+            z_crop=parameters.fusion_z_cropping,
+            margin_x_0=parameters.fusion_cropping_margin_x_0,
+            margin_x_1=parameters.fusion_cropping_margin_x_1,
+            margin_y_0=parameters.fusion_cropping_margin_y_0,
+            margin_y_1=parameters.fusion_cropping_margin_y_1,
+            margin_z_0=parameters.fusion_cropping_margin_z_0,
+            margin_z_1=parameters.fusion_cropping_margin_z_1,
+        )
 
     #
     # other channels
     #
     for c in range(1, n_channels):
-
         if n_channels > 1:
             monitoring.to_log_and_console("    .. process channel #" + str(c), 2)
 
@@ -2589,9 +3611,12 @@ def _hierarchical_fusion_process(input_image_list, the_image_list, fused_image, 
         weight_images = weight_images_list[c]
 
         for i in range(0, len(the_images)):
-
-            monitoring.to_log_and_console("    .. process '"
-                                          + the_images[i].split(os.path.sep)[-1] + "' for fusion", 2)
+            monitoring.to_log_and_console(
+                "    .. process '"
+                + the_images[i].split(os.path.sep)[-1]
+                + "' for fusion",
+                2,
+            )
 
             if do_something[i] is False:
                 monitoring.to_log_and_console("       nothing to do", 2)
@@ -2611,14 +3636,26 @@ def _hierarchical_fusion_process(input_image_list, the_image_list, fused_image, 
                 #
                 # resampling first image
                 #
-                monitoring.to_log_and_console("       resampling '" + the_images[i].split(os.path.sep)[-1]
-                                              + "' at " + str(parameters.target_resolution), 2)
-                if not os.path.isfile(res_images[i]) or monitoring.forceResultsToBeBuilt is True:
-                    cpp_wrapping.apply_transformation(the_images[i], res_images[i], the_transformation=None,
-                                                      template_image=None,
-                                                      voxel_size=parameters.target_resolution,
-                                                      interpolation_mode='linear',
-                                                      monitoring=monitoring)
+                monitoring.to_log_and_console(
+                    "       resampling '"
+                    + the_images[i].split(os.path.sep)[-1]
+                    + "' at "
+                    + str(parameters.target_resolution),
+                    2,
+                )
+                if (
+                    not os.path.isfile(res_images[i])
+                    or monitoring.forceResultsToBeBuilt is True
+                ):
+                    cpp_wrapping.apply_transformation(
+                        the_images[i],
+                        res_images[i],
+                        the_transformation=None,
+                        template_image=None,
+                        voxel_size=parameters.target_resolution,
+                        interpolation_mode="linear",
+                        monitoring=monitoring,
+                    )
                 else:
                     monitoring.to_log_and_console("       already existing", 2)
 
@@ -2628,12 +3665,23 @@ def _hierarchical_fusion_process(input_image_list, the_image_list, fused_image, 
             # - other channels: resampling with transformation of channel #0
             #
             else:
-                monitoring.to_log_and_console("       resampling '" + the_images[i].split(os.path.sep)[-1] + "'", 2)
-                if not os.path.isfile(res_images[i]) or monitoring.forceResultsToBeBuilt is True:
-                    cpp_wrapping.apply_transformation(the_images[i], res_images[i],
-                                                      the_transformation=res_trsfs[i], template_image=res_images[0],
-                                                      voxel_size=None, interpolation_mode='linear',
-                                                      monitoring=monitoring)
+                monitoring.to_log_and_console(
+                    "       resampling '" + the_images[i].split(os.path.sep)[-1] + "'",
+                    2,
+                )
+                if (
+                    not os.path.isfile(res_images[i])
+                    or monitoring.forceResultsToBeBuilt is True
+                ):
+                    cpp_wrapping.apply_transformation(
+                        the_images[i],
+                        res_images[i],
+                        the_transformation=res_trsfs[i],
+                        template_image=res_images[0],
+                        voxel_size=None,
+                        interpolation_mode="linear",
+                        monitoring=monitoring,
+                    )
                 else:
                     monitoring.to_log_and_console("       already existing", 2)
 
@@ -2647,31 +3695,58 @@ def _hierarchical_fusion_process(input_image_list, the_image_list, fused_image, 
             else:
                 direction = True
 
-            if not os.path.isfile(unreg_weight_images[i]) or monitoring.forceResultsToBeBuilt is True:
+            if (
+                not os.path.isfile(unreg_weight_images[i])
+                or monitoring.forceResultsToBeBuilt is True
+            ):
                 #
                 #
                 #
-                _build_unreg_weighting_image(the_images[i], unreg_weight_images[i], direction,
-                                             experiment.rawdata_dir.channel[c].fusion_weighting)
+                _build_unreg_weighting_image(
+                    the_images[i],
+                    unreg_weight_images[i],
+                    direction,
+                    experiment.rawdata_dir.channel[c].fusion_weighting,
+                )
             else:
                 monitoring.to_log_and_console("          already existing", 2)
 
-            monitoring.to_log_and_console("          resampling '" + unreg_weight_images[i].split(os.path.sep)[-1]
-                                          + "'", 2)
+            monitoring.to_log_and_console(
+                "          resampling '"
+                + unreg_weight_images[i].split(os.path.sep)[-1]
+                + "'",
+                2,
+            )
             if i == 0:
-                if not os.path.isfile(weight_images[i]) or monitoring.forceResultsToBeBuilt is True:
-                    cpp_wrapping.apply_transformation(unreg_weight_images[i], weight_images[i],
-                                                      the_transformation=None, template_image=None,
-                                                      voxel_size=parameters.target_resolution,
-                                                      interpolation_mode='linear', monitoring=monitoring)
+                if (
+                    not os.path.isfile(weight_images[i])
+                    or monitoring.forceResultsToBeBuilt is True
+                ):
+                    cpp_wrapping.apply_transformation(
+                        unreg_weight_images[i],
+                        weight_images[i],
+                        the_transformation=None,
+                        template_image=None,
+                        voxel_size=parameters.target_resolution,
+                        interpolation_mode="linear",
+                        monitoring=monitoring,
+                    )
                 else:
                     monitoring.to_log_and_console("          already existing", 2)
             else:
-                if not os.path.isfile(weight_images[i]) or monitoring.forceResultsToBeBuilt is True:
-                    cpp_wrapping.apply_transformation(unreg_weight_images[i], weight_images[i],
-                                                      the_transformation=res_trsfs[i], template_image=res_images[0],
-                                                      voxel_size=None, interpolation_mode='linear',
-                                                      monitoring=monitoring)
+                if (
+                    not os.path.isfile(weight_images[i])
+                    or monitoring.forceResultsToBeBuilt is True
+                ):
+                    cpp_wrapping.apply_transformation(
+                        unreg_weight_images[i],
+                        weight_images[i],
+                        the_transformation=res_trsfs[i],
+                        template_image=res_images[0],
+                        voxel_size=None,
+                        interpolation_mode="linear",
+                        monitoring=monitoring,
+                    )
                 else:
                     monitoring.to_log_and_console("          already existing", 2)
 
@@ -2685,16 +3760,26 @@ def _hierarchical_fusion_process(input_image_list, the_image_list, fused_image, 
         monitoring.to_log_and_console("    .. combining images", 2)
 
         if parameters.fusion_cropping is True:
-            tmp_fused_image = common.add_suffix(fused_image, "_uncropped_fusion",
-                                                new_dirname=experiment.rawdata_dir.get_tmp_directory(4, c),
-                                                new_extension=experiment.default_image_suffix)
+            tmp_fused_image = common.add_suffix(
+                fused_image,
+                "_uncropped_fusion",
+                new_dirname=experiment.rawdata_dir.get_tmp_directory(4, c),
+                new_extension=experiment.default_image_suffix,
+            )
         else:
-            tmp_fused_image = os.path.join(experiment.fusion_dir.get_directory(c), fused_image)
+            tmp_fused_image = os.path.join(
+                experiment.fusion_dir.get_directory(c), fused_image
+            )
 
-        cpp_wrapping.linear_combination(weight_images, res_images, tmp_fused_image, monitoring=monitoring)
+        cpp_wrapping.linear_combination(
+            weight_images, res_images, tmp_fused_image, monitoring=monitoring
+        )
 
         if not os.path.isfile(tmp_fused_image):
-            monitoring.to_log_and_console(proc + ': fused image (channel #' + str(c) +') has not been generated', 0)
+            monitoring.to_log_and_console(
+                proc + ": fused image (channel #" + str(c) + ") has not been generated",
+                0,
+            )
             monitoring.to_log_and_console("Exiting.", 0)
             sys.exit(1)
 
@@ -2702,22 +3787,29 @@ def _hierarchical_fusion_process(input_image_list, the_image_list, fused_image, 
         #
         #
         if parameters.xzsection_extraction is True:
-            _extract_xzsection(weight_images, res_images, tmp_fused_image, c, experiment)
+            _extract_xzsection(
+                weight_images, res_images, tmp_fused_image, c, experiment
+            )
 
         #
         # last crop
         #
         if parameters.fusion_cropping is True:
-
-            monitoring.to_log_and_console("    .. cropping '" + fused_image.split(os.path.sep)[-1], 2)
-            _crop_disk_image(tmp_fused_image, os.path.join(experiment.fusion_dir.get_directory(c), fused_image),
-                             the_max_box=fusion_box, z_crop=parameters.fusion_z_cropping,
-                             margin_x_0=parameters.fusion_cropping_margin_x_0,
-                             margin_x_1=parameters.fusion_cropping_margin_x_1,
-                             margin_y_0=parameters.fusion_cropping_margin_y_0,
-                             margin_y_1=parameters.fusion_cropping_margin_y_1,
-                             margin_z_0=parameters.fusion_cropping_margin_z_0,
-                             margin_z_1=parameters.fusion_cropping_margin_z_1)
+            monitoring.to_log_and_console(
+                "    .. cropping '" + fused_image.split(os.path.sep)[-1], 2
+            )
+            _crop_disk_image(
+                tmp_fused_image,
+                os.path.join(experiment.fusion_dir.get_directory(c), fused_image),
+                the_max_box=fusion_box,
+                z_crop=parameters.fusion_z_cropping,
+                margin_x_0=parameters.fusion_cropping_margin_x_0,
+                margin_x_1=parameters.fusion_cropping_margin_x_1,
+                margin_y_0=parameters.fusion_cropping_margin_y_0,
+                margin_y_1=parameters.fusion_cropping_margin_y_1,
+                margin_z_0=parameters.fusion_cropping_margin_z_0,
+                margin_z_1=parameters.fusion_cropping_margin_z_1,
+            )
 
     return
 
@@ -2733,9 +3825,10 @@ def _hierarchical_fusion_process(input_image_list, the_image_list, fused_image, 
 # then call a fusion method
 #
 
+
 def _fusion_process(input_image_list, fused_image, experiment, parameters):
     """
-    
+
     :param input_image_list: a list of dictionaries of images to be fused. One list per channel
            a dictionary of images to be fused contains up to 4 images, with keys
            0: the left camera of stack #0
@@ -2749,7 +3842,7 @@ def _fusion_process(input_image_list, fused_image, experiment, parameters):
     :return:
     """
 
-    proc = 'fusion_process'
+    proc = "fusion_process"
 
     n_channels = experiment.rawdata_dir.get_number_channels()
 
@@ -2768,13 +3861,19 @@ def _fusion_process(input_image_list, fused_image, experiment, parameters):
     #
 
     if not isinstance(experiment, common.Experiment):
-        monitoring.to_log_and_console(str(proc) + ": unexpected type for 'experiment' variable: "
-                                      + str(type(experiment)))
+        monitoring.to_log_and_console(
+            str(proc)
+            + ": unexpected type for 'experiment' variable: "
+            + str(type(experiment))
+        )
         sys.exit(1)
 
     if not isinstance(parameters, FusionParameters):
-        monitoring.to_log_and_console(str(proc) + ": unexpected type for 'parameters' variable: "
-                                      + str(type(parameters)))
+        monitoring.to_log_and_console(
+            str(proc)
+            + ": unexpected type for 'parameters' variable: "
+            + str(type(parameters))
+        )
         sys.exit(1)
 
     #
@@ -2783,11 +3882,17 @@ def _fusion_process(input_image_list, fused_image, experiment, parameters):
 
     do_something = False
     for c in range(n_channels):
-        if os.path.isfile(os.path.join(experiment.fusion_dir.get_directory(c), fused_image)):
+        if os.path.isfile(
+            os.path.join(experiment.fusion_dir.get_directory(c), fused_image)
+        ):
             if monitoring.forceResultsToBeBuilt is False:
-                monitoring.to_log_and_console('    fused channel #' + str(c) + ' already existing', 2)
+                monitoring.to_log_and_console(
+                    "    fused channel #" + str(c) + " already existing", 2
+                )
             else:
-                monitoring.to_log_and_console('    fused channel #' + str(c) + ' already existing, but forced', 2)
+                monitoring.to_log_and_console(
+                    "    fused channel #" + str(c) + " already existing, but forced", 2
+                )
                 do_something = True
         else:
             do_something = True
@@ -2819,7 +3924,6 @@ def _fusion_process(input_image_list, fused_image, experiment, parameters):
     #
 
     if parameters.acquisition_slit_line_correction is True:
-
         the_image_list = res_image_list[:]
         res_image_list = list()
         corrections = {}
@@ -2829,18 +3933,23 @@ def _fusion_process(input_image_list, fused_image, experiment, parameters):
         #
 
         for c in range(n_channels):
-
             the_images = the_image_list[c]
             res_images = {}
 
             for i in the_images:
-                res_images[i] = common.add_suffix(input_image_list[c][i], "_line_corrected",
-                                                  new_dirname=experiment.rawdata_dir.get_tmp_directory(i, c),
-                                                  new_extension=experiment.default_image_suffix)
+                res_images[i] = common.add_suffix(
+                    input_image_list[c][i],
+                    "_line_corrected",
+                    new_dirname=experiment.rawdata_dir.get_tmp_directory(i, c),
+                    new_extension=experiment.default_image_suffix,
+                )
                 if c == 0:
-                    corrections[i] = common.add_suffix(input_image_list[c][i], "_line_corrected",
-                                                       new_dirname=experiment.rawdata_dir.get_tmp_directory(i, c),
-                                                       new_extension='.txt')
+                    corrections[i] = common.add_suffix(
+                        input_image_list[c][i],
+                        "_line_corrected",
+                        new_dirname=experiment.rawdata_dir.get_tmp_directory(i, c),
+                        new_extension=".txt",
+                    )
             res_image_list.append(res_images)
 
         #
@@ -2854,7 +3963,6 @@ def _fusion_process(input_image_list, fused_image, experiment, parameters):
             do_something[i] = False
 
         for c in range(n_channels):
-
             the_images = the_image_list[c]
             res_images = res_image_list[c]
 
@@ -2878,27 +3986,35 @@ def _fusion_process(input_image_list, fused_image, experiment, parameters):
         #
 
         for c in range(n_channels):
-
             the_images = the_image_list[c]
             res_images = res_image_list[c]
 
             for i in the_images:
-
-                monitoring.to_log_and_console("    .. correcting slit lines of '"
-                                              + the_images[i].split(os.path.sep)[-1] + "'", 2)
+                monitoring.to_log_and_console(
+                    "    .. correcting slit lines of '"
+                    + the_images[i].split(os.path.sep)[-1]
+                    + "'",
+                    2,
+                )
 
                 if do_something[i] is False:
                     monitoring.to_log_and_console("       nothing to do", 2)
                     continue
 
                 if c == 0:
-                    cpp_wrapping.slitline_correction(the_images[i], res_images[i],
-                                                     output_corrections=corrections[i],
-                                                     monitoring=monitoring)
+                    cpp_wrapping.slitline_correction(
+                        the_images[i],
+                        res_images[i],
+                        output_corrections=corrections[i],
+                        monitoring=monitoring,
+                    )
                 else:
-                    cpp_wrapping.slitline_correction(the_images[i], res_images[i],
-                                                     input_corrections=corrections[i],
-                                                     monitoring=monitoring)
+                    cpp_wrapping.slitline_correction(
+                        the_images[i],
+                        res_images[i],
+                        input_corrections=corrections[i],
+                        monitoring=monitoring,
+                    )
 
     #
     # to do: linear filtering to compensate for resolution change
@@ -2916,7 +4032,6 @@ def _fusion_process(input_image_list, fused_image, experiment, parameters):
     res_image_list = list()
 
     for c in range(n_channels):
-
         the_images = the_image_list[c]
         res_images = {}
 
@@ -2925,9 +4040,12 @@ def _fusion_process(input_image_list, fused_image, experiment, parameters):
         #
 
         for i in the_images:
-            res_images[i] = common.add_suffix(input_image_list[c][i], "_resample",
-                                              new_dirname=experiment.rawdata_dir.get_tmp_directory(i, c),
-                                              new_extension=experiment.default_image_suffix)
+            res_images[i] = common.add_suffix(
+                input_image_list[c][i],
+                "_resample",
+                new_dirname=experiment.rawdata_dir.get_tmp_directory(i, c),
+                new_extension=experiment.default_image_suffix,
+            )
         res_image_list.append(res_images)
 
         #
@@ -2935,29 +4053,62 @@ def _fusion_process(input_image_list, fused_image, experiment, parameters):
         #
 
         for i in the_images:
-
             im = imread(the_images[i])
-            if type(parameters.target_resolution) == int or type(parameters.target_resolution) == float:
-                resampling_resolution = [parameters.target_resolution, parameters.target_resolution, im.voxelsize[2]]
-            elif (type(parameters.target_resolution) == list or type(parameters.target_resolution) == tuple) \
-                    and len(parameters.target_resolution) == 3:
-                resampling_resolution = [parameters.target_resolution[0],
-                                         parameters.target_resolution[1], im.voxelsize[2]]
+            if (
+                type(parameters.target_resolution) == int
+                or type(parameters.target_resolution) == float
+            ):
+                resampling_resolution = [
+                    parameters.target_resolution,
+                    parameters.target_resolution,
+                    im.voxelsize[2],
+                ]
+            elif (
+                type(parameters.target_resolution) == list
+                or type(parameters.target_resolution) == tuple
+            ) and len(parameters.target_resolution) == 3:
+                resampling_resolution = [
+                    parameters.target_resolution[0],
+                    parameters.target_resolution[1],
+                    im.voxelsize[2],
+                ]
             else:
-                monitoring.to_log_and_console(proc+': unable to set target resolution for first resampling', 0)
-                monitoring.to_log_and_console("\t target resolution was '"+str(parameters.target_resolution)+"'", 0)
-                monitoring.to_log_and_console("\t image resolution was '" + str(im.voxelsize) + "'", 0)
+                monitoring.to_log_and_console(
+                    proc + ": unable to set target resolution for first resampling", 0
+                )
+                monitoring.to_log_and_console(
+                    "\t target resolution was '"
+                    + str(parameters.target_resolution)
+                    + "'",
+                    0,
+                )
+                monitoring.to_log_and_console(
+                    "\t image resolution was '" + str(im.voxelsize) + "'", 0
+                )
                 monitoring.to_log_and_console("Exiting.", 0)
                 sys.exit(1)
             del im
 
-            monitoring.to_log_and_console("    .. resampling '" + the_images[i].split(os.path.sep)[-1]
-                                          + "' at " + str(resampling_resolution), 2)
-            if not os.path.isfile(res_images[i]) or monitoring.forceResultsToBeBuilt is True:
-                cpp_wrapping.apply_transformation(the_images[i], res_images[i], the_transformation=None,
-                                                  template_image=None,
-                                                  voxel_size=resampling_resolution, interpolation_mode='linear',
-                                                  monitoring=monitoring)
+            monitoring.to_log_and_console(
+                "    .. resampling '"
+                + the_images[i].split(os.path.sep)[-1]
+                + "' at "
+                + str(resampling_resolution),
+                2,
+            )
+            if (
+                not os.path.isfile(res_images[i])
+                or monitoring.forceResultsToBeBuilt is True
+            ):
+                cpp_wrapping.apply_transformation(
+                    the_images[i],
+                    res_images[i],
+                    the_transformation=None,
+                    template_image=None,
+                    voxel_size=resampling_resolution,
+                    interpolation_mode="linear",
+                    monitoring=monitoring,
+                )
             else:
                 monitoring.to_log_and_console("       already existing", 2)
 
@@ -2966,7 +4117,6 @@ def _fusion_process(input_image_list, fused_image, experiment, parameters):
     #
 
     if parameters.acquisition_cropping is True:
-
         the_image_list = res_image_list[:]
         res_image_list = list()
 
@@ -2975,14 +4125,16 @@ def _fusion_process(input_image_list, fused_image, experiment, parameters):
         #
 
         for c in range(n_channels):
-
             the_images = the_image_list[c]
             res_images = {}
 
             for i in the_images:
-                res_images[i] = common.add_suffix(input_image_list[c][i], "_crop",
-                                                  new_dirname=experiment.rawdata_dir.get_tmp_directory(i, c),
-                                                  new_extension=experiment.default_image_suffix)
+                res_images[i] = common.add_suffix(
+                    input_image_list[c][i],
+                    "_crop",
+                    new_dirname=experiment.rawdata_dir.get_tmp_directory(i, c),
+                    new_extension=experiment.default_image_suffix,
+                )
             res_image_list.append(res_images)
 
         #
@@ -2995,7 +4147,6 @@ def _fusion_process(input_image_list, fused_image, experiment, parameters):
             do_something[i] = False
 
         for c in range(n_channels):
-
             the_images = the_image_list[c]
             res_images = res_image_list[c]
 
@@ -3015,34 +4166,42 @@ def _fusion_process(input_image_list, fused_image, experiment, parameters):
         box_list = list()
 
         for c in range(n_channels):
-
             the_images = the_image_list[c]
             res_images = res_image_list[c]
 
             for i in the_images:
-
-                monitoring.to_log_and_console("    .. cropping '"
-                                              + the_images[i].split(os.path.sep)[-1] + "'", 2)
+                monitoring.to_log_and_console(
+                    "    .. cropping '" + the_images[i].split(os.path.sep)[-1] + "'", 2
+                )
 
                 if do_something[i] is False:
                     monitoring.to_log_and_console("       nothing to do", 2)
                     continue
 
                 if c == 0:
-                    box = _crop_bounding_box(the_images[i], z_crop=parameters.acquisition_z_cropping)
+                    box = _crop_bounding_box(
+                        the_images[i], z_crop=parameters.acquisition_z_cropping
+                    )
                     box_list.append(box)
                 else:
                     box = box_list[i]
 
-                if not os.path.isfile(res_images[i]) or monitoring.forceResultsToBeBuilt is True:
-                    _crop_disk_image(the_images[i], res_images[i], the_max_box=box,
-                                     z_crop=parameters.acquisition_z_cropping,
-                                     margin_x_0=parameters.acquisition_cropping_margin_x_0,
-                                     margin_x_1=parameters.acquisition_cropping_margin_x_1,
-                                     margin_y_0=parameters.acquisition_cropping_margin_y_0,
-                                     margin_y_1=parameters.acquisition_cropping_margin_y_1,
-                                     margin_z_0=parameters.acquisition_cropping_margin_z_0,
-                                     margin_z_1=parameters.acquisition_cropping_margin_z_1)
+                if (
+                    not os.path.isfile(res_images[i])
+                    or monitoring.forceResultsToBeBuilt is True
+                ):
+                    _crop_disk_image(
+                        the_images[i],
+                        res_images[i],
+                        the_max_box=box,
+                        z_crop=parameters.acquisition_z_cropping,
+                        margin_x_0=parameters.acquisition_cropping_margin_x_0,
+                        margin_x_1=parameters.acquisition_cropping_margin_x_1,
+                        margin_y_0=parameters.acquisition_cropping_margin_y_0,
+                        margin_y_1=parameters.acquisition_cropping_margin_y_1,
+                        margin_z_0=parameters.acquisition_cropping_margin_z_0,
+                        margin_z_1=parameters.acquisition_cropping_margin_z_1,
+                    )
                 else:
                     monitoring.to_log_and_console("       already existing", 2)
 
@@ -3053,15 +4212,15 @@ def _fusion_process(input_image_list, fused_image, experiment, parameters):
     # Both are done at the same time to avoid reading/writing of images
     #
 
-    if parameters.acquisition_mirrors is False \
-        or parameters.acquisition_stack0_leftcamera_z_stacking.lower() == 'inverse' \
-        or parameters.acquisition_stack1_leftcamera_z_stacking.lower() == 'inverse':
-
+    if (
+        parameters.acquisition_mirrors is False
+        or parameters.acquisition_stack0_leftcamera_z_stacking.lower() == "inverse"
+        or parameters.acquisition_stack1_leftcamera_z_stacking.lower() == "inverse"
+    ):
         the_image_list = res_image_list[:]
         res_image_list = list()
 
         for c in range(n_channels):
-
             the_images = the_image_list[c]
             res_images = {}
 
@@ -3070,43 +4229,68 @@ def _fusion_process(input_image_list, fused_image, experiment, parameters):
             #
 
             for i in the_images:
-
                 if i == 0:
                     # stack 0, left camera
-                    if parameters.acquisition_stack0_leftcamera_z_stacking.lower() == 'inverse':
-                        res_images[i] = common.add_suffix(input_image_list[c][i], "_mirror",
-                                                          new_dirname=experiment.rawdata_dir.get_tmp_directory(i, c),
-                                                          new_extension=experiment.default_image_suffix)
+                    if (
+                        parameters.acquisition_stack0_leftcamera_z_stacking.lower()
+                        == "inverse"
+                    ):
+                        res_images[i] = common.add_suffix(
+                            input_image_list[c][i],
+                            "_mirror",
+                            new_dirname=experiment.rawdata_dir.get_tmp_directory(i, c),
+                            new_extension=experiment.default_image_suffix,
+                        )
                     else:
                         res_images[i] = the_images[i]
                 elif i == 1:
                     # stack 0, right camera
-                    if parameters.acquisition_stack0_leftcamera_z_stacking.lower() == 'inverse' \
-                        or parameters.acquisition_mirrors is False:
-                        res_images[i] = common.add_suffix(input_image_list[c][i], "_mirror",
-                                                          new_dirname=experiment.rawdata_dir.get_tmp_directory(i, c),
-                                                          new_extension=experiment.default_image_suffix)
+                    if (
+                        parameters.acquisition_stack0_leftcamera_z_stacking.lower()
+                        == "inverse"
+                        or parameters.acquisition_mirrors is False
+                    ):
+                        res_images[i] = common.add_suffix(
+                            input_image_list[c][i],
+                            "_mirror",
+                            new_dirname=experiment.rawdata_dir.get_tmp_directory(i, c),
+                            new_extension=experiment.default_image_suffix,
+                        )
                     else:
                         res_images[i] = the_images[i]
                 elif i == 2:
                     # stack 1, left camera
-                    if parameters.acquisition_stack1_leftcamera_z_stacking.lower() == 'inverse':
-                        res_images[i] = common.add_suffix(input_image_list[c][i], "_mirror",
-                                                          new_dirname=experiment.rawdata_dir.get_tmp_directory(i, c),
-                                                          new_extension=experiment.default_image_suffix)
+                    if (
+                        parameters.acquisition_stack1_leftcamera_z_stacking.lower()
+                        == "inverse"
+                    ):
+                        res_images[i] = common.add_suffix(
+                            input_image_list[c][i],
+                            "_mirror",
+                            new_dirname=experiment.rawdata_dir.get_tmp_directory(i, c),
+                            new_extension=experiment.default_image_suffix,
+                        )
                     else:
                         res_images[i] = the_images[i]
                 elif i == 3:
                     # stack 1, right camera
-                    if parameters.acquisition_stack1_leftcamera_z_stacking.lower() == 'inverse' \
-                        or parameters.acquisition_mirrors is False:
-                        res_images[i] = common.add_suffix(input_image_list[c][i], "_mirror",
-                                                          new_dirname=experiment.rawdata_dir.get_tmp_directory(i, c),
-                                                          new_extension=experiment.default_image_suffix)
+                    if (
+                        parameters.acquisition_stack1_leftcamera_z_stacking.lower()
+                        == "inverse"
+                        or parameters.acquisition_mirrors is False
+                    ):
+                        res_images[i] = common.add_suffix(
+                            input_image_list[c][i],
+                            "_mirror",
+                            new_dirname=experiment.rawdata_dir.get_tmp_directory(i, c),
+                            new_extension=experiment.default_image_suffix,
+                        )
                     else:
                         res_images[i] = the_images[i]
                 else:
-                    monitoring.to_log_and_console("       weird index:'" + str(i) + "'", 2)
+                    monitoring.to_log_and_console(
+                        "       weird index:'" + str(i) + "'", 2
+                    )
 
             res_image_list.append(res_images)
 
@@ -3115,13 +4299,23 @@ def _fusion_process(input_image_list, fused_image, experiment, parameters):
             #
 
             for i in the_images:
-
                 if i == 0:
                     # stack 0, left camera
-                    if parameters.acquisition_stack0_leftcamera_z_stacking.lower() == 'inverse':
-                        monitoring.to_log_and_console("    .. mirroring  #" + str(i) + " '"
-                                                      + the_images[i].split(os.path.sep)[-1], 2)
-                        if not os.path.isfile(res_images[i]) or monitoring.forceResultsToBeBuilt is True:
+                    if (
+                        parameters.acquisition_stack0_leftcamera_z_stacking.lower()
+                        == "inverse"
+                    ):
+                        monitoring.to_log_and_console(
+                            "    .. mirroring  #"
+                            + str(i)
+                            + " '"
+                            + the_images[i].split(os.path.sep)[-1],
+                            2,
+                        )
+                        if (
+                            not os.path.isfile(res_images[i])
+                            or monitoring.forceResultsToBeBuilt is True
+                        ):
                             the_im = imread(the_images[i])
                             res_im = SpatialImage(the_im.copy())[:, :, -1::-1]
                             res_im.voxelsize = the_im.voxelsize
@@ -3133,19 +4327,38 @@ def _fusion_process(input_image_list, fused_image, experiment, parameters):
 
                 elif i == 1:
                     # stack 0, right camera
-                    if parameters.acquisition_stack0_leftcamera_z_stacking.lower() == 'inverse' \
-                        or parameters.acquisition_mirrors is False:
-                        monitoring.to_log_and_console("    .. mirroring  #" + str(i) + " '"
-                                                      + the_images[i].split(os.path.sep)[-1], 2)
-                        if not os.path.isfile(res_images[i]) or monitoring.forceResultsToBeBuilt is True:
+                    if (
+                        parameters.acquisition_stack0_leftcamera_z_stacking.lower()
+                        == "inverse"
+                        or parameters.acquisition_mirrors is False
+                    ):
+                        monitoring.to_log_and_console(
+                            "    .. mirroring  #"
+                            + str(i)
+                            + " '"
+                            + the_images[i].split(os.path.sep)[-1],
+                            2,
+                        )
+                        if (
+                            not os.path.isfile(res_images[i])
+                            or monitoring.forceResultsToBeBuilt is True
+                        ):
                             the_im = imread(the_images[i])
                             if parameters.acquisition_mirrors is False:
-                                if parameters.acquisition_stack0_leftcamera_z_stacking.lower() == 'inverse':
-                                    res_im = SpatialImage(the_im.copy())[-1::-1, :, -1::-1]
+                                if (
+                                    parameters.acquisition_stack0_leftcamera_z_stacking.lower()
+                                    == "inverse"
+                                ):
+                                    res_im = SpatialImage(the_im.copy())[
+                                        -1::-1, :, -1::-1
+                                    ]
                                 else:
                                     res_im = SpatialImage(the_im.copy())[-1::-1, :, :]
                             else:
-                                if parameters.acquisition_stack0_leftcamera_z_stacking.lower() == 'inverse':
+                                if (
+                                    parameters.acquisition_stack0_leftcamera_z_stacking.lower()
+                                    == "inverse"
+                                ):
                                     res_im = SpatialImage(the_im.copy())[:, :, -1::-1]
                             res_im.voxelsize = the_im.voxelsize
                             imsave(res_images[i], res_im)
@@ -3156,10 +4369,21 @@ def _fusion_process(input_image_list, fused_image, experiment, parameters):
 
                 elif i == 2:
                     # stack 1, left camera
-                    if parameters.acquisition_stack1_leftcamera_z_stacking.lower() == 'inverse':
-                        monitoring.to_log_and_console("    .. mirroring  #" + str(i) + " '"
-                                                      + the_images[i].split(os.path.sep)[-1], 2)
-                        if not os.path.isfile(res_images[i]) or monitoring.forceResultsToBeBuilt is True:
+                    if (
+                        parameters.acquisition_stack1_leftcamera_z_stacking.lower()
+                        == "inverse"
+                    ):
+                        monitoring.to_log_and_console(
+                            "    .. mirroring  #"
+                            + str(i)
+                            + " '"
+                            + the_images[i].split(os.path.sep)[-1],
+                            2,
+                        )
+                        if (
+                            not os.path.isfile(res_images[i])
+                            or monitoring.forceResultsToBeBuilt is True
+                        ):
                             the_im = imread(the_images[i])
                             res_im = SpatialImage(the_im.copy())[:, :, -1::-1]
                             res_im.voxelsize = the_im.voxelsize
@@ -3171,19 +4395,38 @@ def _fusion_process(input_image_list, fused_image, experiment, parameters):
 
                 elif i == 3:
                     # stack 1, right camera
-                    if parameters.acquisition_stack1_leftcamera_z_stacking.lower() == 'inverse' \
-                        or parameters.acquisition_mirrors is False:
-                        monitoring.to_log_and_console("    .. mirroring  #" + str(i) + " '"
-                                                      + the_images[i].split(os.path.sep)[-1], 2)
-                        if not os.path.isfile(res_images[i]) or monitoring.forceResultsToBeBuilt is True:
+                    if (
+                        parameters.acquisition_stack1_leftcamera_z_stacking.lower()
+                        == "inverse"
+                        or parameters.acquisition_mirrors is False
+                    ):
+                        monitoring.to_log_and_console(
+                            "    .. mirroring  #"
+                            + str(i)
+                            + " '"
+                            + the_images[i].split(os.path.sep)[-1],
+                            2,
+                        )
+                        if (
+                            not os.path.isfile(res_images[i])
+                            or monitoring.forceResultsToBeBuilt is True
+                        ):
                             the_im = imread(the_images[i])
                             if parameters.acquisition_mirrors is False:
-                                if parameters.acquisition_stack1_leftcamera_z_stacking.lower() == 'inverse':
-                                    res_im = SpatialImage(the_im.copy())[-1::-1, :, -1::-1]
+                                if (
+                                    parameters.acquisition_stack1_leftcamera_z_stacking.lower()
+                                    == "inverse"
+                                ):
+                                    res_im = SpatialImage(the_im.copy())[
+                                        -1::-1, :, -1::-1
+                                    ]
                                 else:
                                     res_im = SpatialImage(the_im.copy())[-1::-1, :, :]
                             else:
-                                if parameters.acquisition_stack1_leftcamera_z_stacking.lower() == 'inverse':
+                                if (
+                                    parameters.acquisition_stack1_leftcamera_z_stacking.lower()
+                                    == "inverse"
+                                ):
                                     res_im = SpatialImage(the_im.copy())[:, :, -1::-1]
                             res_im.voxelsize = the_im.voxelsize
                             imsave(res_images[i], res_im)
@@ -3198,18 +4441,27 @@ def _fusion_process(input_image_list, fused_image, experiment, parameters):
     # in _direct_fusion_process()
     # but not in _hierarchical_fusion_process()
     #
-    if len(the_images) == 4 and parameters.fusion_strategy.lower() == 'hierarchical-fusion':
+    if (
+        len(the_images) == 4
+        and parameters.fusion_strategy.lower() == "hierarchical-fusion"
+    ):
         monitoring.to_log_and_console("    .. hierarchical fusion", 2)
-        _hierarchical_fusion_process(input_image_list, res_image_list, fused_image, experiment, parameters)
+        _hierarchical_fusion_process(
+            input_image_list, res_image_list, fused_image, experiment, parameters
+        )
     else:
         #
         # direct fusion
         # each acquisition is co-registered with the left camera of stack #0
-        if parameters.fusion_strategy.lower() == 'hierarchical-fusion':
-            monitoring.to_log_and_console("    .. not enough images, switch to direct fusion", 2)
+        if parameters.fusion_strategy.lower() == "hierarchical-fusion":
+            monitoring.to_log_and_console(
+                "    .. not enough images, switch to direct fusion", 2
+            )
         else:
             monitoring.to_log_and_console("    .. direct fusion", 2)
-        _direct_fusion_process(input_image_list, res_image_list, fused_image, experiment, parameters)
+        _direct_fusion_process(
+            input_image_list, res_image_list, fused_image, experiment, parameters
+        )
 
     return
 
@@ -3251,40 +4503,54 @@ def _fusion_preprocess(input_images, fused_image, time_point, experiment, parame
     #
 
     if not isinstance(experiment, common.Experiment):
-        monitoring.to_log_and_console(str(proc) + ": unexpected type for 'experiment' variable: "
-                                      + str(type(experiment)))
+        monitoring.to_log_and_console(
+            str(proc)
+            + ": unexpected type for 'experiment' variable: "
+            + str(type(experiment))
+        )
         sys.exit(1)
 
     if not isinstance(parameters, FusionParameters):
-        monitoring.to_log_and_console(str(proc) + ": unexpected type for 'parameters' variable: "
-                                      + str(type(parameters)))
+        monitoring.to_log_and_console(
+            str(proc)
+            + ": unexpected type for 'parameters' variable: "
+            + str(type(parameters))
+        )
         sys.exit(1)
 
     #
     #
     #
 
-    monitoring.to_log_and_console('... fusion of time ' + time_point, 1)
+    monitoring.to_log_and_console("... fusion of time " + time_point, 1)
     n_channels = experiment.rawdata_dir.get_number_channels()
     if n_channels > 1:
-        monitoring.to_log_and_console('    there are ' + str(n_channels) + ' channels to be fused', 1)
+        monitoring.to_log_and_console(
+            "    there are " + str(n_channels) + " channels to be fused", 1
+        )
 
     #
     # check whether there exists some unfused channel
     #
     do_something = False
     for c in range(n_channels):
-        if os.path.isfile(os.path.join(experiment.fusion_dir.get_directory(c), fused_image)):
+        if os.path.isfile(
+            os.path.join(experiment.fusion_dir.get_directory(c), fused_image)
+        ):
             if not monitoring.forceResultsToBeBuilt:
-                monitoring.to_log_and_console('    channel #' + str(c) + ' already existing', 2)
+                monitoring.to_log_and_console(
+                    "    channel #" + str(c) + " already existing", 2
+                )
             else:
-                monitoring.to_log_and_console('    channel #' + str(c) + ' already existing, but forced', 2)
+                monitoring.to_log_and_console(
+                    "    channel #" + str(c) + " already existing, but forced", 2
+                )
                 do_something = True
         else:
             do_something = True
 
     if do_something is False:
-        monitoring.to_log_and_console('    nothing to do', 2)
+        monitoring.to_log_and_console("    nothing to do", 2)
         return
 
     #
@@ -3315,7 +4581,7 @@ def _fusion_preprocess(input_images, fused_image, time_point, experiment, parame
     # get image file names
     # - may involve unzipping and conversion
     #
-    monitoring.to_log_and_console('    get original images', 2)
+    monitoring.to_log_and_console("    get original images", 2)
 
     #
     # this is the list (length = #channels) of dictionaries of images to be fused
@@ -3328,17 +4594,20 @@ def _fusion_preprocess(input_images, fused_image, time_point, experiment, parame
     for c in range(experiment.rawdata_dir.get_number_channels()):
         images = {}
         for i in input_images:
-            images[i] =_read_image_name(experiment.rawdata_dir.channel[c].get_angle_path(i),
-                                        experiment.rawdata_dir.get_tmp_directory(i, c),
-                                        input_images[i],
-                                        parameters.acquisition_resolution, experiment.default_image_suffix)
+            images[i] = _read_image_name(
+                experiment.rawdata_dir.channel[c].get_angle_path(i),
+                experiment.rawdata_dir.get_tmp_directory(i, c),
+                input_images[i],
+                parameters.acquisition_resolution,
+                experiment.default_image_suffix,
+            )
         image_list.append(images)
 
     #
     #
     #
 
-    monitoring.to_log_and_console('    fuse images', 2)
+    monitoring.to_log_and_console("    fuse images", 2)
     _fusion_process(image_list, fused_image, experiment, parameters)
 
     #
@@ -3353,7 +4622,9 @@ def _fusion_preprocess(input_images, fused_image, time_point, experiment, parame
     #
 
     end_time = time.time()
-    monitoring.to_log_and_console('    computation time = ' + str(end_time - start_time) + ' s', 1)
+    monitoring.to_log_and_console(
+        "    computation time = " + str(end_time - start_time) + " s", 1
+    )
 
     #
     # there might be 4 threads (compressing of h5 images) launched for one fusion
@@ -3361,7 +4632,7 @@ def _fusion_preprocess(input_images, fused_image, time_point, experiment, parame
     #
     waitForRunningThreadToStop(maxthread=5)
 
-    monitoring.to_log_and_console('', 1)
+    monitoring.to_log_and_console("", 1)
 
     return
 
@@ -3382,20 +4653,26 @@ def fusion_control(experiment, parameters):
     :return:
     """
 
-    proc = 'fusion_control'
+    proc = "fusion_control"
 
     #
     # parameter type checking
     #
 
     if not isinstance(experiment, common.Experiment):
-        monitoring.to_log_and_console(str(proc) + ": unexpected type for 'experiment' variable: "
-                                      + str(type(experiment)))
+        monitoring.to_log_and_console(
+            str(proc)
+            + ": unexpected type for 'experiment' variable: "
+            + str(type(experiment))
+        )
         sys.exit(1)
 
     if not isinstance(parameters, FusionParameters):
-        monitoring.to_log_and_console(str(proc) + ": unexpected type for 'parameters' variable: "
-                                      + str(type(parameters)))
+        monitoring.to_log_and_console(
+            str(proc)
+            + ": unexpected type for 'parameters' variable: "
+            + str(type(parameters))
+        )
         sys.exit(1)
 
     #
@@ -3404,7 +4681,7 @@ def fusion_control(experiment, parameters):
 
     experiment.fusion_dir.make_directory()
 
-    monitoring.to_log_and_console('', 1)
+    monitoring.to_log_and_console("", 1)
 
     #
     # if data directories of the main channel are different, parse them
@@ -3417,7 +4694,6 @@ def fusion_control(experiment, parameters):
     #
 
     if experiment.rawdata_dir.channel[0].sub_directories_are_different() is True:
-
         #
         # for each rawdata subdirectory (ie, left/right camera, stack 0/1)
         # get
@@ -3437,10 +4713,18 @@ def fusion_control(experiment, parameters):
         path_angle2 = experiment.rawdata_dir.channel[0].get_angle_path(2)
         path_angle3 = experiment.rawdata_dir.channel[0].get_angle_path(3)
 
-        prefix0, time_length0, time_points0, suffix0 = _analyze_data_directory(path_angle0)
-        prefix1, time_length1, time_points1, suffix1 = _analyze_data_directory(path_angle1)
-        prefix2, time_length2, time_points2, suffix2 = _analyze_data_directory(path_angle2)
-        prefix3, time_length3, time_points3, suffix3 = _analyze_data_directory(path_angle3)
+        prefix0, time_length0, time_points0, suffix0 = _analyze_data_directory(
+            path_angle0
+        )
+        prefix1, time_length1, time_points1, suffix1 = _analyze_data_directory(
+            path_angle1
+        )
+        prefix2, time_length2, time_points2, suffix2 = _analyze_data_directory(
+            path_angle2
+        )
+        prefix3, time_length3, time_points3, suffix3 = _analyze_data_directory(
+            path_angle3
+        )
 
         if monitoring.debug > 0:
             monitoring.to_log_and_console("")
@@ -3473,26 +4757,33 @@ def fusion_control(experiment, parameters):
         # 2. only a few acquisitions have to be processed
         #
 
-        extra_zeros = ''
+        extra_zeros = ""
         if time_length0 < experiment.rawdata_dir.get_time_digits_for_acquisition():
-            extra_zeros = (experiment.rawdata_dir.get_time_digits_for_acquisition() - time_length0) * '0'
+            extra_zeros = (
+                experiment.rawdata_dir.get_time_digits_for_acquisition() - time_length0
+            ) * "0"
 
         #
         # no indication about the time interval to be process
         # -> process all the time ids of the list
         #
 
-        if experiment.first_time_point < 0 or experiment.last_time_point < 0 or experiment.delta_time_point < 0 \
-                or experiment.first_time_point > experiment.last_time_point:
-
+        if (
+            experiment.first_time_point < 0
+            or experiment.last_time_point < 0
+            or experiment.delta_time_point < 0
+            or experiment.first_time_point > experiment.last_time_point
+        ):
             time_points0.sort()
             for time_point in time_points0:
-
                 #
                 # fused image name
                 #
-                fused_image = experiment.fusion_dir.get_image_name(int(time_point)) + "." \
-                              + experiment.result_image_suffix
+                fused_image = (
+                    experiment.fusion_dir.get_image_name(int(time_point))
+                    + "."
+                    + experiment.result_image_suffix
+                )
 
                 #
                 # input image names
@@ -3504,21 +4795,30 @@ def fusion_control(experiment, parameters):
                 images[0] = im
                 im = prefix1 + time_point + suffix1
                 if time_point not in time_points1:
-                    monitoring.to_log_and_console("    .. image '" + im + "' not found in '" + path_angle1 + "'", 2)
+                    monitoring.to_log_and_console(
+                        "    .. image '" + im + "' not found in '" + path_angle1 + "'",
+                        2,
+                    )
                     # monitoring.to_log_and_console("       skip time " + str(time_point), 2)
                     # continue
                 else:
                     images[1] = im
                 im = prefix2 + time_point + suffix2
                 if time_point not in time_points2:
-                    monitoring.to_log_and_console("    .. image '" + im + "' not found in '" + path_angle2 + "'", 2)
+                    monitoring.to_log_and_console(
+                        "    .. image '" + im + "' not found in '" + path_angle2 + "'",
+                        2,
+                    )
                     # monitoring.to_log_and_console("       skip time " + str(time_point), 2)
                     # continue
                 else:
                     images[2] = im
                 im = prefix3 + time_point + suffix3
                 if time_point not in time_points3:
-                    monitoring.to_log_and_console("    .. image '" + im + "' not found in '" + path_angle3 + "'", 2)
+                    monitoring.to_log_and_console(
+                        "    .. image '" + im + "' not found in '" + path_angle3 + "'",
+                        2,
+                    )
                     # monitoring.to_log_and_console("       skip time " + str(time_point), 2)
                     # continue
                 else:
@@ -3529,18 +4829,27 @@ def fusion_control(experiment, parameters):
                 #
                 if len(images) == 0:
                     monitoring.to_log_and_console("    .. no images to be fused", 2)
-                    monitoring.to_log_and_console("       skip time " + str(time_point), 2)
+                    monitoring.to_log_and_console(
+                        "       skip time " + str(time_point), 2
+                    )
                     continue
                 #
                 # process
                 #
 
-                _fusion_preprocess(images, fused_image, extra_zeros + time_point, experiment, parameters)
+                _fusion_preprocess(
+                    images,
+                    fused_image,
+                    extra_zeros + time_point,
+                    experiment,
+                    parameters,
+                )
 
         else:
-
             if experiment.first_time_point < 0 or experiment.last_time_point < 0:
-                monitoring.to_log_and_console("... time interval does not seem to be defined in the parameter file")
+                monitoring.to_log_and_console(
+                    "... time interval does not seem to be defined in the parameter file"
+                )
                 monitoring.to_log_and_console("    set parameters 'begin' and 'end'")
                 monitoring.to_log_and_console("\t Exiting")
                 sys.exit(1)
@@ -3549,17 +4858,26 @@ def fusion_control(experiment, parameters):
             # parse only the required time values
             #
 
-            for time_value in range(experiment.first_time_point, experiment.last_time_point + 1,
-                                    experiment.delta_time_point):
-
-                acquisition_time = str('{:0{width}d}'.format(time_value, width=time_length0))
+            for time_value in range(
+                experiment.first_time_point,
+                experiment.last_time_point + 1,
+                experiment.delta_time_point,
+            ):
+                acquisition_time = str(
+                    "{:0{width}d}".format(time_value, width=time_length0)
+                )
 
                 #
                 # fused image name
                 #
 
-                fused_image = experiment.fusion_dir.get_image_name(time_value + experiment.delay_time_point) + "." \
-                              + experiment.result_image_suffix
+                fused_image = (
+                    experiment.fusion_dir.get_image_name(
+                        time_value + experiment.delay_time_point
+                    )
+                    + "."
+                    + experiment.result_image_suffix
+                )
 
                 #
                 # input image names
@@ -3569,29 +4887,47 @@ def fusion_control(experiment, parameters):
 
                 im = prefix0 + acquisition_time + suffix0
                 if acquisition_time not in time_points0:
-                    monitoring.to_log_and_console("    .. image '" + im + "' not found in '" + path_angle0 + "'", 2)
+                    monitoring.to_log_and_console(
+                        "    .. image '" + im + "' not found in '" + path_angle0 + "'",
+                        2,
+                    )
                     # monitoring.to_log_and_console("       skip time " + str(acquisition_time), 2)
                     # continue
                 else:
                     images[0] = im
                 im = prefix1 + acquisition_time + suffix1
                 if acquisition_time not in time_points1:
-                    monitoring.to_log_and_console("    .. image '" + im + "' not found in '" + path_angle1 + "'", 2)
-                    monitoring.to_log_and_console("       skip time " + str(acquisition_time), 2)
+                    monitoring.to_log_and_console(
+                        "    .. image '" + im + "' not found in '" + path_angle1 + "'",
+                        2,
+                    )
+                    monitoring.to_log_and_console(
+                        "       skip time " + str(acquisition_time), 2
+                    )
                     continue
                 else:
                     images[1] = im
                 im = prefix2 + acquisition_time + suffix2
                 if acquisition_time not in time_points2:
-                    monitoring.to_log_and_console("    .. image '" + im + "' not found in '" + path_angle2 + "'", 2)
-                    monitoring.to_log_and_console("       skip time " + str(acquisition_time), 2)
+                    monitoring.to_log_and_console(
+                        "    .. image '" + im + "' not found in '" + path_angle2 + "'",
+                        2,
+                    )
+                    monitoring.to_log_and_console(
+                        "       skip time " + str(acquisition_time), 2
+                    )
                     continue
                 else:
                     images[2] = im
                 im = prefix3 + acquisition_time + suffix3
                 if acquisition_time not in time_points3:
-                    monitoring.to_log_and_console("    .. image '" + im + "' not found in '" + path_angle3 + "'", 2)
-                    monitoring.to_log_and_console("       skip time " + str(acquisition_time), 2)
+                    monitoring.to_log_and_console(
+                        "    .. image '" + im + "' not found in '" + path_angle3 + "'",
+                        2,
+                    )
+                    monitoring.to_log_and_console(
+                        "       skip time " + str(acquisition_time), 2
+                    )
                     continue
                 else:
                     images[3] = im
@@ -3601,36 +4937,53 @@ def fusion_control(experiment, parameters):
                 #
                 if len(images) == 0:
                     monitoring.to_log_and_console("    .. no images to be fused", 2)
-                    monitoring.to_log_and_console("       skip time " + str(acquisition_time), 2)
+                    monitoring.to_log_and_console(
+                        "       skip time " + str(acquisition_time), 2
+                    )
                     continue
 
                 #
                 # process
                 #
 
-                _fusion_preprocess(images, fused_image, extra_zeros + acquisition_time, experiment, parameters)
+                _fusion_preprocess(
+                    images,
+                    fused_image,
+                    extra_zeros + acquisition_time,
+                    experiment,
+                    parameters,
+                )
 
     #
     # here data directories are not different, we have to rely on built names
     #
 
     else:
-
         if experiment.first_time_point < 0 or experiment.last_time_point < 0:
-            monitoring.to_log_and_console("... time interval does not seem to be defined in the parameter file")
+            monitoring.to_log_and_console(
+                "... time interval does not seem to be defined in the parameter file"
+            )
             monitoring.to_log_and_console("    set parameters 'begin' and 'end'")
             monitoring.to_log_and_console("\t Exiting")
             sys.exit(1)
 
-        for time_value in range(experiment.first_time_point, experiment.last_time_point+1, experiment.delta_time_point):
-
+        for time_value in range(
+            experiment.first_time_point,
+            experiment.last_time_point + 1,
+            experiment.delta_time_point,
+        ):
             acquisition_time = experiment.get_time_index(time_value)
 
             #
             # fused image name
             #
-            fused_image = experiment.fusion_dir.get_image_name(time_value + experiment.delay_time_point) + "." \
-                          + experiment.result_image_suffix
+            fused_image = (
+                experiment.fusion_dir.get_image_name(
+                    time_value + experiment.delay_time_point
+                )
+                + "."
+                + experiment.result_image_suffix
+            )
 
             #
             # input image names
@@ -3641,12 +4994,22 @@ def fusion_control(experiment, parameters):
             sname = experiment.rawdata_dir.channel[0].get_image_name(0, time_value)
             sdir = experiment.rawdata_dir.channel[0].get_angle_path(0)
             if sdir is None:
-                monitoring.to_log_and_console("    .. no directory for left camera of stack #0", 2)
+                monitoring.to_log_and_console(
+                    "    .. no directory for left camera of stack #0", 2
+                )
             else:
-                im = common.find_file(sdir, sname, file_type='image', callfrom=proc, local_monitoring=None,
-                                      verbose=False)
+                im = common.find_file(
+                    sdir,
+                    sname,
+                    file_type="image",
+                    callfrom=proc,
+                    local_monitoring=None,
+                    verbose=False,
+                )
                 if im is None:
-                    monitoring.to_log_and_console("    .. image '" + sname + "' not found in '" + sdir + "'", 2)
+                    monitoring.to_log_and_console(
+                        "    .. image '" + sname + "' not found in '" + sdir + "'", 2
+                    )
                     # monitoring.to_log_and_console("       skip time " + str(acquisition_time), 2)
                     # continue
                 else:
@@ -3655,12 +5018,22 @@ def fusion_control(experiment, parameters):
             sname = experiment.rawdata_dir.channel[0].get_image_name(1, time_value)
             sdir = experiment.rawdata_dir.channel[0].get_angle_path(1)
             if sdir is None:
-                monitoring.to_log_and_console("    .. no directory for right camera of stack #0", 2)
+                monitoring.to_log_and_console(
+                    "    .. no directory for right camera of stack #0", 2
+                )
             else:
-                im = common.find_file(sdir, sname, file_type='image', callfrom=proc, local_monitoring=None,
-                                      verbose=False)
+                im = common.find_file(
+                    sdir,
+                    sname,
+                    file_type="image",
+                    callfrom=proc,
+                    local_monitoring=None,
+                    verbose=False,
+                )
                 if im is None:
-                    monitoring.to_log_and_console("    .. image '" + sname + "' not found in '" + sdir + "'", 2)
+                    monitoring.to_log_and_console(
+                        "    .. image '" + sname + "' not found in '" + sdir + "'", 2
+                    )
                     # monitoring.to_log_and_console("       skip time " + str(acquisition_time), 2)
                     # continue
                 else:
@@ -3669,12 +5042,22 @@ def fusion_control(experiment, parameters):
             sname = experiment.rawdata_dir.channel[0].get_image_name(2, time_value)
             sdir = experiment.rawdata_dir.channel[0].get_angle_path(2)
             if sdir is None:
-                monitoring.to_log_and_console("    .. no directory for left camera of stack #1", 2)
+                monitoring.to_log_and_console(
+                    "    .. no directory for left camera of stack #1", 2
+                )
             else:
-                im = common.find_file(sdir, sname, file_type='image', callfrom=proc, local_monitoring=None,
-                                      verbose=False)
+                im = common.find_file(
+                    sdir,
+                    sname,
+                    file_type="image",
+                    callfrom=proc,
+                    local_monitoring=None,
+                    verbose=False,
+                )
                 if im is None:
-                    monitoring.to_log_and_console("    .. image '" + sname + "' not found in '" + sdir + "'", 2)
+                    monitoring.to_log_and_console(
+                        "    .. image '" + sname + "' not found in '" + sdir + "'", 2
+                    )
                     # monitoring.to_log_and_console("       skip time " + str(acquisition_time), 2)
                     # monitoring.to_log_and_console("       maybe there is only one stack ", 2)
                 else:
@@ -3683,12 +5066,22 @@ def fusion_control(experiment, parameters):
             sname = experiment.rawdata_dir.channel[0].get_image_name(3, time_value)
             sdir = experiment.rawdata_dir.channel[0].get_angle_path(3)
             if sdir is None:
-                monitoring.to_log_and_console("    .. no directory for right camera of stack #1", 2)
+                monitoring.to_log_and_console(
+                    "    .. no directory for right camera of stack #1", 2
+                )
             else:
-                im = common.find_file(sdir, sname, file_type='image', callfrom=proc, local_monitoring=None,
-                                      verbose=False)
+                im = common.find_file(
+                    sdir,
+                    sname,
+                    file_type="image",
+                    callfrom=proc,
+                    local_monitoring=None,
+                    verbose=False,
+                )
                 if im is None:
-                    monitoring.to_log_and_console("    .. image '" + sname + "' not found in '" + sdir + "'", 2)
+                    monitoring.to_log_and_console(
+                        "    .. image '" + sname + "' not found in '" + sdir + "'", 2
+                    )
                     # monitoring.to_log_and_console("       skip time " + str(acquisition_time), 2)
                     # continue
                 else:
@@ -3699,14 +5092,18 @@ def fusion_control(experiment, parameters):
             #
             if len(images) == 0:
                 monitoring.to_log_and_console("    .. no images to be fused", 2)
-                monitoring.to_log_and_console("       skip time " + str(acquisition_time), 2)
+                monitoring.to_log_and_console(
+                    "       skip time " + str(acquisition_time), 2
+                )
                 continue
 
             #
             # process
             #
 
-            _fusion_preprocess(images, fused_image, acquisition_time, experiment, parameters)
+            _fusion_preprocess(
+                images, fused_image, acquisition_time, experiment, parameters
+            )
 
     waitForRunningThreadToStop(maxthread=1)
 
