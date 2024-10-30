@@ -106,7 +106,7 @@ A first segmentation of :math:`I_{t}`, :math:`\tilde{S}_{t}`, is computed by a s
 This seed image, :math:`S^e_{t-1 \leftarrow t}`, plus the membrane input image are used as input for a seeded watershed, and yield :math:`\tilde{S}_{t}`. 
 By construction, no cell division can occur in :math:`\tilde{S}_{t}` with respect to :math:`S^\star_{t-1}`.
 
-If the variable ``propagation_strategy`` is set to 
+If the variable ```` is set to 
 ``'seeds_from_previous_segmentation'``, 
 the segmentation propagation stops and :math:`\tilde{S}_{t}` is the final result. 
 

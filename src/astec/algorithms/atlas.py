@@ -29,13 +29,19 @@ def atlas_process(experiment, parameters):
     #
 
     if not isinstance(experiment, common.Experiment):
-        monitoring.to_log_and_console(str(proc) + ": unexpected type for 'experiment' variable: "
-                                      + str(type(experiment)))
+        monitoring.to_log_and_console(
+            str(proc)
+            + ": unexpected type for 'experiment' variable: "
+            + str(type(experiment))
+        )
         sys.exit(1)
 
     if not isinstance(parameters, uatlase.AtlasParameters):
-        monitoring.to_log_and_console(str(proc) + ": unexpected type for 'parameters' variable: "
-                                      + str(type(parameters)))
+        monitoring.to_log_and_console(
+            str(proc)
+            + ": unexpected type for 'parameters' variable: "
+            + str(type(parameters))
+        )
         sys.exit(1)
 
     time_digits_for_cell_id = experiment.get_time_digits_for_cell_id()
@@ -49,8 +55,11 @@ def atlas_process(experiment, parameters):
     # copy from files the properties of interest
     # and temporally register the atlases
     #
-    atlases.add_atlases(parameters.atlasFiles, parameters, time_digits_for_cell_id=time_digits_for_cell_id)
-
+    atlases.add_atlases(
+        parameters.atlasFiles,
+        parameters,
+        time_digits_for_cell_id=time_digits_for_cell_id,
+    )
 
     if atlases.n_atlases() == 0:
         msg = proc + ": no atlases ?!"

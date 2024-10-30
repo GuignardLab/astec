@@ -1,4 +1,3 @@
-
 import copy
 import os
 import sys
@@ -22,16 +21,15 @@ monitoring = common.Monitoring()
 #
 ############################################################
 
-class DivisionParameters(uatlase.AtlasParameters):
 
+class DivisionParameters(uatlase.AtlasParameters):
     ############################################################
     #
     # initialisation
     #
     ############################################################
 
-    def __init__(self, prefix='atlas_'):
-
+    def __init__(self, prefix="atlas_"):
         if "doc" not in self.__dict__:
             self.doc = {}
 
@@ -41,7 +39,7 @@ class DivisionParameters(uatlase.AtlasParameters):
         #
         #
         doc = "\t True or False. Exclude inner surfaces from the division-to-division distance calculation\n"
-        self.doc['exclude_inner_surfaces'] = doc
+        self.doc["exclude_inner_surfaces"] = doc
         self.exclude_inner_surfaces = False
 
         #
@@ -49,13 +47,13 @@ class DivisionParameters(uatlase.AtlasParameters):
         #
         doc = "\t True or False. Performs some diagnosis after building the division atlas. \n"
         doc += "\t Incrementing the verboseness ('-v' in the command line) may give more details.\n"
-        self.doc['division_diagnosis'] = doc
+        self.doc["division_diagnosis"] = doc
         self.division_diagnosis = False
 
         doc = "\t If True, will propose some daughters switches in the atlases. For a given division,\n"
         doc += "\t a global score is computed as the sum of all pairwise division similarity.\n"
         doc += "\t A switch is proposed for an atlas if it allows to decrease this global score.\n"
-        self.doc['division_permutation_proposal'] = doc
+        self.doc["division_permutation_proposal"] = doc
         self.division_permutation_proposal = False
 
         #
@@ -72,17 +70,18 @@ class DivisionParameters(uatlase.AtlasParameters):
         doc += "\t - 'median'\n"
         doc += "\t - 'ward'\n"
         doc += "\t see https://docs.scipy.org/doc/scipy/reference/generated/scipy.cluster.hierarchy.linkage.html.\n"
-        self.doc['dendrogram_cluster_distance'] = doc
-        self.dendrogram_cluster_distance = 'single'
+        self.doc["dendrogram_cluster_distance"] = doc
+        self.dendrogram_cluster_distance = "single"
 
         doc = "\t Write out morphonet selection files."
-        self.doc['write_selection'] = doc
+        self.doc["write_selection"] = doc
         self.write_selection = False
 
         #
         #
         #
         self.cells_to_be_traced = None
+
     ############################################################
     #
     # print / write
@@ -91,24 +90,26 @@ class DivisionParameters(uatlase.AtlasParameters):
 
     def print_parameters(self):
         print("")
-        print('#')
-        print('# DivisionParameters')
-        print('#')
+        print("#")
+        print("# DivisionParameters")
+        print("#")
         print("")
 
         common.PrefixedParameter.print_parameters(self)
 
         uatlase.AtlasParameters.print_parameters(self)
 
-        self.varprint('exclude_inner_surfaces', self.exclude_inner_surfaces)
+        self.varprint("exclude_inner_surfaces", self.exclude_inner_surfaces)
 
-        self.varprint('division_diagnosis', self.division_diagnosis)
-        self.varprint('division_permutation_proposal', self.division_permutation_proposal)
+        self.varprint("division_diagnosis", self.division_diagnosis)
+        self.varprint(
+            "division_permutation_proposal", self.division_permutation_proposal
+        )
 
-        self.varprint('dendrogram_cluster_distance', self.dendrogram_cluster_distance)
-        self.varprint('write_selection', self.write_selection)
+        self.varprint("dendrogram_cluster_distance", self.dendrogram_cluster_distance)
+        self.varprint("write_selection", self.write_selection)
 
-        self.varprint('cells_to_be_traced', self.cells_to_be_traced)
+        self.varprint("cells_to_be_traced", self.cells_to_be_traced)
         print("")
 
     def write_parameters_in_file(self, logfile):
@@ -122,24 +123,51 @@ class DivisionParameters(uatlase.AtlasParameters):
 
         uatlase.AtlasParameters.write_parameters_in_file(self, logfile)
 
-        self.varwrite(logfile, 'exclude_inner_surfaces', self.exclude_inner_surfaces,
-                      self.doc.get('exclude_inner_surfaces', None))
+        self.varwrite(
+            logfile,
+            "exclude_inner_surfaces",
+            self.exclude_inner_surfaces,
+            self.doc.get("exclude_inner_surfaces", None),
+        )
 
-        self.varwrite(logfile, 'division_diagnosis', self.division_diagnosis, self.doc.get('division_diagnosis', None))
-        self.varwrite(logfile, 'division_permutation_proposal', self.division_permutation_proposal,
-                      self.doc.get('division_permutation_proposal', None))
+        self.varwrite(
+            logfile,
+            "division_diagnosis",
+            self.division_diagnosis,
+            self.doc.get("division_diagnosis", None),
+        )
+        self.varwrite(
+            logfile,
+            "division_permutation_proposal",
+            self.division_permutation_proposal,
+            self.doc.get("division_permutation_proposal", None),
+        )
 
-        self.varwrite(logfile, 'dendrogram_cluster_distance', self.dendrogram_cluster_distance,
-                      self.doc.get('dendrogram_cluster_distance', None))
-        self.varwrite(logfile, 'write_selection', self.write_selection, self.doc.get('write_selection', None))
+        self.varwrite(
+            logfile,
+            "dendrogram_cluster_distance",
+            self.dendrogram_cluster_distance,
+            self.doc.get("dendrogram_cluster_distance", None),
+        )
+        self.varwrite(
+            logfile,
+            "write_selection",
+            self.write_selection,
+            self.doc.get("write_selection", None),
+        )
 
-        self.varwrite(logfile, 'cells_to_be_traced', self.cells_to_be_traced, self.doc.get('cells_to_be_traced', None))
+        self.varwrite(
+            logfile,
+            "cells_to_be_traced",
+            self.cells_to_be_traced,
+            self.doc.get("cells_to_be_traced", None),
+        )
 
         logfile.write("\n")
         return
 
     def write_parameters(self, log_file_name):
-        with open(log_file_name, 'a') as logfile:
+        with open(log_file_name, "a") as logfile:
             self.write_parameters_in_file(logfile)
         return
 
@@ -150,27 +178,44 @@ class DivisionParameters(uatlase.AtlasParameters):
     ############################################################
 
     def update_from_parameters(self, parameters):
-
         uatlase.AtlasParameters.update_from_parameters(self, parameters)
 
-        self.exclude_inner_surfaces = self.read_parameter(parameters, 'exclude_inner_surfaces',
-                                                          self.exclude_inner_surfaces)
+        self.exclude_inner_surfaces = self.read_parameter(
+            parameters, "exclude_inner_surfaces", self.exclude_inner_surfaces
+        )
 
-        self.division_diagnosis = self.read_parameter(parameters, 'division_diagnosis', self.division_diagnosis)
-        self.division_diagnosis = self.read_parameter(parameters, 'diagnosis_properties', self.division_diagnosis)
-        self.division_diagnosis = self.read_parameter(parameters, 'naming_diagnosis', self.division_diagnosis)
-        self.division_diagnosis = self.read_parameter(parameters, 'diagnosis_naming', self.division_diagnosis)
+        self.division_diagnosis = self.read_parameter(
+            parameters, "division_diagnosis", self.division_diagnosis
+        )
+        self.division_diagnosis = self.read_parameter(
+            parameters, "diagnosis_properties", self.division_diagnosis
+        )
+        self.division_diagnosis = self.read_parameter(
+            parameters, "naming_diagnosis", self.division_diagnosis
+        )
+        self.division_diagnosis = self.read_parameter(
+            parameters, "diagnosis_naming", self.division_diagnosis
+        )
 
-        self.division_permutation_proposal = self.read_parameter(parameters, 'division_permutation_proposal',
-                                                                 self.division_permutation_proposal)
-        self.division_permutation_proposal = self.read_parameter(parameters, 'daughter_switch_proposal',
-                                                                 self.division_permutation_proposal)
+        self.division_permutation_proposal = self.read_parameter(
+            parameters,
+            "division_permutation_proposal",
+            self.division_permutation_proposal,
+        )
+        self.division_permutation_proposal = self.read_parameter(
+            parameters, "daughter_switch_proposal", self.division_permutation_proposal
+        )
 
-        self.dendrogram_cluster_distance = self.read_parameter(parameters, 'dendrogram_cluster_distance',
-                                                               self.dendrogram_cluster_distance)
-        self.write_selection = self.read_parameter(parameters, 'write_selection', self.write_selection)
+        self.dendrogram_cluster_distance = self.read_parameter(
+            parameters, "dendrogram_cluster_distance", self.dendrogram_cluster_distance
+        )
+        self.write_selection = self.read_parameter(
+            parameters, "write_selection", self.write_selection
+        )
 
-        self.cells_to_be_traced = self.read_parameter(parameters, 'cells_to_be_traced', self.cells_to_be_traced)
+        self.cells_to_be_traced = self.read_parameter(
+            parameters, "cells_to_be_traced", self.cells_to_be_traced
+        )
 
     def update_from_parameter_file(self, parameter_file):
         if parameter_file is None:
@@ -188,6 +233,7 @@ class DivisionParameters(uatlase.AtlasParameters):
 #
 #
 ############################################################
+
 
 def _build_common_neighborhoods(neighborhoods):
     """
@@ -214,9 +260,17 @@ def _build_common_neighborhoods(neighborhoods):
             continue
         sister = uname.get_sister_name(cell)
         if sister in common_neighborhoods:
-            msg = "weird, '" + str(sister) + "' is in neighborhoods while '" + str(cell) + "' is not"
+            msg = (
+                "weird, '"
+                + str(sister)
+                + "' is in neighborhoods while '"
+                + str(cell)
+                + "' is not"
+            )
             monitoring.to_log_and_console(proc + ": " + msg)
-        new_neighborhoods = uneighborhood.build_same_contact_surfaces(neighborhoods, [cell, sister])
+        new_neighborhoods = uneighborhood.build_same_contact_surfaces(
+            neighborhoods, [cell, sister]
+        )
         for n in new_neighborhoods:
             common_neighborhoods[n] = copy.deepcopy(new_neighborhoods[n])
     return common_neighborhoods
@@ -228,7 +282,10 @@ def _build_common_neighborhoods(neighborhoods):
 #
 ########################################################################################
 
-def _write_list(listtobeprinted, firstheader="", otherheader="", maxlength=112, verboseness=0):
+
+def _write_list(
+    listtobeprinted, firstheader="", otherheader="", maxlength=112, verboseness=0
+):
     txt = ""
     n = 0
     for i, item in enumerate(listtobeprinted):
@@ -254,39 +311,59 @@ def _write_summary_pairwise_switches(atlases, summary):
     mother_names = list(summary.keys())
 
     for n in mother_names:
-        percents.append(100.0 * float(len(summary[n]['disagreement'])) / float(summary[n]['tested_couples']))
-    [sorted_percents, sorted_mothers] = list(zip(*sorted(zip(percents, mother_names), reverse=True)))
+        percents.append(
+            100.0
+            * float(len(summary[n]["disagreement"]))
+            / float(summary[n]["tested_couples"])
+        )
+    [sorted_percents, sorted_mothers] = list(
+        zip(*sorted(zip(percents, mother_names), reverse=True))
+    )
 
     majority = {}
     equality = {}
     for n in sorted_mothers:
         majority[n] = {}
         equality[n] = {}
-        if len(summary[n]['disagreement']) == 0:
+        if len(summary[n]["disagreement"]) == 0:
             continue
         msg = " - " + str(n) + " cell division into "
-        msg += str(uname.get_daughter_names(n)) + " has " + str(len(summary[n]['disagreement']))
-        if len(summary[n]['disagreement']) > 1:
+        msg += (
+            str(uname.get_daughter_names(n))
+            + " has "
+            + str(len(summary[n]["disagreement"]))
+        )
+        if len(summary[n]["disagreement"]) > 1:
             msg += " disagreements"
         else:
             msg += " disagreement"
-        percent = 100.0 * float(len(summary[n]['disagreement'])) / float(summary[n]['tested_couples'])
+        percent = (
+            100.0
+            * float(len(summary[n]["disagreement"]))
+            / float(summary[n]["tested_couples"])
+        )
         msg += " (" + "{:2.2f}%".format(percent) + ")"
         monitoring.to_log_and_console(msg)
-        msg = "\t over " + str(summary[n]['tested_couples']) + " tested configurations "
+        msg = "\t over " + str(summary[n]["tested_couples"]) + " tested configurations "
         msg += "and over " + str(len(divisions[n]))
         msg += " references: "
         monitoring.to_log_and_console(msg)
         #
         # print references
         #
-        _write_list(sorted(divisions[n]), firstheader="\t     ", otherheader="\t     ", maxlength=112, verboseness=0)
+        _write_list(
+            sorted(divisions[n]),
+            firstheader="\t     ",
+            otherheader="\t     ",
+            maxlength=112,
+            verboseness=0,
+        )
         #
         # count the cases where one atlas disagrees
         #
         for a in divisions[n]:
             s = 0
-            for pair in summary[n]['disagreement']:
+            for pair in summary[n]["disagreement"]:
                 if a in pair:
                     s += 1
             if 2 * s > len(divisions[n]):
@@ -296,8 +373,13 @@ def _write_summary_pairwise_switches(atlases, summary):
         #
         # print detailed disagreements
         #
-        _write_list(sorted(summary[n]['disagreement']), firstheader="\t - disagreement list:", otherheader="\t     ",
-                    maxlength=112, verboseness=3)
+        _write_list(
+            sorted(summary[n]["disagreement"]),
+            firstheader="\t - disagreement list:",
+            otherheader="\t     ",
+            maxlength=112,
+            verboseness=3,
+        )
 
     nitems = 0
     for n in sorted_mothers:
@@ -311,7 +393,15 @@ def _write_summary_pairwise_switches(atlases, summary):
             msg = " - " + str(n) + " division, atlas that mostly disagrees:"
             akeys = sorted(list(majority[n].keys()))
             for i, a in enumerate(akeys):
-                msg += " " + str(a) + " (" + str(majority[n][a]) + "/" + str(len(divisions[n])) + ")"
+                msg += (
+                    " "
+                    + str(a)
+                    + " ("
+                    + str(majority[n][a])
+                    + "/"
+                    + str(len(divisions[n]))
+                    + ")"
+                )
                 if i < len(akeys) - 1:
                     msg += ","
             monitoring.to_log_and_console(msg)
@@ -320,7 +410,15 @@ def _write_summary_pairwise_switches(atlases, summary):
             msg = " - " + str(n) + " division, atlas that equally disagrees:"
             akeys = sorted(list(equality[n].keys()))
             for i, a in enumerate(akeys):
-                msg += " " + str(a) + " (" + str(equality[n][a]) + "/" + str(len(divisions[n])) + ")"
+                msg += (
+                    " "
+                    + str(a)
+                    + " ("
+                    + str(equality[n][a])
+                    + "/"
+                    + str(len(divisions[n]))
+                    + ")"
+                )
                 if i < len(akeys) - 1:
                     msg += ","
             monitoring.to_log_and_console(msg)
@@ -331,7 +429,9 @@ def _diagnosis_pairwise_switches(atlases, parameters):
 
     divisions = atlases.get_divisions()
     ccs = not parameters.use_common_neighborhood
-    neighborhoods = atlases.get_cell_neighborhood(delay_from_division=parameters.name_delay_from_division)
+    neighborhoods = atlases.get_cell_neighborhood(
+        delay_from_division=parameters.name_delay_from_division
+    )
 
     summary = {}
     innersurfaces = []
@@ -343,8 +443,8 @@ def _diagnosis_pairwise_switches(atlases, parameters):
         if len(divisions[n]) <= 1:
             continue
         summary[n] = {}
-        summary[n]['tested_couples'] = 0
-        summary[n]['disagreement'] = []
+        summary[n]["tested_couples"] = 0
+        summary[n]["disagreement"] = []
 
         d = uname.get_daughter_names(n)
         if parameters.exclude_inner_surfaces:
@@ -354,14 +454,16 @@ def _diagnosis_pairwise_switches(atlases, parameters):
             for r2 in divisions[n]:
                 if r2 <= r1:
                     continue
-                summary[n]['tested_couples'] += 1
+                summary[n]["tested_couples"] += 1
                 #
                 # test reference r1 versus r2
                 # it is assumed that (r1, switched(r2)) is similar to (switched(r1), r2)
                 # so only (r1, switched(r2)) is tested
                 #
-                switch_neighs = {d[0]: copy.deepcopy(neighborhoods[d[1]][r2]),
-                                 d[1]: copy.deepcopy(neighborhoods[d[0]][r2])}
+                switch_neighs = {
+                    d[0]: copy.deepcopy(neighborhoods[d[1]][r2]),
+                    d[1]: copy.deepcopy(neighborhoods[d[0]][r2]),
+                }
                 if d[0] in switch_neighs[d[0]]:
                     switch_neighs[d[0]][d[1]] = switch_neighs[d[0]][d[0]]
                     del switch_neighs[d[0]][d[0]]
@@ -371,21 +473,35 @@ def _diagnosis_pairwise_switches(atlases, parameters):
                 #
                 # same
                 #
-                same_dist = division_distance(neighborhoods[d[0]][r1], neighborhoods[d[1]][r1],
-                                              neighborhoods[d[0]][r2], neighborhoods[d[1]][r2],
-                                              change_contact_surfaces=ccs, innersurfaces=innersurfaces)
-                swit_dist = division_distance(neighborhoods[d[0]][r1], neighborhoods[d[1]][r1],
-                                              switch_neighs[d[0]], switch_neighs[d[1]],
-                                              change_contact_surfaces=ccs, innersurfaces=innersurfaces)
+                same_dist = division_distance(
+                    neighborhoods[d[0]][r1],
+                    neighborhoods[d[1]][r1],
+                    neighborhoods[d[0]][r2],
+                    neighborhoods[d[1]][r2],
+                    change_contact_surfaces=ccs,
+                    innersurfaces=innersurfaces,
+                )
+                swit_dist = division_distance(
+                    neighborhoods[d[0]][r1],
+                    neighborhoods[d[1]][r1],
+                    switch_neighs[d[0]],
+                    switch_neighs[d[1]],
+                    change_contact_surfaces=ccs,
+                    innersurfaces=innersurfaces,
+                )
                 if same_dist < swit_dist:
                     continue
-                summary[n]['disagreement'] += [(r1, r2)]
+                summary[n]["disagreement"] += [(r1, r2)]
 
-    divisions_with_disagreement = [n for n in summary if len(summary[n]['disagreement']) > 0]
+    divisions_with_disagreement = [
+        n for n in summary if len(summary[n]["disagreement"]) > 0
+    ]
 
     msg = "tested divisions = " + str(len(summary))
     monitoring.to_log_and_console(str(proc) + ": " + msg)
-    msg = "divisions with pairwise disagreement =  " + str(len(divisions_with_disagreement))
+    msg = "divisions with pairwise disagreement =  " + str(
+        len(divisions_with_disagreement)
+    )
     monitoring.to_log_and_console("\t " + msg)
     msg = "  A disagreement means that a division from a reference is closer to the\n"
     msg += "  switched division of an other reference than the division itself."
@@ -405,8 +521,13 @@ def _diagnosis_pairwise_switches(atlases, parameters):
 ############################################################
 
 
-def division_scipy_linkage(config, cluster_distance='single', change_contact_surfaces=True, innersurfaces=[],
-                           distance='distance'):
+def division_scipy_linkage(
+    config,
+    cluster_distance="single",
+    change_contact_surfaces=True,
+    innersurfaces=[],
+    distance="distance",
+):
     """
 
     Parameters
@@ -443,14 +564,24 @@ def division_scipy_linkage(config, cluster_distance='single', change_contact_sur
             # if r == 'switched-' + str(s) or s == 'switched-' + str(r):
             #    continue
             dist[i][j] = 0.0
-            if distance == 'signature':
-                dist[i][j] = 100.0 * division_signature(config[r][0], config[r][1], config[s][0], config[s][1],
-                                                        change_contact_surfaces=change_contact_surfaces,
-                                                        innersurfaces=innersurfaces)
+            if distance == "signature":
+                dist[i][j] = 100.0 * division_signature(
+                    config[r][0],
+                    config[r][1],
+                    config[s][0],
+                    config[s][1],
+                    change_contact_surfaces=change_contact_surfaces,
+                    innersurfaces=innersurfaces,
+                )
             else:
-                dist[i][j] = 100.0 * division_distance(config[r][0], config[r][1], config[s][0], config[s][1],
-                                                       change_contact_surfaces=change_contact_surfaces,
-                                                       innersurfaces=innersurfaces)
+                dist[i][j] = 100.0 * division_distance(
+                    config[r][0],
+                    config[r][1],
+                    config[s][0],
+                    config[s][1],
+                    change_contact_surfaces=change_contact_surfaces,
+                    innersurfaces=innersurfaces,
+                )
             dist[j][i] = dist[i][j]
 
     conddist = sp.spatial.distance.squareform(dist)
@@ -469,18 +600,28 @@ def switched_division_neighborhoods(config, mother_name):
         swconfig[r] = {}
         swconfig[r][0] = copy.deepcopy(config[r][0])
         swconfig[r][1] = copy.deepcopy(config[r][1])
-        sr = 'switched-' + str(r)
+        sr = "switched-" + str(r)
         swconfig[sr] = {}
         swconfig[sr][0] = copy.deepcopy(config[r][1])
         swconfig[sr][1] = copy.deepcopy(config[r][0])
         if daughters[1] in swconfig[sr][0] and swconfig[sr][0][daughters[1]] > 0:
-            msg = "  weird, " + str(daughters[1]) + " was found in its neighborhood for reference " + str(r)
+            msg = (
+                "  weird, "
+                + str(daughters[1])
+                + " was found in its neighborhood for reference "
+                + str(r)
+            )
             monitoring.to_log_and_console("      " + msg)
         if daughters[0] in swconfig[sr][0]:
             swconfig[sr][0][daughters[1]] = swconfig[sr][0][daughters[0]]
             del swconfig[sr][0][daughters[0]]
         if daughters[0] in swconfig[sr][1] and swconfig[sr][1][daughters[0]] > 0:
-            msg = "  weird, " + str(daughters[0]) + " was found in its neighborhood for reference " + str(r)
+            msg = (
+                "  weird, "
+                + str(daughters[0])
+                + " was found in its neighborhood for reference "
+                + str(r)
+            )
             monitoring.to_log_and_console("      " + msg)
         if daughters[1] in swconfig[sr][1]:
             swconfig[sr][1][daughters[0]] = swconfig[sr][1][daughters[1]]
@@ -507,7 +648,7 @@ def _diagnosis_linkage(atlases, parameters):
     innersurfaces = []
 
     for n in divisions:
-        stage = n.split('.')[0][1:]
+        stage = n.split(".")[0][1:]
         if len(divisions[n]) <= 2:
             continue
 
@@ -519,13 +660,17 @@ def _diagnosis_linkage(atlases, parameters):
         # -> [reference][i] gives the neighborhood of daughter #i of division/mother n
         # swconfig contains the same neighborhoods than config plus the "switched" neighborhoods
         #
-        config = atlases.extract_division_neighborhoods(n, delay_from_division=parameters.name_delay_from_division)
+        config = atlases.extract_division_neighborhoods(
+            n, delay_from_division=parameters.name_delay_from_division
+        )
         swconfig = switched_division_neighborhoods(config, n)
 
         #
         # distance array for couples of atlases/references
         #
-        conddist, z, labels = division_scipy_linkage(config, change_contact_surfaces=ccs, innersurfaces=innersurfaces)
+        conddist, z, labels = division_scipy_linkage(
+            config, change_contact_surfaces=ccs, innersurfaces=innersurfaces
+        )
 
         merge_values[stage] = merge_values.get(stage, []) + list(z[:, 2])
         lastmerge_value = z[:, 2][-1]
@@ -536,14 +681,21 @@ def _diagnosis_linkage(atlases, parameters):
         #
         for r in divisions[n]:
             if r not in ref_atlases:
-                if not (r[:4] == 'sym-' and r[4:] in ref_atlases):
-                    monitoring.to_log_and_console(proc + ": weird, '" + str(r) + "' is not in reference atlases.", 4)
+                if not (r[:4] == "sym-" and r[4:] in ref_atlases):
+                    monitoring.to_log_and_console(
+                        proc + ": weird, '" + str(r) + "' is not in reference atlases.",
+                        4,
+                    )
                 continue
             keyselection = "morphonet_float_" + str(r) + "_last_dendrogram_value"
             output_selections[keyselection] = output_selections.get(keyselection, {})
             lineage = ref_atlases[r].cell_lineage
             name = ref_atlases[r].cell_name
-            cells = list(set(lineage.keys()).union(set([v for values in list(lineage.values()) for v in values])))
+            cells = list(
+                set(lineage.keys()).union(
+                    set([v for values in list(lineage.values()) for v in values])
+                )
+            )
             for c in cells:
                 if c not in name:
                     continue
@@ -553,52 +705,71 @@ def _diagnosis_linkage(atlases, parameters):
         #
         # distance array for couples of atlases/references plus the switched ones
         #
-        swconddist, swz, swlabels = division_scipy_linkage(swconfig, change_contact_surfaces=ccs,
-                                                          innersurfaces=innersurfaces)
+        swconddist, swz, swlabels = division_scipy_linkage(
+            swconfig, change_contact_surfaces=ccs, innersurfaces=innersurfaces
+        )
 
         swmerge_values[stage] = swmerge_values.get(stage, []) + list(swz[:, 2])
         swlastmerge_value = swz[:, 2][-1]
-        swlastmerge_values[stage] = swlastmerge_values.get(stage, []) + [swlastmerge_value]
+        swlastmerge_values[stage] = swlastmerge_values.get(stage, []) + [
+            swlastmerge_value
+        ]
 
         division_lastmerge_values[n] = [lastmerge_value, swlastmerge_value]
 
     nochanges = {n: v for n, v in division_lastmerge_values.items() if v[1] <= v[0]}
-    mother_with_nochanges = [n for n, v in division_lastmerge_values.items() if v[1] <= v[0]]
+    mother_with_nochanges = [
+        n for n, v in division_lastmerge_values.items() if v[1] <= v[0]
+    ]
     #
     # set the lastmerge_value in morphonet selection
     #
     for n in mother_with_nochanges:
         for r in divisions[n]:
             if r not in ref_atlases:
-                if not (r[:4] == 'sym-' and r[4:] in ref_atlases):
-                    monitoring.to_log_and_console(proc + ": weird, '" + str(r) + "' is not in reference atlases.", 4)
+                if not (r[:4] == "sym-" and r[4:] in ref_atlases):
+                    monitoring.to_log_and_console(
+                        proc + ": weird, '" + str(r) + "' is not in reference atlases.",
+                        4,
+                    )
                 continue
             keyselection = "morphonet_selection_" + str(r) + "_dendrogram_warning"
             output_selections[keyselection] = output_selections.get(keyselection, {})
             lineage = ref_atlases[r].cell_lineage
             name = ref_atlases[r].cell_name
-            cells = list(set(lineage.keys()).union(set([v for values in list(lineage.values()) for v in values])))
+            cells = list(
+                set(lineage.keys()).union(
+                    set([v for values in list(lineage.values()) for v in values])
+                )
+            )
             for c in cells:
                 if c not in name:
                     continue
                 if name[c] == n:
                     output_selections[keyselection][c] = 100
 
-    monitoring.to_log_and_console("------ division with same dendrogram last values (without and with switch)")
+    monitoring.to_log_and_console(
+        "------ division with same dendrogram last values (without and with switch)"
+    )
     msg = str(len(nochanges)) + "/" + str(len(division_lastmerge_values)) + " divisions"
     monitoring.to_log_and_console("\t " + msg)
 
     monitoring.to_log_and_console("------ cell-based view")
     division_by_generation = {}
     for m in mother_with_nochanges:
-        g = m.split('.')[0][1:]
+        g = m.split(".")[0][1:]
         division_by_generation[g] = division_by_generation.get(g, []) + [m]
     for g in division_by_generation:
         monitoring.to_log_and_console("  - generation " + str(g))
         mothers = list(division_by_generation[g])
         mothers.sort()
         for m in mothers:
-            msg = "    - division of '" + str(m) + "': " + str(division_lastmerge_values[m])
+            msg = (
+                "    - division of '"
+                + str(m)
+                + "': "
+                + str(division_lastmerge_values[m])
+            )
             monitoring.to_log_and_console(msg)
 
     monitoring.to_log_and_console("------ dendrogram last-value view")
@@ -614,6 +785,7 @@ def _diagnosis_linkage(atlases, parameters):
 #
 #
 ########################################################################################
+
 
 def _dpp_switch_contact_surfaces(neighbors, reference, daughters):
     """
@@ -632,7 +804,10 @@ def _dpp_switch_contact_surfaces(neighbors, reference, daughters):
     # contact surfaces of daughters[0] for atlas 'reference'
     # replace contact surface with daughters[1] with a contact surface with daughters[0]
     #
-    neighs = {0: copy.deepcopy(neighbors[1][reference]), 1: copy.deepcopy(neighbors[0][reference])}
+    neighs = {
+        0: copy.deepcopy(neighbors[1][reference]),
+        1: copy.deepcopy(neighbors[0][reference]),
+    }
     if daughters[0] in neighs[0]:
         neighs[0][daughters[1]] = neighs[0][daughters[0]]
         del neighs[0][daughters[0]]
@@ -645,7 +820,9 @@ def _dpp_switch_contact_surfaces(neighbors, reference, daughters):
     return neighbors
 
 
-def _dpp_global_generic_distance(mother, neighbors, references, parameters, debug=False):
+def _dpp_global_generic_distance(
+    mother, neighbors, references, parameters, debug=False
+):
     """
     Compute a global score. The global score is the average of local similarities over all
     couples of references/atlases.
@@ -676,8 +853,14 @@ def _dpp_global_generic_distance(mother, neighbors, references, parameters, debu
         for r2 in references:
             if r2 <= r1:
                 continue
-            dist = division_distance(neighbors[0][r1], neighbors[1][r1], neighbors[0][r2], neighbors[1][r2],
-                                     change_contact_surfaces=ccs, innersurfaces=innersurfaces)
+            dist = division_distance(
+                neighbors[0][r1],
+                neighbors[1][r1],
+                neighbors[0][r2],
+                neighbors[1][r2],
+                change_contact_surfaces=ccs,
+                innersurfaces=innersurfaces,
+            )
             if debug:
                 distances[r1][r2] = dist
             score += dist
@@ -690,7 +873,14 @@ def _dpp_global_generic_distance(mother, neighbors, references, parameters, debu
             refs2 = distances[r1].keys()
             refs2 = sorted(refs2)
             for r2 in refs2:
-                print("   - dist[" + str(r1) + ", " + str(r2) + "] = " + str(distances[r1][r2]))
+                print(
+                    "   - dist["
+                    + str(r1)
+                    + ", "
+                    + str(r2)
+                    + "] = "
+                    + str(distances[r1][r2])
+                )
     return score / n
 
 
@@ -712,15 +902,22 @@ def _dpp_test_one_division(atlases, mother, parameters):
         return {}, []
 
     daughters = uname.get_daughter_names(mother)
-    neighborhoods = atlases.get_cell_neighborhood(delay_from_division=parameters.name_delay_from_division)
-    neighbors = {0: copy.deepcopy(neighborhoods[daughters[0]]), 1: copy.deepcopy(neighborhoods[daughters[1]])}
+    neighborhoods = atlases.get_cell_neighborhood(
+        delay_from_division=parameters.name_delay_from_division
+    )
+    neighbors = {
+        0: copy.deepcopy(neighborhoods[daughters[0]]),
+        1: copy.deepcopy(neighborhoods[daughters[1]]),
+    }
 
     # score before any changes
     debug = False
     if debug:
         print("")
         print("===== test division " + str(mother) + " : " + str(divisions[mother]))
-    score = _dpp_global_generic_distance(mother, neighbors, divisions[mother], parameters, debug=debug)
+    score = _dpp_global_generic_distance(
+        mother, neighbors, divisions[mother], parameters, debug=debug
+    )
 
     returned_scores = [(None, score)]
     corrections = []
@@ -736,9 +933,16 @@ def _dpp_test_one_division(atlases, mother, parameters):
             if debug:
                 print("===== test switch " + str(mother) + " / " + str(r))
             # compute a new score, keep it if it better than the one before any changes
-            newscore[r] = _dpp_global_generic_distance(mother, tmp, divisions[mother], parameters, debug=debug)
+            newscore[r] = _dpp_global_generic_distance(
+                mother, tmp, divisions[mother], parameters, debug=debug
+            )
             if debug:
-                print("     new score = " + str(newscore[r]) + " - original score = " + str(score))
+                print(
+                    "     new score = "
+                    + str(newscore[r])
+                    + " - original score = "
+                    + str(score)
+                )
             if newscore[r] > score:
                 del newscore[r]
         # no found correction at this iteration
@@ -767,7 +971,6 @@ def _dpp_test_one_division(atlases, mother, parameters):
 
 
 def division_permutation_proposal(atlases, parameters):
-
     # neighborhoods is a dictionary of dictionaries
     # ['cell name']['reference name']
     # first key is a cell name (daughter cell)
@@ -784,7 +987,7 @@ def division_permutation_proposal(atlases, parameters):
     divisions = atlases.get_divisions()
     mothers = {}
     for n in divisions:
-        stage = n.split('.')[0][1:]
+        stage = n.split(".")[0][1:]
         mothers[stage] = mothers.get(stage, []) + [n]
     for s in mothers:
         mothers[s] = sorted(mothers[s])
@@ -822,25 +1025,42 @@ def division_permutation_proposal(atlases, parameters):
         (a, score) = selection[m][0]
 
         for i, (ref, ds) in enumerate(selection[m]):
-
             if i == 0:
                 continue
 
             # check if the reference is registered
             # discard symmetrical neighborhood for warning
             if ref not in ref_atlases:
-                if not (ref[:4] == 'sym-' and ref[4:] in ref_atlases):
-                    monitoring.to_log_and_console(proc + ": weird, '" + str(ref) + "' is not in reference atlases.", 4)
+                if not (ref[:4] == "sym-" and ref[4:] in ref_atlases):
+                    monitoring.to_log_and_console(
+                        proc
+                        + ": weird, '"
+                        + str(ref)
+                        + "' is not in reference atlases.",
+                        4,
+                    )
                 continue
 
-            keyscore = "morphonet_float_" + str(ref) + "_distance_average_before_permutation_proposal"
-            keydecre = "morphonet_float_" + str(ref) + "_distance_decrement_percentage_after_permutation_proposal"
+            keyscore = (
+                "morphonet_float_"
+                + str(ref)
+                + "_distance_average_before_permutation_proposal"
+            )
+            keydecre = (
+                "morphonet_float_"
+                + str(ref)
+                + "_distance_decrement_percentage_after_permutation_proposal"
+            )
             output_selections[keyscore] = output_selections.get(keyscore, {})
             output_selections[keydecre] = output_selections.get(keydecre, {})
 
             lineage = ref_atlases[ref].cell_lineage
             name = ref_atlases[ref].cell_name
-            cells = list(set(lineage.keys()).union(set([v for values in list(lineage.values()) for v in values])))
+            cells = list(
+                set(lineage.keys()).union(
+                    set([v for values in list(lineage.values()) for v in values])
+                )
+            )
 
             for c in cells:
                 if c not in name:
@@ -872,7 +1092,7 @@ def division_permutation_proposal(atlases, parameters):
             msg = "    - division of '" + str(m) + "': "
             for i, r in enumerate(tmp):
                 msg += str(r)
-                if i < len(tmp)-1:
+                if i < len(tmp) - 1:
                     msg += ", "
             monitoring.to_log_and_console(msg)
     if len(corrections_by_atlas) > 0:
@@ -895,7 +1115,9 @@ def division_permutation_proposal(atlases, parameters):
                 quadruplet += [(m, ref, score, 100.0 * ds / score)]
         quadruplet = sorted(quadruplet, key=operator.itemgetter(1))
         quadruplet = sorted(quadruplet, key=operator.itemgetter(3), reverse=True)
-        monitoring.to_log_and_console("------ average distance percentage decrease view")
+        monitoring.to_log_and_console(
+            "------ average distance percentage decrease view"
+        )
         for q in quadruplet:
             msg = "  - division of '" + str(q[0]) + "' in '" + str(q[1]) + "': "
             msg += "{:2.2f}% decrease of {:1.2f} average distance".format(q[3], q[2])
@@ -909,6 +1131,7 @@ def division_permutation_proposal(atlases, parameters):
 #
 #
 ########################################################################################
+
 
 def _print_common_neighborhoods(neighborhood0, neighborhood1, title=None):
     #
@@ -937,7 +1160,9 @@ def _print_common_neighborhoods(neighborhood0, neighborhood1, title=None):
     monitoring.to_log_and_console(msg)
 
 
-def _division_distance(daughter00, daughter01, daughter10, daughter11, innersurfaces=[], debug=False):
+def _division_distance(
+    daughter00, daughter01, daughter10, daughter11, innersurfaces=[], debug=False
+):
     """
     Compute distance between two contact surface vectors. Do not compute 'common' neighborhood.
     Parameters
@@ -957,14 +1182,25 @@ def _division_distance(daughter00, daughter01, daughter10, daughter11, innersurf
     # get the sum of difference, as well as the sums of contact surfaces
     # cells in 'innersurfaces' are excluded
     #
-    nm0, n00, n10 = uneighborhood.cell_distance_elements(daughter00, daughter10, innersurfaces=innersurfaces)
-    nm1, n01, n11 = uneighborhood.cell_distance_elements(daughter01, daughter11, innersurfaces=innersurfaces)
+    nm0, n00, n10 = uneighborhood.cell_distance_elements(
+        daughter00, daughter10, innersurfaces=innersurfaces
+    )
+    nm1, n01, n11 = uneighborhood.cell_distance_elements(
+        daughter01, daughter11, innersurfaces=innersurfaces
+    )
     score = (nm0 + nm1) / (n00 + n10 + n01 + n11)
     return score
 
 
-def division_distance(daughter00, daughter01, daughter10, daughter11, change_contact_surfaces=True, innersurfaces=[],
-                      debug=False):
+def division_distance(
+    daughter00,
+    daughter01,
+    daughter10,
+    daughter11,
+    change_contact_surfaces=True,
+    innersurfaces=[],
+    debug=False,
+):
     """
 
     Parameters
@@ -984,19 +1220,31 @@ def division_distance(daughter00, daughter01, daughter10, daughter11, change_con
     """
 
     if change_contact_surfaces:
-        tmp = {'foo': {0: daughter00, 1: daughter10}}
-        v0 = uneighborhood.build_same_contact_surfaces(tmp, ['foo'], debug=debug)
-        tmp = {'foo': {0: daughter01, 1: daughter11}}
-        v1 = uneighborhood.build_same_contact_surfaces(tmp, ['foo'], debug=debug)
-        score = _division_distance(v0['foo'][0], v1['foo'][0], v0['foo'][1], v1['foo'][1], innersurfaces=innersurfaces)
+        tmp = {"foo": {0: daughter00, 1: daughter10}}
+        v0 = uneighborhood.build_same_contact_surfaces(tmp, ["foo"], debug=debug)
+        tmp = {"foo": {0: daughter01, 1: daughter11}}
+        v1 = uneighborhood.build_same_contact_surfaces(tmp, ["foo"], debug=debug)
+        score = _division_distance(
+            v0["foo"][0],
+            v1["foo"][0],
+            v0["foo"][1],
+            v1["foo"][1],
+            innersurfaces=innersurfaces,
+        )
     else:
-        score = _division_distance(daughter00, daughter01, daughter10, daughter11, innersurfaces=innersurfaces)
+        score = _division_distance(
+            daughter00, daughter01, daughter10, daughter11, innersurfaces=innersurfaces
+        )
 
     return score
 
 
-def _division_signature(daughter00, daughter01, daughter10, daughter11, innersurfaces=[]):
-    neighbors = set(daughter00.keys()).union(set(daughter01.keys()), set(daughter10.keys()), set(daughter11.keys()))
+def _division_signature(
+    daughter00, daughter01, daughter10, daughter11, innersurfaces=[]
+):
+    neighbors = set(daughter00.keys()).union(
+        set(daughter01.keys()), set(daughter10.keys()), set(daughter11.keys())
+    )
     den = 0.0
     num = 0.0
     for k in neighbors:
@@ -1032,8 +1280,15 @@ def _division_signature(daughter00, daughter01, daughter10, daughter11, innersur
     return score
 
 
-def division_signature(daughter00, daughter01, daughter10, daughter11, change_contact_surfaces=True, innersurfaces=[],
-                       debug=False):
+def division_signature(
+    daughter00,
+    daughter01,
+    daughter10,
+    daughter11,
+    change_contact_surfaces=True,
+    innersurfaces=[],
+    debug=False,
+):
     """
 
     Parameters
@@ -1053,15 +1308,24 @@ def division_signature(daughter00, daughter01, daughter10, daughter11, change_co
     """
 
     if change_contact_surfaces:
-        tmp = {'foo': {0: daughter00, 1: daughter10}}
-        v0 = uneighborhood.build_same_contact_surfaces(tmp, ['foo'], debug=debug)
-        tmp = {'foo': {0: daughter01, 1: daughter11}}
-        v1 = uneighborhood.build_same_contact_surfaces(tmp, ['foo'], debug=debug)
-        score = _division_signature(v0['foo'][0], v1['foo'][0], v0['foo'][1], v1['foo'][1], innersurfaces=innersurfaces)
+        tmp = {"foo": {0: daughter00, 1: daughter10}}
+        v0 = uneighborhood.build_same_contact_surfaces(tmp, ["foo"], debug=debug)
+        tmp = {"foo": {0: daughter01, 1: daughter11}}
+        v1 = uneighborhood.build_same_contact_surfaces(tmp, ["foo"], debug=debug)
+        score = _division_signature(
+            v0["foo"][0],
+            v1["foo"][0],
+            v0["foo"][1],
+            v1["foo"][1],
+            innersurfaces=innersurfaces,
+        )
     else:
-        score = _division_signature(daughter00, daughter01, daughter10, daughter11, innersurfaces=innersurfaces)
+        score = _division_signature(
+            daughter00, daughter01, daughter10, daughter11, innersurfaces=innersurfaces
+        )
 
     return score
+
 
 ###########################################################
 #
@@ -1069,9 +1333,9 @@ def division_signature(daughter00, daughter01, daughter10, daughter11, change_co
 #
 ############################################################
 
+
 class DivisionAtlases(uatlasc.CellAtlases):
     def __init__(self, parameters=None):
-
         uatlasc.CellAtlases.__init__(self, parameters)
 
         self._use_common_neighborhood = False
@@ -1137,12 +1401,16 @@ class DivisionAtlases(uatlasc.CellAtlases):
         #
         # get all references per division/mother cells
         #
-        neighborhoods = self.get_cell_neighborhood(delay_from_division=delay_from_division)
+        neighborhoods = self.get_cell_neighborhood(
+            delay_from_division=delay_from_division
+        )
         cell_names = sorted(list(neighborhoods.keys()))
         references = {}
         for cell_name in cell_names:
             mother_name = uname.get_mother_name(cell_name)
-            references[mother_name] = references.get(mother_name, set()).union(set(neighborhoods[cell_name].keys()))
+            references[mother_name] = references.get(mother_name, set()).union(
+                set(neighborhoods[cell_name].keys())
+            )
 
         #
         # remove references that does not exist for one daughter
@@ -1155,11 +1423,23 @@ class DivisionAtlases(uatlasc.CellAtlases):
             #
             refs = list(references[n])
             for r in refs:
-                if daughters[0] in neighborhoods and r in neighborhoods[daughters[0]] and \
-                        daughters[1] in neighborhoods and r in neighborhoods[daughters[1]]:
+                if (
+                    daughters[0] in neighborhoods
+                    and r in neighborhoods[daughters[0]]
+                    and daughters[1] in neighborhoods
+                    and r in neighborhoods[daughters[1]]
+                ):
                     self._divisions[n] = self._divisions.get(n, []) + [r]
                 else:
-                    msg = "    " + str(proc) + ": remove atlas '" + str(r) + "' for division '" + str(n) + "'"
+                    msg = (
+                        "    "
+                        + str(proc)
+                        + ": remove atlas '"
+                        + str(r)
+                        + "' for division '"
+                        + str(n)
+                        + "'"
+                    )
                     monitoring.to_log_and_console(msg)
 
     #
@@ -1205,9 +1485,17 @@ class DivisionAtlases(uatlasc.CellAtlases):
             elif vol10 > minimal_references and vol01 == 0:
                 self._unequal_divisions[delay][mother] = [d[1], d[0]]
 
-        msg = "found " + str(len(self._unequal_divisions[delay])) + " unequal divisions "
+        msg = (
+            "found " + str(len(self._unequal_divisions[delay])) + " unequal divisions "
+        )
         msg += "at delay = " + str(delay) + " "
-        msg += "(more than " + str(minimal_references) + " atlases) in " + str(len(divisions)) + " divisions"
+        msg += (
+            "(more than "
+            + str(minimal_references)
+            + " atlases) in "
+            + str(len(divisions))
+            + " divisions"
+        )
         monitoring.to_log_and_console("\t" + msg)
         return
 
@@ -1216,14 +1504,15 @@ class DivisionAtlases(uatlasc.CellAtlases):
     #
 
     def build_division_atlases(self, parameters):
-
         #
         # cell based part
         # extract neighborhoods for required delays
         #
         delays = [parameters.name_delay_from_division]
-        if parameters.confidence_delay_from_division is not None and \
-                parameters.confidence_delay_from_division not in delays:
+        if (
+            parameters.confidence_delay_from_division is not None
+            and parameters.confidence_delay_from_division not in delays
+        ):
             delays += [parameters.confidence_delay_from_division]
         self.set_default_delay(parameters.name_delay_from_division)
         for d in delays:
@@ -1237,7 +1526,9 @@ class DivisionAtlases(uatlasc.CellAtlases):
             monitoring.to_log_and_console("... build common neighborhoods", 1)
             for d in delays:
                 neighborhoods = self.get_cell_neighborhood(delay_from_division=d)
-                self.set_cell_neighborhood(_build_common_neighborhoods(neighborhoods), delay_from_division=d)
+                self.set_cell_neighborhood(
+                    _build_common_neighborhoods(neighborhoods), delay_from_division=d
+                )
             self._use_common_neighborhood = True
             monitoring.to_log_and_console("    done", 1)
 
@@ -1260,12 +1551,20 @@ class DivisionAtlases(uatlasc.CellAtlases):
 
         if parameters.division_diagnosis:
             monitoring.to_log_and_console("")
-            monitoring.to_log_and_console("============================================================")
-            monitoring.to_log_and_console("===== diagnosis: atlases pairwise disagreements")
+            monitoring.to_log_and_console(
+                "============================================================"
+            )
+            monitoring.to_log_and_console(
+                "===== diagnosis: atlases pairwise disagreements"
+            )
             _diagnosis_pairwise_switches(self, parameters)
-            monitoring.to_log_and_console("===== diagnosis: dendrogram/linkage diagnosis")
+            monitoring.to_log_and_console(
+                "===== diagnosis: dendrogram/linkage diagnosis"
+            )
             _diagnosis_linkage(self, parameters)
-            monitoring.to_log_and_console("============================================================")
+            monitoring.to_log_and_console(
+                "============================================================"
+            )
             monitoring.to_log_and_console("")
 
         #
@@ -1319,46 +1618,97 @@ class DivisionAtlases(uatlasc.CellAtlases):
     ############################################################
 
     def generate_figure(self, parameters, time_digits_for_cell_id=4):
+        uatlasc.CellAtlases.generate_figure(
+            self, parameters, time_digits_for_cell_id=time_digits_for_cell_id
+        )
 
-        uatlasc.CellAtlases.generate_figure(self, parameters, time_digits_for_cell_id=time_digits_for_cell_id)
-
-        generate_figure = (isinstance(parameters.generate_figure, bool) and parameters.generate_figure) or \
-                          (isinstance(parameters.generate_figure, str) and parameters.generate_figure == 'all') or \
-                          (isinstance(parameters.generate_figure, list) and 'all' in parameters.generate_figure)
+        generate_figure = (
+            (
+                isinstance(parameters.generate_figure, bool)
+                and parameters.generate_figure
+            )
+            or (
+                isinstance(parameters.generate_figure, str)
+                and parameters.generate_figure == "all"
+            )
+            or (
+                isinstance(parameters.generate_figure, list)
+                and "all" in parameters.generate_figure
+            )
+        )
 
         #
         # draw histograms of both right pairing and wrong pairing
         # 2D histograms are at division level
         # 1D histograms are at cell (daughter) level
         #
-        if (isinstance(parameters.generate_figure, str) and parameters.generate_figure == 'distance-histograms') \
-            or (isinstance(parameters.generate_figure, str)
-                and parameters.generate_figure == 'cell-distance-histograms') \
-            or (isinstance(parameters.generate_figure, list) and 'distance-histograms' in parameters.generate_figure) \
-            or (isinstance(parameters.generate_figure, list)
-                and 'cell-distance-histograms' in parameters.generate_figure) or generate_figure:
-            monitoring.to_log_and_console("... generate cell distance histogram file", 1)
+        if (
+            (
+                isinstance(parameters.generate_figure, str)
+                and parameters.generate_figure == "distance-histograms"
+            )
+            or (
+                isinstance(parameters.generate_figure, str)
+                and parameters.generate_figure == "cell-distance-histograms"
+            )
+            or (
+                isinstance(parameters.generate_figure, list)
+                and "distance-histograms" in parameters.generate_figure
+            )
+            or (
+                isinstance(parameters.generate_figure, list)
+                and "cell-distance-histograms" in parameters.generate_figure
+            )
+            or generate_figure
+        ):
+            monitoring.to_log_and_console(
+                "... generate cell distance histogram file", 1
+            )
             _figures_cell_distance_histogram(self, parameters)
             monitoring.to_log_and_console("... done", 1)
 
-        if (isinstance(parameters.generate_figure, str) and parameters.generate_figure == 'distance-histograms') \
-            or (isinstance(parameters.generate_figure, str)
-                and parameters.generate_figure == 'division-distance-histograms') \
-            or (isinstance(parameters.generate_figure, list) and 'distance-histograms' in parameters.generate_figure) \
-            or (isinstance(parameters.generate_figure, list)
-                and 'division-distance-histograms' in parameters.generate_figure) or generate_figure:
-            monitoring.to_log_and_console("... generate division distance histogram file", 1)
+        if (
+            (
+                isinstance(parameters.generate_figure, str)
+                and parameters.generate_figure == "distance-histograms"
+            )
+            or (
+                isinstance(parameters.generate_figure, str)
+                and parameters.generate_figure == "division-distance-histograms"
+            )
+            or (
+                isinstance(parameters.generate_figure, list)
+                and "distance-histograms" in parameters.generate_figure
+            )
+            or (
+                isinstance(parameters.generate_figure, list)
+                and "division-distance-histograms" in parameters.generate_figure
+            )
+            or generate_figure
+        ):
+            monitoring.to_log_and_console(
+                "... generate division distance histogram file", 1
+            )
             _figures_division_distance_histogram(self, parameters)
             monitoring.to_log_and_console("... done", 1)
 
         #
         # draw a dendrogram per division where atlases are grouped with similarity between division
         #
-        if (isinstance(parameters.generate_figure, str) and parameters.generate_figure == 'division-dendrograms') \
-                or (isinstance(parameters.generate_figure, list)
-                    and 'division-dendrograms' in parameters.generate_figure) \
-                or generate_figure:
-            monitoring.to_log_and_console("... generate division dendrogram figure file", 1)
+        if (
+            (
+                isinstance(parameters.generate_figure, str)
+                and parameters.generate_figure == "division-dendrograms"
+            )
+            or (
+                isinstance(parameters.generate_figure, list)
+                and "division-dendrograms" in parameters.generate_figure
+            )
+            or generate_figure
+        ):
+            monitoring.to_log_and_console(
+                "... generate division dendrogram figure file", 1
+            )
             _figures_division_dendrogram(self, parameters)
             monitoring.to_log_and_console("...", 1)
             _figures_signature_dendrogram(self, parameters)
@@ -1370,6 +1720,7 @@ class DivisionAtlases(uatlasc.CellAtlases):
 # cell-to-cell and division-to-division distance histograms
 #
 ################################################################################
+
 
 def _write_raw_array(f, a, length=4):
     form = "{:1." + str(length) + "f}"
@@ -1413,21 +1764,26 @@ def _figures_cell_distance_histogram(atlases, parameters):
     """
     proc = "_figures_cell_distance_histogram"
 
-    filename = 'figures_cell_distance_histogram'
+    filename = "figures_cell_distance_histogram"
     file_suffix = None
-    if parameters.figurefile_suffix is not None and isinstance(parameters.figurefile_suffix, str) and \
-            len(parameters.figurefile_suffix) > 0:
-        file_suffix = '_' + parameters.figurefile_suffix
+    if (
+        parameters.figurefile_suffix is not None
+        and isinstance(parameters.figurefile_suffix, str)
+        and len(parameters.figurefile_suffix) > 0
+    ):
+        file_suffix = "_" + parameters.figurefile_suffix
     if file_suffix is not None:
         filename += file_suffix
-    filename += '.py'
+    filename += ".py"
 
     if parameters.outputDir is not None and isinstance(parameters.outputDir, str):
         if not os.path.isdir(parameters.outputDir):
             if not os.path.exists(parameters.outputDir):
                 os.makedirs(parameters.outputDir)
             else:
-                monitoring.to_log_and_console(proc + ": '" + str(parameters.outputDir) + "' is not a directory ?!")
+                monitoring.to_log_and_console(
+                    proc + ": '" + str(parameters.outputDir) + "' is not a directory ?!"
+                )
         if os.path.isdir(parameters.outputDir):
             filename = os.path.join(parameters.outputDir, filename)
 
@@ -1445,10 +1801,18 @@ def _figures_cell_distance_histogram(atlases, parameters):
     #
     division_per_generation = {}
     for n in divisions:
-        generation = n.split('.')[0][1:]
-        division_per_generation[generation] = division_per_generation.get(generation, []) + [n]
+        generation = n.split(".")[0][1:]
+        division_per_generation[generation] = division_per_generation.get(
+            generation, []
+        ) + [n]
     for g in division_per_generation:
-        print("    - generation " + str(g) + ": " + str(len(division_per_generation[g])) + " divisions")
+        print(
+            "    - generation "
+            + str(g)
+            + ": "
+            + str(len(division_per_generation[g]))
+            + " divisions"
+        )
 
     ndivision = 0
     for g in division_per_generation:
@@ -1477,16 +1841,32 @@ def _figures_cell_distance_histogram(atlases, parameters):
                 for r2 in divisions[n]:
                     if r2 <= r1:
                         continue
-                    d00 = uneighborhood.cell_distance(neighborhoods[d[0]][r1], neighborhoods[d[0]][r2],
-                                                      change_contact_surfaces=ccs)
-                    d11 = uneighborhood.cell_distance(neighborhoods[d[1]][r1], neighborhoods[d[1]][r2],
-                                                      change_contact_surfaces=ccs)
-                    d01 = uneighborhood.cell_distance(neighborhoods[d[0]][r1], neighborhoods[d[1]][r2],
-                                                      change_contact_surfaces=True)
-                    d10 = uneighborhood.cell_distance(neighborhoods[d[1]][r1], neighborhoods[d[0]][r2],
-                                                      change_contact_surfaces=True)
-                    right_cscores_per_generation[g] = right_cscores_per_generation.get(g, []) + [d00, d11]
-                    wrong_cscores_per_generation[g] = wrong_cscores_per_generation.get(g, []) + [d01, d10]
+                    d00 = uneighborhood.cell_distance(
+                        neighborhoods[d[0]][r1],
+                        neighborhoods[d[0]][r2],
+                        change_contact_surfaces=ccs,
+                    )
+                    d11 = uneighborhood.cell_distance(
+                        neighborhoods[d[1]][r1],
+                        neighborhoods[d[1]][r2],
+                        change_contact_surfaces=ccs,
+                    )
+                    d01 = uneighborhood.cell_distance(
+                        neighborhoods[d[0]][r1],
+                        neighborhoods[d[1]][r2],
+                        change_contact_surfaces=True,
+                    )
+                    d10 = uneighborhood.cell_distance(
+                        neighborhoods[d[1]][r1],
+                        neighborhoods[d[0]][r2],
+                        change_contact_surfaces=True,
+                    )
+                    right_cscores_per_generation[g] = right_cscores_per_generation.get(
+                        g, []
+                    ) + [d00, d11]
+                    wrong_cscores_per_generation[g] = wrong_cscores_per_generation.get(
+                        g, []
+                    ) + [d01, d10]
     #
     # compute cell-to-cell distance for cells of the same generation
     # but not the same cell nor its sister
@@ -1495,7 +1875,7 @@ def _figures_cell_distance_histogram(atlases, parameters):
         i = 0
         for n in divisions:
             d = uname.get_daughter_names(n)
-            generation = n.split('.')[0][1:]
+            generation = n.split(".")[0][1:]
             # if int(generation) > generationmax:
             #     continue
             if i % 10 == 0:
@@ -1509,17 +1889,31 @@ def _figures_cell_distance_histogram(atlases, parameters):
                     for r2 in divisions[m]:
                         if r2 == r1:
                             continue
-                        d00 = uneighborhood.cell_distance(neighborhoods[d[0]][r1], neighborhoods[f[0]][r2],
-                                                          change_contact_surfaces=True)
-                        d11 = uneighborhood.cell_distance(neighborhoods[d[1]][r1], neighborhoods[f[1]][r2],
-                                                          change_contact_surfaces=True)
-                        d01 = uneighborhood.cell_distance(neighborhoods[d[0]][r1], neighborhoods[f[1]][r2],
-                                                          change_contact_surfaces=True)
-                        d10 = uneighborhood.cell_distance(neighborhoods[d[1]][r1], neighborhoods[f[0]][r2],
-                                                          change_contact_surfaces=True)
+                        d00 = uneighborhood.cell_distance(
+                            neighborhoods[d[0]][r1],
+                            neighborhoods[f[0]][r2],
+                            change_contact_surfaces=True,
+                        )
+                        d11 = uneighborhood.cell_distance(
+                            neighborhoods[d[1]][r1],
+                            neighborhoods[f[1]][r2],
+                            change_contact_surfaces=True,
+                        )
+                        d01 = uneighborhood.cell_distance(
+                            neighborhoods[d[0]][r1],
+                            neighborhoods[f[1]][r2],
+                            change_contact_surfaces=True,
+                        )
+                        d10 = uneighborhood.cell_distance(
+                            neighborhoods[d[1]][r1],
+                            neighborhoods[f[0]][r2],
+                            change_contact_surfaces=True,
+                        )
                         other_scores += [d00, d11, d01, d10]
             i += 1
-            other_scores_per_generation[generation] = other_scores_per_generation.get(generation, []) + other_scores
+            other_scores_per_generation[generation] = (
+                other_scores_per_generation.get(generation, []) + other_scores
+            )
 
     f = open(filename, "w")
 
@@ -1531,13 +1925,17 @@ def _figures_cell_distance_histogram(atlases, parameters):
     f.write("savefig = True\n")
 
     f.write("\n")
-    _write_dict_of_arrays(f, "right_cscores_per_generation", right_cscores_per_generation, length=4)
+    _write_dict_of_arrays(
+        f, "right_cscores_per_generation", right_cscores_per_generation, length=4
+    )
     f.write("right_cscores = []\n")
     f.write("for g in right_cscores_per_generation:\n")
     f.write("    right_cscores += right_cscores_per_generation[g]\n")
 
     f.write("\n")
-    _write_dict_of_arrays(f, "wrong_cscores_per_generation", wrong_cscores_per_generation, length=4)
+    _write_dict_of_arrays(
+        f, "wrong_cscores_per_generation", wrong_cscores_per_generation, length=4
+    )
     f.write("wrong_cscores = []\n")
     f.write("for g in wrong_cscores_per_generation:\n")
     f.write("    wrong_cscores += wrong_cscores_per_generation[g]\n")
@@ -1545,7 +1943,9 @@ def _figures_cell_distance_histogram(atlases, parameters):
     f.write("\n")
     f.write("fig, ax = plt.subplots(figsize=(7.5, 7.5))\n")
     f.write("labels = ['same cell', 'sister cell']\n")
-    f.write("ax.hist([right_cscores, wrong_cscores], 100, histtype='bar', label=labels)\n")
+    f.write(
+        "ax.hist([right_cscores, wrong_cscores], 100, histtype='bar', label=labels)\n"
+    )
     f.write("ax.legend(prop={'size': 10})\n")
     f.write("ax.set_title('atlas-to-atlas cell distances', fontsize=12)\n")
     f.write("ax.tick_params(labelsize=10)\n")
@@ -1562,7 +1962,9 @@ def _figures_cell_distance_histogram(atlases, parameters):
 
     if compute_other_scores:
         f.write("\n")
-        _write_dict_of_arrays(f, "other_scores_per_generation", other_scores_per_generation, length=4)
+        _write_dict_of_arrays(
+            f, "other_scores_per_generation", other_scores_per_generation, length=4
+        )
         f.write("other_scores = []\n")
         f.write("for g in other_scores_per_generation:\n")
         f.write("    other_scores += other_scores_per_generation[g]\n")
@@ -1570,7 +1972,9 @@ def _figures_cell_distance_histogram(atlases, parameters):
         f.write("\n")
         f.write("fig, ax = plt.subplots(figsize=(7.5, 7.5))\n")
         f.write("labels = ['same cell', 'sister cell', 'other cell']\n")
-        f.write("ax.hist([right_cscores, wrong_cscores, other_scores], 100, histtype='bar', label=labels, density=True)\n")
+        f.write(
+            "ax.hist([right_cscores, wrong_cscores, other_scores], 100, histtype='bar', label=labels, density=True)\n"
+        )
         f.write("ax.legend(prop={'size': 10})\n")
         f.write("ax.set_title('atlas-to-atlas cell distances', fontsize=12)\n")
         f.write("ax.tick_params(labelsize=10)\n")
@@ -1604,21 +2008,26 @@ def _figures_division_distance_histogram(atlases, parameters):
     """
     proc = "_figures_division_distance_histogram"
 
-    filename = 'figures_division_distance_histogram'
+    filename = "figures_division_distance_histogram"
     file_suffix = None
-    if parameters.figurefile_suffix is not None and isinstance(parameters.figurefile_suffix, str) and \
-            len(parameters.figurefile_suffix) > 0:
-        file_suffix = '_' + parameters.figurefile_suffix
+    if (
+        parameters.figurefile_suffix is not None
+        and isinstance(parameters.figurefile_suffix, str)
+        and len(parameters.figurefile_suffix) > 0
+    ):
+        file_suffix = "_" + parameters.figurefile_suffix
     if file_suffix is not None:
         filename += file_suffix
-    filename += '.py'
+    filename += ".py"
 
     if parameters.outputDir is not None and isinstance(parameters.outputDir, str):
         if not os.path.isdir(parameters.outputDir):
             if not os.path.exists(parameters.outputDir):
                 os.makedirs(parameters.outputDir)
             else:
-                monitoring.to_log_and_console(proc + ": '" + str(parameters.outputDir) + "' is not a directory ?!")
+                monitoring.to_log_and_console(
+                    proc + ": '" + str(parameters.outputDir) + "' is not a directory ?!"
+                )
         if os.path.isdir(parameters.outputDir):
             filename = os.path.join(parameters.outputDir, filename)
 
@@ -1634,11 +2043,19 @@ def _figures_division_distance_histogram(atlases, parameters):
     #
     division_per_generation = {}
     for n in divisions:
-        generation = n.split('.')[0][1:]
-        division_per_generation[generation] = division_per_generation.get(generation, []) + [n]
+        generation = n.split(".")[0][1:]
+        division_per_generation[generation] = division_per_generation.get(
+            generation, []
+        ) + [n]
     for g in division_per_generation:
         division_per_generation[g] = sorted(division_per_generation[g])
-        print("    - generation " + str(g) + ": " + str(len(division_per_generation[g])) + " divisions")
+        print(
+            "    - generation "
+            + str(g)
+            + ": "
+            + str(len(division_per_generation[g]))
+            + " divisions"
+        )
 
     ndivision = 0
     for g in division_per_generation:
@@ -1668,24 +2085,40 @@ def _figures_division_distance_histogram(atlases, parameters):
                     if r2 <= r1:
                         continue
 
-                    div00 = division_distance(neighborhoods[d[0]][r1], neighborhoods[d[1]][r1], neighborhoods[d[0]][r2],
-                                              neighborhoods[d[1]][r2], change_contact_surfaces=ccs,
-                                              innersurfaces=innersurfaces)
+                    div00 = division_distance(
+                        neighborhoods[d[0]][r1],
+                        neighborhoods[d[1]][r1],
+                        neighborhoods[d[0]][r2],
+                        neighborhoods[d[1]][r2],
+                        change_contact_surfaces=ccs,
+                        innersurfaces=innersurfaces,
+                    )
 
                     # daughter neighborhood have the same neighbors if atlases.get_use_common_neighborhood() is True
                     # there is then no need to change the contact surfaces
-                    div01 = division_distance(neighborhoods[d[0]][r1], neighborhoods[d[1]][r1], neighborhoods[d[1]][r2],
-                                              neighborhoods[d[0]][r2], change_contact_surfaces=ccs,
-                                              innersurfaces=innersurfaces)
+                    div01 = division_distance(
+                        neighborhoods[d[0]][r1],
+                        neighborhoods[d[1]][r1],
+                        neighborhoods[d[1]][r2],
+                        neighborhoods[d[0]][r2],
+                        change_contact_surfaces=ccs,
+                        innersurfaces=innersurfaces,
+                    )
 
                     # trace = n == "b7.0003_" or n == "b7.0008*"
                     # if trace:
                     #     print("division distance of " + n + " between " + r1 + " and " + r2 + ":")
                     #     print("\t right pairing = " + str(div00))
                     #     print("\t wrong pairing = " + str(div01))
-                    right_dscores_per_generation[g] = right_dscores_per_generation.get(g, []) + [div00]
-                    wrong_dscores_per_generation[g] = wrong_dscores_per_generation.get(g, []) + [div01]
-                    diff_dscores_per_generation[g] = diff_dscores_per_generation.get(g, []) + [div01-div00]
+                    right_dscores_per_generation[g] = right_dscores_per_generation.get(
+                        g, []
+                    ) + [div00]
+                    wrong_dscores_per_generation[g] = wrong_dscores_per_generation.get(
+                        g, []
+                    ) + [div01]
+                    diff_dscores_per_generation[g] = diff_dscores_per_generation.get(
+                        g, []
+                    ) + [div01 - div00]
 
     f = open(filename, "w")
 
@@ -1697,13 +2130,17 @@ def _figures_division_distance_histogram(atlases, parameters):
     f.write("savefig = True\n")
 
     f.write("\n")
-    _write_dict_of_arrays(f, "right_dscores_per_generation", right_dscores_per_generation, length=4)
+    _write_dict_of_arrays(
+        f, "right_dscores_per_generation", right_dscores_per_generation, length=4
+    )
     f.write("right_dscores = []\n")
     f.write("for g in right_dscores_per_generation:\n")
     f.write("    right_dscores += right_dscores_per_generation[g]\n")
 
     f.write("\n")
-    _write_dict_of_arrays(f, "wrong_dscores_per_generation", wrong_dscores_per_generation, length=4)
+    _write_dict_of_arrays(
+        f, "wrong_dscores_per_generation", wrong_dscores_per_generation, length=4
+    )
     f.write("wrong_dscores = []\n")
     f.write("for g in wrong_dscores_per_generation:\n")
     f.write("    wrong_dscores += wrong_dscores_per_generation[g]\n")
@@ -1716,7 +2153,9 @@ def _figures_division_distance_histogram(atlases, parameters):
     f.write("\n")
     f.write("fig, ax = plt.subplots(figsize=(7.5, 7.5))\n")
     f.write("labels = ['right pairing', 'wrong pairing']\n")
-    f.write("ax.hist([right_dscores, wrong_dscores], 100, histtype='bar', label=labels)\n")
+    f.write(
+        "ax.hist([right_dscores, wrong_dscores], 100, histtype='bar', label=labels)\n"
+    )
     f.write("ax.legend(prop={'size': 10})\n")
     f.write("ax.set_title('atlas-to-atlas division distances', fontsize=12)\n")
     f.write("ax.tick_params(labelsize=10)\n")
@@ -1732,31 +2171,41 @@ def _figures_division_distance_histogram(atlases, parameters):
     f.write("    plt.close()\n")
 
     f.write("\n")
-    f.write("fig, axs = plt.subplots(2, 2, figsize=(7.5, 7.5), sharex=True, sharey=True)\n")
+    f.write(
+        "fig, axs = plt.subplots(2, 2, figsize=(7.5, 7.5), sharex=True, sharey=True)\n"
+    )
     f.write("labels = ['right pairing', 'wrong pairing']\n")
     f.write("if len(gens) >= 1:\n")
-    f.write("    axs[0, 0].hist([right_dscores_per_generation[gens[0]], wrong_dscores_per_generation[gens[0]]]")
+    f.write(
+        "    axs[0, 0].hist([right_dscores_per_generation[gens[0]], wrong_dscores_per_generation[gens[0]]]"
+    )
     f.write(", 100, histtype='bar', label=labels)\n")
     f.write("    axs[0, 0].legend(prop={'size': 10})\n")
     f.write("    title = 'generation = ' + str(gens[0])\n")
     f.write("    axs[0, 0].set_title(title, fontsize=10)\n")
     f.write("    axs[0, 0].tick_params(labelsize=10)\n")
     f.write("if len(gens) >= 2:\n")
-    f.write("    axs[0, 1].hist([right_dscores_per_generation[gens[1]], wrong_dscores_per_generation[gens[1]]]")
+    f.write(
+        "    axs[0, 1].hist([right_dscores_per_generation[gens[1]], wrong_dscores_per_generation[gens[1]]]"
+    )
     f.write(", 100, histtype='bar', label=labels)\n")
     f.write("    axs[0, 1].legend(prop={'size': 10})\n")
     f.write("    title = 'generation = ' + str(gens[1])\n")
     f.write("    axs[0, 1].set_title(title, fontsize=10)\n")
     f.write("    axs[0, 1].tick_params(labelsize=10)\n")
     f.write("if len(gens) >= 3:\n")
-    f.write("    axs[1, 0].hist([right_dscores_per_generation[gens[2]], wrong_dscores_per_generation[gens[2]]]")
+    f.write(
+        "    axs[1, 0].hist([right_dscores_per_generation[gens[2]], wrong_dscores_per_generation[gens[2]]]"
+    )
     f.write(", 100, histtype='bar', label=labels)\n")
     f.write("    axs[1, 0].legend(prop={'size': 10})\n")
     f.write("    title = 'generation = ' + str(gens[2])\n")
     f.write("    axs[1, 0].set_title(title, fontsize=10)\n")
     f.write("    axs[1, 0].tick_params(labelsize=10)\n")
     f.write("if len(gens) >= 4:\n")
-    f.write("    axs[1, 1].hist([right_dscores_per_generation[gens[3]], wrong_dscores_per_generation[gens[3]]]")
+    f.write(
+        "    axs[1, 1].hist([right_dscores_per_generation[gens[3]], wrong_dscores_per_generation[gens[3]]]"
+    )
     f.write(", 100, histtype='bar', label=labels)\n")
     f.write("    axs[1, 1].legend(prop={'size': 10})\n")
     f.write("    title = 'generation = ' + str(gens[3])\n")
@@ -1775,7 +2224,9 @@ def _figures_division_distance_histogram(atlases, parameters):
     f.write("    plt.close()\n")
 
     f.write("\n")
-    _write_dict_of_arrays(f, "diff_dscores_per_generation", diff_dscores_per_generation, length=4)
+    _write_dict_of_arrays(
+        f, "diff_dscores_per_generation", diff_dscores_per_generation, length=4
+    )
     f.write("diff_dscores = []\n")
     f.write("for g in diff_dscores_per_generation:\n")
     f.write("    diff_dscores += diff_dscores_per_generation[g]\n")
@@ -1783,7 +2234,9 @@ def _figures_division_distance_histogram(atlases, parameters):
     f.write("\n")
     f.write("fig, ax = plt.subplots(figsize=(7.5, 7.5))\n")
     f.write("ax.hist(diff_dscores, 100, histtype='bar')\n")
-    f.write("ax.set_title('atlas-to-atlas division distance difference', fontsize=12)\n")
+    f.write(
+        "ax.set_title('atlas-to-atlas division distance difference', fontsize=12)\n"
+    )
     f.write("ax.tick_params(labelsize=10)\n")
 
     f.write("\n")
@@ -1806,6 +2259,7 @@ def _figures_division_distance_histogram(atlases, parameters):
 # cell neighbors number wrt total number of cells in the embryo
 #
 ################################################################################
+
 
 def _linkage_balance(z, nlabels):
     """
@@ -1854,21 +2308,26 @@ def _figures_division_dendrogram(atlases, parameters):
     """
     proc = "figures_division_dendrogram"
 
-    filename = 'figures_division_dendrogram'
+    filename = "figures_division_dendrogram"
     file_suffix = None
-    if parameters.figurefile_suffix is not None and isinstance(parameters.figurefile_suffix, str) and \
-            len(parameters.figurefile_suffix) > 0:
-        file_suffix = '_' + parameters.figurefile_suffix
+    if (
+        parameters.figurefile_suffix is not None
+        and isinstance(parameters.figurefile_suffix, str)
+        and len(parameters.figurefile_suffix) > 0
+    ):
+        file_suffix = "_" + parameters.figurefile_suffix
     if file_suffix is not None:
         filename += file_suffix
-    filename += '.py'
+    filename += ".py"
 
     if parameters.outputDir is not None and isinstance(parameters.outputDir, str):
         if not os.path.isdir(parameters.outputDir):
             if not os.path.exists(parameters.outputDir):
                 os.makedirs(parameters.outputDir)
             else:
-                monitoring.to_log_and_console(proc + ": '" + str(parameters.outputDir) + "' is not a directory ?!")
+                monitoring.to_log_and_console(
+                    proc + ": '" + str(parameters.outputDir) + "' is not a directory ?!"
+                )
         if os.path.isdir(parameters.outputDir):
             filename = os.path.join(parameters.outputDir, filename)
 
@@ -1904,7 +2363,7 @@ def _figures_division_dendrogram(atlases, parameters):
     innersurfaces = []
 
     for n in divisions:
-        stage = n.split('.')[0][1:]
+        stage = n.split(".")[0][1:]
         if len(divisions[n]) <= 2:
             continue
 
@@ -1925,8 +2384,12 @@ def _figures_division_dendrogram(atlases, parameters):
         d = uname.get_daughter_names(n)
         if parameters.exclude_inner_surfaces:
             innersurfaces = [d[0], d[1]]
-        conddist, z, labels = division_scipy_linkage(config, cluster_distance=cluster_distance,
-                                                    change_contact_surfaces=ccs, innersurfaces=innersurfaces)
+        conddist, z, labels = division_scipy_linkage(
+            config,
+            cluster_distance=cluster_distance,
+            change_contact_surfaces=ccs,
+            innersurfaces=innersurfaces,
+        )
 
         merge_values[stage] = merge_values.get(stage, []) + list(z[:, 2])
         # lastmerge_value is the distance between the two last clusters
@@ -1934,33 +2397,41 @@ def _figures_division_dendrogram(atlases, parameters):
         # balance in [0, 1] reflects the balance between the two last cluster. 1.0 means the two last clusters
         # have the same number of original observations
         balance = _linkage_balance(z, len(labels))
-        dendro_values[stage] = dendro_values.get(stage, []) + [(lastmerge_value, balance, len(labels))]
+        dendro_values[stage] = dendro_values.get(stage, []) + [
+            (lastmerge_value, balance, len(labels))
+        ]
 
         #
         # distance array for couples of atlases/references plus the switched ones
         # daughter neighborhoods may be in a common reference, if so there is no need to change
         # the contact surfaces
         #
-        swconddist, swz, swlabels = division_scipy_linkage(swconfig, cluster_distance=cluster_distance,
-                                                          change_contact_surfaces=ccs, innersurfaces=innersurfaces)
+        swconddist, swz, swlabels = division_scipy_linkage(
+            swconfig,
+            cluster_distance=cluster_distance,
+            change_contact_surfaces=ccs,
+            innersurfaces=innersurfaces,
+        )
 
         swmerge_values[stage] = swmerge_values.get(stage, []) + list(swz[:, 2])
         swlastmerge_value = swz[:, 2][-1]
-        swlastmerge_values[stage] = swlastmerge_values.get(stage, []) + [swlastmerge_value]
+        swlastmerge_values[stage] = swlastmerge_values.get(stage, []) + [
+            swlastmerge_value
+        ]
 
         #
         # identifier for mother cell
         #
-        cellname = n.split('.')[0] + "_" + n.split('.')[1][0:4]
-        if n.split('.')[1][4] == '_':
-            cellname += 'U'
-        elif n.split('.')[1][4] == '*':
-            cellname += 'S'
+        cellname = n.split(".")[0] + "_" + n.split(".")[1][0:4]
+        if n.split(".")[1][4] == "_":
+            cellname += "U"
+        elif n.split(".")[1][4] == "*":
+            cellname += "S"
         else:
-            cellname += 'S'
-        fileidentifier = 'HC{:03d}_'.format(int(lastmerge_value)) + cellname
-        cellidentifier = cellname + '_HC{:03d}'.format(int(lastmerge_value))
-        cellidentifier += '_BAL{:03d}'.format(round(100.0 * balance))
+            cellname += "S"
+        fileidentifier = "HC{:03d}_".format(int(lastmerge_value)) + cellname
+        cellidentifier = cellname + "_HC{:03d}".format(int(lastmerge_value))
+        cellidentifier += "_BAL{:03d}".format(round(100.0 * balance))
         cellidentifierlist.append((cellidentifier, n))
 
         f.write("\n")
@@ -1988,11 +2459,15 @@ def _figures_division_dendrogram(atlases, parameters):
         f.write("    " + "plt.xlim([0, 100])\n")
 
         f.write("    if savefig:\n")
-        f.write("        plt.savefig('" + str(fileidentifier) + "_' + cluster_distance +'")
+        f.write(
+            "        plt.savefig('" + str(fileidentifier) + "_' + cluster_distance +'"
+        )
         if file_suffix is not None:
             f.write(file_suffix)
         f.write("'" + " + '.png')\n")
-        f.write("        plt.savefig('" + str(cellidentifier) + "_' + cluster_distance +'")
+        f.write(
+            "        plt.savefig('" + str(cellidentifier) + "_' + cluster_distance +'"
+        )
         if file_suffix is not None:
             f.write(file_suffix)
         f.write("'" + " + '.png')\n")
@@ -2003,18 +2478,24 @@ def _figures_division_dendrogram(atlases, parameters):
 
         f.write("    " + "Z = sch.linkage(cswdist, method=cluster_distance)\n")
         f.write("    " + "fig = plt.figure(figsize=(18, 8))\n")
-        f.write("    " + "dn = sch.dendrogram(Z, labels=swlabels, orientation='right')\n")
+        f.write(
+            "    " + "dn = sch.dendrogram(Z, labels=swlabels, orientation='right')\n"
+        )
         f.write("    " + "plt.title(title, fontsize=24)\n")
         f.write("    " + "plt.xticks(fontsize=16)\n")
         f.write("    " + "plt.yticks(fontsize=12)\n")
         f.write("    " + "plt.xlim([0, 100])\n")
 
         f.write("    if savefig:\n")
-        f.write("        plt.savefig('" + str(fileidentifier) + "_' + cluster_distance +'")
+        f.write(
+            "        plt.savefig('" + str(fileidentifier) + "_' + cluster_distance +'"
+        )
         if file_suffix is not None:
             f.write(file_suffix)
         f.write("'" + " + '_SW.png')\n")
-        f.write("        plt.savefig('" + str(cellidentifier) + "_' + cluster_distance +'")
+        f.write(
+            "        plt.savefig('" + str(cellidentifier) + "_' + cluster_distance +'"
+        )
         if file_suffix is not None:
             f.write(file_suffix)
         f.write("'" + " + '_SW.png')\n")
@@ -2036,12 +2517,14 @@ def _figures_division_dendrogram(atlases, parameters):
 
     f.write("celllist = []\n")
     f.write("if len(sys.argv) > 1 and sys.argv[1][:2] == '-h':\n")
-    f.write("    print('Usage: ' + str(sys.argv[0]) + ' list of cell names (between quotes)')\n")
+    f.write(
+        "    print('Usage: ' + str(sys.argv[0]) + ' list of cell names (between quotes)')\n"
+    )
     f.write("if len(sys.argv) > 1:\n")
     f.write("    for i in range(1, len(sys.argv)):\n")
     f.write("        celllist += [sys.argv[i]]\n")
     f.write("\n")
-    f.write("# print(\"celllist=\"+str(celllist))\n")
+    f.write('# print("celllist="+str(celllist))\n')
     f.write("draw_all(celllist=celllist, savefig=savefig)\n")
     f.write("\n")
 
@@ -2082,12 +2565,16 @@ def _figures_division_dendrogram(atlases, parameters):
     f.write("\n")
     f.write("fig, (ax1, ax2) = plt.subplots(ncols=2, figsize=(16, 6.5))\n")
 
-    f.write("ax1.hist(merge_values, bins=list(range(0, 101, 2)), histtype='bar', stacked=True, label=merge_labels)\n")
+    f.write(
+        "ax1.hist(merge_values, bins=list(range(0, 101, 2)), histtype='bar', stacked=True, label=merge_labels)\n"
+    )
     f.write("ax1.set_title('dendrogram merge values', fontsize=12)\n")
     f.write("ax1.legend(prop={'size': 10})\n")
     f.write("ax1.tick_params(labelsize=10)\n")
 
-    f.write("ax2.hist(lastmerge_values, bins=list(range(0, 101, 2)), histtype='bar', stacked=True, label=merge_labels)\n")
+    f.write(
+        "ax2.hist(lastmerge_values, bins=list(range(0, 101, 2)), histtype='bar', stacked=True, label=merge_labels)\n"
+    )
     f.write("ax2.set_title('dendrogram last merge values', fontsize=12)\n")
     f.write("ax2.legend(prop={'size': 10})\n")
     f.write("ax2.tick_params(labelsize=10)\n")
@@ -2105,7 +2592,9 @@ def _figures_division_dendrogram(atlases, parameters):
     f.write("\n")
     f.write("fig, ax = plt.subplots(figsize=(8, 8))\n")
 
-    f.write("ax.hist(balance_values, bins=50, range=(0, 1), histtype='bar', stacked=True, label=merge_labels)\n")
+    f.write(
+        "ax.hist(balance_values, bins=50, range=(0, 1), histtype='bar', stacked=True, label=merge_labels)\n"
+    )
     f.write("ax.set_title('dendrogram balance values', fontsize=12)\n")
     f.write("ax.legend(prop={'size': 10})\n")
     f.write("ax.tick_params(labelsize=10)\n")
@@ -2123,7 +2612,9 @@ def _figures_division_dendrogram(atlases, parameters):
     f.write("\n")
     f.write("x = [lv for lvg in lastmerge_values for lv in lvg]\n")
     f.write("y = [bv for bvg in balance_values for bv in bvg]\n")
-    f.write("c_values = [[int(generations[i])] * len(lvg) for i, lvg in enumerate(lastmerge_values)]\n")
+    f.write(
+        "c_values = [[int(generations[i])] * len(lvg) for i, lvg in enumerate(lastmerge_values)]\n"
+    )
     f.write("c = [cv for cvg in c_values for cv in cvg]\n")
     f.write("s_values = [[v[2] for v in dv] for dv in dendro_values]\n")
     f.write("s = [10 * sv for svg in s_values for sv in svg]\n")
@@ -2133,7 +2624,9 @@ def _figures_division_dendrogram(atlases, parameters):
     f.write("scatter = ax.scatter(x, y, c=c, s=s, alpha=0.5)\n")
     f.write("ax.set_xlabel('Last merge value (cluster distance * 100)')\n")
     f.write("ax.set_ylabel('Linkage balance')\n")
-    f.write("legend1 = ax.legend(*scatter.legend_elements(alpha=0.8), loc='upper left', title='Generations')\n")
+    f.write(
+        "legend1 = ax.legend(*scatter.legend_elements(alpha=0.8), loc='upper left', title='Generations')\n"
+    )
     f.write("ax.add_artist(legend1)\n")
     f.write("handles, labels = scatter.legend_elements(prop='sizes', alpha=0.6)\n")
     f.write("labels = [l.replace('0}', '}') for l in labels]\n")
@@ -2169,21 +2662,26 @@ def _figures_signature_dendrogram(atlases, parameters):
     """
     proc = "figures_signature_dendrogram"
 
-    filename = 'figures_signature_dendrogram'
+    filename = "figures_signature_dendrogram"
     file_suffix = None
-    if parameters.figurefile_suffix is not None and isinstance(parameters.figurefile_suffix, str) and \
-            len(parameters.figurefile_suffix) > 0:
-        file_suffix = '_' + parameters.figurefile_suffix
+    if (
+        parameters.figurefile_suffix is not None
+        and isinstance(parameters.figurefile_suffix, str)
+        and len(parameters.figurefile_suffix) > 0
+    ):
+        file_suffix = "_" + parameters.figurefile_suffix
     if file_suffix is not None:
         filename += file_suffix
-    filename += '.py'
+    filename += ".py"
 
     if parameters.outputDir is not None and isinstance(parameters.outputDir, str):
         if not os.path.isdir(parameters.outputDir):
             if not os.path.exists(parameters.outputDir):
                 os.makedirs(parameters.outputDir)
             else:
-                monitoring.to_log_and_console(proc + ": '" + str(parameters.outputDir) + "' is not a directory ?!")
+                monitoring.to_log_and_console(
+                    proc + ": '" + str(parameters.outputDir) + "' is not a directory ?!"
+                )
         if os.path.isdir(parameters.outputDir):
             filename = os.path.join(parameters.outputDir, filename)
 
@@ -2216,7 +2714,7 @@ def _figures_signature_dendrogram(atlases, parameters):
     innersurfaces = []
 
     for n in divisions:
-        stage = n.split('.')[0][1:]
+        stage = n.split(".")[0][1:]
         if len(divisions[n]) <= 2:
             continue
 
@@ -2233,9 +2731,13 @@ def _figures_signature_dendrogram(atlases, parameters):
         d = uname.get_daughter_names(n)
         if parameters.exclude_inner_surfaces:
             innersurfaces = [d[0], d[1]]
-        conddist, z, labels = division_scipy_linkage(config, cluster_distance=cluster_distance,
-                                                     change_contact_surfaces=ccs, innersurfaces=innersurfaces,
-                                                     distance='signature')
+        conddist, z, labels = division_scipy_linkage(
+            config,
+            cluster_distance=cluster_distance,
+            change_contact_surfaces=ccs,
+            innersurfaces=innersurfaces,
+            distance="signature",
+        )
 
         merge_values[stage] = merge_values.get(stage, []) + list(z[:, 2])
         # lastmerge_value is the distance between the two last clusters
@@ -2243,21 +2745,23 @@ def _figures_signature_dendrogram(atlases, parameters):
         # balance in [0, 1] reflects the balance between the two last cluster. 1.0 means the two last clusters
         # have the same number of original observations
         balance = _linkage_balance(z, len(labels))
-        dendro_values[stage] = dendro_values.get(stage, []) + [(lastmerge_value, balance, len(labels))]
+        dendro_values[stage] = dendro_values.get(stage, []) + [
+            (lastmerge_value, balance, len(labels))
+        ]
 
         #
         # identifier for mother cell
         #
-        cellname = n.split('.')[0] + "_" + n.split('.')[1][0:4]
-        if n.split('.')[1][4] == '_':
-            cellname += 'U'
-        elif n.split('.')[1][4] == '*':
-            cellname += 'S'
+        cellname = n.split(".")[0] + "_" + n.split(".")[1][0:4]
+        if n.split(".")[1][4] == "_":
+            cellname += "U"
+        elif n.split(".")[1][4] == "*":
+            cellname += "S"
         else:
-            cellname += 'S'
-        fileidentifier = 'HC{:03d}_'.format(int(lastmerge_value)) + cellname
-        cellidentifier = cellname + '_HC{:03d}'.format(int(lastmerge_value))
-        cellidentifier += '_BAL{:03d}'.format(round(100.0 * balance))
+            cellname += "S"
+        fileidentifier = "HC{:03d}_".format(int(lastmerge_value)) + cellname
+        cellidentifier = cellname + "_HC{:03d}".format(int(lastmerge_value))
+        cellidentifier += "_BAL{:03d}".format(round(100.0 * balance))
         cellidentifierlist.append((cellidentifier, n))
 
         f.write("\n")
@@ -2282,11 +2786,19 @@ def _figures_signature_dendrogram(atlases, parameters):
         f.write("    " + "plt.xlim([0, 100])\n")
 
         f.write("    if savefig:\n")
-        f.write("        plt.savefig('SIG_" + str(fileidentifier) + "_' + cluster_distance +'")
+        f.write(
+            "        plt.savefig('SIG_"
+            + str(fileidentifier)
+            + "_' + cluster_distance +'"
+        )
         if file_suffix is not None:
             f.write(file_suffix)
         f.write("'" + " + '.png')\n")
-        f.write("        plt.savefig('SIG_" + str(cellidentifier) + "_' + cluster_distance +'")
+        f.write(
+            "        plt.savefig('SIG_"
+            + str(cellidentifier)
+            + "_' + cluster_distance +'"
+        )
         if file_suffix is not None:
             f.write(file_suffix)
         f.write("'" + " + '.png')\n")
@@ -2307,12 +2819,14 @@ def _figures_signature_dendrogram(atlases, parameters):
 
     f.write("celllist = []\n")
     f.write("if len(sys.argv) > 1 and sys.argv[1][:2] == '-h':\n")
-    f.write("    print('Usage: ' + str(sys.argv[0]) + ' list of cell names (between quotes)')\n")
+    f.write(
+        "    print('Usage: ' + str(sys.argv[0]) + ' list of cell names (between quotes)')\n"
+    )
     f.write("if len(sys.argv) > 1:\n")
     f.write("    for i in range(1, len(sys.argv)):\n")
     f.write("        celllist += [sys.argv[i]]\n")
     f.write("\n")
-    f.write("# print(\"celllist=\"+str(celllist))\n")
+    f.write('# print("celllist="+str(celllist))\n')
     f.write("draw_all(celllist=celllist, savefig=savefig)\n")
     f.write("\n")
 
@@ -2353,12 +2867,16 @@ def _figures_signature_dendrogram(atlases, parameters):
     f.write("\n")
     f.write("fig, (ax1, ax2) = plt.subplots(ncols=2, figsize=(16, 6.5))\n")
 
-    f.write("ax1.hist(merge_values, bins=list(range(0, 101, 2)), histtype='bar', stacked=True, label=merge_labels)\n")
+    f.write(
+        "ax1.hist(merge_values, bins=list(range(0, 101, 2)), histtype='bar', stacked=True, label=merge_labels)\n"
+    )
     f.write("ax1.set_title('dendrogram merge values', fontsize=12)\n")
     f.write("ax1.legend(prop={'size': 10})\n")
     f.write("ax1.tick_params(labelsize=10)\n")
 
-    f.write("ax2.hist(lastmerge_values, bins=list(range(0, 101, 2)), histtype='bar', stacked=True, label=merge_labels)\n")
+    f.write(
+        "ax2.hist(lastmerge_values, bins=list(range(0, 101, 2)), histtype='bar', stacked=True, label=merge_labels)\n"
+    )
     f.write("ax2.set_title('dendrogram last merge values', fontsize=12)\n")
     f.write("ax2.legend(prop={'size': 10})\n")
     f.write("ax2.tick_params(labelsize=10)\n")
@@ -2376,7 +2894,9 @@ def _figures_signature_dendrogram(atlases, parameters):
     f.write("\n")
     f.write("fig, ax = plt.subplots(figsize=(8, 8))\n")
 
-    f.write("ax.hist(balance_values, bins=50, range=(0, 1), histtype='bar', stacked=True, label=merge_labels)\n")
+    f.write(
+        "ax.hist(balance_values, bins=50, range=(0, 1), histtype='bar', stacked=True, label=merge_labels)\n"
+    )
     f.write("ax.set_title('dendrogram balance values', fontsize=12)\n")
     f.write("ax.legend(prop={'size': 10})\n")
     f.write("ax.tick_params(labelsize=10)\n")
@@ -2394,7 +2914,9 @@ def _figures_signature_dendrogram(atlases, parameters):
     f.write("\n")
     f.write("x = [lv for lvg in lastmerge_values for lv in lvg]\n")
     f.write("y = [bv for bvg in balance_values for bv in bvg]\n")
-    f.write("c_values = [[int(generations[i])] * len(lvg) for i, lvg in enumerate(lastmerge_values)]\n")
+    f.write(
+        "c_values = [[int(generations[i])] * len(lvg) for i, lvg in enumerate(lastmerge_values)]\n"
+    )
     f.write("c = [cv for cvg in c_values for cv in cvg]\n")
     f.write("s_values = [[v[2] for v in dv] for dv in dendro_values]\n")
     f.write("s = [10 * sv for svg in s_values for sv in svg]\n")
@@ -2404,7 +2926,9 @@ def _figures_signature_dendrogram(atlases, parameters):
     f.write("scatter = ax.scatter(x, y, c=c, s=s, alpha=0.5)\n")
     f.write("ax.set_xlabel('Last merge value (cluster distance * 100)')\n")
     f.write("ax.set_ylabel('Linkage balance')\n")
-    f.write("legend1 = ax.legend(*scatter.legend_elements(alpha=0.8), loc='upper left', title='Generations')\n")
+    f.write(
+        "legend1 = ax.legend(*scatter.legend_elements(alpha=0.8), loc='upper left', title='Generations')\n"
+    )
     f.write("ax.add_artist(legend1)\n")
     f.write("handles, labels = scatter.legend_elements(prop='sizes', alpha=0.6)\n")
     f.write("labels = [l.replace('0}', '}') for l in labels]\n")
@@ -2412,7 +2936,9 @@ def _figures_signature_dendrogram(atlases, parameters):
 
     f.write("\n")
     f.write("if savefig:\n")
-    f.write("    plt.savefig('SIG_dendrogram_balance_merge_scatter_' + cluster_distance +'")
+    f.write(
+        "    plt.savefig('SIG_dendrogram_balance_merge_scatter_' + cluster_distance +'"
+    )
     if file_suffix is not None:
         f.write(file_suffix)
     f.write("'" + " + '.png')\n")

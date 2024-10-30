@@ -1,4 +1,3 @@
-
 import os
 import sys
 import importlib
@@ -55,12 +54,12 @@ def str_variable(name, value):
             if type(value[0]) == str:
                 for i in range(len(value)):
                     s += "'" + value[i] + "'"
-                    if i+1 < len(value):
+                    if i + 1 < len(value):
                         s += ", "
             else:
                 s += "unhandled type"
         else:
-            s += 'empty list'
+            s += "empty list"
         s += "]"
     elif type(value) == tuple:
         s += str(value)
@@ -95,6 +94,7 @@ def _read_parameter(parameters, parameter_description, default_value):
 #
 ##################################################
 
+
 def _flat_list(input_list):
     output_list = []
     # iterating over the data
@@ -115,7 +115,7 @@ class PrefixedParameter(object):
             self._full_prefix = ""
         elif type(prefix) is str:
             self._prefix = prefix
-            self._full_prefix = ''.join(self._prefix)
+            self._full_prefix = "".join(self._prefix)
         elif type(prefix) is list:
             output_list = _flat_list(prefix)
             self._prefix = []
@@ -125,12 +125,18 @@ class PrefixedParameter(object):
                 elif type(p) is list:
                     self._prefix.extend(p)
                 else:
-                    monitoring.to_log_and_console("PrefixedParameter.init: unexpected type for 'p':" + str(type(p)))
+                    monitoring.to_log_and_console(
+                        "PrefixedParameter.init: unexpected type for 'p':"
+                        + str(type(p))
+                    )
                     monitoring.to_log_and_console("Exiting")
                     sys.exit(0)
-            self._full_prefix = ''.join(self._prefix)
+            self._full_prefix = "".join(self._prefix)
         else:
-            monitoring.to_log_and_console("PrefixedParameter.init: unexpected type for 'prefix':" + str(type(prefix)))
+            monitoring.to_log_and_console(
+                "PrefixedParameter.init: unexpected type for 'prefix':"
+                + str(type(prefix))
+            )
             monitoring.to_log_and_console("Exiting")
             sys.exit(0)
         self._set_prefixes()
@@ -145,9 +151,9 @@ class PrefixedParameter(object):
         if type(prefix) is list:
             prefixes = [""]
             prefixes.extend(prefix)
-            for length in range(2, len(prefix)+1):
+            for length in range(2, len(prefix) + 1):
                 for c in itertools.combinations(prefix, length):
-                    prefixes.append(''.join(c))
+                    prefixes.append("".join(c))
             self._prefixes = prefixes
         return
 
@@ -177,14 +183,14 @@ class PrefixedParameter(object):
         return returned_attr
 
     def _fulldesc(self, desc):
-        if self._prefix is None or self._prefix == '':
-            return '- ' + desc + ' = '
+        if self._prefix is None or self._prefix == "":
+            return "- " + desc + " = "
         elif type(self._prefix) is str:
-            return '- [' + str(self._prefix) + ']' + desc + ' = '
+            return "- [" + str(self._prefix) + "]" + desc + " = "
         elif type(self._prefix) is list:
-            return '- ' + str(self._prefix) + desc + ' = '
+            return "- " + str(self._prefix) + desc + " = "
         else:
-            return '- ' + desc + ' = '
+            return "- " + desc + " = "
         # if self._full_prefix is not None:
         #     name = self._full_prefix + desc
         # else:
@@ -192,48 +198,51 @@ class PrefixedParameter(object):
         # return '- ' + name + ' = '
 
     def confprint(self, name, value, spaces=0):
-        print(spaces * ' ' + self._fulldesc(name) + str(value))
+        print(spaces * " " + self._fulldesc(name) + str(value))
 
     def print_configuration(self, spaces=0):
         if type(self._prefixes) is list and len(self._prefixes) > 1:
-            print(spaces * ' ' + "- _prefix = " + str(self._prefix))
-            print(spaces * ' ' + "- _full_prefix = " + str(self._full_prefix))
-            print(spaces * ' ' + "- _prefixes = " + str(self._prefixes))
+            print(spaces * " " + "- _prefix = " + str(self._prefix))
+            print(spaces * " " + "- _full_prefix = " + str(self._full_prefix))
+            print(spaces * " " + "- _prefixes = " + str(self._prefixes))
 
     def confwrite(self, logfile, name, value, spaces=0):
-        logfile.write(spaces * ' ' + self._fulldesc(name) + str(value) + '\n')
+        logfile.write(spaces * " " + self._fulldesc(name) + str(value) + "\n")
 
     def write_configuration_in_file(self, logfile, spaces=0):
         if type(self._prefixes) is list and len(self._prefixes) > 1:
-            logfile.write(spaces * ' ' + "- _prefix = " + str(self._prefix) + '\n')
-            logfile.write(spaces * ' ' + "- _full_prefix = " + str(self._full_prefix) + '\n')
-            logfile.write(spaces * ' ' + "- _prefixes = " + str(self._prefixes) + '\n')
+            logfile.write(spaces * " " + "- _prefix = " + str(self._prefix) + "\n")
+            logfile.write(
+                spaces * " " + "- _full_prefix = " + str(self._full_prefix) + "\n"
+            )
+            logfile.write(spaces * " " + "- _prefixes = " + str(self._prefixes) + "\n")
 
     def varprint(self, name, value, doc=None):
         print(str_variable(self._full_prefix + name, value))
         if doc is not None and isinstance(doc, str) and len(doc):
             for line in doc.splitlines():
-                print('# ' + line)
+                print("# " + line)
 
     def print_parameters(self):
         if type(self._prefixes) is list and len(self._prefixes) > 1:
-            print('# _prefix      = ' + str(self._prefix))
-            print('# _full_prefix = ' + str(self._full_prefix))
-            print('# _prefixes    = ' + str(self._prefixes))
-            print('#')
+            print("# _prefix      = " + str(self._prefix))
+            print("# _full_prefix = " + str(self._full_prefix))
+            print("# _prefixes    = " + str(self._prefixes))
+            print("#")
 
     def varwrite(self, logfile, name, value, doc=None):
-        logfile.write(str_variable(self._full_prefix + name, value) + '\n')
+        logfile.write(str_variable(self._full_prefix + name, value) + "\n")
         if doc is not None and isinstance(doc, str) and len(doc):
             for line in doc.splitlines():
-                logfile.write('# ' + line + '\n')
+                logfile.write("# " + line + "\n")
 
     def write_parameters_in_file(self, logfile):
         if type(self._prefixes) is list and len(self._prefixes) > 1:
-            logfile.write('# _prefix      = ' + str(self._prefix) + '\n')
-            logfile.write('# _full_prefix = ' + str(self._full_prefix) + '\n')
-            logfile.write('# _prefixes    = ' + str(self._prefixes) + '\n')
-            logfile.write('#' + '\n')
+            logfile.write("# _prefix      = " + str(self._prefix) + "\n")
+            logfile.write("# _full_prefix = " + str(self._full_prefix) + "\n")
+            logfile.write("# _prefixes    = " + str(self._prefixes) + "\n")
+            logfile.write("#" + "\n")
+
 
 ##################################################
 #
@@ -243,7 +252,6 @@ class PrefixedParameter(object):
 
 
 class Monitoring(object):
-
     ############################################################
     #
     # initialisation
@@ -265,32 +273,41 @@ class Monitoring(object):
 
     def print_configuration(self):
         print("")
-        print('Monitoring configuration')
-        print('- verbose is ' + str(self.verbose))
-        print('- debug is ' + str(self.debug))
-        print('- log_filename is ' + str(self.log_filename))
-        print('- keepTemporaryFiles is ' + str(self.keepTemporaryFiles))
-        print('- forceResultsToBeBuilt is ' + str(self.forceResultsToBeBuilt))
+        print("Monitoring configuration")
+        print("- verbose is " + str(self.verbose))
+        print("- debug is " + str(self.debug))
+        print("- log_filename is " + str(self.log_filename))
+        print("- keepTemporaryFiles is " + str(self.keepTemporaryFiles))
+        print("- forceResultsToBeBuilt is " + str(self.forceResultsToBeBuilt))
         print("")
 
     def write_configuration(self):
         if self.log_filename is not None:
-            with open(self.log_filename, 'a') as logfile:
+            with open(self.log_filename, "a") as logfile:
                 logfile.write("\n")
-                logfile.write('Monitoring status\n')
-                logfile.write('- verbose is ' + str(self.verbose)+'\n')
-                logfile.write('- debug is ' + str(self.debug)+'\n')
-                logfile.write('- log_filename is ' + str(self.log_filename)+'\n')
-                logfile.write('- keepTemporaryFiles is ' + str(self.keepTemporaryFiles)+'\n')
-                logfile.write('- forceResultsToBeBuilt is ' + str(self.forceResultsToBeBuilt)+'\n')
+                logfile.write("Monitoring status\n")
+                logfile.write("- verbose is " + str(self.verbose) + "\n")
+                logfile.write("- debug is " + str(self.debug) + "\n")
+                logfile.write("- log_filename is " + str(self.log_filename) + "\n")
+                logfile.write(
+                    "- keepTemporaryFiles is " + str(self.keepTemporaryFiles) + "\n"
+                )
+                logfile.write(
+                    "- forceResultsToBeBuilt is "
+                    + str(self.forceResultsToBeBuilt)
+                    + "\n"
+                )
                 logfile.write("\n")
         return
 
     def update_execution_time(self, start_time=None, end_time=None):
         if self.log_filename is not None:
-            with open(self.log_filename, 'a') as logfile:
-                logfile.write('# Total execution time = ' + str(time.mktime(end_time) - time.mktime(start_time))
-                              + ' sec\n')
+            with open(self.log_filename, "a") as logfile:
+                logfile.write(
+                    "# Total execution time = "
+                    + str(time.mktime(end_time) - time.mktime(start_time))
+                    + " sec\n"
+                )
                 logfile.write("\n\n")
         return
 
@@ -312,7 +329,9 @@ class Monitoring(object):
     #
     ############################################################
 
-    def set_log_filename(self, experiment=None, cli_name=None, timestamp=None, log_filename=None):
+    def set_log_filename(
+        self, experiment=None, cli_name=None, timestamp=None, log_filename=None
+    ):
         """
         set the full logfile name. The log directory name is built
         :param experiment:
@@ -327,7 +346,12 @@ class Monitoring(object):
 
         if experiment is not None:
             if not isinstance(experiment, Experiment):
-                print("Monitoring.set_log_filename" + ": weird type ('" + str(type(experiment)) + "') for 'experiment'.")
+                print(
+                    "Monitoring.set_log_filename"
+                    + ": weird type ('"
+                    + str(type(experiment))
+                    + "') for 'experiment'."
+                )
                 print("\t Exiting.")
                 sys.exit(1)
             log_dirname = experiment.get_log_dirname()
@@ -337,12 +361,12 @@ class Monitoring(object):
             log_dirname = os.getcwd()
 
         if cli_name is None:
-            local_executable = 'unknown'
+            local_executable = "unknown"
         else:
             local_executable = os.path.basename(cli_name)
-            if local_executable[-3:] == '.py':
+            if local_executable[-3:] == ".py":
                 local_executable = local_executable[:-3]
-        log_filename = local_executable + '-' + _timestamp_to_str(timestamp) + '.log'
+        log_filename = local_executable + "-" + _timestamp_to_str(timestamp) + ".log"
 
         self.log_filename = os.path.join(log_dirname, log_filename)
         return
@@ -373,8 +397,8 @@ class Monitoring(object):
 
     def to_log(self, text):
         if self.log_filename is not None:
-            with open(self.log_filename, 'a') as logfile:
-                logfile.write(text+'\n')
+            with open(self.log_filename, "a") as logfile:
+                logfile.write(text + "\n")
 
     def to_log_and_console(self, text, verboseness=0):
         if self.verbose >= verboseness or self.debug > 0:
@@ -395,6 +419,7 @@ monitoring = Monitoring()
 #
 # utilities
 #
+
 
 def _get_directory(directories, i=0):
     """
@@ -432,6 +457,7 @@ def _get_directory(directories, i=0):
     monitoring.to_log_and_console("Warning: " + proc + ", unhandled _directory type")
     return None
 
+
 #
 #
 #
@@ -445,8 +471,15 @@ def _print_directory_list(directories):
             print("       Empty list")
         else:
             for i in range(len(directories)):
-                print("       #" + str(i) + ": '" + str(_get_directory(directories, i)) + "'")
+                print(
+                    "       #"
+                    + str(i)
+                    + ": '"
+                    + str(_get_directory(directories, i))
+                    + "'"
+                )
     return
+
 
 #
 #
@@ -461,8 +494,15 @@ def _write_directory_list_in_file(directories, logfile):
             logfile.write("       Empty list\n")
         else:
             for i in range(len(directories)):
-                logfile.write("      #" + str(i) + ": '" + str(_get_directory(directories, i)) + "'\n")
+                logfile.write(
+                    "      #"
+                    + str(i)
+                    + ": '"
+                    + str(_get_directory(directories, i))
+                    + "'\n"
+                )
     return
+
 
 #
 #
@@ -503,12 +543,14 @@ def _rmtree_directory_list(directories, min_index=-1):
 
 def _get_history_filename(cli_name):
     if cli_name is None:
-        local_cli_name = 'unknown'
+        local_cli_name = "unknown"
     else:
         local_cli_name = os.path.basename(cli_name)
-        if local_cli_name[-3:] == '.py':
+        if local_cli_name[-3:] == ".py":
             local_cli_name = local_cli_name[:-3]
-    return local_cli_name + '-history.log'
+    return local_cli_name + "-history.log"
+
+
 #
 #
 #
@@ -520,8 +562,8 @@ def _get_history_filename(cli_name):
 #
 ##################################################
 
-class RawdataChannel(PrefixedParameter):
 
+class RawdataChannel(PrefixedParameter):
     ############################################################
     #
     # initialisation
@@ -537,7 +579,9 @@ class RawdataChannel(PrefixedParameter):
         doc += "##############################\n"
         doc += "It assumed that there are 4 acquisitions images, namely the left and\n"
         doc += "right acquisitions of the first stack, and the left and right acquisitions\n"
-        doc += "of the second stack. They are respectively stored in the four following\n"
+        doc += (
+            "of the second stack. They are respectively stored in the four following\n"
+        )
         doc += "directories:\n"
         doc += "- <PATH_EMBRYO>/<DIR_RAWDATA>/<DIR_LEFTCAM_STACKZERO>\n"
         doc += "- <PATH_EMBRYO>/<DIR_RAWDATA>/<DIR_RIGHTCAM_STACKZERO>\n"
@@ -549,7 +593,9 @@ class RawdataChannel(PrefixedParameter):
         doc += "FUSE/FUSE_<EXP_FUSE>/TEMP_<XXX>/ANGLE_[0,1,2,3]\n"
         doc += "\n"
         doc += "Multi-channel raw data\n"
-        doc += "Paths to the raw data (of the other channels) have also to be specified\n"
+        doc += (
+            "Paths to the raw data (of the other channels) have also to be specified\n"
+        )
         doc += "with the variables (X = 2 or 3) and the same path construction\n"
         doc += "eg: <PATH_EMBRYO>/<DIR_RAWDATA_CHANNEL_X>/<DIR_LEFTCAM_STACKZERO_CHANNEL_X>\n"
         doc += "If DIR_RAWDATA_CHANNEL_X is not given, it is replaced by DIR_RAWDATA\n"
@@ -557,12 +603,12 @@ class RawdataChannel(PrefixedParameter):
         doc += "is not given, it is also replaced by the main channel variable\n"
         doc += "(DIR_dirCAM_STACKx) or its default value.\n"
         doc += "\n"
-        self.doc['rawdata_overview'] = doc
+        self.doc["rawdata_overview"] = doc
         doc = "\t directory where are located the subdirectories containing the\n"
         doc += "\t acquisition images."
-        self.doc['_main_directory'] = doc
+        self.doc["_main_directory"] = doc
         self._parent_directory = None
-        self._main_directory = 'RAWDATA'
+        self._main_directory = "RAWDATA"
         self._channel_id = c
 
         #
@@ -570,25 +616,25 @@ class RawdataChannel(PrefixedParameter):
         #
         doc = "\t <RAW_DATA> subdirectory where are stored the acquisition of the\n"
         doc += "\t left camera of the first stack (stack #0)\n"
-        self.doc['angle0_sub_directory'] = doc
+        self.doc["angle0_sub_directory"] = doc
         doc = "\t <RAW_DATA> subdirectory where are stored the acquisition of the\n"
         doc += "\t right camera of the first stack (stack #0)\n"
-        self.doc['angle1_sub_directory'] = doc
+        self.doc["angle1_sub_directory"] = doc
         doc = "\t <RAW_DATA> subdirectory where are stored the acquisition of the\n"
         doc += "\t left camera of the second stack (stack #1)\n"
-        self.doc['angle2_sub_directory'] = doc
+        self.doc["angle2_sub_directory"] = doc
         doc = "\t <RAW_DATA> subdirectory where are stored the acquisition of the\n"
         doc += "\t right camera of the second stack (stack #1)\n"
-        self.doc['angle3_sub_directory'] = doc
+        self.doc["angle3_sub_directory"] = doc
         if c == 0:
             # self.angle0_sub_directory = os.path.join('LC', 'Stack0000')
             # self.angle1_sub_directory = os.path.join('RC', 'Stack0000')
             # self.angle2_sub_directory = os.path.join('LC', 'Stack0001')
             # self.angle3_sub_directory = os.path.join('RC', 'Stack0001')
-            self.angle0_sub_directory = 'stack_0_channel_0'
-            self.angle1_sub_directory = 'stack_0_channel_0'
-            self.angle2_sub_directory = 'stack_1_channel_0'
-            self.angle3_sub_directory = 'stack_1_channel_0'
+            self.angle0_sub_directory = "stack_0_channel_0"
+            self.angle1_sub_directory = "stack_0_channel_0"
+            self.angle2_sub_directory = "stack_1_channel_0"
+            self.angle3_sub_directory = "stack_1_channel_0"
         else:
             self.angle0_sub_directory = None
             self.angle1_sub_directory = None
@@ -630,8 +676,8 @@ class RawdataChannel(PrefixedParameter):
         doc += "\t schemes for each channel. \n"
         doc += "\t Setting the variable 'xzsection_extraction' to True allows to see\n"
         doc += "\t  the weights used for the extracted XZ sections.\n"
-        self.doc['fusion_weighting'] = doc
-        self.fusion_weighting = 'guignard-weighting'
+        self.doc["fusion_weighting"] = doc
+        self.fusion_weighting = "guignard-weighting"
 
         #
         #
@@ -646,114 +692,191 @@ class RawdataChannel(PrefixedParameter):
 
     def print_configuration(self, spaces=0):
         if self.is_empty():
-            print('    RawdataChannel ' + str(self._channel_id) + ' is empty')
+            print("    RawdataChannel " + str(self._channel_id) + " is empty")
             return
         else:
-            print('    RawdataChannel ' + str(self._channel_id))
+            print("    RawdataChannel " + str(self._channel_id))
         print("    - _parent_directory = " + str(self._parent_directory))
         print("    - _main_directory = " + str(self._main_directory))
 
-        print('    - angle0_sub_directory = ' + str(self.angle0_sub_directory))
-        print('    - angle1_sub_directory = ' + str(self.angle1_sub_directory))
-        print('    - angle2_sub_directory = ' + str(self.angle2_sub_directory))
-        print('    - angle3_sub_directory = ' + str(self.angle3_sub_directory))
+        print("    - angle0_sub_directory = " + str(self.angle0_sub_directory))
+        print("    - angle1_sub_directory = " + str(self.angle1_sub_directory))
+        print("    - angle2_sub_directory = " + str(self.angle2_sub_directory))
+        print("    - angle3_sub_directory = " + str(self.angle3_sub_directory))
 
-        print('    - _angle0_file_prefix = ' + str(self._angle0_file_prefix))
-        print('    - _angle1_file_prefix = ' + str(self._angle1_file_prefix))
-        print('    - _angle2_file_prefix = ' + str(self._angle2_file_prefix))
-        print('    - _angle3_file_prefix = ' + str(self._angle3_file_prefix))
+        print("    - _angle0_file_prefix = " + str(self._angle0_file_prefix))
+        print("    - _angle1_file_prefix = " + str(self._angle1_file_prefix))
+        print("    - _angle2_file_prefix = " + str(self._angle2_file_prefix))
+        print("    - _angle3_file_prefix = " + str(self._angle3_file_prefix))
 
         for j in range(0, len(self.tmp_directory)):
-            print('    - tmp_directory #' + str(j) + ' = ' + str(self.tmp_directory[j]))
+            print("    - tmp_directory #" + str(j) + " = " + str(self.tmp_directory[j]))
 
-        print('    - fusion_weighting = ' + str(self.fusion_weighting))
-        print('    - _time_digits_for_acquisition = ' + str(self._time_digits_for_acquisition))
+        print("    - fusion_weighting = " + str(self.fusion_weighting))
+        print(
+            "    - _time_digits_for_acquisition = "
+            + str(self._time_digits_for_acquisition)
+        )
         return
 
     def write_configuration_in_file(self, logfile, spaces=0):
-        logfile.write('    RawdataChannel ' + str(self._channel_id))
+        logfile.write("    RawdataChannel " + str(self._channel_id))
         if self.is_empty():
-            logfile.write(' is empty\n')
+            logfile.write(" is empty\n")
             return
         else:
-            logfile.write('\n')
+            logfile.write("\n")
         logfile.write("    - _parent_directory = " + str(self._parent_directory) + "\n")
         logfile.write("    - _main_directory = " + str(self._main_directory) + "\n")
 
-        logfile.write('    - angle0_sub_directory = ' + str(self.angle0_sub_directory)+'\n')
-        logfile.write('    - angle1_sub_directory = ' + str(self.angle1_sub_directory)+'\n')
-        logfile.write('    - angle2_sub_directory = ' + str(self.angle2_sub_directory)+'\n')
-        logfile.write('    - angle3_sub_directory = ' + str(self.angle3_sub_directory)+'\n')
+        logfile.write(
+            "    - angle0_sub_directory = " + str(self.angle0_sub_directory) + "\n"
+        )
+        logfile.write(
+            "    - angle1_sub_directory = " + str(self.angle1_sub_directory) + "\n"
+        )
+        logfile.write(
+            "    - angle2_sub_directory = " + str(self.angle2_sub_directory) + "\n"
+        )
+        logfile.write(
+            "    - angle3_sub_directory = " + str(self.angle3_sub_directory) + "\n"
+        )
 
-        logfile.write('    - _angle0_file_prefix = ' + str(self._angle0_file_prefix) + '\n')
-        logfile.write('    - _angle1_file_prefix = ' + str(self._angle1_file_prefix) + '\n')
-        logfile.write('    - _angle2_file_prefix = ' + str(self._angle2_file_prefix) + '\n')
-        logfile.write('    - _angle3_file_prefix = ' + str(self._angle3_file_prefix) + '\n')
+        logfile.write(
+            "    - _angle0_file_prefix = " + str(self._angle0_file_prefix) + "\n"
+        )
+        logfile.write(
+            "    - _angle1_file_prefix = " + str(self._angle1_file_prefix) + "\n"
+        )
+        logfile.write(
+            "    - _angle2_file_prefix = " + str(self._angle2_file_prefix) + "\n"
+        )
+        logfile.write(
+            "    - _angle3_file_prefix = " + str(self._angle3_file_prefix) + "\n"
+        )
 
         for j in range(0, len(self.tmp_directory)):
-            logfile.write('    - tmp_directory #' + str(j) + ' = ' + str(self.tmp_directory[j]) + '\n')
+            logfile.write(
+                "    - tmp_directory #"
+                + str(j)
+                + " = "
+                + str(self.tmp_directory[j])
+                + "\n"
+            )
 
-        logfile.write('    - fusion_weighting = ' + str(self.fusion_weighting) + '\n')
-        logfile.write('    - _time_digits_for_acquisition = ' + str(self._time_digits_for_acquisition) + '\n')
+        logfile.write("    - fusion_weighting = " + str(self.fusion_weighting) + "\n")
+        logfile.write(
+            "    - _time_digits_for_acquisition = "
+            + str(self._time_digits_for_acquisition)
+            + "\n"
+        )
         return
 
     def print_parameters(self):
-        print('')
-        print('#')
-        print('# RawdataChannel ' + str(self._channel_id))
-        print('#')
-        print('')
+        print("")
+        print("#")
+        print("# RawdataChannel " + str(self._channel_id))
+        print("#")
+        print("")
 
         if self._channel_id == 0:
-            ext = ''
+            ext = ""
         else:
-            ext = '_CHANNEL_' + str(self._channel_id)
+            ext = "_CHANNEL_" + str(self._channel_id)
 
-        for line in self.doc['rawdata_overview'].splitlines():
-            print('# ' + line)
+        for line in self.doc["rawdata_overview"].splitlines():
+            print("# " + line)
 
-        self.varprint('DIR_RAWDATA' + ext, self._main_directory, self.doc['_main_directory'])
-        self.varprint('DIR_LEFTCAM_STACKZERO' + ext, self.angle0_sub_directory, self.doc['angle0_sub_directory'])
-        self.varprint('DIR_RIGHTCAM_STACKZERO' + ext, self.angle1_sub_directory, self.doc['angle1_sub_directory'])
-        self.varprint('DIR_LEFTCAM_STACKONE' + ext, self.angle2_sub_directory, self.doc['angle2_sub_directory'])
-        self.varprint('DIR_RIGHTCAM_STACKONE' + ext, self.angle3_sub_directory, self.doc['angle3_sub_directory'])
+        self.varprint(
+            "DIR_RAWDATA" + ext, self._main_directory, self.doc["_main_directory"]
+        )
+        self.varprint(
+            "DIR_LEFTCAM_STACKZERO" + ext,
+            self.angle0_sub_directory,
+            self.doc["angle0_sub_directory"],
+        )
+        self.varprint(
+            "DIR_RIGHTCAM_STACKZERO" + ext,
+            self.angle1_sub_directory,
+            self.doc["angle1_sub_directory"],
+        )
+        self.varprint(
+            "DIR_LEFTCAM_STACKONE" + ext,
+            self.angle2_sub_directory,
+            self.doc["angle2_sub_directory"],
+        )
+        self.varprint(
+            "DIR_RIGHTCAM_STACKONE" + ext,
+            self.angle3_sub_directory,
+            self.doc["angle3_sub_directory"],
+        )
 
         if self._channel_id == 0:
-            ext = ''
+            ext = ""
         else:
-            ext = '_channel' + str(self._channel_id)
-        self.varprint('fusion_weighting' + ext, self.fusion_weighting, self.doc['fusion_weighting'])
+            ext = "_channel" + str(self._channel_id)
+        self.varprint(
+            "fusion_weighting" + ext,
+            self.fusion_weighting,
+            self.doc["fusion_weighting"],
+        )
         return
 
     def write_parameters_in_file(self, logfile):
-        logfile.write('\n')
-        logfile.write('#' + '\n')
-        logfile.write('# RawdataChannel ' + str(self._channel_id) + '\n')
-        logfile.write('#' + '\n')
+        logfile.write("\n")
+        logfile.write("#" + "\n")
+        logfile.write("# RawdataChannel " + str(self._channel_id) + "\n")
+        logfile.write("#" + "\n")
 
         if self._channel_id == 0:
-            ext = ''
+            ext = ""
         else:
-            ext = '_CHANNEL_' + str(self._channel_id)
+            ext = "_CHANNEL_" + str(self._channel_id)
 
-        for line in self.doc['rawdata_overview'].splitlines():
-            logfile.write('# ' + line + '\n')
+        for line in self.doc["rawdata_overview"].splitlines():
+            logfile.write("# " + line + "\n")
 
-        self.varwrite(logfile, 'DIR_RAWDATA' + ext, self._main_directory, self.doc['_main_directory'])
-        self.varwrite(logfile, 'DIR_LEFTCAM_STACKZERO' + ext, self.angle0_sub_directory,
-                      self.doc['angle0_sub_directory'])
-        self.varwrite(logfile, 'DIR_RIGHTCAM_STACKZERO' + ext, self.angle1_sub_directory,
-                      self.doc['angle1_sub_directory'])
-        self.varwrite(logfile, 'DIR_LEFTCAM_STACKONE' + ext, self.angle2_sub_directory,
-                      self.doc['angle2_sub_directory'])
-        self.varwrite(logfile, 'DIR_RIGHTCAM_STACKONE' + ext, self.angle3_sub_directory,
-                      self.doc['angle3_sub_directory'])
+        self.varwrite(
+            logfile,
+            "DIR_RAWDATA" + ext,
+            self._main_directory,
+            self.doc["_main_directory"],
+        )
+        self.varwrite(
+            logfile,
+            "DIR_LEFTCAM_STACKZERO" + ext,
+            self.angle0_sub_directory,
+            self.doc["angle0_sub_directory"],
+        )
+        self.varwrite(
+            logfile,
+            "DIR_RIGHTCAM_STACKZERO" + ext,
+            self.angle1_sub_directory,
+            self.doc["angle1_sub_directory"],
+        )
+        self.varwrite(
+            logfile,
+            "DIR_LEFTCAM_STACKONE" + ext,
+            self.angle2_sub_directory,
+            self.doc["angle2_sub_directory"],
+        )
+        self.varwrite(
+            logfile,
+            "DIR_RIGHTCAM_STACKONE" + ext,
+            self.angle3_sub_directory,
+            self.doc["angle3_sub_directory"],
+        )
 
         if self._channel_id == 0:
-            ext = ''
+            ext = ""
         else:
-            ext = '_channel' + str(self._channel_id)
-        self.varwrite(logfile, 'fusion_weighting' + ext, self.fusion_weighting, self.doc['fusion_weighting'])
+            ext = "_channel" + str(self._channel_id)
+        self.varwrite(
+            logfile,
+            "fusion_weighting" + ext,
+            self.fusion_weighting,
+            self.doc["fusion_weighting"],
+        )
         return
 
     ############################################################
@@ -764,43 +887,63 @@ class RawdataChannel(PrefixedParameter):
 
     def update_from_parameters(self, parameters):
         channel_id = self._channel_id
-        if hasattr(parameters, 'DIR_RAWDATA'):
-            self._main_directory = getattr(parameters, 'DIR_RAWDATA')
-        elif hasattr(parameters, 'DIR_RAWDATA_CHANNEL_' + str(channel_id)):
-            self._main_directory = getattr(parameters, 'DIR_RAWDATA_CHANNEL_' + str(channel_id))
+        if hasattr(parameters, "DIR_RAWDATA"):
+            self._main_directory = getattr(parameters, "DIR_RAWDATA")
+        elif hasattr(parameters, "DIR_RAWDATA_CHANNEL_" + str(channel_id)):
+            self._main_directory = getattr(
+                parameters, "DIR_RAWDATA_CHANNEL_" + str(channel_id)
+            )
 
-        if hasattr(parameters, 'DIR_LEFTCAM_STACKZERO_CHANNEL_' + str(channel_id)):
-            self.angle0_sub_directory = getattr(parameters, 'DIR_LEFTCAM_STACKZERO_CHANNEL_' + str(channel_id))
-        elif hasattr(parameters, 'DIR_LEFTCAM_STACKZERO_CHANNEL' + str(channel_id)):
-            self.angle0_sub_directory = getattr(parameters, 'DIR_LEFTCAM_STACKZERO_CHANNEL' + str(channel_id))
-        elif hasattr(parameters, 'DIR_LEFTCAM_STACKZERO'):
-            self.angle0_sub_directory = getattr(parameters, 'DIR_LEFTCAM_STACKZERO')
+        if hasattr(parameters, "DIR_LEFTCAM_STACKZERO_CHANNEL_" + str(channel_id)):
+            self.angle0_sub_directory = getattr(
+                parameters, "DIR_LEFTCAM_STACKZERO_CHANNEL_" + str(channel_id)
+            )
+        elif hasattr(parameters, "DIR_LEFTCAM_STACKZERO_CHANNEL" + str(channel_id)):
+            self.angle0_sub_directory = getattr(
+                parameters, "DIR_LEFTCAM_STACKZERO_CHANNEL" + str(channel_id)
+            )
+        elif hasattr(parameters, "DIR_LEFTCAM_STACKZERO"):
+            self.angle0_sub_directory = getattr(parameters, "DIR_LEFTCAM_STACKZERO")
 
-        if hasattr(parameters, 'DIR_RIGHTCAM_STACKZERO_CHANNEL_' + str(channel_id)):
-            self.angle1_sub_directory = getattr(parameters, 'DIR_RIGHTCAM_STACKZERO_CHANNEL_' + str(channel_id))
-        elif hasattr(parameters, 'DIR_RIGHTCAM_STACKZERO_CHANNEL' + str(channel_id)):
-            self.angle1_sub_directory = getattr(parameters, 'DIR_RIGHTCAM_STACKZERO_CHANNEL' + str(channel_id))
-        elif hasattr(parameters, 'DIR_RIGHTCAM_STACKZERO'):
-            self.angle1_sub_directory = getattr(parameters, 'DIR_RIGHTCAM_STACKZERO')
+        if hasattr(parameters, "DIR_RIGHTCAM_STACKZERO_CHANNEL_" + str(channel_id)):
+            self.angle1_sub_directory = getattr(
+                parameters, "DIR_RIGHTCAM_STACKZERO_CHANNEL_" + str(channel_id)
+            )
+        elif hasattr(parameters, "DIR_RIGHTCAM_STACKZERO_CHANNEL" + str(channel_id)):
+            self.angle1_sub_directory = getattr(
+                parameters, "DIR_RIGHTCAM_STACKZERO_CHANNEL" + str(channel_id)
+            )
+        elif hasattr(parameters, "DIR_RIGHTCAM_STACKZERO"):
+            self.angle1_sub_directory = getattr(parameters, "DIR_RIGHTCAM_STACKZERO")
 
-        if hasattr(parameters, 'DIR_LEFTCAM_STACKONE_CHANNEL_' + str(channel_id)):
-            self.angle2_sub_directory = getattr(parameters, 'DIR_LEFTCAM_STACKONE_CHANNEL_' + str(channel_id))
-        elif hasattr(parameters, 'DIR_LEFTCAM_STACKONE_CHANNEL' + str(channel_id)):
-            self.angle2_sub_directory = getattr(parameters, 'DIR_LEFTCAM_STACKONE_CHANNEL' + str(channel_id))
-        elif hasattr(parameters, 'DIR_LEFTCAM_STACKONE'):
-            self.angle2_sub_directory = getattr(parameters, 'DIR_LEFTCAM_STACKONE')
+        if hasattr(parameters, "DIR_LEFTCAM_STACKONE_CHANNEL_" + str(channel_id)):
+            self.angle2_sub_directory = getattr(
+                parameters, "DIR_LEFTCAM_STACKONE_CHANNEL_" + str(channel_id)
+            )
+        elif hasattr(parameters, "DIR_LEFTCAM_STACKONE_CHANNEL" + str(channel_id)):
+            self.angle2_sub_directory = getattr(
+                parameters, "DIR_LEFTCAM_STACKONE_CHANNEL" + str(channel_id)
+            )
+        elif hasattr(parameters, "DIR_LEFTCAM_STACKONE"):
+            self.angle2_sub_directory = getattr(parameters, "DIR_LEFTCAM_STACKONE")
 
-        if hasattr(parameters, 'DIR_RIGHTCAM_STACKONE_CHANNEL_' + str(channel_id)):
-            self.angle3_sub_directory = getattr(parameters, 'DIR_RIGHTCAM_STACKONE_CHANNEL_' + str(channel_id))
-        elif hasattr(parameters, 'DIR_RIGHTCAM_STACKONE_CHANNEL' + str(channel_id)):
-            self.angle3_sub_directory = getattr(parameters, 'DIR_RIGHTCAM_STACKONE_CHANNEL' + str(channel_id))
-        elif hasattr(parameters, 'DIR_RIGHTCAM_STACKONE'):
-            self.angle3_sub_directory = getattr(parameters, 'DIR_RIGHTCAM_STACKONE')
+        if hasattr(parameters, "DIR_RIGHTCAM_STACKONE_CHANNEL_" + str(channel_id)):
+            self.angle3_sub_directory = getattr(
+                parameters, "DIR_RIGHTCAM_STACKONE_CHANNEL_" + str(channel_id)
+            )
+        elif hasattr(parameters, "DIR_RIGHTCAM_STACKONE_CHANNEL" + str(channel_id)):
+            self.angle3_sub_directory = getattr(
+                parameters, "DIR_RIGHTCAM_STACKONE_CHANNEL" + str(channel_id)
+            )
+        elif hasattr(parameters, "DIR_RIGHTCAM_STACKONE"):
+            self.angle3_sub_directory = getattr(parameters, "DIR_RIGHTCAM_STACKONE")
 
-        if hasattr(parameters, 'fusion_weighting'):
-            self.fusion_weighting = getattr(parameters, 'fusion_weighting')
-        elif hasattr(parameters, 'fusion_weighting_channel_' + str(channel_id)):
-            self.fusion_weighting = getattr(parameters, 'fusion_weighting_channel_' + str(channel_id))
+        if hasattr(parameters, "fusion_weighting"):
+            self.fusion_weighting = getattr(parameters, "fusion_weighting")
+        elif hasattr(parameters, "fusion_weighting_channel_" + str(channel_id)):
+            self.fusion_weighting = getattr(
+                parameters, "fusion_weighting_channel_" + str(channel_id)
+            )
 
         return
 
@@ -817,19 +960,27 @@ class RawdataChannel(PrefixedParameter):
         if angle_id == 0:
             if self.angle0_sub_directory is None:
                 return None
-            return os.path.join(self._parent_directory, self._main_directory, self.angle0_sub_directory)
+            return os.path.join(
+                self._parent_directory, self._main_directory, self.angle0_sub_directory
+            )
         elif angle_id == 1:
             if self.angle1_sub_directory is None:
                 return None
-            return os.path.join(self._parent_directory, self._main_directory, self.angle1_sub_directory)
+            return os.path.join(
+                self._parent_directory, self._main_directory, self.angle1_sub_directory
+            )
         elif angle_id == 2:
             if self.angle2_sub_directory is None:
                 return None
-            return os.path.join(self._parent_directory, self._main_directory, self.angle2_sub_directory)
+            return os.path.join(
+                self._parent_directory, self._main_directory, self.angle2_sub_directory
+            )
         elif angle_id == 3:
             if self.angle3_sub_directory is None:
                 return None
-            return os.path.join(self._parent_directory, self._main_directory, self.angle3_sub_directory)
+            return os.path.join(
+                self._parent_directory, self._main_directory, self.angle3_sub_directory
+            )
         return None
 
     def get_image_name(self, angle_id, time_value):
@@ -851,7 +1002,11 @@ class RawdataChannel(PrefixedParameter):
 
     def set_parent_directory(self, parentdir):
         if not os.path.isdir(parentdir):
-            print("RawdataChannel.set_parent_directory: '" + str(parentdir) + "' is not a valid directory.")
+            print(
+                "RawdataChannel.set_parent_directory: '"
+                + str(parentdir)
+                + "' is not a valid directory."
+            )
             print("\t Exiting.")
             sys.exit(1)
         self._parent_directory = parentdir
@@ -868,19 +1023,23 @@ class RawdataChannel(PrefixedParameter):
     ############################################################
 
     def compare_to_channel(self, c):
-        if self._main_directory != c.get_main_directory() or (self.angle0_sub_directory != c.angle0_sub_directory
-                                                              and self.angle1_sub_directory != c.angle1_sub_directory
-                                                              and self.angle2_sub_directory != c.angle2_sub_directory
-                                                              and self.angle3_sub_directory != c.angle3_sub_directory):
+        if self._main_directory != c.get_main_directory() or (
+            self.angle0_sub_directory != c.angle0_sub_directory
+            and self.angle1_sub_directory != c.angle1_sub_directory
+            and self.angle2_sub_directory != c.angle2_sub_directory
+            and self.angle3_sub_directory != c.angle3_sub_directory
+        ):
             return
         self.__init__(self._channel_id)
         return
 
     def identical_sub_directories(self, c):
-        if self.angle0_sub_directory != c.angle0_sub_directory \
-                and self.angle1_sub_directory != c.angle1_sub_directory \
-                and self.angle2_sub_directory != c.angle2_sub_directory \
-                and self.angle3_sub_directory != c.angle3_sub_directory:
+        if (
+            self.angle0_sub_directory != c.angle0_sub_directory
+            and self.angle1_sub_directory != c.angle1_sub_directory
+            and self.angle2_sub_directory != c.angle2_sub_directory
+            and self.angle3_sub_directory != c.angle3_sub_directory
+        ):
             return False
         return True
 
@@ -899,17 +1058,20 @@ class RawdataChannel(PrefixedParameter):
         return False
 
     def sub_directories_are_different(self):
-        if self.angle0_sub_directory != self.angle1_sub_directory \
-                and self.angle0_sub_directory != self.angle2_sub_directory \
-                and self.angle0_sub_directory != self.angle3_sub_directory \
-                and self.angle1_sub_directory != self.angle2_sub_directory \
-                and self.angle1_sub_directory != self.angle3_sub_directory \
-                and self.angle2_sub_directory != self.angle3_sub_directory:
+        if (
+            self.angle0_sub_directory != self.angle1_sub_directory
+            and self.angle0_sub_directory != self.angle2_sub_directory
+            and self.angle0_sub_directory != self.angle3_sub_directory
+            and self.angle1_sub_directory != self.angle2_sub_directory
+            and self.angle1_sub_directory != self.angle3_sub_directory
+            and self.angle2_sub_directory != self.angle3_sub_directory
+        ):
             return True
         return False
 
     def timepoint_to_str(self, i):
-        return '{:0{width}d}'.format(i, width=self._time_digits_for_acquisition)
+        return "{:0{width}d}".format(i, width=self._time_digits_for_acquisition)
+
 
 #
 #
@@ -917,7 +1079,6 @@ class RawdataChannel(PrefixedParameter):
 
 
 class RawdataSubdirectory(object):
-
     ############################################################
     #
     # initialisation
@@ -946,13 +1107,20 @@ class RawdataSubdirectory(object):
     def print_configuration(self):
         for i in range(self._n_max_channels):
             self.channel[i].print_configuration()
-        print('  - _time_digits_for_acquisition = ' + str(self._time_digits_for_acquisition))
+        print(
+            "  - _time_digits_for_acquisition = "
+            + str(self._time_digits_for_acquisition)
+        )
         return
 
     def write_configuration_in_file(self, logfile):
         for i in range(self._n_max_channels):
             self.channel[i].write_configuration_in_file(logfile)
-        logfile.write('  - _time_digits_for_acquisition = ' + str(self._time_digits_for_acquisition) + '\n')
+        logfile.write(
+            "  - _time_digits_for_acquisition = "
+            + str(self._time_digits_for_acquisition)
+            + "\n"
+        )
         return
 
     def print_parameters(self):
@@ -1011,7 +1179,11 @@ class RawdataSubdirectory(object):
 
     def set_parent_directory(self, parentdir):
         if not os.path.isdir(parentdir):
-            print("RawdataSubdirectory.set_parent_directory: '" + str(parentdir) + "' is not a valid directory.")
+            print(
+                "RawdataSubdirectory.set_parent_directory: '"
+                + str(parentdir)
+                + "' is not a valid directory."
+            )
             print("\t Exiting.")
             sys.exit(1)
         for i in range(self._n_max_channels):
@@ -1030,6 +1202,7 @@ class RawdataSubdirectory(object):
 # sub-directories management
 #
 ##################################################
+
 
 class GenericSubdirectory(PrefixedParameter):
     """
@@ -1079,7 +1252,7 @@ class GenericSubdirectory(PrefixedParameter):
         #
         self._file_prefix = None
         self._file_suffix = None
-        self._time_prefix = '_t'
+        self._time_prefix = "_t"
         self._time_digits_for_filename = 3
 
     ############################################################
@@ -1108,7 +1281,9 @@ class GenericSubdirectory(PrefixedParameter):
         #
         print("    - _file_prefix = " + str(self._file_prefix))
         print("    - _file_suffix = " + str(self._file_suffix))
-        print("    - _time_digits_for_filename = " + str(self._time_digits_for_filename))
+        print(
+            "    - _time_digits_for_filename = " + str(self._time_digits_for_filename)
+        )
         return
 
     def _write_directory_list_in_file(self, logfile):
@@ -1120,7 +1295,9 @@ class GenericSubdirectory(PrefixedParameter):
                 logfile.write("    Empty list\n")
             else:
                 for i in range(len(self._directory)):
-                    logfile.write("      #" + str(i) + ": '" + str(self.get_directory(i)) + "'\n")
+                    logfile.write(
+                        "      #" + str(i) + ": '" + str(self.get_directory(i)) + "'\n"
+                    )
 
     def write_configuration_in_file(self, logfile, spaces=0):
         self._set_directory()
@@ -1129,8 +1306,12 @@ class GenericSubdirectory(PrefixedParameter):
         #
         logfile.write("    - _parent_directory = " + str(self._parent_directory) + "\n")
         logfile.write("    - _main_directory = " + str(self._main_directory) + "\n")
-        logfile.write("    - _sub_directory_prefix = " + str(self._sub_directory_prefix) + "\n")
-        logfile.write("    - _sub_directory_suffix = " + str(self._sub_directory_suffix) + "\n")
+        logfile.write(
+            "    - _sub_directory_prefix = " + str(self._sub_directory_prefix) + "\n"
+        )
+        logfile.write(
+            "    - _sub_directory_suffix = " + str(self._sub_directory_suffix) + "\n"
+        )
         #
         logfile.write("    - _directory = " + "\n")
         _write_directory_list_in_file(self._directory, logfile)
@@ -1143,7 +1324,11 @@ class GenericSubdirectory(PrefixedParameter):
         #
         logfile.write("    - _file_prefix = " + str(self._file_prefix) + "\n")
         logfile.write("    - _file_suffix = " + str(self._file_suffix) + "\n")
-        logfile.write("    - _time_digits_for_filename = " + str(self._time_digits_for_filename) + "\n")
+        logfile.write(
+            "    - _time_digits_for_filename = "
+            + str(self._time_digits_for_filename)
+            + "\n"
+        )
         return
 
     ############################################################
@@ -1184,12 +1369,22 @@ class GenericSubdirectory(PrefixedParameter):
         return self._file_suffix
 
     def get_image_format(self):
-        return self._file_prefix + self._file_suffix + self._time_prefix + self._get_time_format()
+        return (
+            self._file_prefix
+            + self._file_suffix
+            + self._time_prefix
+            + self._get_time_format()
+        )
 
     def get_image_name(self, time_value):
         if time_value is None:
             return None
-        return self._file_prefix + self._file_suffix + self._time_prefix + self.timepoint_to_str(time_value)
+        return (
+            self._file_prefix
+            + self._file_suffix
+            + self._time_prefix
+            + self.timepoint_to_str(time_value)
+        )
 
     def get_log_directory(self, i=0):
         """
@@ -1295,7 +1490,9 @@ class GenericSubdirectory(PrefixedParameter):
         #
         self._directory = []
         for i in range(self.get_number_sub_directories()):
-            self._directory.append(os.path.join(str(self._parent_directory), self.get_sub_directory(i)))
+            self._directory.append(
+                os.path.join(str(self._parent_directory), self.get_sub_directory(i))
+            )
         return
 
     def set_directory_prefix(self, directory_prefix):
@@ -1331,7 +1528,11 @@ class GenericSubdirectory(PrefixedParameter):
 
     def set_parent_directory(self, parentdir):
         if not os.path.isdir(parentdir):
-            print("GenericSubdirectory.set_parent_directory: '" + str(parentdir) + "' is not a valid directory.")
+            print(
+                "GenericSubdirectory.set_parent_directory: '"
+                + str(parentdir)
+                + "' is not a valid directory."
+            )
             print("\t Exiting.")
             sys.exit(1)
         self._parent_directory = parentdir
@@ -1344,7 +1545,9 @@ class GenericSubdirectory(PrefixedParameter):
         self._set_directory()
         self._rec_directory = []
         for i in range(len(self._directory)):
-            self._rec_directory.append(os.path.join(self.get_directory(i), "RECONSTRUCTION"))
+            self._rec_directory.append(
+                os.path.join(self.get_directory(i), "RECONSTRUCTION")
+            )
         return
 
     def set_rec_directory_to_tmp(self):
@@ -1368,16 +1571,25 @@ class GenericSubdirectory(PrefixedParameter):
         #
         self._sub_directory = []
         if self._sub_directory_suffix is None:
-            monitoring.to_log_and_console("Warning: " + proc + ", _sub_directory_suffix is None")
+            monitoring.to_log_and_console(
+                "Warning: " + proc + ", _sub_directory_suffix is None"
+            )
         elif type(self._sub_directory_suffix) == str:
             subdir = str(self._sub_directory_prefix) + str(self._sub_directory_suffix)
             self._sub_directory.append(os.path.join(str(self._main_directory), subdir))
-        elif type(self._sub_directory_suffix) == list or type(self._sub_directory_suffix) == tuple:
+        elif (
+            type(self._sub_directory_suffix) == list
+            or type(self._sub_directory_suffix) == tuple
+        ):
             for s in self._sub_directory_suffix:
                 subdir = str(self._sub_directory_prefix) + str(s)
-                self._sub_directory.append(os.path.join(str(self._main_directory), subdir))
+                self._sub_directory.append(
+                    os.path.join(str(self._main_directory), subdir)
+                )
         else:
-            monitoring.to_log_and_console("Warning: " + proc + ", unhandled _sub_directory_suffix type")
+            monitoring.to_log_and_console(
+                "Warning: " + proc + ", unhandled _sub_directory_suffix type"
+            )
         return
 
     def set_tmp_directory(self, timepoint):
@@ -1387,9 +1599,13 @@ class GenericSubdirectory(PrefixedParameter):
         self._set_directory()
         self._tmp_directory = []
         for i in range(len(self._directory)):
-            self._tmp_directory.append(os.path.join(self.get_directory(i), "TEMP_" + self.timepoint_to_str(timepoint)))
+            self._tmp_directory.append(
+                os.path.join(
+                    self.get_directory(i), "TEMP_" + self.timepoint_to_str(timepoint)
+                )
+            )
         return
-    
+
     def set_time_digits_for_filename(self, time_digits=3):
         self._time_digits_for_filename = time_digits
         return
@@ -1427,12 +1643,17 @@ class GenericSubdirectory(PrefixedParameter):
 
     def timepoint_to_str(self, i):
         if type(i) is int:
-            return '{:0{width}d}'.format(i, width=self._time_digits_for_filename)
+            return "{:0{width}d}".format(i, width=self._time_digits_for_filename)
         elif type(i) is str:
-            return '{:0{width}d}'.format(int(i), width=self._time_digits_for_filename)
+            return "{:0{width}d}".format(int(i), width=self._time_digits_for_filename)
         else:
-            print("GenericSubdirectory.timepoint_to_str: type '" + str(type(i)) + "' not handled yet.")
+            print(
+                "GenericSubdirectory.timepoint_to_str: type '"
+                + str(type(i))
+                + "' not handled yet."
+            )
             return None
+
 
 #
 #
@@ -1442,17 +1663,16 @@ class GenericSubdirectory(PrefixedParameter):
 
 
 class FuseSubdirectory(GenericSubdirectory):
-
     def __init__(self):
         GenericSubdirectory.__init__(self)
         if "doc" not in self.__dict__:
             self.doc = {}
-        self._main_directory = 'FUSE'
+        self._main_directory = "FUSE"
         doc = "\t suffix to built fusion image subdirectory name, that is\n"
         doc += "\t <PATH_EMBRYO>/FUSE/FUSE_<EXP_FUSE>/\n"
-        self.doc['EXP_FUSE'] = doc
-        self._sub_directory_prefix = 'FUSE_'
-        self._sub_directory_suffix = 'RELEASE'
+        self.doc["EXP_FUSE"] = doc
+        self._sub_directory_prefix = "FUSE_"
+        self._sub_directory_suffix = "RELEASE"
         self._file_suffix = "_fuse"
 
         self._xzsection_directory = list()
@@ -1469,15 +1689,17 @@ class FuseSubdirectory(GenericSubdirectory):
         GenericSubdirectory.write_configuration_in_file(self, logfile)
 
     def print_parameters(self):
-        self.varprint('EXP_FUSE', self._sub_directory_suffix, self.doc['EXP_FUSE'])
+        self.varprint("EXP_FUSE", self._sub_directory_suffix, self.doc["EXP_FUSE"])
         return
 
     def write_parameters_in_file(self, logfile):
-        self.varwrite(logfile, 'EXP_FUSE', self._sub_directory_suffix, self.doc['EXP_FUSE'])
+        self.varwrite(
+            logfile, "EXP_FUSE", self._sub_directory_suffix, self.doc["EXP_FUSE"]
+        )
         return
 
     def update_from_parameters(self, parameters):
-        if hasattr(parameters, 'EXP_FUSE'):
+        if hasattr(parameters, "EXP_FUSE"):
             if parameters.EXP_FUSE is not None:
                 self._sub_directory_suffix = parameters.EXP_FUSE
         return
@@ -1496,7 +1718,75 @@ class FuseSubdirectory(GenericSubdirectory):
             os.makedirs(d)
         return d
 
+
 #
+
+####### modification by Gesa
+# add section for contour subdirectory
+# based on FUSION sub-directory (just above)
+#
+#
+
+
+class ContourSubdirectory(GenericSubdirectory):
+    def __init__(self):
+        GenericSubdirectory.__init__(self)
+        if "doc" not in self.__dict__:
+            self.doc = {}
+        self._main_directory = "CONTOUR"
+        doc = "\t suffix to built fusion image subdirectory name, that is\n"
+        doc += "\t <PATH_EMBRYO>/CONTOUR/CONTOUR_<EXP_CONTOUR>/\n"
+        self.doc["EXP_CONTOUR"] = doc
+        self._sub_directory_prefix = "CONTOUR_"
+        self._sub_directory_suffix = "RELEASE"
+        self._file_suffix = "_contour"
+
+        self._xzsection_directory = list()
+
+    def print_configuration(self, spaces=0):
+        self._set_directory()
+        print("  - subpath/to/contour is")
+        GenericSubdirectory.print_configuration(self)
+        return
+
+    def write_configuration_in_file(self, logfile, spaces=0):
+        self._set_directory()
+        logfile.write("  - subpath/to/contour is \n")
+        GenericSubdirectory.write_configuration_in_file(self, logfile)
+
+    def print_parameters(self):
+        self.varprint(
+            "EXP_CONTOUR", self._sub_directory_suffix, self.doc["EXP_CONTOUR"]
+        )
+        return
+
+    def write_parameters_in_file(self, logfile):
+        self.varwrite(
+            logfile, "EXP_CONTOUR", self._sub_directory_suffix, self.doc["EXP_CONTOUR"]
+        )
+        return
+
+    def update_from_parameters(self, parameters):
+        if hasattr(parameters, "EXP_CONTOUR"):
+            if parameters.EXP_CONTOUR is not None:
+                self._sub_directory_suffix = parameters.EXP_CONTOUR
+        return
+
+    def set_xzsection_directory(self, time_value):
+        self._xzsection_directory = list()
+        t = "XZSECTION_" + self.timepoint_to_str(time_value)
+        for c in range(self.get_number_directories()):
+            d = os.path.join(self.get_directory(c), t)
+            self._xzsection_directory.append(d)
+        return
+
+    def get_xzsection_directory(self, channel_id=0):
+        d = _get_directory(self._xzsection_directory, channel_id)
+        if not os.path.isdir(d):
+            os.makedirs(d)
+        return d
+
+
 #
 # INTRAREG sub-directory
 #
@@ -1504,15 +1794,14 @@ class FuseSubdirectory(GenericSubdirectory):
 
 
 class IntraregSubdirectory(GenericSubdirectory):
-
     def __init__(self):
         GenericSubdirectory.__init__(self)
-        self._main_directory = 'INTRAREG'
+        self._main_directory = "INTRAREG"
         doc = "\t suffix to built intra-registration image subdirectory name, that is\n"
         doc += "\t <PATH_EMBRYO>/INTRAREG/INTRAREG_<EXP_INTRAREG>/\n"
-        self.doc['EXP_INTRAREG'] = doc
-        self._sub_directory_prefix = 'INTRAREG_'
-        self._sub_directory_suffix = 'RELEASE'
+        self.doc["EXP_INTRAREG"] = doc
+        self._sub_directory_prefix = "INTRAREG_"
+        self._sub_directory_suffix = "RELEASE"
         self._file_suffix = "_intrareg"
 
     def print_configuration(self, spaces=0):
@@ -1527,18 +1816,26 @@ class IntraregSubdirectory(GenericSubdirectory):
         GenericSubdirectory.write_configuration_in_file(self, logfile)
 
     def print_parameters(self):
-        self.varprint('EXP_INTRAREG', self._sub_directory_suffix, self.doc['EXP_INTRAREG'])
+        self.varprint(
+            "EXP_INTRAREG", self._sub_directory_suffix, self.doc["EXP_INTRAREG"]
+        )
         return
 
     def write_parameters_in_file(self, logfile):
-        self.varwrite(logfile, 'EXP_INTRAREG', self._sub_directory_suffix, self.doc['EXP_INTRAREG'])
+        self.varwrite(
+            logfile,
+            "EXP_INTRAREG",
+            self._sub_directory_suffix,
+            self.doc["EXP_INTRAREG"],
+        )
         return
 
     def update_from_parameters(self, parameters):
-        if hasattr(parameters, 'EXP_INTRAREG'):
+        if hasattr(parameters, "EXP_INTRAREG"):
             if parameters.EXP_INTRAREG is not None:
                 self._sub_directory_suffix = parameters.EXP_INTRAREG
         return
+
 
 #
 #
@@ -1548,17 +1845,16 @@ class IntraregSubdirectory(GenericSubdirectory):
 
 
 class MarsSubdirectory(GenericSubdirectory):
-
     def __init__(self):
         GenericSubdirectory.__init__(self)
-        self._main_directory = 'SEG'
+        self._main_directory = "SEG"
         doc = "\t suffix to built mars image subdirectory name, that is\n"
         doc += "\t <PATH_EMBRYO>/SEG/SEG_<EXP_MARS>/\n"
         doc += "\t It is convenient to set EXP_MARS to the same value than\n"
         doc += "\t EXP_SEG.\n"
-        self.doc['EXP_MARS'] = doc
-        self._sub_directory_prefix = 'SEG_'
-        self._sub_directory_suffix = 'RELEASE'
+        self.doc["EXP_MARS"] = doc
+        self._sub_directory_prefix = "SEG_"
+        self._sub_directory_suffix = "RELEASE"
         self._file_suffix = "_mars"
 
     def print_configuration(self, spaces=0):
@@ -1573,18 +1869,27 @@ class MarsSubdirectory(GenericSubdirectory):
         GenericSubdirectory.write_configuration_in_file(self, logfile)
 
     def print_parameters(self):
-        self.varprint('EXP_MARS', self._sub_directory_suffix, self.doc['EXP_MARS'])
+        self.varprint("EXP_MARS", self._sub_directory_suffix, self.doc["EXP_MARS"])
         return
 
     def write_parameters_in_file(self, logfile):
-        self.varwrite(logfile, 'EXP_MARS', self._sub_directory_suffix, self.doc['EXP_MARS'])
+        self.varwrite(
+            logfile, "EXP_MARS", self._sub_directory_suffix, self.doc["EXP_MARS"]
+        )
         return
 
     def update_from_parameters(self, parameters):
-        self._sub_directory_suffix = _read_parameter(parameters, 'EXP_SEG', self._sub_directory_suffix)
-        self._sub_directory_suffix = _read_parameter(parameters, 'EXP_MARS', self._sub_directory_suffix)
-        self._sub_directory_suffix = _read_parameter(parameters, 'EXP_SEG_FROM', self._sub_directory_suffix)
+        self._sub_directory_suffix = _read_parameter(
+            parameters, "EXP_SEG", self._sub_directory_suffix
+        )
+        self._sub_directory_suffix = _read_parameter(
+            parameters, "EXP_MARS", self._sub_directory_suffix
+        )
+        self._sub_directory_suffix = _read_parameter(
+            parameters, "EXP_SEG_FROM", self._sub_directory_suffix
+        )
         return
+
 
 #
 #
@@ -1594,15 +1899,14 @@ class MarsSubdirectory(GenericSubdirectory):
 
 
 class AstecSubdirectory(GenericSubdirectory):
-
     def __init__(self):
         GenericSubdirectory.__init__(self)
-        self._main_directory = 'SEG'
+        self._main_directory = "SEG"
         doc = "\t suffix to built segmentation image subdirectory name, that is\n"
         doc += "\t <PATH_EMBRYO>/SEG/SEG_<EXP_SEG>/\n"
-        self.doc['EXP_SEG'] = doc
-        self._sub_directory_prefix = 'SEG_'
-        self._sub_directory_suffix = 'RELEASE'
+        self.doc["EXP_SEG"] = doc
+        self._sub_directory_prefix = "SEG_"
+        self._sub_directory_suffix = "RELEASE"
         self._file_suffix = "_seg"
 
     def print_configuration(self, spaces=0):
@@ -1616,17 +1920,24 @@ class AstecSubdirectory(GenericSubdirectory):
         GenericSubdirectory.write_configuration_in_file(self, logfile)
 
     def print_parameters(self):
-        self.varprint('EXP_SEG', self._sub_directory_suffix, self.doc['EXP_SEG'])
+        self.varprint("EXP_SEG", self._sub_directory_suffix, self.doc["EXP_SEG"])
         return
 
     def write_parameters_in_file(self, logfile):
-        self.varwrite(logfile, 'EXP_SEG', self._sub_directory_suffix, self.doc['EXP_SEG'])
+        self.varwrite(
+            logfile, "EXP_SEG", self._sub_directory_suffix, self.doc["EXP_SEG"]
+        )
         return
 
     def update_from_parameters(self, parameters):
-        self._sub_directory_suffix = _read_parameter(parameters, 'EXP_SEG', self._sub_directory_suffix)
-        self._sub_directory_suffix = _read_parameter(parameters, 'EXP_SEG_TO', self._sub_directory_suffix)
+        self._sub_directory_suffix = _read_parameter(
+            parameters, "EXP_SEG", self._sub_directory_suffix
+        )
+        self._sub_directory_suffix = _read_parameter(
+            parameters, "EXP_SEG_TO", self._sub_directory_suffix
+        )
         return
+
 
 #
 #
@@ -1636,15 +1947,14 @@ class AstecSubdirectory(GenericSubdirectory):
 
 
 class PostSubdirectory(GenericSubdirectory):
-
     def __init__(self):
         GenericSubdirectory.__init__(self)
-        self._main_directory = 'POST'
+        self._main_directory = "POST"
         doc = "\t suffix to built post-processed image subdirectory name, that is\n"
         doc += "\t <PATH_EMBRYO>/POST/POST_<EXP_POST>/\n"
-        self.doc['EXP_POST'] = doc
-        self._sub_directory_prefix = 'POST_'
-        self._sub_directory_suffix = 'RELEASE'
+        self.doc["EXP_POST"] = doc
+        self._sub_directory_prefix = "POST_"
+        self._sub_directory_suffix = "RELEASE"
         self._file_suffix = "_post"
 
     def print_configuration(self, spaces=0):
@@ -1658,15 +1968,17 @@ class PostSubdirectory(GenericSubdirectory):
         GenericSubdirectory.write_configuration_in_file(self, logfile)
 
     def print_parameters(self):
-        self.varprint('EXP_POST', self._sub_directory_suffix, self.doc['EXP_POST'])
+        self.varprint("EXP_POST", self._sub_directory_suffix, self.doc["EXP_POST"])
         return
 
     def write_parameters_in_file(self, logfile):
-        self.varwrite(logfile, 'EXP_POST', self._sub_directory_suffix, self.doc['EXP_POST'])
+        self.varwrite(
+            logfile, "EXP_POST", self._sub_directory_suffix, self.doc["EXP_POST"]
+        )
         return
 
     def update_from_parameters(self, parameters):
-        if hasattr(parameters, 'EXP_POST'):
+        if hasattr(parameters, "EXP_POST"):
             if parameters.EXP_POST is not None:
                 self._sub_directory_suffix = parameters.EXP_POST
         return
@@ -1680,7 +1992,6 @@ class PostSubdirectory(GenericSubdirectory):
 
 
 class Experiment(PrefixedParameter):
-
     ############################################################
     #
     # initialisation
@@ -1694,43 +2005,43 @@ class Experiment(PrefixedParameter):
 
         doc = "\t path to the embryo data, e.g. '/media/DATA/171107-Karine-St8'\n"
         doc += "\t if not present the actual directory is used\n"
-        self.doc['_embryo_path'] = doc
+        self.doc["_embryo_path"] = doc
         self._embryo_path = None
         doc = "\t Embryo Name.\n"
         doc += "\t CRBM naming format is YYMMDD-SaintOfTheDays-Stage,\n"
         doc += "\t eg: '171107-Karine-St8'\n"
         doc += "\t (automatically extracted from the path to the embryo data\n"
         doc += "\t  if not provided)\n"
-        self.doc['_embryo_name'] = doc
+        self.doc["_embryo_name"] = doc
         self._embryo_name = None
 
         doc = "\t first time point of the series to be processed\n"
-        self.doc['first_time_point'] = doc
+        self.doc["first_time_point"] = doc
         self.first_time_point = None
         doc = "\t last time point of the series to be processed\n"
         doc += "\t When testing or tuning parameters, it is advised not to\n"
         doc += "\t processed the whole series, but only one or a few time\n"
         doc += "\t points.\n"
-        self.doc['last_time_point'] = doc
+        self.doc["last_time_point"] = doc
         self.last_time_point = None
         self.restart_time_point = None
         doc = "\t time interval between two time points.\n"
         doc += "\t fragile\n"
-        self.doc['delta_time_point'] = doc
+        self.doc["delta_time_point"] = doc
         self.delta_time_point = 1
         doc = "\t increment to to be added to the time values (ie values in range\n"
         doc += "\t [begin,end]) when generating image names.\n"
         doc += "\t eg: acquisition at time point 't' results in the fused image\n"
         doc += "\t  at time 't+raw_delay'. Fragile.\n"
-        self.doc['delay_time_point'] = doc
+        self.doc["delay_time_point"] = doc
         self.delay_time_point = 0
 
         doc = "\t Number of digits to encode the time point in file names. Fragile.\n"
-        self.doc['_time_digits_for_filename'] = doc
+        self.doc["_time_digits_for_filename"] = doc
         self._time_digits_for_filename = 3
         doc = "\t Number of digits to encode the time point in cell unique\n"
         doc += "\t identifier. Fragile\n"
-        self.doc['_time_digits_for_cell_id'] = doc
+        self.doc["_time_digits_for_cell_id"] = doc
         self._time_digits_for_cell_id = 4
 
         #
@@ -1742,6 +2053,9 @@ class Experiment(PrefixedParameter):
         #
         self.rawdata_dir = RawdataSubdirectory()
         self.fusion_dir = FuseSubdirectory()
+
+        # added contour dir by Gesa
+        self.contour_dir = ContourSubdirectory()
         self.mars_dir = MarsSubdirectory()
         self.astec_dir = AstecSubdirectory()
         self.post_dir = PostSubdirectory()
@@ -1760,18 +2074,18 @@ class Experiment(PrefixedParameter):
         doc = "\t Possible values are 'inr', 'mha', tif'\n"
         doc += "\t Defines the image format for all output images.\n"
         doc += "\t 'mha' is recommended\n"
-        self.doc['result_image_suffix'] = doc
-        self.result_image_suffix = 'mha'
+        self.doc["result_image_suffix"] = doc
+        self.result_image_suffix = "mha"
         doc = "\t Possible values are 'inr', 'mha', tif'\n"
         doc += "\t Defines the image format for all output images, plus the \n"
         doc += "\t auxiliary ones (in the TEMP_<xxx> directory)\n"
         doc += "\t 'mha' is recommended\n"
-        self.doc['default_image_suffix'] = doc
-        self.default_image_suffix = 'mha'
+        self.doc["default_image_suffix"] = doc
+        self.default_image_suffix = "mha"
         doc = "\t Possible values are 'xml', 'pkl'\n"
         doc += "\t Defines the lineage and properties file format\n"
-        self.doc['result_lineage_suffix'] = doc
-        self.result_lineage_suffix = 'xml'
+        self.doc["result_lineage_suffix"] = doc
+        self.result_lineage_suffix = "xml"
 
     ############################################################
     #
@@ -1781,42 +2095,45 @@ class Experiment(PrefixedParameter):
 
     def print_configuration(self, spaces=0):
         print("")
-        print('Experiment configuration')
+        print("Experiment configuration")
 
-        print('- _embryo_path is ' + str(self._embryo_path))
-        print('- _embryo_name is ' + str(self._embryo_name))
+        print("- _embryo_path is " + str(self._embryo_path))
+        print("- _embryo_name is " + str(self._embryo_name))
 
-        print('- first_time_point is ' + str(self.first_time_point))
-        print('- last_time_point is ' + str(self.last_time_point))
-        print('- restart_time_point is ' + str(self.restart_time_point))
-        print('- delta_time_point is ' + str(self.delta_time_point))
-        print('- delay_time_point is ' + str(self.delay_time_point))
+        print("- first_time_point is " + str(self.first_time_point))
+        print("- last_time_point is " + str(self.last_time_point))
+        print("- restart_time_point is " + str(self.restart_time_point))
+        print("- delta_time_point is " + str(self.delta_time_point))
+        print("- delay_time_point is " + str(self.delay_time_point))
 
-        print('- _time_digits_for_filename is ' + str(self._time_digits_for_filename))
-        print('- _time_digits_for_cell_id is ' + str(self._time_digits_for_cell_id))
+        print("- _time_digits_for_filename is " + str(self._time_digits_for_filename))
+        print("- _time_digits_for_cell_id is " + str(self._time_digits_for_cell_id))
 
-        print('- raw data directory is')
+        print("- raw data directory is")
         self.rawdata_dir.print_configuration()
-        print('- fusion directory is')
+        print("- fusion directory is")
         self.fusion_dir.print_configuration()
-        print('- mars directory is')
+        # added contour - Gesa
+        print("- contour directory is")
+        self.contour_dir.print_configuration()
+        print("- mars directory is")
         self.mars_dir.print_configuration()
-        print('- segmentation directory is')
+        print("- segmentation directory is")
         self.astec_dir.print_configuration()
-        print('- post-correction directory is')
+        print("- post-correction directory is")
         self.post_dir.print_configuration()
-        print('- intra-registration directory is')
+        print("- intra-registration directory is")
         self.intrareg_dir.print_configuration()
-        print('- working directory is')
+        print("- working directory is")
         if self.working_dir is not None:
             self.working_dir.print_configuration()
         else:
             print(" 'None'")
 
-        print('- result_image_suffix = ' + str(self.result_image_suffix))
-        print('- default_image_suffix = ' + str(self.default_image_suffix))
+        print("- result_image_suffix = " + str(self.result_image_suffix))
+        print("- default_image_suffix = " + str(self.default_image_suffix))
 
-        print('- result_lineage_suffix = ' + str(self.result_lineage_suffix))
+        print("- result_lineage_suffix = " + str(self.result_lineage_suffix))
         print("")
         return
 
@@ -1826,122 +2143,223 @@ class Experiment(PrefixedParameter):
         else:
             local_log_filename = monitoring.log_filename
         if local_log_filename is not None:
-            with open(local_log_filename, 'a') as logfile:
+            with open(local_log_filename, "a") as logfile:
                 logfile.write("\n")
-                logfile.write('Experiment parameters\n')
+                logfile.write("Experiment parameters\n")
 
-                logfile.write('- _embryo_path is ' + str(self.get_embryo_path())+'\n')
-                logfile.write('- _embryo_name is ' + str(self.get_embryo_name())+'\n')
+                logfile.write("- _embryo_path is " + str(self.get_embryo_path()) + "\n")
+                logfile.write("- _embryo_name is " + str(self.get_embryo_name()) + "\n")
 
-                logfile.write('- first_time_point is ' + str(self.first_time_point)+'\n')
-                logfile.write('- last_time_point is ' + str(self.last_time_point)+'\n')
-                logfile.write('- restart_time_point is ' + str(self.restart_time_point) + '\n')
-                logfile.write('- delta_time_point is ' + str(self.delta_time_point)+'\n')
-                logfile.write('- delay_time_point is ' + str(self.delay_time_point)+'\n')
+                logfile.write(
+                    "- first_time_point is " + str(self.first_time_point) + "\n"
+                )
+                logfile.write(
+                    "- last_time_point is " + str(self.last_time_point) + "\n"
+                )
+                logfile.write(
+                    "- restart_time_point is " + str(self.restart_time_point) + "\n"
+                )
+                logfile.write(
+                    "- delta_time_point is " + str(self.delta_time_point) + "\n"
+                )
+                logfile.write(
+                    "- delay_time_point is " + str(self.delay_time_point) + "\n"
+                )
 
-                logfile.write('- _time_digits_for_filename is ' + str(self._time_digits_for_filename) + '\n')
-                logfile.write('- _time_digits_for_cell_id is ' + str(self._time_digits_for_cell_id) + '\n')
+                logfile.write(
+                    "- _time_digits_for_filename is "
+                    + str(self._time_digits_for_filename)
+                    + "\n"
+                )
+                logfile.write(
+                    "- _time_digits_for_cell_id is "
+                    + str(self._time_digits_for_cell_id)
+                    + "\n"
+                )
 
-                logfile.write('- raw data directory is \n')
+                logfile.write("- raw data directory is \n")
                 self.rawdata_dir.write_configuration_in_file(logfile)
-                logfile.write('- fusion directory is \n')
+                logfile.write("- fusion directory is \n")
                 self.fusion_dir.write_configuration_in_file(logfile)
-                logfile.write('- mars directory is \n')
+                # added contour - Gesa
+                logfile.write("- contour directory is \n")
+                self.contour_dir.write_configuration_in_file(logfile)
+                logfile.write("- mars directory is \n")
                 self.mars_dir.write_configuration_in_file(logfile)
-                logfile.write('- segmentation directory is \n')
+                logfile.write("- segmentation directory is \n")
                 self.astec_dir.write_configuration_in_file(logfile)
-                logfile.write('- post-correction directory is \n')
+                logfile.write("- post-correction directory is \n")
                 self.post_dir.write_configuration_in_file(logfile)
-                logfile.write('- intra-registration directory is \n')
+                logfile.write("- intra-registration directory is \n")
                 self.intrareg_dir.write_configuration_in_file(logfile)
-                logfile.write('- working directory is \n')
+                logfile.write("- working directory is \n")
                 if self.working_dir is not None:
                     self.working_dir.write_configuration_in_file(logfile)
                 else:
                     logfile.write(" 'None'\n")
 
-                logfile.write('- result_image_suffix = ' + str(self.result_image_suffix) + '\n')
-                logfile.write('- default_image_suffix = ' + str(self.default_image_suffix) + '\n')
+                logfile.write(
+                    "- result_image_suffix = " + str(self.result_image_suffix) + "\n"
+                )
+                logfile.write(
+                    "- default_image_suffix = " + str(self.default_image_suffix) + "\n"
+                )
 
-                logfile.write('- result_lineage_suffix = ' + str(self.result_lineage_suffix) + '\n')
+                logfile.write(
+                    "- result_lineage_suffix = "
+                    + str(self.result_lineage_suffix)
+                    + "\n"
+                )
 
                 logfile.write("\n")
         return
 
     def print_parameters(self, directories=None):
-        print('')
-        print('#')
-        print('# Experiment parameters')
-        print('#')
-        print('')
+        print("")
+        print("#")
+        print("# Experiment parameters")
+        print("#")
+        print("")
 
-        self.varprint('PATH_EMBRYO', self._embryo_path, self.doc['_embryo_path'])
-        self.varprint('EN', self._embryo_name, self.doc['_embryo_name'])
-        self.varprint('begin', self.first_time_point, self.doc['first_time_point'])
-        self.varprint('end', self.last_time_point, self.doc['last_time_point'])
-        self.varprint('delta', self.delta_time_point, self.doc['delta_time_point'])
-        self.varprint('raw_delay', self.delay_time_point, self.doc['delay_time_point'])
+        self.varprint("PATH_EMBRYO", self._embryo_path, self.doc["_embryo_path"])
+        self.varprint("EN", self._embryo_name, self.doc["_embryo_name"])
+        self.varprint("begin", self.first_time_point, self.doc["first_time_point"])
+        self.varprint("end", self.last_time_point, self.doc["last_time_point"])
+        self.varprint("delta", self.delta_time_point, self.doc["delta_time_point"])
+        self.varprint("raw_delay", self.delay_time_point, self.doc["delay_time_point"])
 
-        self.varprint('time_digits_for_filename', self._time_digits_for_filename, self.doc['_time_digits_for_filename'])
-        self.varprint('time_digits_for_cell_id', self._time_digits_for_cell_id, self.doc['_time_digits_for_cell_id'])
+        self.varprint(
+            "time_digits_for_filename",
+            self._time_digits_for_filename,
+            self.doc["_time_digits_for_filename"],
+        )
+        self.varprint(
+            "time_digits_for_cell_id",
+            self._time_digits_for_cell_id,
+            self.doc["_time_digits_for_cell_id"],
+        )
 
-        if directories is None or (type(directories) == list and 'rawdata' in directories):
+        if directories is None or (
+            type(directories) == list and "rawdata" in directories
+        ):
             self.rawdata_dir.print_parameters()
-        if directories is None or (type(directories) == list and 'fusion' in directories):
+        if directories is None or (
+            type(directories) == list and "fusion" in directories
+        ):
             self.fusion_dir.print_parameters()
-        if directories is None or (type(directories) == list and 'mars' in directories):
+        # added contour - Gesa
+        if directories is None or (
+            type(directories) == list and "contour" in directories
+        ):
+            self.contour_dir.print_parameters()
+        if directories is None or (type(directories) == list and "mars" in directories):
             self.mars_dir.print_parameters()
-        if directories is None or (type(directories) == list and 'astec' in directories):
+        if directories is None or (
+            type(directories) == list and "astec" in directories
+        ):
             self.astec_dir.print_parameters()
-        if directories is None or (type(directories) == list and 'post' in directories):
+        if directories is None or (type(directories) == list and "post" in directories):
             self.post_dir.print_parameters()
-        if directories is None or (type(directories) == list and 'intrareg' in directories):
+        if directories is None or (
+            type(directories) == list and "intrareg" in directories
+        ):
             self.intrareg_dir.print_parameters()
 
-        print('')
-        self.varprint('result_image_suffix', self.result_image_suffix, self.doc['result_image_suffix'])
-        self.varprint('default_image_suffix', self.default_image_suffix, self.doc['default_image_suffix'])
-        self.varprint('result_lineage_suffix', self.result_lineage_suffix, self.doc['result_lineage_suffix'])
-        print('')
+        print("")
+        self.varprint(
+            "result_image_suffix",
+            self.result_image_suffix,
+            self.doc["result_image_suffix"],
+        )
+        self.varprint(
+            "default_image_suffix",
+            self.default_image_suffix,
+            self.doc["default_image_suffix"],
+        )
+        self.varprint(
+            "result_lineage_suffix",
+            self.result_lineage_suffix,
+            self.doc["result_lineage_suffix"],
+        )
+        print("")
         return
 
     def write_parameters_in_file(self, logfile, directories=None):
-        logfile.write('\n')
-        logfile.write('#' + '\n')
-        logfile.write('# Experiment parameters' + '\n')
-        logfile.write('#' + '\n')
-        logfile.write('\n')
+        logfile.write("\n")
+        logfile.write("#" + "\n")
+        logfile.write("# Experiment parameters" + "\n")
+        logfile.write("#" + "\n")
+        logfile.write("\n")
 
-        self.varwrite(logfile, 'PATH_EMBRYO', self._embryo_path, self.doc['_embryo_path'])
-        self.varwrite(logfile, 'EN', self._embryo_name, self.doc['_embryo_name'])
-        self.varwrite(logfile, 'begin', self.first_time_point, self.doc['first_time_point'])
-        self.varwrite(logfile, 'end', self.last_time_point, self.doc['last_time_point'])
-        self.varwrite(logfile, 'delta', self.delta_time_point, self.doc['delta_time_point'])
-        self.varwrite(logfile, 'raw_delay', self.delay_time_point, self.doc['delay_time_point'])
+        self.varwrite(
+            logfile, "PATH_EMBRYO", self._embryo_path, self.doc["_embryo_path"]
+        )
+        self.varwrite(logfile, "EN", self._embryo_name, self.doc["_embryo_name"])
+        self.varwrite(
+            logfile, "begin", self.first_time_point, self.doc["first_time_point"]
+        )
+        self.varwrite(logfile, "end", self.last_time_point, self.doc["last_time_point"])
+        self.varwrite(
+            logfile, "delta", self.delta_time_point, self.doc["delta_time_point"]
+        )
+        self.varwrite(
+            logfile, "raw_delay", self.delay_time_point, self.doc["delay_time_point"]
+        )
 
-        self.varwrite(logfile, 'time_digits_for_filename', self._time_digits_for_filename,
-                      self.doc['_time_digits_for_filename'])
-        self.varwrite(logfile, 'time_digits_for_cell_id', self._time_digits_for_cell_id,
-                      self.doc['_time_digits_for_cell_id'])
+        self.varwrite(
+            logfile,
+            "time_digits_for_filename",
+            self._time_digits_for_filename,
+            self.doc["_time_digits_for_filename"],
+        )
+        self.varwrite(
+            logfile,
+            "time_digits_for_cell_id",
+            self._time_digits_for_cell_id,
+            self.doc["_time_digits_for_cell_id"],
+        )
 
-        if directories is None or (type(directories) == list and 'rawdata' in directories):
+        if directories is None or (
+            type(directories) == list and "rawdata" in directories
+        ):
             self.rawdata_dir.write_parameters_in_file(logfile)
-        if directories is None or (type(directories) == list and 'fusion' in directories):
+        if directories is None or (
+            type(directories) == list and "fusion" in directories
+        ):
             self.fusion_dir.write_parameters_in_file(logfile)
-        if directories is None or (type(directories) == list and 'mars' in directories):
+        if directories is None or (type(directories) == list and "mars" in directories):
             self.mars_dir.write_parameters_in_file(logfile)
-        if directories is None or (type(directories) == list and 'astec' in directories):
+        if directories is None or (
+            type(directories) == list and "astec" in directories
+        ):
             self.astec_dir.write_parameters_in_file(logfile)
-        if directories is None or (type(directories) == list and 'post' in directories):
+        if directories is None or (type(directories) == list and "post" in directories):
             self.post_dir.write_parameters_in_file(logfile)
-        if directories is None or (type(directories) == list and 'intrareg' in directories):
+        if directories is None or (
+            type(directories) == list and "intrareg" in directories
+        ):
             self.intrareg_dir.write_parameters_in_file(logfile)
 
-        logfile.write('\n')
-        self.varwrite(logfile, 'result_image_suffix', self.result_image_suffix, self.doc['result_image_suffix'])
-        self.varwrite(logfile, 'default_image_suffix', self.default_image_suffix, self.doc['default_image_suffix'])
-        self.varwrite(logfile, 'result_lineage_suffix', self.result_lineage_suffix, self.doc['result_lineage_suffix'])
-        logfile.write('\n')
+        logfile.write("\n")
+        self.varwrite(
+            logfile,
+            "result_image_suffix",
+            self.result_image_suffix,
+            self.doc["result_image_suffix"],
+        )
+        self.varwrite(
+            logfile,
+            "default_image_suffix",
+            self.default_image_suffix,
+            self.doc["default_image_suffix"],
+        )
+        self.varwrite(
+            logfile,
+            "result_lineage_suffix",
+            self.result_lineage_suffix,
+            self.doc["result_lineage_suffix"],
+        )
+        logfile.write("\n")
         return
 
     def write_parameters(self, log_filename=None, directories=None):
@@ -1950,19 +2368,23 @@ class Experiment(PrefixedParameter):
         else:
             local_log_filename = monitoring.log_filename
         if local_log_filename is not None:
-            with open(local_log_filename, 'a') as logfile:
+            with open(local_log_filename, "a") as logfile:
                 self.write_parameters_in_file(logfile, directories=directories)
         return
 
-    def update_history_at_start(self, cli_name=None, start_time=None, parameter_file=None, path_to_vt=None):
+    def update_history_at_start(
+        self, cli_name=None, start_time=None, parameter_file=None, path_to_vt=None
+    ):
         if self.working_dir is not None:
             history_filename = self.working_dir.get_history_filename(cli_name)
         else:
             history_filename = _get_history_filename(cli_name)
-        with open(history_filename, 'a') as logfile:
+        with open(history_filename, "a") as logfile:
             logfile.write("\n")
             if start_time is not None:
-                logfile.write("# " + time.strftime("%a, %d %b %Y %H:%M:%S", start_time) + "\n")
+                logfile.write(
+                    "# " + time.strftime("%a, %d %b %Y %H:%M:%S", start_time) + "\n"
+                )
             logfile.write("# Embryo path: '" + str(self.get_embryo_path()) + "'\n")
             logfile.write("# Embryo name: '" + str(self.get_embryo_name()) + "'\n")
             if parameter_file is not None:
@@ -1975,18 +2397,24 @@ class Experiment(PrefixedParameter):
                 _write_git_information(os.path.dirname(cli_name), logfile, "# ASTEC")
             if path_to_vt is not None:
                 _write_git_information(path_to_vt, logfile, "# VT")
-            if cpp_wrapping.path_to_cli('conda') is not None:
+            if cpp_wrapping.path_to_cli("conda") is not None:
                 _write_conda_information(logfile, "# CONDA")
             logfile.write("# \n")
         return
 
-    def update_history_execution_time(self, cli_name=None, start_time=None, end_time=None):
+    def update_history_execution_time(
+        self, cli_name=None, start_time=None, end_time=None
+    ):
         if self.working_dir is not None:
             history_filename = self.working_dir.get_history_filename(cli_name)
         else:
             history_filename = _get_history_filename(cli_name)
-        with open(history_filename, 'a') as logfile:
-            logfile.write('# Total execution time = ' + str(time.mktime(end_time) - time.mktime(start_time)) + ' sec\n')
+        with open(history_filename, "a") as logfile:
+            logfile.write(
+                "# Total execution time = "
+                + str(time.mktime(end_time) - time.mktime(start_time))
+                + " sec\n"
+            )
             logfile.write("\n\n")
         return
 
@@ -2001,11 +2429,17 @@ class Experiment(PrefixedParameter):
             local_directory = os.getcwd()
 
         d = _timestamp_to_str(timestamp)
-        if len(thefile.split('.')) > 1:
-            ext = thefile.split('.')[-1]
-            filename = re.sub(r'(\.*).' + ext, r'\1', thefile.split(os.path.sep)[-1]) + '-' + d + '.' + ext
+        if len(thefile.split(".")) > 1:
+            ext = thefile.split(".")[-1]
+            filename = (
+                re.sub(r"(\.*)." + ext, r"\1", thefile.split(os.path.sep)[-1])
+                + "-"
+                + d
+                + "."
+                + ext
+            )
         else:
-            filename = thefile.split(os.path.sep)[-1] + '-' + d
+            filename = thefile.split(os.path.sep)[-1] + "-" + d
 
         resfile = os.path.join(local_directory, filename)
         shutil.copy2(thefile, resfile)
@@ -2033,11 +2467,16 @@ class Experiment(PrefixedParameter):
     #
 
     def _update_embryo_path_from_parameters(self, parameters):
-        proc = '_update_embryo_path_from_parameters'
-        if hasattr(parameters, 'PATH_EMBRYO'):
+        proc = "_update_embryo_path_from_parameters"
+        if hasattr(parameters, "PATH_EMBRYO"):
             if parameters.PATH_EMBRYO is not None:
                 if not os.path.isdir(parameters.PATH_EMBRYO):
-                    print(proc + ": '" + parameters.PATH_EMBRYO + "' is not a valid directory. Exiting.")
+                    print(
+                        proc
+                        + ": '"
+                        + parameters.PATH_EMBRYO
+                        + "' is not a valid directory. Exiting."
+                    )
                     sys.exit(1)
                 self._set_embryo_path(parameters.PATH_EMBRYO)
             else:
@@ -2050,17 +2489,17 @@ class Experiment(PrefixedParameter):
         sp = self._embryo_path.split(os.path.sep)
         if len(sp) == 0:
             return
-        if sp[-1] != '':
+        if sp[-1] != "":
             self._set_embryo_name(sp[-1])
             return
-        if len(sp) >= 2 and sp[-2] != '':
+        if len(sp) >= 2 and sp[-2] != "":
             self._set_embryo_name(sp[-2])
             return
         return
 
     def _update_embryo_name_from_parameters(self, parameters):
         self._update_embryo_path_from_parameters(parameters)
-        if hasattr(parameters, 'EN'):
+        if hasattr(parameters, "EN"):
             if parameters.EN is not None:
                 self._set_embryo_name(parameters.EN)
             else:
@@ -2089,36 +2528,58 @@ class Experiment(PrefixedParameter):
         self._update_embryo_path_from_parameters(parameters)
         self._update_embryo_name_from_parameters(parameters)
 
-        self.first_time_point = _read_parameter(parameters, 'first_time_point', self.first_time_point)
-        self.first_time_point = _read_parameter(parameters, 'begin', self.first_time_point)
+        self.first_time_point = _read_parameter(
+            parameters, "first_time_point", self.first_time_point
+        )
+        self.first_time_point = _read_parameter(
+            parameters, "begin", self.first_time_point
+        )
         # if self.first_time_point is None:
         #     print(proc + ": it is mandatory to specify the first time point")
         #     print("\t Exiting.")
         #     sys.exit(1)
 
-        self.last_time_point = _read_parameter(parameters, 'last_time_point', self.last_time_point)
-        self.last_time_point = _read_parameter(parameters, 'end', self.last_time_point)
+        self.last_time_point = _read_parameter(
+            parameters, "last_time_point", self.last_time_point
+        )
+        self.last_time_point = _read_parameter(parameters, "end", self.last_time_point)
         # if self.last_time_point is None:
         #    print(proc + ": it is mandatory to specify the last time point")
         #    print("\t Exiting.")
         #    sys.exit(1)
 
-        self.restart_time_point = _read_parameter(parameters, 'restart_time_point', self.restart_time_point)
-        self.restart_time_point = _read_parameter(parameters, 'restart', self.restart_time_point)
+        self.restart_time_point = _read_parameter(
+            parameters, "restart_time_point", self.restart_time_point
+        )
+        self.restart_time_point = _read_parameter(
+            parameters, "restart", self.restart_time_point
+        )
 
-        self.delta_time_point = _read_parameter(parameters, 'delta_time_point', self.delta_time_point)
-        self.delta_time_point = _read_parameter(parameters, 'delta', self.delta_time_point)
+        self.delta_time_point = _read_parameter(
+            parameters, "delta_time_point", self.delta_time_point
+        )
+        self.delta_time_point = _read_parameter(
+            parameters, "delta", self.delta_time_point
+        )
 
-        self.delay_time_point = _read_parameter(parameters, 'delay_time_point', self.delay_time_point)
-        self.delay_time_point = _read_parameter(parameters, 'raw_delay', self.delay_time_point)
+        self.delay_time_point = _read_parameter(
+            parameters, "delay_time_point", self.delay_time_point
+        )
+        self.delay_time_point = _read_parameter(
+            parameters, "raw_delay", self.delay_time_point
+        )
 
-        self._time_digits_for_filename = _read_parameter(parameters, 'time_digits_for_filename',
-                                                         self._time_digits_for_filename)
-        self._time_digits_for_cell_id = _read_parameter(parameters, 'time_digits_for_cell_id',
-                                                        self._time_digits_for_cell_id)
+        self._time_digits_for_filename = _read_parameter(
+            parameters, "time_digits_for_filename", self._time_digits_for_filename
+        )
+        self._time_digits_for_cell_id = _read_parameter(
+            parameters, "time_digits_for_cell_id", self._time_digits_for_cell_id
+        )
 
         self.rawdata_dir.update_from_parameters(parameters)
         self.fusion_dir.update_from_parameters(parameters)
+        # added contour - Gesa
+        self.contour_dir.update_from_parameters(parameters)
         self.mars_dir.update_from_parameters(parameters)
         self.astec_dir.update_from_parameters(parameters)
         self.post_dir.update_from_parameters(parameters)
@@ -2129,24 +2590,31 @@ class Experiment(PrefixedParameter):
         #
         # set result_image_suffix
         #
-        self.result_image_suffix = _read_parameter(parameters, 'result_image_suffix', self.result_image_suffix)
-        self.result_image_suffix = _read_parameter(parameters, 'RESULT_IMAGE_SUFFIX_FUSE', self.result_image_suffix)
+        self.result_image_suffix = _read_parameter(
+            parameters, "result_image_suffix", self.result_image_suffix
+        )
+        self.result_image_suffix = _read_parameter(
+            parameters, "RESULT_IMAGE_SUFFIX_FUSE", self.result_image_suffix
+        )
 
         #
         # set result_image_suffix to default_image_suffix
         # if default_image_suffix is given and not result_image_suffix
         #
-        if hasattr(parameters, 'default_image_suffix'):
+        if hasattr(parameters, "default_image_suffix"):
             if parameters.default_image_suffix is not None:
                 self.default_image_suffix = parameters.default_image_suffix
-                if not hasattr(parameters, 'result_image_suffix') \
-                        and not hasattr(parameters, 'RESULT_IMAGE_SUFFIX_FUSE'):
+                if not hasattr(parameters, "result_image_suffix") and not hasattr(
+                    parameters, "RESULT_IMAGE_SUFFIX_FUSE"
+                ):
                     self.result_image_suffix = parameters.default_image_suffix
 
         #
         # set result_lineage_suffix
         #
-        self.result_lineage_suffix = _read_parameter(parameters, 'result_lineage_suffix', self.result_lineage_suffix)
+        self.result_lineage_suffix = _read_parameter(
+            parameters, "result_lineage_suffix", self.result_lineage_suffix
+        )
 
         return
 
@@ -2171,30 +2639,50 @@ class Experiment(PrefixedParameter):
             return os.getcwd()
 
     def get_segmentation_image(self, time_value, verbose=True):
-        proc = 'Experiment.get_segmentation_image'
+        proc = "Experiment.get_segmentation_image"
         #
         # try to find segmentation image
         #
         if time_value is None:
             return None
         seg_name = self.astec_dir.get_image_name(time_value)
-        seg_image = find_file(self.astec_dir.get_directory(), seg_name, file_type='image', callfrom=proc,
-                              local_monitoring=None, verbose=False)
+        seg_image = find_file(
+            self.astec_dir.get_directory(),
+            seg_name,
+            file_type="image",
+            callfrom=proc,
+            local_monitoring=None,
+            verbose=False,
+        )
         if seg_image is not None:
             return os.path.join(self.astec_dir.get_directory(), seg_image)
         #
         # try to find mars image
         #
         mars_name = self.mars_dir.get_image_name(time_value)
-        mars_image = find_file(self.mars_dir.get_directory(), mars_name, file_type='image', callfrom=proc,
-                               local_monitoring=None, verbose=False)
+        mars_image = find_file(
+            self.mars_dir.get_directory(),
+            mars_name,
+            file_type="image",
+            callfrom=proc,
+            local_monitoring=None,
+            verbose=False,
+        )
         if mars_image is not None:
             #
             # copy mars image with the same suffix
             #
-            seg_name += "." + mars_image[len(mars_name)+1:]
-            monitoring.to_log_and_console("    .. " + proc + ": copy '" + str(mars_image) + "' into '"
-                                          + str(seg_name) + "'", 2)
+            seg_name += "." + mars_image[len(mars_name) + 1 :]
+            monitoring.to_log_and_console(
+                "    .. "
+                + proc
+                + ": copy '"
+                + str(mars_image)
+                + "' into '"
+                + str(seg_name)
+                + "'",
+                2,
+            )
             mars_image = os.path.join(self.mars_dir.get_directory(), mars_image)
             seg_image = os.path.join(self.astec_dir.get_directory(), seg_name)
             shutil.copy2(mars_image, seg_image)
@@ -2205,12 +2693,33 @@ class Experiment(PrefixedParameter):
         if not verbose:
             return None
 
-        monitoring.to_log_and_console("    .. " + proc + ": no segmentation image was found for time "
-                                      + str(time_value), 2)
-        monitoring.to_log_and_console("       \t" + "1. was looking for file '" + str(seg_name) + "'", 2)
-        monitoring.to_log_and_console("       \t" + "   in directory '" + str(self.astec_dir.get_directory()) + "'", 2)
-        monitoring.to_log_and_console("       \t" + "2. was looking for file '" + str(mars_name) + "'", 2)
-        monitoring.to_log_and_console("       \t" + "   in directory '" + str(self.mars_dir.get_directory()) + "'", 2)
+        monitoring.to_log_and_console(
+            "    .. "
+            + proc
+            + ": no segmentation image was found for time "
+            + str(time_value),
+            2,
+        )
+        monitoring.to_log_and_console(
+            "       \t" + "1. was looking for file '" + str(seg_name) + "'", 2
+        )
+        monitoring.to_log_and_console(
+            "       \t"
+            + "   in directory '"
+            + str(self.astec_dir.get_directory())
+            + "'",
+            2,
+        )
+        monitoring.to_log_and_console(
+            "       \t" + "2. was looking for file '" + str(mars_name) + "'", 2
+        )
+        monitoring.to_log_and_console(
+            "       \t"
+            + "   in directory '"
+            + str(self.mars_dir.get_directory())
+            + "'",
+            2,
+        )
 
         return None
 
@@ -2225,7 +2734,7 @@ class Experiment(PrefixedParameter):
         return form
 
     def get_time_index(self, index):
-        ind = '{:0{width}d}'.format(index, width=self._time_digits_for_filename)
+        ind = "{:0{width}d}".format(index, width=self._time_digits_for_filename)
         return ind
 
     ############################################################
@@ -2240,6 +2749,8 @@ class Experiment(PrefixedParameter):
         # set file prefix
         #
         self.fusion_dir.set_file_prefix(embryo_name)
+        # added contour - Gesa
+        self.contour_dir.set_file_prefix(embryo_name)
         self.mars_dir.set_file_prefix(embryo_name)
         self.astec_dir.set_file_prefix(embryo_name)
         self.post_dir.set_file_prefix(embryo_name)
@@ -2258,6 +2769,8 @@ class Experiment(PrefixedParameter):
         #
         self.rawdata_dir.set_parent_directory(embryo_path)
         self.fusion_dir.set_parent_directory(embryo_path)
+        # added contour - Gesa
+        self.contour_dir.set_parent_directory(embryo_path)
         self.mars_dir.set_parent_directory(embryo_path)
         self.astec_dir.set_parent_directory(embryo_path)
         self.post_dir.set_parent_directory(embryo_path)
@@ -2266,8 +2779,13 @@ class Experiment(PrefixedParameter):
 
     def set_fusion_tmp_directory(self, time_value):
         proc = "Experiment.set_fusion_tmp_directory"
-        if self.rawdata_dir.get_number_channels() is not self.fusion_dir.get_number_directories():
-            print(str(proc) + ": number of channels is different from fusion directories.")
+        if (
+            self.rawdata_dir.get_number_channels()
+            is not self.fusion_dir.get_number_directories()
+        ):
+            print(
+                str(proc) + ": number of channels is different from fusion directories."
+            )
             print("\t Exiting.")
             sys.exit(1)
         t = "TEMP_" + self.fusion_dir.timepoint_to_str(time_value)
@@ -2294,10 +2812,14 @@ class Experiment(PrefixedParameter):
         elif type(digits) is str:
             time_digits = int(digits)
         else:
-            print(str(proc) + ": unexpected type '" + str(type(digits)) + "' for 'digits'")
+            print(
+                str(proc) + ": unexpected type '" + str(type(digits)) + "' for 'digits'"
+            )
             return
         self._time_digits_for_filename = time_digits
         self.fusion_dir.set_time_digits_for_filename(time_digits)
+        # added contour - Gesa
+        self.contour_dir.set_time_digits_for_filename(time_digits)
         self.mars_dir.set_time_digits_for_filename(time_digits)
         self.astec_dir.set_time_digits_for_filename(time_digits)
         self.post_dir.set_time_digits_for_filename(time_digits)
@@ -2324,15 +2846,19 @@ class Experiment(PrefixedParameter):
                 if c == 0:
                     new_dir_suffix.append(dir_suffix)
                 else:
-                    new_dir_suffix.append(dir_suffix + "_CHANNEL_" + str(c+1))
+                    new_dir_suffix.append(dir_suffix + "_CHANNEL_" + str(c + 1))
         elif type(dir_suffix) is list:
             for c in range(n_channels):
                 if c < n_dirs:
                     new_dir_suffix.append(dir_suffix[c])
                 else:
-                    new_dir_suffix.append(dir_suffix[0] + "_CHANNEL_" + str(c+1))
+                    new_dir_suffix.append(dir_suffix[0] + "_CHANNEL_" + str(c + 1))
         else:
-            print("Experiment._fix_fusion_directories: type '" + str(type(dir_suffix)) + "' not handled yet.")
+            print(
+                "Experiment._fix_fusion_directories: type '"
+                + str(type(dir_suffix))
+                + "' not handled yet."
+            )
             print("\t Exiting.")
             sys.exit(1)
         self.fusion_dir.set_directory_suffix(new_dir_suffix)
@@ -2358,11 +2884,10 @@ def _fullname(prefix, desc):
 
 
 def _fulldesc(prefix, desc):
-    return '- ' + _fullname(prefix, desc) + ' = '
+    return "- " + _fullname(prefix, desc) + " = "
 
 
 class RegistrationParameters(PrefixedParameter):
-
     ############################################################
     #
     # initialisation
@@ -2379,7 +2904,7 @@ class RegistrationParameters(PrefixedParameter):
         #
         #
         doc = "\t possible values are True or False\n"
-        self.doc['compute_registration'] = doc
+        self.doc["compute_registration"] = doc
         self.compute_registration = True
 
         #
@@ -2401,27 +2926,27 @@ class RegistrationParameters(PrefixedParameter):
         doc += "\t immediately inferior to the image dimension, or the\n"
         doc += "\t image dimension divided by 2 if it is already of\n"
         doc += "\t form 2^n.\n"
-        self.doc['pyramid_highest_level'] = doc
+        self.doc["pyramid_highest_level"] = doc
         self.pyramid_highest_level = 6
 
         doc = "\t Lowest level of the pyramid image use for registration\n"
         doc += "\t Setting it to 0 means that the lowest level is with\n"
         doc += "\t the image itself. Setting it to 1 or even 2 allows\n"
         doc += "\t to gain computational time.\n"
-        self.doc['pyramid_lowest_level'] = doc
+        self.doc["pyramid_lowest_level"] = doc
         self.pyramid_lowest_level = 3
 
         doc = "\t possible values are True or False\n"
         doc += "\t If True the image at one pyramid level is smoothed\n"
         doc += "\t by a Gaussian kernel before building the image at\n"
         doc += "\t the next level\n"
-        self.doc['gaussian_pyramid'] = doc
+        self.doc["gaussian_pyramid"] = doc
         self.gaussian_pyramid = False
 
         doc = "\t Possible values are 'translation', 'rigid', 'similitude', \n"
         doc += "\t 'affine' or 'vectorfield'\n"
-        self.doc['transformation_type'] = doc
-        self.transformation_type = 'affine'
+        self.doc["transformation_type"] = doc
+        self.transformation_type = "affine"
 
         doc = "\t Gaussian sigma to regularize the deformation.\n"
         doc += "\t Only for 'vectorfield' transformation.\n"
@@ -2432,7 +2957,7 @@ class RegistrationParameters(PrefixedParameter):
         doc += "\t previously found transformation, and the resulting\n"
         doc += "\t deformation is finally smoothed (regularized) by a gaussian\n"
         doc += "\t of 'elastic_sigma' parameter.\n"
-        self.doc['elastic_sigma'] = doc
+        self.doc["elastic_sigma"] = doc
         self.elastic_sigma = 4.0
 
         doc = "\t Possible values are 'wlts', 'lts', 'wls', or 'ls'\n"
@@ -2440,23 +2965,23 @@ class RegistrationParameters(PrefixedParameter):
         doc += "\t - 'lts': least trimmed squares\n"
         doc += "\t - 'wls': weighted least squares\n"
         doc += "\t - 'ls': least squares \n"
-        self.doc['transformation_estimation_type'] = doc
-        self.transformation_estimation_type = 'wlts'
+        self.doc["transformation_estimation_type"] = doc
+        self.transformation_estimation_type = "wlts"
 
         doc = "\t Fraction of pairings retained to compute the transformation.\n"
         doc += "\t Only for robust estimation scheme ('wlts' or 'lts')\n"
-        self.doc['lts_fraction'] = doc
+        self.doc["lts_fraction"] = doc
         self.lts_fraction = 0.55
 
         doc = "\t Gaussian sigma to regularize the deformation update.\n"
         doc += "\t Only for 'vectorfield' transformation.\n"
-        self.doc['fluid_sigma'] = doc
+        self.doc["fluid_sigma"] = doc
         self.fluid_sigma = 4.0
 
         doc = "\t possible values are True or False. If True, the images to be registered\n"
         doc += "\t are normalized on 1 byte for computational purposes.\n"
         doc += "\t This variable is kept for historical reasons. Do not change it.\n"
-        self.doc['normalization'] = doc
+        self.doc["normalization"] = doc
         self.normalization = False
 
     ############################################################
@@ -2467,29 +2992,50 @@ class RegistrationParameters(PrefixedParameter):
 
     def print_parameters(self):
         print("")
-        print('#')
-        print('# RegistrationParameters')
-        print('#')
+        print("#")
+        print("# RegistrationParameters")
+        print("#")
         print("")
 
         PrefixedParameter.print_parameters(self)
 
-        self.varprint('compute_registration', self.compute_registration, self.doc['compute_registration'])
+        self.varprint(
+            "compute_registration",
+            self.compute_registration,
+            self.doc["compute_registration"],
+        )
 
-        self.varprint('pyramid_highest_level', self.pyramid_highest_level, self.doc['pyramid_highest_level'])
-        self.varprint('pyramid_lowest_level', self.pyramid_lowest_level, self.doc['pyramid_lowest_level'])
-        self.varprint('gaussian_pyramid', self.gaussian_pyramid, self.doc['gaussian_pyramid'])
+        self.varprint(
+            "pyramid_highest_level",
+            self.pyramid_highest_level,
+            self.doc["pyramid_highest_level"],
+        )
+        self.varprint(
+            "pyramid_lowest_level",
+            self.pyramid_lowest_level,
+            self.doc["pyramid_lowest_level"],
+        )
+        self.varprint(
+            "gaussian_pyramid", self.gaussian_pyramid, self.doc["gaussian_pyramid"]
+        )
 
-        self.varprint('transformation_type', self.transformation_type, self.doc['transformation_type'])
+        self.varprint(
+            "transformation_type",
+            self.transformation_type,
+            self.doc["transformation_type"],
+        )
 
-        self.varprint('elastic_sigma', self.elastic_sigma, self.doc['elastic_sigma'])
+        self.varprint("elastic_sigma", self.elastic_sigma, self.doc["elastic_sigma"])
 
-        self.varprint('transformation_estimation_type', self.transformation_estimation_type,
-                      self.doc['transformation_estimation_type'])
-        self.varprint('lts_fraction', self.lts_fraction, self.doc['lts_fraction'])
-        self.varprint('fluid_sigma', self.fluid_sigma, self.doc['fluid_sigma'])
+        self.varprint(
+            "transformation_estimation_type",
+            self.transformation_estimation_type,
+            self.doc["transformation_estimation_type"],
+        )
+        self.varprint("lts_fraction", self.lts_fraction, self.doc["lts_fraction"])
+        self.varprint("fluid_sigma", self.fluid_sigma, self.doc["fluid_sigma"])
 
-        self.varprint('normalization', self.normalization, self.doc['normalization'])
+        self.varprint("normalization", self.normalization, self.doc["normalization"])
         print("")
         return
 
@@ -2502,22 +3048,57 @@ class RegistrationParameters(PrefixedParameter):
 
         PrefixedParameter.write_parameters_in_file(self, logfile)
 
-        self.varwrite(logfile, 'compute_registration', self.compute_registration, self.doc['compute_registration'])
+        self.varwrite(
+            logfile,
+            "compute_registration",
+            self.compute_registration,
+            self.doc["compute_registration"],
+        )
 
-        self.varwrite(logfile, 'pyramid_highest_level', self.pyramid_highest_level, self.doc['pyramid_highest_level'])
-        self.varwrite(logfile, 'pyramid_lowest_level', self.pyramid_lowest_level, self.doc['pyramid_lowest_level'])
-        self.varwrite(logfile, 'gaussian_pyramid', self.gaussian_pyramid, self.doc['gaussian_pyramid'])
+        self.varwrite(
+            logfile,
+            "pyramid_highest_level",
+            self.pyramid_highest_level,
+            self.doc["pyramid_highest_level"],
+        )
+        self.varwrite(
+            logfile,
+            "pyramid_lowest_level",
+            self.pyramid_lowest_level,
+            self.doc["pyramid_lowest_level"],
+        )
+        self.varwrite(
+            logfile,
+            "gaussian_pyramid",
+            self.gaussian_pyramid,
+            self.doc["gaussian_pyramid"],
+        )
 
-        self.varwrite(logfile, 'transformation_type', self.transformation_type, self.doc['transformation_type'])
+        self.varwrite(
+            logfile,
+            "transformation_type",
+            self.transformation_type,
+            self.doc["transformation_type"],
+        )
 
-        self.varwrite(logfile, 'elastic_sigma', self.elastic_sigma, self.doc['elastic_sigma'])
+        self.varwrite(
+            logfile, "elastic_sigma", self.elastic_sigma, self.doc["elastic_sigma"]
+        )
 
-        self.varwrite(logfile, 'transformation_estimation_type', self.transformation_estimation_type,
-                      self.doc['transformation_estimation_type'])
-        self.varwrite(logfile, 'lts_fraction', self.lts_fraction, self.doc['lts_fraction'])
-        self.varwrite(logfile, 'fluid_sigma', self.fluid_sigma, self.doc['fluid_sigma'])
+        self.varwrite(
+            logfile,
+            "transformation_estimation_type",
+            self.transformation_estimation_type,
+            self.doc["transformation_estimation_type"],
+        )
+        self.varwrite(
+            logfile, "lts_fraction", self.lts_fraction, self.doc["lts_fraction"]
+        )
+        self.varwrite(logfile, "fluid_sigma", self.fluid_sigma, self.doc["fluid_sigma"])
 
-        self.varwrite(logfile, 'normalization', self.normalization, self.doc['normalization'])
+        self.varwrite(
+            logfile, "normalization", self.normalization, self.doc["normalization"]
+        )
 
         logfile.write("\n")
         return
@@ -2528,7 +3109,7 @@ class RegistrationParameters(PrefixedParameter):
         else:
             local_log_filename = monitoring.log_filename
         if local_log_filename is not None:
-            with open(local_log_filename, 'a') as logfile:
+            with open(local_log_filename, "a") as logfile:
                 self.write_parameters_in_file(logfile)
         return
 
@@ -2539,25 +3120,44 @@ class RegistrationParameters(PrefixedParameter):
     ############################################################
 
     def update_from_parameters(self, parameters):
-        self.compute_registration = self.read_parameter(parameters, 'compute_registration', self.compute_registration)
+        self.compute_registration = self.read_parameter(
+            parameters, "compute_registration", self.compute_registration
+        )
 
-        self.pyramid_highest_level = self.read_parameter(parameters, 'pyramid_highest_level',
-                                                         self.pyramid_highest_level)
-        self.pyramid_lowest_level = self.read_parameter(parameters, 'pyramid_lowest_level', self.pyramid_lowest_level)
-        self.gaussian_pyramid = self.read_parameter(parameters, 'gaussian_pyramid', self.gaussian_pyramid)
+        self.pyramid_highest_level = self.read_parameter(
+            parameters, "pyramid_highest_level", self.pyramid_highest_level
+        )
+        self.pyramid_lowest_level = self.read_parameter(
+            parameters, "pyramid_lowest_level", self.pyramid_lowest_level
+        )
+        self.gaussian_pyramid = self.read_parameter(
+            parameters, "gaussian_pyramid", self.gaussian_pyramid
+        )
 
-        self.transformation_type = self.read_parameter(parameters, 'transformation_type', self.transformation_type)
+        self.transformation_type = self.read_parameter(
+            parameters, "transformation_type", self.transformation_type
+        )
 
-        self.elastic_sigma = self.read_parameter(parameters, 'elastic_sigma', self.elastic_sigma)
+        self.elastic_sigma = self.read_parameter(
+            parameters, "elastic_sigma", self.elastic_sigma
+        )
 
-        self.transformation_estimation_type = self.read_parameter(parameters, 'transformation_estimation_type',
-                                                                  self.transformation_estimation_type)
-        self.lts_fraction = self.read_parameter(parameters, 'lts_fraction', self.lts_fraction)
-        self.fluid_sigma = self.read_parameter(parameters, 'fluid_sigma', self.fluid_sigma)
-        self.normalization = self.read_parameter(parameters, 'normalization', self.normalization)
+        self.transformation_estimation_type = self.read_parameter(
+            parameters,
+            "transformation_estimation_type",
+            self.transformation_estimation_type,
+        )
+        self.lts_fraction = self.read_parameter(
+            parameters, "lts_fraction", self.lts_fraction
+        )
+        self.fluid_sigma = self.read_parameter(
+            parameters, "fluid_sigma", self.fluid_sigma
+        )
+        self.normalization = self.read_parameter(
+            parameters, "normalization", self.normalization
+        )
 
     def update_from_parameter_file(self, parameter_file):
-
         if parameter_file is None:
             return
         if not os.path.isfile(parameter_file):
@@ -2598,7 +3198,15 @@ class RegistrationParameters(PrefixedParameter):
         return True
 
 
-def blockmatching(image_ref, image_flo, image_output, trsf_output, trsf_init, parameters, other_options=None):
+def blockmatching(
+    image_ref,
+    image_flo,
+    image_output,
+    trsf_output,
+    trsf_init,
+    parameters,
+    other_options=None,
+):
     """
 
     :param image_ref:
@@ -2618,19 +3226,31 @@ def blockmatching(image_ref, image_flo, image_output, trsf_output, trsf_init, pa
     #
 
     if not isinstance(parameters, RegistrationParameters):
-        monitoring.to_log_and_console(str(proc) + ": unexpected type for 'parameters' variable: "
-                                      + str(type(parameters)))
+        monitoring.to_log_and_console(
+            str(proc)
+            + ": unexpected type for 'parameters' variable: "
+            + str(type(parameters))
+        )
         sys.exit(1)
 
-    cpp_wrapping.blockmatching(image_ref, image_flo, image_output, trsf_output, trsf_init,
-                               py_hl=parameters.pyramid_highest_level, py_ll=parameters.pyramid_lowest_level,
-                               gaussian_pyramid=parameters.gaussian_pyramid,
-                               transformation_type=parameters.transformation_type,
-                               elastic_sigma=parameters.elastic_sigma,
-                               transformation_estimator=parameters.transformation_estimation_type,
-                               lts_fraction=parameters.lts_fraction, fluid_sigma=parameters.fluid_sigma,
-                               normalization=parameters.normalization, other_options=other_options,
-                               monitoring=monitoring)
+    cpp_wrapping.blockmatching(
+        image_ref,
+        image_flo,
+        image_output,
+        trsf_output,
+        trsf_init,
+        py_hl=parameters.pyramid_highest_level,
+        py_ll=parameters.pyramid_lowest_level,
+        gaussian_pyramid=parameters.gaussian_pyramid,
+        transformation_type=parameters.transformation_type,
+        elastic_sigma=parameters.elastic_sigma,
+        transformation_estimator=parameters.transformation_estimation_type,
+        lts_fraction=parameters.lts_fraction,
+        fluid_sigma=parameters.fluid_sigma,
+        normalization=parameters.normalization,
+        other_options=other_options,
+        monitoring=monitoring,
+    )
     return
 
 
@@ -2640,6 +3260,7 @@ def blockmatching(image_ref, image_flo, image_output, trsf_output, trsf_init, pa
 #
 ########################################################################################
 
+
 def get_parameter_file(parameter_file):
     """
     check if the given parameter file is valid, otherwise ask for a file name
@@ -2648,12 +3269,16 @@ def get_parameter_file(parameter_file):
     """
     if parameter_file is not None and os.path.isfile(parameter_file):
         return parameter_file
-    new_parameter_file = input('   Provide the parameter file: ')
-    if new_parameter_file is None or new_parameter_file == '':
+    new_parameter_file = input("   Provide the parameter file: ")
+    if new_parameter_file is None or new_parameter_file == "":
         print("getParameterFile: no parameter file. Exiting.")
         sys.exit(1)
     if not os.path.isfile(new_parameter_file):
-        print("getParameterFile: '" + new_parameter_file + "' is not a valid file. Exiting.")
+        print(
+            "getParameterFile: '"
+            + new_parameter_file
+            + "' is not a valid file. Exiting."
+        )
         sys.exit(1)
     return new_parameter_file
 
@@ -2664,6 +3289,7 @@ def get_parameter_file(parameter_file):
 #
 ########################################################################################
 
+
 def _write_git_information(path, logfile, desc):
     """
 
@@ -2672,16 +3298,19 @@ def _write_git_information(path, logfile, desc):
     :param desc:
     :return:
     """
-    gitremote = 'git remote get-url origin'
-    gitdescribe = 'git describe'
+    gitremote = "git remote get-url origin"
+    gitdescribe = "git describe"
     gitlog = 'git log -n 1 --format="Commit (tag, date, ref): %H -- %cD -- %D"'
 
     logfile.write(str(desc) + " path: ")
 
-    pipe = subprocess.Popen("cd " + path + "; " + "pwd" + "; cd " + str(os.getcwd()),
-                            shell=True, stdout=subprocess.PIPE).stdout
-    o = (pipe.readline()).decode('utf-8')
-    v = o.split('\n')
+    pipe = subprocess.Popen(
+        "cd " + path + "; " + "pwd" + "; cd " + str(os.getcwd()),
+        shell=True,
+        stdout=subprocess.PIPE,
+    ).stdout
+    o = (pipe.readline()).decode("utf-8")
+    v = o.split("\n")
     logfile.write(str(v[0] + "\n"))
 
     logfile.write(str(desc) + " repository: ")
@@ -2690,8 +3319,12 @@ def _write_git_information(path, logfile, desc):
     #     logfile.write("not found\n")
     #     return
 
-    pipe = subprocess.Popen("cd " + path + "; " + gitremote + "; cd " + str(os.getcwd()),
-                            shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    pipe = subprocess.Popen(
+        "cd " + path + "; " + gitremote + "; cd " + str(os.getcwd()),
+        shell=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
     (stdoutData, stderrData) = pipe.communicate()
 
     if len(stderrData) > 6:
@@ -2702,23 +3335,30 @@ def _write_git_information(path, logfile, desc):
     elif len(stderrData) > 0:
         logfile.write("not a git repository?!\n")
     else:
-        v = (stdoutData.decode('utf8')).split('\n')
+        v = (stdoutData.decode("utf8")).split("\n")
         logfile.write(str(v[0] + "\n"))
 
         logfile.write(str(desc) + " version: ")
-        pipe = subprocess.Popen("cd " + path + "; " + gitdescribe + "; cd " + str(os.getcwd()),
-                                shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        pipe = subprocess.Popen(
+            "cd " + path + "; " + gitdescribe + "; cd " + str(os.getcwd()),
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
         (stdoutData, stderrData) = pipe.communicate()
         if len(stderrData) > 0:
             logfile.write("no version found\n")
         else:
-            v = (stdoutData.decode('utf8')).split('\n')
+            v = (stdoutData.decode("utf8")).split("\n")
             logfile.write(str(v[0] + "\n"))
 
-        pipe = subprocess.Popen("cd " + path + "; " + gitlog + "; cd " + str(os.getcwd()),
-                                shell=True, stdout=subprocess.PIPE).stdout
-        o = (pipe.readline()).decode('utf-8')
-        v = o.split('\n')
+        pipe = subprocess.Popen(
+            "cd " + path + "; " + gitlog + "; cd " + str(os.getcwd()),
+            shell=True,
+            stdout=subprocess.PIPE,
+        ).stdout
+        o = (pipe.readline()).decode("utf-8")
+        v = o.split("\n")
         logfile.write("#\t" + str(v[0] + "\n"))
 
     return
@@ -2735,15 +3375,17 @@ def _write_conda_information(logfile, desc):
     # if not os.path.exists(path + os.path.sep + '.git'):
     #     logfile.write("not found\n")
     #     return
-    packagelist = ['astec', 'vt']
+    packagelist = ["astec", "vt"]
     packageversion = {}
 
-    pipe = subprocess.Popen("conda list", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    pipe = subprocess.Popen(
+        "conda list", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+    )
     (stdoutData, stderrData) = pipe.communicate()
 
-    lines = (stdoutData.decode('utf8')).split('\n')
+    lines = (stdoutData.decode("utf8")).split("\n")
     for l in lines:
-        v = re.split(r'\s{1,}', l)
+        v = re.split(r"\s{1,}", l)
         # v = Name Version Build Channel
         if v[0] in packagelist:
             packageversion[v[0]] = v
@@ -2752,10 +3394,19 @@ def _write_conda_information(logfile, desc):
         if p not in packageversion:
             logfile.write(str(desc) + " package " + str(p) + " not found ?!" + "\n")
         else:
-            logfile.write(str(desc) + " version of package " + str(p) + " is " + str(packageversion[p][1]) +
-                          " issued from channel " + str(packageversion[p][3]) + "\n")
+            logfile.write(
+                str(desc)
+                + " version of package "
+                + str(p)
+                + " is "
+                + str(packageversion[p][1])
+                + " issued from channel "
+                + str(packageversion[p][3])
+                + "\n"
+            )
 
     return
+
 
 ########################################################################################
 #
@@ -2770,7 +3421,7 @@ def read_lut(filename):
     :param filename:
     :return:
     """
-    proc = 'read_lut'
+    proc = "read_lut"
     lut = {}
 
     if not os.path.isfile(filename):
@@ -2780,7 +3431,7 @@ def read_lut(filename):
     f = open(filename)
     for line in f:
         li = line.strip()
-        if li.startswith('#'):
+        if li.startswith("#"):
             continue
         info = li.split()
         if len(info) == 2:
@@ -2801,8 +3452,9 @@ def read_lut(filename):
 #
 ########################################################################################
 
+
 def _get_extension(filename, recognized_extensions):
-    """ Return the file extension. Must be in the set of recognized extensions.
+    """Return the file extension. Must be in the set of recognized extensions.
     :param filename:
     :param recognized_extensions:
     :return: None in case of unrecognized extension,
@@ -2811,17 +3463,30 @@ def _get_extension(filename, recognized_extensions):
     for e in recognized_extensions:
         if len(filename) < len(e):
             continue
-        if filename[len(filename)-len(e):len(filename)] == e:
+        if filename[len(filename) - len(e) : len(filename)] == e:
             return e
     return None
 
 
-recognized_image_extensions = ['.zip', '.h5', '.h5.gz', '.tif', '.tiff', '.TIF', '.TIFF', '.inr', '.inr.gz', '.mha', '.mha.gz',
-                               '.nii', '.nii.gz']
+recognized_image_extensions = [
+    ".zip",
+    ".h5",
+    ".h5.gz",
+    ".tif",
+    ".tiff",
+    ".TIF",
+    ".TIFF",
+    ".inr",
+    ".inr.gz",
+    ".mha",
+    ".mha.gz",
+    ".nii",
+    ".nii.gz",
+]
 
 
 def get_image_extension(filename):
-    """ Return the file extension. Must be in the set of recognized extensions.
+    """Return the file extension. Must be in the set of recognized extensions.
     :param filename:
     :return: None in case of unrecognized extension,
              else the recognized extension (begins with '.')
@@ -2829,16 +3494,18 @@ def get_image_extension(filename):
     return _get_extension(filename, recognized_image_extensions)
 
 
-recognized_lineage_extensions = ['.pkl', '.xml']
+recognized_lineage_extensions = [".pkl", ".xml"]
 
 
 def get_lineage_extension(filename):
-    """ Return the file extension. Must be in the set of recognized extensions.
+    """Return the file extension. Must be in the set of recognized extensions.
     :param filename:
     :return: None in case of unrecognized extension,
              else the recognized extension (begins with '.')
     """
     return _get_extension(filename, recognized_lineage_extensions)
+
+
 #
 #
 #
@@ -2855,7 +3522,7 @@ def add_suffix(filename, suffix, new_dirname=None, new_extension=None):
     :param new_extension: change the extension of the file
     :return: the transformed file name
     """
-    proc = 'add_suffix'
+    proc = "add_suffix"
     if filename is None:
         print(proc + ": was called with '" + str(filename) + "'")
         return
@@ -2870,15 +3537,15 @@ def add_suffix(filename, suffix, new_dirname=None, new_extension=None):
         # sys.exit(1)
         new_basename = b
     else:
-        new_basename = b[0:len(b)-len(e)]
+        new_basename = b[0 : len(b) - len(e)]
     new_basename += suffix
     if new_extension is None:
         new_basename += e
     else:
-        if new_extension[0] == '.':
+        if new_extension[0] == ".":
             new_basename += new_extension
         else:
-            new_basename += '.' + new_extension
+            new_basename += "." + new_extension
     if new_dirname is None:
         res_name = os.path.join(d, new_basename)
     else:
@@ -2892,7 +3559,15 @@ def add_suffix(filename, suffix, new_dirname=None, new_extension=None):
 #
 #
 
-def find_file(data_path, file_prefix, file_type=None, callfrom=None, local_monitoring=None, verbose=True):
+
+def find_file(
+    data_path,
+    file_prefix,
+    file_type=None,
+    callfrom=None,
+    local_monitoring=None,
+    verbose=True,
+):
     """
     find a file in a directory with a given prefix. The suffix is unknown
 
@@ -2912,9 +3587,13 @@ def find_file(data_path, file_prefix, file_type=None, callfrom=None, local_monit
 
     if not os.path.isdir(data_path):
         if local_monitoring is not None:
-            local_monitoring.to_log_and_console(proc + ": '" + str(data_path) + "' is not a valid directory ?!")
+            local_monitoring.to_log_and_console(
+                proc + ": '" + str(data_path) + "' is not a valid directory ?!"
+            )
             if callfrom is not None:
-                local_monitoring.to_log_and_console("\t call from '" + str(callfrom) + "'")
+                local_monitoring.to_log_and_console(
+                    "\t call from '" + str(callfrom) + "'"
+                )
         else:
             print(proc + ": '" + str(data_path) + "' is not a valid directory ?!")
             if callfrom is not None:
@@ -2933,9 +3612,9 @@ def find_file(data_path, file_prefix, file_type=None, callfrom=None, local_monit
     #
     extension = None
     if file_type is not None:
-        if file_type.lower() == 'lineage':
+        if file_type.lower() == "lineage":
             extension = get_lineage_extension(file_prefix)
-        elif file_type.lower() == 'image':
+        elif file_type.lower() == "image":
             extension = get_image_extension(file_prefix)
 
     if extension is not None:
@@ -2953,16 +3632,16 @@ def find_file(data_path, file_prefix, file_type=None, callfrom=None, local_monit
         if f[0:length_file_prefix] == file_prefix[0:length_file_prefix]:
             if extension is None:
                 prefixedfilenames.append(f)
-            elif f[length_file_prefix] == '.':
+            elif f[length_file_prefix] == ".":
                 prefixedfilenames.append(f)
 
     filenames = []
     if file_type is not None:
-        if file_type.lower() == 'lineage':
+        if file_type.lower() == "lineage":
             for f in prefixedfilenames:
                 if f[length_file_prefix:] in recognized_lineage_extensions:
                     filenames.append(f)
-        elif file_type.lower() == 'image':
+        elif file_type.lower() == "image":
             for f in prefixedfilenames:
                 if f[length_file_prefix:] in recognized_image_extensions:
                     filenames.append(f)
@@ -2971,23 +3650,47 @@ def find_file(data_path, file_prefix, file_type=None, callfrom=None, local_monit
 
     if len(filenames) == 0:
         if local_monitoring is not None:
-            local_monitoring.to_log_and_console(proc + ": no file with name '" + str(file_prefix)
-                                                + "' was found in '" + str(data_path) + "'", 4)
+            local_monitoring.to_log_and_console(
+                proc
+                + ": no file with name '"
+                + str(file_prefix)
+                + "' was found in '"
+                + str(data_path)
+                + "'",
+                4,
+            )
         elif verbose is True:
-            print(proc + ": no file with name '" + str(file_prefix) + "' was found in '" + str(data_path) + "'")
+            print(
+                proc
+                + ": no file with name '"
+                + str(file_prefix)
+                + "' was found in '"
+                + str(data_path)
+                + "'"
+            )
         return None
 
     if len(filenames) > 1:
         if local_monitoring is not None:
             local_monitoring.to_log_and_console("\t " + proc + ": warning")
-            local_monitoring.to_log_and_console("\t several files with name '" + str(file_prefix) + "' were found in")
+            local_monitoring.to_log_and_console(
+                "\t several files with name '" + str(file_prefix) + "' were found in"
+            )
             local_monitoring.to_log_and_console("\t    '" + str(data_path) + "'")
-            local_monitoring.to_log_and_console("\t    -> "+str(filenames))
-            local_monitoring.to_log_and_console("\t returned file is '" + str(filenames[0]) + "'")
+            local_monitoring.to_log_and_console("\t    -> " + str(filenames))
+            local_monitoring.to_log_and_console(
+                "\t returned file is '" + str(filenames[0]) + "'"
+            )
         elif verbose is True:
-            print(proc + ": several files with name '"
-                  + str(file_prefix) + "' were found in '" + str(data_path) + "'")
-            print("\t "+str(filenames))
+            print(
+                proc
+                + ": several files with name '"
+                + str(file_prefix)
+                + "' were found in '"
+                + str(data_path)
+                + "'"
+            )
+            print("\t " + str(filenames))
             print("\t returned file is '" + str(filenames[0]) + "'")
         # return None
 
@@ -3003,7 +3706,7 @@ def load_source(path):
         print("\t Exiting.")
         sys.exit(1)
 
-    spec = importlib.util.spec_from_file_location('parameters', path)
+    spec = importlib.util.spec_from_file_location("parameters", path)
     parameters = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(parameters)
     return parameters
@@ -3014,6 +3717,7 @@ def load_source(path):
 #
 #
 #
+
 
 def get_file_suffix(experiment, data_path, file_format, flag_time=None):
     """
@@ -3028,7 +3732,13 @@ def get_file_suffix(experiment, data_path, file_format, flag_time=None):
     proc = "get_file_suffix"
 
     if not os.path.isdir(data_path):
-        monitoring.to_log_and_console(proc + ": weird, data path '" + str(data_path) + "' is not a valid directory", 0)
+        monitoring.to_log_and_console(
+            proc
+            + ": weird, data path '"
+            + str(data_path)
+            + "' is not a valid directory",
+            0,
+        )
         return None
 
     first_time_point = experiment.first_time_point + experiment.delay_time_point
@@ -3047,17 +3757,19 @@ def get_file_suffix(experiment, data_path, file_format, flag_time=None):
     #
     # get and count suffixes for images
     #
-    for current_time in range(first_time_point + experiment.delay_time_point,
-                              last_time_point + experiment.delay_time_point + 1, experiment.delta_time_point):
-
+    for current_time in range(
+        first_time_point + experiment.delay_time_point,
+        last_time_point + experiment.delay_time_point + 1,
+        experiment.delta_time_point,
+    ):
         time_point = experiment.get_time_index(current_time)
         file_prefix = file_format.replace(flag, time_point)
         image_suffixes[current_time] = []
         for f in os.listdir(data_path):
             if len(f) <= len(file_prefix):
                 pass
-            if f[0:len(file_prefix)] == file_prefix and f[len(file_prefix)] == '.':
-                suffix = f[len(file_prefix) + 1:len(f)]
+            if f[0 : len(file_prefix)] == file_prefix and f[len(file_prefix)] == ".":
+                suffix = f[len(file_prefix) + 1 : len(f)]
                 suffixes[suffix] = suffixes.get(suffix, 0) + 1
                 nfiles += 1
                 image_suffixes[current_time] += [suffix]
@@ -3068,12 +3780,22 @@ def get_file_suffix(experiment, data_path, file_format, flag_time=None):
     #
     for s, n in suffixes.items():
         if n == nimages:
+            print("\nreturning common suffix")
             return s
 
     if nfiles < nimages:
-        monitoring.to_log_and_console(proc + ": weird, not enough images '" + str(file_format)
-                                      + "' were found in '" + str(data_path) + "'", 0)
-        monitoring.to_log_and_console("\t found "+str(nfiles)+" images instead of "+str(nimages))
+        monitoring.to_log_and_console(
+            proc
+            + ": weird, not enough images '"
+            + str(file_format)
+            + "' were found in '"
+            + str(data_path)
+            + "'",
+            0,
+        )
+        monitoring.to_log_and_console(
+            "\t found " + str(nfiles) + " images instead of " + str(nimages)
+        )
         monitoring.to_log_and_console("\t Exiting.", 0)
         exit(1)
 
@@ -3090,12 +3812,34 @@ def get_file_suffix(experiment, data_path, file_format, flag_time=None):
             if s not in image_suffixes[i] and s + ".gz" not in image_suffixes[i]:
                 found_suffix = False
         if found_suffix:
-            monitoring.to_log_and_console(proc + ": warning, mixed suffixes '" + str(s) + "' and '" + str(s) + ".gz'"
-                                          + " were found in '" + str(data_path) + "'", 2)
+            monitoring.to_log_and_console(
+                proc
+                + ": warning, mixed suffixes '"
+                + str(s)
+                + "' and '"
+                + str(s)
+                + ".gz'"
+                + " were found in '"
+                + str(data_path)
+                + "'",
+                2,
+            )
             return s
 
-
-    monitoring.to_log_and_console(proc + ": no common suffix for '" + str(file_format)
-                                  + "' was found in '" + str(data_path) + "'", 2)
-    monitoring.to_log_and_console("\t time point range was ["+str(first_time_point)+", "+str(last_time_point)+"]")
+    monitoring.to_log_and_console(
+        proc
+        + ": no common suffix for '"
+        + str(file_format)
+        + "' was found in '"
+        + str(data_path)
+        + "'",
+        2,
+    )
+    monitoring.to_log_and_console(
+        "\t time point range was ["
+        + str(first_time_point)
+        + ", "
+        + str(last_time_point)
+        + "]"
+    )
     return None

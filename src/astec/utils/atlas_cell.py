@@ -1,4 +1,3 @@
-
 import copy
 import os
 import sys
@@ -17,6 +16,7 @@ monitoring = common.Monitoring()
 #
 ############################################################
 
+
 def _get_branch_length(cell, lineage):
     length = 0
     c = cell
@@ -34,10 +34,10 @@ def _get_symmetric_neighborhood(neighborhood):
     """
     symneighborhood = {}
     for n in neighborhood:
-        if n == 'background':
-            sn = 'background'
-        elif n == 'other-half':
-            sn = 'other-half'
+        if n == "background":
+            sn = "background"
+        elif n == "other-half":
+            sn = "other-half"
         else:
             sn = uname.get_symmetric_name(n)
         symneighborhood[sn] = neighborhood[n]
@@ -45,13 +45,13 @@ def _get_symmetric_neighborhood(neighborhood):
 
 
 def neighborhood_normalization(neighborhood, atlas, timepoint, cell_normalization=None):
-    if cell_normalization == 'local':
+    if cell_normalization == "local":
         total = 0
         for n in neighborhood:
             total += neighborhood[n]
         for n in neighborhood:
             neighborhood[n] /= total
-    elif cell_normalization == 'global':
+    elif cell_normalization == "global":
         vs = atlas.get_voxelsize_correction(timepoint)
         for n in neighborhood:
             neighborhood[n] *= vs * vs
@@ -64,9 +64,9 @@ def neighborhood_normalization(neighborhood, atlas, timepoint, cell_normalizatio
 #
 ############################################################
 
+
 class CellAtlases(uatlase.Atlases):
     def __init__(self, parameters=None):
-
         uatlase.Atlases.__init__(self, parameters)
 
         self._default_delay = None
@@ -134,7 +134,14 @@ class CellAtlases(uatlase.Atlases):
     #
     ############################################################
 
-    def _add_cell_atlas(self, atlas, atlas_name, parameters, delay_from_division=0, time_digits_for_cell_id=4):
+    def _add_cell_atlas(
+        self,
+        atlas,
+        atlas_name,
+        parameters,
+        delay_from_division=0,
+        time_digits_for_cell_id=4,
+    ):
         """
 
         Parameters
@@ -152,8 +159,11 @@ class CellAtlases(uatlase.Atlases):
         proc = "add_cell_atlas"
 
         if not isinstance(parameters, uatlase.AtlasParameters):
-            monitoring.to_log_and_console(str(proc) + ": unexpected type for 'parameters' variable: "
-                                          + str(type(parameters)))
+            monitoring.to_log_and_console(
+                str(proc)
+                + ": unexpected type for 'parameters' variable: "
+                + str(type(parameters))
+            )
             sys.exit(1)
 
         #
@@ -164,7 +174,9 @@ class CellAtlases(uatlase.Atlases):
         # only consider the first time point after the division
         #
 
-        neighborhoods = self.get_cell_neighborhood(delay_from_division=delay_from_division)
+        neighborhoods = self.get_cell_neighborhood(
+            delay_from_division=delay_from_division
+        )
         volumes = self.get_volumes(delay_from_division=delay_from_division)
 
         #
@@ -176,7 +188,7 @@ class CellAtlases(uatlase.Atlases):
         cell_name = atlas.cell_name
         cells = list(cell_name.keys())
         for c in cells:
-            if cell_name[c] == '':
+            if cell_name[c] == "":
                 del cell_name[c]
                 continue
             cell_name[c] = cell_name[c].strip()
@@ -186,14 +198,18 @@ class CellAtlases(uatlase.Atlases):
         cell_lineage = atlas.cell_lineage
         cell_contact = atlas.cell_contact_surface
 
-        div = 10 ** time_digits_for_cell_id
+        div = 10**time_digits_for_cell_id
 
         #
         # get the daughter cells just after division
         #
         reverse_lineage = {v: k for k, values in cell_lineage.items() for v in values}
-        daughters = [cell_lineage[c][0] for c in cell_lineage if len(cell_lineage[c]) == 2]
-        daughters += [cell_lineage[c][1] for c in cell_lineage if len(cell_lineage[c]) == 2]
+        daughters = [
+            cell_lineage[c][0] for c in cell_lineage if len(cell_lineage[c]) == 2
+        ]
+        daughters += [
+            cell_lineage[c][1] for c in cell_lineage if len(cell_lineage[c]) == 2
+        ]
 
         ancestor_name = []
         missing_name = []
@@ -215,23 +231,43 @@ class CellAtlases(uatlase.Atlases):
             if daugh not in cell_name:
                 if daugh not in missing_name:
                     missing_name.append(daugh)
-                    monitoring.to_log_and_console("\t" + str(proc) + ": daughter cell #" + str(daugh)
-                                                  + " was not found in 'cell_name' dictionary. Skip it", 6)
+                    monitoring.to_log_and_console(
+                        "\t"
+                        + str(proc)
+                        + ": daughter cell #"
+                        + str(daugh)
+                        + " was not found in 'cell_name' dictionary. Skip it",
+                        6,
+                    )
                 continue
 
             if daugh not in cell_contact:
                 if daugh not in missing_contact:
                     missing_contact.append(daugh)
-                    monitoring.to_log_and_console("\t" + str(proc) + ": daughter cell #" + str(daugh)
-                                                  + " was not found in 'cell_contact_surface' dictionary. Skip it")
+                    monitoring.to_log_and_console(
+                        "\t"
+                        + str(proc)
+                        + ": daughter cell #"
+                        + str(daugh)
+                        + " was not found in 'cell_contact_surface' dictionary. Skip it"
+                    )
                 continue
 
             #
             # check whether the mother name is the right one
             #
-            if cell_name[reverse_lineage[daugh]] != uname.get_mother_name(cell_name[daugh]):
-                msg = "weird, name of daughter cell #" + str(daugh) + " is " + str(cell_name[daugh])
-                msg += " while its mother #" + str(reverse_lineage[daugh]) + " is named "
+            if cell_name[reverse_lineage[daugh]] != uname.get_mother_name(
+                cell_name[daugh]
+            ):
+                msg = (
+                    "weird, name of daughter cell #"
+                    + str(daugh)
+                    + " is "
+                    + str(cell_name[daugh])
+                )
+                msg += (
+                    " while its mother #" + str(reverse_lineage[daugh]) + " is named "
+                )
                 msg += str(cell_name[reverse_lineage[daugh]]) + ". Skip it"
                 monitoring.to_log_and_console("\t" + str(proc) + ": " + msg)
                 continue
@@ -276,7 +312,9 @@ class CellAtlases(uatlase.Atlases):
             for c in cell_contact[d]:
                 n = int(c) % div
                 if n == 1 or n == 0:
-                    neighbor['background'] = neighbor.get('background', 0) + cell_contact[d][c]
+                    neighbor["background"] = (
+                        neighbor.get("background", 0) + cell_contact[d][c]
+                    )
                 else:
                     cname = c
                     #
@@ -289,7 +327,11 @@ class CellAtlases(uatlase.Atlases):
                         neighbor_is_complete = False
                         if c not in missing_neighbors:
                             missing_neighbors.append(c)
-                            msg = "cell #" + str(c) + " (nor any ancestor) was not found in 'cell_name' dictionary."
+                            msg = (
+                                "cell #"
+                                + str(c)
+                                + " (nor any ancestor) was not found in 'cell_name' dictionary."
+                            )
                             monitoring.to_log_and_console("\t" + proc + ": " + msg)
                         continue
                     #
@@ -302,30 +344,49 @@ class CellAtlases(uatlase.Atlases):
                         #
                         if c not in ancestor_name:
                             ancestor_name += [c]
-                            msg = "use name '" + str(this_cell_name) + "' of cell #" + str(cname)
+                            msg = (
+                                "use name '"
+                                + str(this_cell_name)
+                                + "' of cell #"
+                                + str(cname)
+                            )
                             msg += " for cell #" + str(c)
                             monitoring.to_log_and_console("\t" + proc + ": " + msg)
                     if parameters.differentiate_other_half:
-                        neighbor[this_cell_name] = neighbor.get(this_cell_name, 0) + cell_contact[d][c]
+                        neighbor[this_cell_name] = (
+                            neighbor.get(this_cell_name, 0) + cell_contact[d][c]
+                        )
                     else:
                         if this_cell_name[-1] == half_id:
-                            neighbor[this_cell_name] = neighbor.get(this_cell_name, 0) + cell_contact[d][c]
+                            neighbor[this_cell_name] = (
+                                neighbor.get(this_cell_name, 0) + cell_contact[d][c]
+                            )
                         else:
-                            neighbor['other-half'] = neighbor.get('other-half', 0) + cell_contact[d][c]
+                            neighbor["other-half"] = (
+                                neighbor.get("other-half", 0) + cell_contact[d][c]
+                            )
 
             #
             # check whether all neighboring cells have a name
             #
             if not neighbor_is_complete:
-                msg = ": neighborhood of " + str(cell_name[d]) + " is not complete. Skip it"
+                msg = (
+                    ": neighborhood of "
+                    + str(cell_name[d])
+                    + " is not complete. Skip it"
+                )
                 monitoring.to_log_and_console("\t" + str(proc) + msg)
                 continue
 
             #
             # surface normalization
             #
-            neighbor = neighborhood_normalization(neighbor, atlas, int(d) // div,
-                                                  cell_normalization=parameters.cell_normalization)
+            neighbor = neighborhood_normalization(
+                neighbor,
+                atlas,
+                int(d) // div,
+                cell_normalization=parameters.cell_normalization,
+            )
 
             #
             # add cell neighborhood and volume
@@ -335,19 +396,29 @@ class CellAtlases(uatlase.Atlases):
             if key_cell_name not in neighborhoods:
                 neighborhoods[key_cell_name] = {}
             if atlas_name in neighborhoods[key_cell_name]:
-                msg = "weird, " + str(atlas_name) + " was already indexed for neighbors of cell " + \
-                      str(cell_name[d])
+                msg = (
+                    "weird, "
+                    + str(atlas_name)
+                    + " was already indexed for neighbors of cell "
+                    + str(cell_name[d])
+                )
                 monitoring.to_log_and_console("\t" + str(proc) + ": " + msg)
             neighborhoods[key_cell_name][atlas_name] = neighbor
 
             if key_cell_name not in volumes:
                 volumes[key_cell_name] = {}
             if atlas_name in volumes[key_cell_name]:
-                msg = "weird, " + str(atlas_name) + " was already indexed for volume of cell " + \
-                      str(cell_name[d])
+                msg = (
+                    "weird, "
+                    + str(atlas_name)
+                    + " was already indexed for volume of cell "
+                    + str(cell_name[d])
+                )
                 monitoring.to_log_and_console("\t" + str(proc) + ": " + msg)
             if d not in cell_volume:
-                msg = "\t cell #" + str(d) + " was not found in 'cell_volume' dictionary."
+                msg = (
+                    "\t cell #" + str(d) + " was not found in 'cell_volume' dictionary."
+                )
                 monitoring.to_log_and_console("\t" + str(proc) + ": " + msg)
             else:
                 volumes[key_cell_name][atlas_name] = cell_volume[d]
@@ -356,38 +427,61 @@ class CellAtlases(uatlase.Atlases):
             #
             if parameters.add_symmetric_neighborhood:
                 sname = uname.get_symmetric_name(cell_name[d])
-                sreference = 'sym-' + atlas_name
+                sreference = "sym-" + atlas_name
                 sneighbor = _get_symmetric_neighborhood(neighbor)
                 key_sym_name = sname
 
                 if key_sym_name not in neighborhoods:
                     neighborhoods[key_sym_name] = {}
                 if sreference in neighborhoods[key_sym_name]:
-                    msg = "weird, " + str(sreference) + " was already indexed for cell " + str(sname)
+                    msg = (
+                        "weird, "
+                        + str(sreference)
+                        + " was already indexed for cell "
+                        + str(sname)
+                    )
                     monitoring.to_log_and_console("\t" + str(proc) + ": " + msg)
                 neighborhoods[key_sym_name][sreference] = sneighbor
 
                 if key_sym_name not in volumes:
                     volumes[key_sym_name] = {}
                 if sreference in volumes[key_sym_name]:
-                    msg = "weird, " + str(sreference) + " was already indexed for volume of cell " + str(sname)
+                    msg = (
+                        "weird, "
+                        + str(sreference)
+                        + " was already indexed for volume of cell "
+                        + str(sname)
+                    )
                     monitoring.to_log_and_console("\t" + str(proc) + ": " + msg)
                 if d not in cell_volume:
-                    msg = "\t cell #" + str(d) + " was not found in 'cell_volume' dictionary."
+                    msg = (
+                        "\t cell #"
+                        + str(d)
+                        + " was not found in 'cell_volume' dictionary."
+                    )
                     monitoring.to_log_and_console("\t" + str(proc) + ": " + msg)
                 else:
                     volumes[key_sym_name][sreference] = cell_volume[d]
 
-        self.set_cell_neighborhood(neighborhoods, delay_from_division=delay_from_division)
+        self.set_cell_neighborhood(
+            neighborhoods, delay_from_division=delay_from_division
+        )
         self.set_volumes(volumes, delay_from_division=delay_from_division)
 
         if len(missing_name) > 0:
-            msg = ": daughter cells without names = " + str(len(missing_name)) + "/" + str(len(daughters))
+            msg = (
+                ": daughter cells without names = "
+                + str(len(missing_name))
+                + "/"
+                + str(len(daughters))
+            )
             msg += " in '" + str(atlas_name) + "'"
             monitoring.to_log_and_console(str(proc) + msg)
 
         if len(missing_contact) > 0:
-            msg = ": daughter cells without contact surfaces  = " + str(len(missing_contact))
+            msg = ": daughter cells without contact surfaces  = " + str(
+                len(missing_contact)
+            )
             msg += "/" + str(len(daughters)) + " in '" + str(atlas_name) + "'"
             monitoring.to_log_and_console(str(proc) + msg)
 
@@ -400,11 +494,18 @@ class CellAtlases(uatlase.Atlases):
 
         return
 
-    def build_cell_atlases(self, parameters, delay_from_division=0, time_digits_for_cell_id=4):
+    def build_cell_atlases(
+        self, parameters, delay_from_division=0, time_digits_for_cell_id=4
+    ):
         ref_atlases = self.get_atlases()
         for a in ref_atlases:
-            self._add_cell_atlas(ref_atlases[a], a, parameters, delay_from_division=delay_from_division,
-                                 time_digits_for_cell_id=time_digits_for_cell_id)
+            self._add_cell_atlas(
+                ref_atlases[a],
+                a,
+                parameters,
+                delay_from_division=delay_from_division,
+                time_digits_for_cell_id=time_digits_for_cell_id,
+            )
 
     ############################################################
     #
@@ -413,23 +514,44 @@ class CellAtlases(uatlase.Atlases):
     ############################################################
 
     def generate_figure(self, parameters, time_digits_for_cell_id=4):
-
         uatlase.Atlases.generate_figure(self, parameters)
 
-        do_generate_figure = (isinstance(parameters.generate_figure, bool) and parameters.generate_figure) or \
-                             (isinstance(parameters.generate_figure, str) and parameters.generate_figure == 'all') or \
-                             (isinstance(parameters.generate_figure, list) and 'all' in parameters.generate_figure)
+        do_generate_figure = (
+            (
+                isinstance(parameters.generate_figure, bool)
+                and parameters.generate_figure
+            )
+            or (
+                isinstance(parameters.generate_figure, str)
+                and parameters.generate_figure == "all"
+            )
+            or (
+                isinstance(parameters.generate_figure, list)
+                and "all" in parameters.generate_figure
+            )
+        )
 
         #
         # cell-to-cell distance between successive cells in a branch with respect to distance from first cell
         # (from first time point/division to last time point/division)
         #
-        if (isinstance(parameters.generate_figure, str) and parameters.generate_figure == 'cell-distance-along-branch') \
-                or (isinstance(parameters.generate_figure, list)
-                    and 'cell-distance-along-branch' in parameters.generate_figure) \
-                or do_generate_figure:
-            monitoring.to_log_and_console("... generate cell distance along branch file", 1)
-            _figures_distance_along_branch(self, parameters, time_digits_for_cell_id=time_digits_for_cell_id)
+        if (
+            (
+                isinstance(parameters.generate_figure, str)
+                and parameters.generate_figure == "cell-distance-along-branch"
+            )
+            or (
+                isinstance(parameters.generate_figure, list)
+                and "cell-distance-along-branch" in parameters.generate_figure
+            )
+            or do_generate_figure
+        ):
+            monitoring.to_log_and_console(
+                "... generate cell distance along branch file", 1
+            )
+            _figures_distance_along_branch(
+                self, parameters, time_digits_for_cell_id=time_digits_for_cell_id
+            )
             monitoring.to_log_and_console("... done", 1)
 
 
@@ -440,6 +562,7 @@ class CellAtlases(uatlase.Atlases):
 # (from first time point/division to last time point/division)
 #
 ################################################################################
+
 
 def _figures_distance_along_branch(atlases, parameters, time_digits_for_cell_id=4):
     """
@@ -456,31 +579,35 @@ def _figures_distance_along_branch(atlases, parameters, time_digits_for_cell_id=
     """
     proc = "_figures_distance_along_branch"
 
-    filename = 'figures_distance_along_branch'
+    filename = "figures_distance_along_branch"
     file_suffix = None
-    if parameters.figurefile_suffix is not None and isinstance(parameters.figurefile_suffix, str) and \
-            len(parameters.figurefile_suffix) > 0:
-        file_suffix = '_' + parameters.figurefile_suffix
+    if (
+        parameters.figurefile_suffix is not None
+        and isinstance(parameters.figurefile_suffix, str)
+        and len(parameters.figurefile_suffix) > 0
+    ):
+        file_suffix = "_" + parameters.figurefile_suffix
     if file_suffix is not None:
         filename += file_suffix
-    filename += '.py'
+    filename += ".py"
 
     if parameters.outputDir is not None and isinstance(parameters.outputDir, str):
         if not os.path.isdir(parameters.outputDir):
             if not os.path.exists(parameters.outputDir):
                 os.makedirs(parameters.outputDir)
             else:
-                monitoring.to_log_and_console(proc + ": '" + str(parameters.outputDir) + "' is not a directory ?!")
+                monitoring.to_log_and_console(
+                    proc + ": '" + str(parameters.outputDir) + "' is not a directory ?!"
+                )
         if os.path.isdir(parameters.outputDir):
             filename = os.path.join(parameters.outputDir, filename)
 
     ref_atlases = atlases.get_atlases()
-    div = 10 ** time_digits_for_cell_id
+    div = 10**time_digits_for_cell_id
 
     contact_distance_along_time = {}
 
     for ref in ref_atlases:
-
         contact_distance_along_time[ref] = {}
         lineage = ref_atlases[ref].cell_lineage
         contact = ref_atlases[ref].cell_contact_surface
@@ -490,7 +617,11 @@ def _figures_distance_along_branch(atlases, parameters, time_digits_for_cell_id=
         #
         # get the first and last time points
         #
-        cells = list(set(lineage.keys()).union(set([v for values in list(lineage.values()) for v in values])))
+        cells = list(
+            set(lineage.keys()).union(
+                set([v for values in list(lineage.values()) for v in values])
+            )
+        )
         cells = sorted(cells)
         cells_per_time = {}
         for c in cells:
@@ -504,18 +635,34 @@ def _figures_distance_along_branch(atlases, parameters, time_digits_for_cell_id=
         #
         # study single branches beginning right after a division, but not at the last time
         #
-        first_cells = [lineage[c][0] for c in lineage if len(lineage[c]) == 2 and int(c) // div < last_time - 1]
-        first_cells += [lineage[c][1] for c in lineage if len(lineage[c]) == 2 and int(c) // div < last_time - 1]
+        first_cells = [
+            lineage[c][0]
+            for c in lineage
+            if len(lineage[c]) == 2 and int(c) // div < last_time - 1
+        ]
+        first_cells += [
+            lineage[c][1]
+            for c in lineage
+            if len(lineage[c]) == 2 and int(c) // div < last_time - 1
+        ]
 
         for cell in first_cells:
             if cell not in contact:
-                msg = "    * weird, cell " + str(cell) + " is not in the 'contact surface' dictionary"
+                msg = (
+                    "    * weird, cell "
+                    + str(cell)
+                    + " is not in the 'contact surface' dictionary"
+                )
                 msg += " of atlas '" + str(ref) + "'"
                 monitoring.to_log_and_console(msg, 3)
                 continue
 
             if cell not in name:
-                msg = "    * weird, cell " + str(cell) + " is not in the 'name' dictionary"
+                msg = (
+                    "    * weird, cell "
+                    + str(cell)
+                    + " is not in the 'name' dictionary"
+                )
                 msg += " of atlas '" + str(ref) + "'"
                 monitoring.to_log_and_console(msg, 3)
                 keyd = cell
@@ -525,8 +672,12 @@ def _figures_distance_along_branch(atlases, parameters, time_digits_for_cell_id=
             first_time = int(cell) // div
             pcell = cell
             pneigh = copy.deepcopy(contact[cell])
-            pneigh = neighborhood_normalization(pneigh, ref_atlases[ref], first_time,
-                                                cell_normalization=parameters.cell_normalization)
+            pneigh = neighborhood_normalization(
+                pneigh,
+                ref_atlases[ref],
+                first_time,
+                cell_normalization=parameters.cell_normalization,
+            )
             #
             # extract next neighborhood, change neighbors wrt first cell and compute distance
             #
@@ -550,7 +701,11 @@ def _figures_distance_along_branch(atlases, parameters, time_digits_for_cell_id=
                     else:
                         for i in range(t - first_time):
                             if c not in reverse_lineage:
-                                msg = "    * weird, cell " + str(c) + " is not in the reversed lineage"
+                                msg = (
+                                    "    * weird, cell "
+                                    + str(c)
+                                    + " is not in the reversed lineage"
+                                )
                                 msg += " of atlas '" + str(ref) + "'"
                                 monitoring.to_log_and_console(msg)
                                 emergency_break = True
@@ -564,10 +719,18 @@ def _figures_distance_along_branch(atlases, parameters, time_digits_for_cell_id=
                 #
                 #
                 #
-                nneigh = neighborhood_normalization(nneigh, ref_atlases[ref], t,
-                                                    cell_normalization=parameters.cell_normalization)
-                d = uneighborhood.cell_distance(pneigh, nneigh, change_contact_surfaces=False)
-                contact_distance_along_time[ref][keyd] = contact_distance_along_time[ref].get(keyd, []) + [d]
+                nneigh = neighborhood_normalization(
+                    nneigh,
+                    ref_atlases[ref],
+                    t,
+                    cell_normalization=parameters.cell_normalization,
+                )
+                d = uneighborhood.cell_distance(
+                    pneigh, nneigh, change_contact_surfaces=False
+                )
+                contact_distance_along_time[ref][keyd] = contact_distance_along_time[
+                    ref
+                ].get(keyd, []) + [d]
                 pcell = ncell
                 pneigh = copy.deepcopy(nneigh)
     #
@@ -584,14 +747,18 @@ def _figures_distance_along_branch(atlases, parameters, time_digits_for_cell_id=
 
     f.write("\n")
     f.write("contact_distance = " + str(contact_distance_along_time) + "\n")
-    f.write("lengths = [len(contact_distance[r][c]) for r in contact_distance for c in contact_distance[r]]\n")
+    f.write(
+        "lengths = [len(contact_distance[r][c]) for r in contact_distance for c in contact_distance[r]]\n"
+    )
 
     f.write("\n")
     f.write("dict_dist_per_time = {}\n")
     f.write("for r in contact_distance:\n")
     f.write("    for c in contact_distance[r]:\n")
     f.write("        for i, v in enumerate(contact_distance[r][c]):\n")
-    f.write("            dict_dist_per_time[i] = dict_dist_per_time.get(i, []) + [contact_distance[r][c][i]]\n")
+    f.write(
+        "            dict_dist_per_time[i] = dict_dist_per_time.get(i, []) + [contact_distance[r][c][i]]\n"
+    )
     f.write("dist_per_time = []\n")
     f.write("for i in range(max(lengths)):\n")
     f.write("    dist_per_time.append(dict_dist_per_time[i])\n")
@@ -607,7 +774,7 @@ def _figures_distance_along_branch(atlases, parameters, time_digits_for_cell_id=
     f.write("ax1.set_xlabel('time from division', fontsize=15)\n")
     f.write("ax1.set_ylabel('distance', fontsize=15)\n")
     f.write("ax1.boxplot(dist_per_time)\n")
-    f.write("ax1.set_title(\"[t, t+1] distances\", fontsize=15)\n")
+    f.write('ax1.set_title("[t, t+1] distances", fontsize=15)\n')
     f.write("ax1.set_xticks(ticks)\n")
     f.write("ax1.set_xticklabels(ticks)\n")
 
@@ -617,7 +784,7 @@ def _figures_distance_along_branch(atlases, parameters, time_digits_for_cell_id=
     f.write("ax2.set_xlabel('time from division', fontsize=15)\n")
     f.write("ax2.set_ylabel('distance', fontsize=15)\n")
     f.write("ax2.boxplot(dist_per_time)\n")
-    f.write("ax2.set_title(\"[t, t+1] distances (close-up)\", fontsize=15)\n")
+    f.write('ax2.set_title("[t, t+1] distances (close-up)", fontsize=15)\n')
 
     f.write("\n")
     f.write("if savefig:\n")

@@ -1,6 +1,7 @@
 from os.path import exists, splitext, split as psplit, expanduser as expusr
 import os
 import subprocess
+import shutil
 
 from astec.components.spatial_image import SpatialImage
 from astec.components.threading import CompressFile
@@ -27,16 +28,20 @@ def imread(filename):
     :Returns Type:
         |SpatialImage|
     """
-    proc = 'imread'
+    proc = "imread"
     filename = expusr(filename)
 
-    if not os.path.isfile(filename) and os.path.isfile(filename+".gz"):
+    if not os.path.isfile(filename) and os.path.isfile(filename + ".gz"):
         filename = filename + ".gz"
-        print(proc + ": Warning: path to read image has been changed to " + filename + ".")
+        print(
+            proc + ": Warning: path to read image has been changed to " + filename + "."
+        )
 
-    if not os.path.isfile(filename) and os.path.isfile(filename+".zip"):
+    if not os.path.isfile(filename) and os.path.isfile(filename + ".zip"):
         filename = filename + ".zip"
-        print(proc + ": Warning: path to read image has been changed to " + filename + ".")
+        print(
+            proc + ": Warning: path to read image has been changed to " + filename + "."
+        )
 
     if not exists(filename):
         raise IOError("The requested file do not exist: %s" % filename)
@@ -61,7 +66,12 @@ def imread(filename):
             uncompressedfilename = filename[:-3]
             print("       .. uncompressing '" + os.path.basename(filename) + "'")
             command_line = "gzip -d " + str(filename)
-            subprocess.call(command_line, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            subprocess.call(
+                command_line,
+                shell=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+            )
         image = read_h5(uncompressedfilename)
         if compressed:
             compressTasks[filename] = CompressFile(uncompressedfilename)
@@ -114,3 +124,18 @@ def imsave(filename, img):
         write_nii(filename, img)
     else:
         raise IOError("Such image extension not handled yet: %s" % filename)
+
+
+def imcopy(src, dst):
+    """
+    copying a file from the temporary to the main results folder, while making sure that the final result has the specified format
+    Parameters:
+    src (str): string of path of the file that should be copied
+    dst (str): string of path of the destination of the file
+
+    """
+
+    if src.split(".")[-1] == dst.split(".")[-1]:
+        shutil.copyfile(src, dst)
+    else:
+        subprocess.call(f"copy {src} {dst}", shell=True)

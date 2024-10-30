@@ -1,4 +1,3 @@
-
 import copy
 import math
 import os
@@ -23,6 +22,7 @@ monitoring = common.Monitoring()
 #
 #
 ############################################################
+
 
 def _build_vector_sphere(r=3):
     """
@@ -119,8 +119,8 @@ def _build_vector_sphere(r=3):
 #
 ############################################################
 
-class EmbryoSymmetryParameters(common.PrefixedParameter):
 
+class EmbryoSymmetryParameters(common.PrefixedParameter):
     ############################################################
     #
     # initialisation
@@ -128,7 +128,6 @@ class EmbryoSymmetryParameters(common.PrefixedParameter):
     ############################################################
 
     def __init__(self, prefix=""):
-
         common.PrefixedParameter.__init__(self, prefix=prefix)
 
         if "doc" not in self.__dict__:
@@ -147,27 +146,35 @@ class EmbryoSymmetryParameters(common.PrefixedParameter):
         doc += "\t radius = 30:  9194 vectors, angle between neighboring vectors in [1.46, 3.40] degrees\n"
         doc += "\t radius = 35: 12542 vectors, angle between neighboring vectors in [1.26, 2.90] degrees\n"
         doc += "\t radius = 40: 16418 vectors, angle between neighboring vectors in [1.08, 2.53] degrees\n"
-        self.doc['sphere_radius'] = doc
+        self.doc["sphere_radius"] = doc
         self.sphere_radius = 20
 
         doc = "\t Sigma (standard deviation) to build the direction distribution (in radian).\n"
-        doc += "\t The distribution is built through a Gaussian kernel density estimation."
-        self.doc['sigma'] = doc
+        doc += (
+            "\t The distribution is built through a Gaussian kernel density estimation."
+        )
+        self.doc["sigma"] = doc
         self.sigma = 0.15
 
         doc = "\t Threshold on the distribution value. Only maxima above this threshold are\n"
         doc += "\t kept. Recall that the distribution values are normalize so that the maximum\n"
         doc += "\t is 1.\n"
-        self.doc['maxima_threshold'] = doc
+        self.doc["maxima_threshold"] = doc
         self.maxima_threshold = 0.5
 
         doc = "\t Number of distribution maxima to be retained as candidates.\n"
-        doc += "\t 'None' or negative number means all of them. Since the distribution\n"
-        doc += "\t is computed onto a sphere, both the surface normal and its opposite\n"
+        doc += (
+            "\t 'None' or negative number means all of them. Since the distribution\n"
+        )
+        doc += (
+            "\t is computed onto a sphere, both the surface normal and its opposite\n"
+        )
         doc += "\t contribute to the distribution estimation. It comes out that each symmetry\n"
-        doc += "\t direction is represented by two (opposite) vectors, meaning that this\n"
+        doc += (
+            "\t direction is represented by two (opposite) vectors, meaning that this\n"
+        )
         doc += "\t parameter has to be even. \n"
-        self.doc['maxima_number'] = doc
+        self.doc["maxima_number"] = doc
         self.maxima_number = 12
 
     ############################################################
@@ -178,17 +185,25 @@ class EmbryoSymmetryParameters(common.PrefixedParameter):
 
     def print_parameters(self):
         print("")
-        print('#')
-        print('# EmbryoSymmetryParameters')
-        print('#')
+        print("#")
+        print("# EmbryoSymmetryParameters")
+        print("#")
         print("")
 
         common.PrefixedParameter.print_parameters(self)
 
-        self.varprint('sphere_radius', self.sphere_radius, self.doc.get('sphere_radius', None))
-        self.varprint('sigma', self.sigma, self.doc.get('sigma', None))
-        self.varprint('maxima_threshold', self.maxima_threshold, self.doc.get('maxima_threshold', None))
-        self.varprint('maxima_number', self.maxima_number, self.doc.get('maxima_number', None))
+        self.varprint(
+            "sphere_radius", self.sphere_radius, self.doc.get("sphere_radius", None)
+        )
+        self.varprint("sigma", self.sigma, self.doc.get("sigma", None))
+        self.varprint(
+            "maxima_threshold",
+            self.maxima_threshold,
+            self.doc.get("maxima_threshold", None),
+        )
+        self.varprint(
+            "maxima_number", self.maxima_number, self.doc.get("maxima_number", None)
+        )
         print("")
 
     def write_parameters_in_file(self, logfile):
@@ -200,16 +215,31 @@ class EmbryoSymmetryParameters(common.PrefixedParameter):
 
         common.PrefixedParameter.write_parameters_in_file(self, logfile)
 
-        self.varwrite(logfile, 'sphere_radius', self.sphere_radius, self.doc.get('sphere_radius', None))
-        self.varwrite(logfile, 'sigma', self.sigma, self.doc.get('sigma', None))
-        self.varwrite(logfile, 'maxima_threshold', self.maxima_threshold, self.doc.get('maxima_threshold', None))
-        self.varwrite(logfile, 'maxima_number', self.maxima_number, self.doc.get('maxima_number', None))
+        self.varwrite(
+            logfile,
+            "sphere_radius",
+            self.sphere_radius,
+            self.doc.get("sphere_radius", None),
+        )
+        self.varwrite(logfile, "sigma", self.sigma, self.doc.get("sigma", None))
+        self.varwrite(
+            logfile,
+            "maxima_threshold",
+            self.maxima_threshold,
+            self.doc.get("maxima_threshold", None),
+        )
+        self.varwrite(
+            logfile,
+            "maxima_number",
+            self.maxima_number,
+            self.doc.get("maxima_number", None),
+        )
 
         logfile.write("\n")
         return
 
     def write_parameters(self, log_file_name):
-        with open(log_file_name, 'a') as logfile:
+        with open(log_file_name, "a") as logfile:
             self.write_parameters_in_file(logfile)
         return
 
@@ -220,11 +250,16 @@ class EmbryoSymmetryParameters(common.PrefixedParameter):
     ############################################################
 
     def update_from_parameters(self, parameters):
-
-        self.sphere_radius = self.read_parameter(parameters, 'sphere_radius', self.sphere_radius)
-        self.sigma = self.read_parameter(parameters, 'sigma', self.sigma)
-        self.maxima_threshold = self.read_parameter(parameters, 'maxima_threshold', self.maxima_threshold)
-        self.maxima_number = self.read_parameter(parameters, 'maxima_number', self.maxima_number)
+        self.sphere_radius = self.read_parameter(
+            parameters, "sphere_radius", self.sphere_radius
+        )
+        self.sigma = self.read_parameter(parameters, "sigma", self.sigma)
+        self.maxima_threshold = self.read_parameter(
+            parameters, "maxima_threshold", self.maxima_threshold
+        )
+        self.maxima_number = self.read_parameter(
+            parameters, "maxima_number", self.maxima_number
+        )
 
     def update_from_parameter_file(self, parameter_file):
         if parameter_file is None:
@@ -242,6 +277,7 @@ class EmbryoSymmetryParameters(common.PrefixedParameter):
 #
 #
 ############################################################
+
 
 def _distribution_build_support(parameters):
     proc = "_distribution_build_support"
@@ -266,10 +302,10 @@ def _distribution_build_support(parameters):
             for k in range(m.shape[2]):
                 if m[i][j][k] == 0:
                     continue
-                p = {'voxel': (i, j, k)}
+                p = {"voxel": (i, j, k)}
                 v = np.array([(i - c[0]), (j - c[1]), (k - c[2])])
-                p['vector'] = v / np.linalg.norm(v)
-                p['value'] = 0.0
+                p["vector"] = v / np.linalg.norm(v)
+                p["value"] = 0.0
                 direction_distribution += [p]
                 #
                 # error evaluation: angles between neighboring vectors
@@ -279,16 +315,28 @@ def _distribution_build_support(parameters):
                         for dk in range(-1, 2):
                             if di == 0 and dj == 0 and dk == 0:
                                 continue
-                            if m[i+di][j+dj][k+dk] == 0:
+                            if m[i + di][j + dj][k + dk] == 0:
                                 continue
-                            v = np.array([(i + di - c[0]), (j + dj - c[1]), (k + dk - c[2])])
-                            angles += [math.acos(np.dot(p['vector'], v / np.linalg.norm(v)))]
+                            v = np.array(
+                                [(i + di - c[0]), (j + dj - c[1]), (k + dk - c[2])]
+                            )
+                            angles += [
+                                math.acos(np.dot(p["vector"], v / np.linalg.norm(v)))
+                            ]
 
-    monitoring.to_log_and_console("      ... direction distribution build with r = " + str(parameters.sphere_radius), 2)
-    monitoring.to_log_and_console("          vectors = " + str(len(direction_distribution)), 2)
-    min_angles = min(angles)*180.0/np.pi
+    monitoring.to_log_and_console(
+        "      ... direction distribution build with r = "
+        + str(parameters.sphere_radius),
+        2,
+    )
+    monitoring.to_log_and_console(
+        "          vectors = " + str(len(direction_distribution)), 2
+    )
+    min_angles = min(angles) * 180.0 / np.pi
     max_angles = max(angles) * 180.0 / np.pi
-    msg = "          angles between adjacent vectors in [{:.2f}, {:.2f}]".format(min_angles, max_angles)
+    msg = "          angles between adjacent vectors in [{:.2f}, {:.2f}]".format(
+        min_angles, max_angles
+    )
     monitoring.to_log_and_console(msg, 2)
 
     return direction_distribution
@@ -313,8 +361,12 @@ def _distribution_direction_build(embryo, timepoint, parameters):
     #
     # cells to be processed
     #
-    div_cell = 10 ** time_digits_for_cell_id
-    cells = [c for c in cell_contact_surface if (int(c) // div_cell == timepoint) and int(c) % div_cell != 1]
+    div_cell = 10**time_digits_for_cell_id
+    cells = [
+        c
+        for c in cell_contact_surface
+        if (int(c) // div_cell == timepoint) and int(c) % div_cell != 1
+    ]
 
     #
     # initialisation
@@ -349,7 +401,11 @@ def _distribution_direction_build(embryo, timepoint, parameters):
             sum_negative_contributions = 0.0
 
             for i, p in enumerate(distribution):
-                sp = p['vector'][0] * v[0] + p['vector'][1] * v[1] + p['vector'][2] * v[2]
+                sp = (
+                    p["vector"][0] * v[0]
+                    + p["vector"][1] * v[1]
+                    + p["vector"][2] * v[2]
+                )
                 sp = max(min(sp, 1.0), -1.0)
                 #
                 # positive contribution
@@ -357,7 +413,7 @@ def _distribution_direction_build(embryo, timepoint, parameters):
                 #
                 angle = math.acos(sp)
                 if angle < angle_threshold:
-                    contrib = math.exp(- angle * angle / div)
+                    contrib = math.exp(-angle * angle / div)
                     sum_positive_contributions += contrib
                     plist += [(i, contrib)]
                 #
@@ -366,28 +422,31 @@ def _distribution_direction_build(embryo, timepoint, parameters):
                 # so acos( -sp ) will be pi -  acos( sp )
                 angle = np.pi - angle
                 if angle < angle_threshold:
-                    contrib = math.exp(- angle * angle / div)
+                    contrib = math.exp(-angle * angle / div)
                     sum_negative_contributions += contrib
                     nlist += [(i, contrib)]
 
-            for (i, contrib) in plist:
-                contribution_list[i] += cell_contact_surface[c][d] * contrib / sum_positive_contributions
-            for (i, contrib) in nlist:
-                contribution_list[i] += cell_contact_surface[c][d] * contrib / sum_negative_contributions
+            for i, contrib in plist:
+                contribution_list[i] += (
+                    cell_contact_surface[c][d] * contrib / sum_positive_contributions
+                )
+            for i, contrib in nlist:
+                contribution_list[i] += (
+                    cell_contact_surface[c][d] * contrib / sum_negative_contributions
+                )
 
     #
     # set distribution values on distribution support
     #
     max_contribution = max(contribution_list)
     for i, v in enumerate(contribution_list):
-        distribution[i]['value'] = v / max_contribution
+        distribution[i]["value"] = v / max_contribution
 
     embryo.direction_distribution[timepoint] = distribution
     return
 
 
 def _distribution_direction_maxima(embryo, timepoint, parameters):
-
     #
     # build a voxel array and set the distribution values
     # see _build_vector_sphere()
@@ -398,7 +457,7 @@ def _distribution_direction_maxima(embryo, timepoint, parameters):
     distribution = embryo.direction_distribution[timepoint]
 
     for p in distribution:
-        values[p['voxel'][0]][p['voxel'][1]][p['voxel'][2]] = p['value']
+        values[p["voxel"][0]][p["voxel"][1]][p["voxel"][2]] = p["value"]
 
     maxima = []
     for p in distribution:
@@ -406,64 +465,64 @@ def _distribution_direction_maxima(embryo, timepoint, parameters):
         # hard threshold on maxima
         # recall the maximum of the distribution has to set to 1.0
         #
-        if p['value'] <= parameters.maxima_threshold:
+        if p["value"] <= parameters.maxima_threshold:
             continue
-        i = p['voxel'][0]
-        j = p['voxel'][1]
-        k = p['voxel'][2]
+        i = p["voxel"][0]
+        j = p["voxel"][1]
+        k = p["voxel"][2]
         if values[i][j][k] == 0.0:
             continue
-        if values[i][j][k] < values[i-1][j-1][k-1]:
+        if values[i][j][k] < values[i - 1][j - 1][k - 1]:
             continue
-        if values[i][j][k] < values[i][j-1][k-1]:
+        if values[i][j][k] < values[i][j - 1][k - 1]:
             continue
-        if values[i][j][k] < values[i+1][j-1][k-1]:
+        if values[i][j][k] < values[i + 1][j - 1][k - 1]:
             continue
-        if values[i][j][k] < values[i-1][j][k-1]:
+        if values[i][j][k] < values[i - 1][j][k - 1]:
             continue
-        if values[i][j][k] < values[i][j][k-1]:
+        if values[i][j][k] < values[i][j][k - 1]:
             continue
-        if values[i][j][k] < values[i+1][j][k-1]:
+        if values[i][j][k] < values[i + 1][j][k - 1]:
             continue
-        if values[i][j][k] < values[i-1][j+1][k-1]:
+        if values[i][j][k] < values[i - 1][j + 1][k - 1]:
             continue
-        if values[i][j][k] < values[i][j+1][k-1]:
+        if values[i][j][k] < values[i][j + 1][k - 1]:
             continue
-        if values[i][j][k] < values[i+1][j+1][k-1]:
+        if values[i][j][k] < values[i + 1][j + 1][k - 1]:
             continue
-        if values[i][j][k] < values[i-1][j-1][k]:
+        if values[i][j][k] < values[i - 1][j - 1][k]:
             continue
-        if values[i][j][k] < values[i][j-1][k]:
+        if values[i][j][k] < values[i][j - 1][k]:
             continue
-        if values[i][j][k] < values[i+1][j-1][k]:
+        if values[i][j][k] < values[i + 1][j - 1][k]:
             continue
-        if values[i][j][k] < values[i-1][j][k]:
+        if values[i][j][k] < values[i - 1][j][k]:
             continue
-        if values[i][j][k] < values[i+1][j][k]:
+        if values[i][j][k] < values[i + 1][j][k]:
             continue
-        if values[i][j][k] < values[i-1][j+1][k]:
+        if values[i][j][k] < values[i - 1][j + 1][k]:
             continue
-        if values[i][j][k] < values[i][j+1][k]:
+        if values[i][j][k] < values[i][j + 1][k]:
             continue
-        if values[i][j][k] < values[i+1][j+1][k]:
+        if values[i][j][k] < values[i + 1][j + 1][k]:
             continue
-        if values[i][j][k] < values[i-1][j-1][k+1]:
+        if values[i][j][k] < values[i - 1][j - 1][k + 1]:
             continue
-        if values[i][j][k] < values[i][j-1][k+1]:
+        if values[i][j][k] < values[i][j - 1][k + 1]:
             continue
-        if values[i][j][k] < values[i+1][j-1][k+1]:
+        if values[i][j][k] < values[i + 1][j - 1][k + 1]:
             continue
-        if values[i][j][k] < values[i-1][j][k+1]:
+        if values[i][j][k] < values[i - 1][j][k + 1]:
             continue
-        if values[i][j][k] < values[i][j][k+1]:
+        if values[i][j][k] < values[i][j][k + 1]:
             continue
-        if values[i][j][k] < values[i+1][j][k+1]:
+        if values[i][j][k] < values[i + 1][j][k + 1]:
             continue
-        if values[i][j][k] < values[i-1][j+1][k+1]:
+        if values[i][j][k] < values[i - 1][j + 1][k + 1]:
             continue
-        if values[i][j][k] < values[i][j+1][k+1]:
+        if values[i][j][k] < values[i][j + 1][k + 1]:
             continue
-        if values[i][j][k] < values[i+1][j+1][k+1]:
+        if values[i][j][k] < values[i + 1][j + 1][k + 1]:
             continue
         maxima += [p]
 
@@ -480,8 +539,8 @@ def _distribution_direction_maxima(embryo, timepoint, parameters):
 #
 ############################################################
 
-class AtlasParameters(udiagnosis.DiagnosisParameters, EmbryoSymmetryParameters):
 
+class AtlasParameters(udiagnosis.DiagnosisParameters, EmbryoSymmetryParameters):
     ############################################################
     #
     # initialisation
@@ -489,7 +548,6 @@ class AtlasParameters(udiagnosis.DiagnosisParameters, EmbryoSymmetryParameters):
     ############################################################
 
     def __init__(self, prefix=None):
-
         if "doc" not in self.__dict__:
             self.doc = {}
 
@@ -508,24 +566,24 @@ class AtlasParameters(udiagnosis.DiagnosisParameters, EmbryoSymmetryParameters):
 
         doc = "\t List of atlas files. An atlas file is a property file that contains lineage,\n"
         doc += "\t names, and contact surfaces for an embryo."
-        self.doc['atlasFiles'] = doc
+        self.doc["atlasFiles"] = doc
         self.atlasFiles = []
 
         doc = "\t Reference atlas. Use for time alignment. If not provide, the first atlas of\n"
         doc += "\t 'atlasFiles' is used as reference. Warning, the reference atlas has to be in\n"
         doc += "\t 'atlasFiles' list also."
-        self.doc['referenceAtlas'] = doc
+        self.doc["referenceAtlas"] = doc
         self.referenceAtlas = None
 
         doc = "\t Output directory where to write atlas-individualized output files,\n"
         doc += "\t ie morphonet selection files or figure files."
-        self.doc['outputDir'] = doc
+        self.doc["outputDir"] = doc
         self.outputDir = "."
 
         doc = "\t True or False. Performs some diagnosis when reading an additional property file \n"
         doc += "\t into the atlases. Incrementing the verboseness ('-v' in the command line) may give\n"
         doc += "\t more details."
-        self.doc['atlas_diagnosis'] = doc
+        self.doc["atlas_diagnosis"] = doc
         self.atlas_diagnosis = False
 
         doc = "\t if True, generate python files (prefixed by 'figures_') that generate figures.\n"
@@ -554,14 +612,16 @@ class AtlasParameters(udiagnosis.DiagnosisParameters, EmbryoSymmetryParameters):
         doc += "\t 'division-dendrograms': draw a dendrogram per division where atlases are grouped with\n"
         doc += "\t    distance between divisions\n"
         doc += "\t 'embryo-volume': plot the embryo volume (in voxel)\n"
-        doc += "\t    without and with temporal registration (computed from cell number)\n"
+        doc += (
+            "\t    without and with temporal registration (computed from cell number)\n"
+        )
         doc += "\t 'symmetry-axis': lot the error of the best symmetry axes (the closest to the one\n"
         doc += "\t estimated with cell names), as well as its rank with respect to the distribution value\n"
-        self.doc['generate_figure'] = doc
+        self.doc["generate_figure"] = doc
         self.generate_figure = False
 
         doc = "\t suffix used to named the above python files as well as the generated figures."
-        self.doc['figurefile_suffix'] = doc
+        self.doc["figurefile_suffix"] = doc
         self.figurefile_suffix = ""
 
         #
@@ -572,27 +632,29 @@ class AtlasParameters(udiagnosis.DiagnosisParameters, EmbryoSymmetryParameters):
         doc += "\t and thus for naming.\n"
         doc += "\t 0 means right after the division.\n"
         doc += "\t negative values means that the delay is counted backwards from the end of the branch.\n"
-        self.doc['name_delay_from_division'] = doc
+        self.doc["name_delay_from_division"] = doc
         self.name_delay_from_division = 3
 
         doc = "\t Delay from the division to extract the neighborhooods used for naming confidence.\n"
         doc += "\t 0 means right after the division.\n"
         doc += "\t negative values means that the delay is counted backwards from the end of the branch.\n"
-        self.doc['confidence_delay_from_division'] = doc
+        self.doc["confidence_delay_from_division"] = doc
         self.confidence_delay_from_division = None
 
         #
         # parameters dedicated to build neighborhoods
         #
         doc = "\t if 'True', add the symmetric neighborhood as additional exemplar.\n"
-        doc += "\t It means that left and right embryo hemisphere are considered together"
-        self.doc['add_symmetric_neighborhood'] = doc
+        doc += (
+            "\t It means that left and right embryo hemisphere are considered together"
+        )
+        self.doc["add_symmetric_neighborhood"] = doc
         self.add_symmetric_neighborhood = True
 
         doc = "\t if 'True', differentiate the cells of the symmetric half-embryo.\n"
         doc += "\t If 'False', consider all the cells of the symmetric half-embryo\n"
         doc += "\t as a single cell.\n"
-        self.doc['differentiate_other_half'] = doc
+        self.doc["differentiate_other_half"] = doc
         self.differentiate_other_half = True
 
         doc = "\t The same cell has different neighbors from an atlas to the other.\n"
@@ -601,7 +663,7 @@ class AtlasParameters(udiagnosis.DiagnosisParameters, EmbryoSymmetryParameters):
         doc += "\t neighboring cells. Eg, if a division has occurred in some embryos\n"
         doc += "\t and not in others, daughter cells will be fused so that all\n"
         doc += "\t neighborhoods only exhibit the parent cell."
-        self.doc['use_common_neighborhood'] = doc
+        self.doc["use_common_neighborhood"] = doc
         self.use_common_neighborhood = True
 
         #
@@ -612,12 +674,14 @@ class AtlasParameters(udiagnosis.DiagnosisParameters, EmbryoSymmetryParameters):
         doc += "\t - None: no normalization (for test purpose)\n"
         doc += "\t - 'local': normalization by the cell surface\n"
         doc += "\t   The normalization factor is then different from cell to cell within a embryo,\n"
-        doc += "\t   and obviously for the two daughter cells resulting from a division\n"
+        doc += (
+            "\t   and obviously for the two daughter cells resulting from a division\n"
+        )
         doc += "\t - 'global': normalization by embryo volume\n"
         doc += "\t   The normalization factor is for all the cells from the same time point within a embryo.\n"
         doc += "\t   It changes along time to compensate for the volume decrease."
-        self.doc['cell_normalization'] = doc
-        self.cell_normalization = 'global'
+        self.doc["cell_normalization"] = doc
+        self.cell_normalization = "global"
 
     ############################################################
     #
@@ -627,9 +691,9 @@ class AtlasParameters(udiagnosis.DiagnosisParameters, EmbryoSymmetryParameters):
 
     def print_parameters(self):
         print("")
-        print('#')
-        print('# AtlasParameters')
-        print('#')
+        print("#")
+        print("# AtlasParameters")
+        print("#")
         print("")
 
         common.PrefixedParameter.print_parameters(self)
@@ -637,23 +701,25 @@ class AtlasParameters(udiagnosis.DiagnosisParameters, EmbryoSymmetryParameters):
         udiagnosis.DiagnosisParameters.print_parameters(self)
         EmbryoSymmetryParameters.print_parameters(self)
 
-        self.varprint('atlasFiles', self.atlasFiles)
-        self.varprint('referenceAtlas', self.referenceAtlas)
-        self.varprint('outputDir', self.outputDir)
+        self.varprint("atlasFiles", self.atlasFiles)
+        self.varprint("referenceAtlas", self.referenceAtlas)
+        self.varprint("outputDir", self.outputDir)
 
-        self.varprint('atlas_diagnosis', self.atlas_diagnosis)
+        self.varprint("atlas_diagnosis", self.atlas_diagnosis)
 
-        self.varprint('generate_figure', self.generate_figure)
-        self.varprint('figurefile_suffix', self.figurefile_suffix)
+        self.varprint("generate_figure", self.generate_figure)
+        self.varprint("figurefile_suffix", self.figurefile_suffix)
 
-        self.varprint('name_delay_from_division', self.name_delay_from_division)
-        self.varprint('confidence_delay_from_division', self.confidence_delay_from_division)
+        self.varprint("name_delay_from_division", self.name_delay_from_division)
+        self.varprint(
+            "confidence_delay_from_division", self.confidence_delay_from_division
+        )
 
-        self.varprint('add_symmetric_neighborhood', self.add_symmetric_neighborhood)
-        self.varprint('differentiate_other_half', self.differentiate_other_half)
-        self.varprint('use_common_neighborhood', self.use_common_neighborhood)
+        self.varprint("add_symmetric_neighborhood", self.add_symmetric_neighborhood)
+        self.varprint("differentiate_other_half", self.differentiate_other_half)
+        self.varprint("use_common_neighborhood", self.use_common_neighborhood)
 
-        self.varprint('cell_normalization', self.cell_normalization)
+        self.varprint("cell_normalization", self.cell_normalization)
         print("")
 
     def write_parameters_in_file(self, logfile):
@@ -668,33 +734,82 @@ class AtlasParameters(udiagnosis.DiagnosisParameters, EmbryoSymmetryParameters):
         udiagnosis.DiagnosisParameters.write_parameters_in_file(self, logfile)
         EmbryoSymmetryParameters.write_parameters_in_file(self, logfile)
 
-        self.varwrite(logfile, 'atlasFiles', self.atlasFiles, self.doc.get('atlasFiles', None))
-        self.varwrite(logfile, 'referenceAtlas', self.referenceAtlas, self.doc.get('referenceAtlas', None))
-        self.varwrite(logfile, 'outputDir', self.outputDir, self.doc.get('outputDir', None))
+        self.varwrite(
+            logfile, "atlasFiles", self.atlasFiles, self.doc.get("atlasFiles", None)
+        )
+        self.varwrite(
+            logfile,
+            "referenceAtlas",
+            self.referenceAtlas,
+            self.doc.get("referenceAtlas", None),
+        )
+        self.varwrite(
+            logfile, "outputDir", self.outputDir, self.doc.get("outputDir", None)
+        )
 
-        self.varwrite(logfile, 'atlas_diagnosis', self.atlas_diagnosis, self.doc.get('atlas_diagnosis', None))
+        self.varwrite(
+            logfile,
+            "atlas_diagnosis",
+            self.atlas_diagnosis,
+            self.doc.get("atlas_diagnosis", None),
+        )
 
-        self.varwrite(logfile, 'generate_figure', self.generate_figure, self.doc.get('generate_figure', None))
-        self.varwrite(logfile, 'figurefile_suffix', self.figurefile_suffix, self.doc.get('figurefile_suffix', None))
+        self.varwrite(
+            logfile,
+            "generate_figure",
+            self.generate_figure,
+            self.doc.get("generate_figure", None),
+        )
+        self.varwrite(
+            logfile,
+            "figurefile_suffix",
+            self.figurefile_suffix,
+            self.doc.get("figurefile_suffix", None),
+        )
 
-        self.varwrite(logfile, 'name_delay_from_division', self.name_delay_from_division,
-                      self.doc.get('name_delay_from_division', None))
-        self.varwrite(logfile, 'confidence_delay_from_division', self.confidence_delay_from_division,
-                      self.doc.get('confidence_delay_from_division', None))
+        self.varwrite(
+            logfile,
+            "name_delay_from_division",
+            self.name_delay_from_division,
+            self.doc.get("name_delay_from_division", None),
+        )
+        self.varwrite(
+            logfile,
+            "confidence_delay_from_division",
+            self.confidence_delay_from_division,
+            self.doc.get("confidence_delay_from_division", None),
+        )
 
-        self.varwrite(logfile, 'add_symmetric_neighborhood', self.add_symmetric_neighborhood,
-                      self.doc.get('add_symmetric_neighborhood', None))
-        self.varwrite(logfile, 'differentiate_other_half', self.differentiate_other_half,
-                      self.doc.get('differentiate_other_half', None))
-        self.varwrite(logfile, 'use_common_neighborhood', self.use_common_neighborhood,
-                      self.doc.get('use_common_neighborhood', None))
+        self.varwrite(
+            logfile,
+            "add_symmetric_neighborhood",
+            self.add_symmetric_neighborhood,
+            self.doc.get("add_symmetric_neighborhood", None),
+        )
+        self.varwrite(
+            logfile,
+            "differentiate_other_half",
+            self.differentiate_other_half,
+            self.doc.get("differentiate_other_half", None),
+        )
+        self.varwrite(
+            logfile,
+            "use_common_neighborhood",
+            self.use_common_neighborhood,
+            self.doc.get("use_common_neighborhood", None),
+        )
 
-        self.varwrite(logfile, 'cell_normalization', self.cell_normalization, self.doc.get('cell_normalization', None))
+        self.varwrite(
+            logfile,
+            "cell_normalization",
+            self.cell_normalization,
+            self.doc.get("cell_normalization", None),
+        )
         logfile.write("\n")
         return
 
     def write_parameters(self, log_file_name):
-        with open(log_file_name, 'a') as logfile:
+        with open(log_file_name, "a") as logfile:
             self.write_parameters_in_file(logfile)
         return
 
@@ -705,41 +820,67 @@ class AtlasParameters(udiagnosis.DiagnosisParameters, EmbryoSymmetryParameters):
     ############################################################
 
     def update_from_parameters(self, parameters):
-
         udiagnosis.DiagnosisParameters.update_from_parameters(self, parameters)
         EmbryoSymmetryParameters.update_from_parameters(self, parameters)
 
-        self.atlasFiles = self.read_parameter(parameters, 'atlasFiles', self.atlasFiles)
-        self.atlasFiles = self.read_parameter(parameters, 'referenceFiles', self.atlasFiles)
-        self.referenceAtlas = self.read_parameter(parameters, 'referenceAtlas', self.referenceAtlas)
+        self.atlasFiles = self.read_parameter(parameters, "atlasFiles", self.atlasFiles)
+        self.atlasFiles = self.read_parameter(
+            parameters, "referenceFiles", self.atlasFiles
+        )
+        self.referenceAtlas = self.read_parameter(
+            parameters, "referenceAtlas", self.referenceAtlas
+        )
 
-        self.outputDir = self.read_parameter(parameters, 'outputDir', self.outputDir)
+        self.outputDir = self.read_parameter(parameters, "outputDir", self.outputDir)
 
-        self.atlas_diagnosis = self.read_parameter(parameters, 'atlas_diagnosis', self.atlas_diagnosis)
-        self.atlas_diagnosis = self.read_parameter(parameters, 'diagnosis_properties', self.atlas_diagnosis)
-        self.atlas_diagnosis = self.read_parameter(parameters, 'naming_diagnosis', self.atlas_diagnosis)
-        self.atlas_diagnosis = self.read_parameter(parameters, 'diagnosis_naming', self.atlas_diagnosis)
+        self.atlas_diagnosis = self.read_parameter(
+            parameters, "atlas_diagnosis", self.atlas_diagnosis
+        )
+        self.atlas_diagnosis = self.read_parameter(
+            parameters, "diagnosis_properties", self.atlas_diagnosis
+        )
+        self.atlas_diagnosis = self.read_parameter(
+            parameters, "naming_diagnosis", self.atlas_diagnosis
+        )
+        self.atlas_diagnosis = self.read_parameter(
+            parameters, "diagnosis_naming", self.atlas_diagnosis
+        )
 
-        self.generate_figure = self.read_parameter(parameters, 'generate_figure', self.generate_figure)
-        self.figurefile_suffix = self.read_parameter(parameters, 'figurefile_suffix', self.figurefile_suffix)
+        self.generate_figure = self.read_parameter(
+            parameters, "generate_figure", self.generate_figure
+        )
+        self.figurefile_suffix = self.read_parameter(
+            parameters, "figurefile_suffix", self.figurefile_suffix
+        )
 
-        self.name_delay_from_division = self.read_parameter(parameters, 'name_delay_from_division',
-                                                            self.name_delay_from_division)
-        self.name_delay_from_division = self.read_parameter(parameters, 'delay_from_division',
-                                                            self.name_delay_from_division)
-        self.confidence_delay_from_division = self.read_parameter(parameters, 'confidence_delay_from_division',
-                                                                  self.confidence_delay_from_division)
-        self.confidence_delay_from_division = self.read_parameter(parameters, 'delay_from_division',
-                                                                  self.confidence_delay_from_division)
+        self.name_delay_from_division = self.read_parameter(
+            parameters, "name_delay_from_division", self.name_delay_from_division
+        )
+        self.name_delay_from_division = self.read_parameter(
+            parameters, "delay_from_division", self.name_delay_from_division
+        )
+        self.confidence_delay_from_division = self.read_parameter(
+            parameters,
+            "confidence_delay_from_division",
+            self.confidence_delay_from_division,
+        )
+        self.confidence_delay_from_division = self.read_parameter(
+            parameters, "delay_from_division", self.confidence_delay_from_division
+        )
 
-        self.add_symmetric_neighborhood = self.read_parameter(parameters, 'add_symmetric_neighborhood',
-                                                              self.add_symmetric_neighborhood)
-        self.differentiate_other_half = self.read_parameter(parameters, 'differentiate_other_half',
-                                                            self.differentiate_other_half)
-        self.use_common_neighborhood = self.read_parameter(parameters, 'use_common_neighborhood',
-                                                           self.use_common_neighborhood)
+        self.add_symmetric_neighborhood = self.read_parameter(
+            parameters, "add_symmetric_neighborhood", self.add_symmetric_neighborhood
+        )
+        self.differentiate_other_half = self.read_parameter(
+            parameters, "differentiate_other_half", self.differentiate_other_half
+        )
+        self.use_common_neighborhood = self.read_parameter(
+            parameters, "use_common_neighborhood", self.use_common_neighborhood
+        )
 
-        self.cell_normalization = self.read_parameter(parameters, 'cell_normalization', self.cell_normalization)
+        self.cell_normalization = self.read_parameter(
+            parameters, "cell_normalization", self.cell_normalization
+        )
 
     def update_from_parameter_file(self, parameter_file):
         if parameter_file is None:
@@ -758,36 +899,50 @@ class AtlasParameters(udiagnosis.DiagnosisParameters, EmbryoSymmetryParameters):
 #
 ############################################################
 
+
 class Atlas(object):
     def __init__(self, atlas_properties=None, time_digits_for_cell_id=4, verbose=False):
         proc = "Atlas.init"
 
         self.time_digits_for_cell_id = time_digits_for_cell_id
-        self._properties = {'temporal_alignment': (1.0, 0.0), 'volume_local_estimation': (0.0, 1.0),
-                            'target_volume': 6000000}
+        self._properties = {
+            "temporal_alignment": (1.0, 0.0),
+            "volume_local_estimation": (0.0, 1.0),
+            "target_volume": 6000000,
+        }
 
         if isinstance(atlas_properties, dict):
-            if 'cell_lineage' in atlas_properties:
-                self.cell_lineage = atlas_properties['cell_lineage']
+            if "cell_lineage" in atlas_properties:
+                self.cell_lineage = atlas_properties["cell_lineage"]
             elif verbose:
-                monitoring.to_log_and_console(str(proc) + ": 'cell_lineage' was not in dictionary")
-            if 'cell_name' in atlas_properties:
-                self.cell_name = atlas_properties['cell_name']
+                monitoring.to_log_and_console(
+                    str(proc) + ": 'cell_lineage' was not in dictionary"
+                )
+            if "cell_name" in atlas_properties:
+                self.cell_name = atlas_properties["cell_name"]
             elif verbose:
-                monitoring.to_log_and_console(str(proc) + ": 'cell_name' was not in dictionary")
-            if 'cell_contact_surface' in atlas_properties:
-                self.cell_contact_surface = atlas_properties['cell_contact_surface']
+                monitoring.to_log_and_console(
+                    str(proc) + ": 'cell_name' was not in dictionary"
+                )
+            if "cell_contact_surface" in atlas_properties:
+                self.cell_contact_surface = atlas_properties["cell_contact_surface"]
             elif verbose:
-                monitoring.to_log_and_console(str(proc) + ": 'cell_contact_surface' was not in dictionary")
-            if 'cell_barycenter' in atlas_properties:
-                self.cell_barycenter = atlas_properties['cell_barycenter']
+                monitoring.to_log_and_console(
+                    str(proc) + ": 'cell_contact_surface' was not in dictionary"
+                )
+            if "cell_barycenter" in atlas_properties:
+                self.cell_barycenter = atlas_properties["cell_barycenter"]
             elif verbose:
-                monitoring.to_log_and_console(str(proc) + ": 'cell_barycenter' was not in dictionary")
-            if 'cell_volume' in atlas_properties:
-                self.cell_volume = atlas_properties['cell_volume']
+                monitoring.to_log_and_console(
+                    str(proc) + ": 'cell_barycenter' was not in dictionary"
+                )
+            if "cell_volume" in atlas_properties:
+                self.cell_volume = atlas_properties["cell_volume"]
                 self._volume_local_fitting()
             elif verbose:
-                monitoring.to_log_and_console(str(proc) + ": 'cell_volume' was not in dictionary")
+                monitoring.to_log_and_console(
+                    str(proc) + ": 'cell_volume' was not in dictionary"
+                )
 
     ############################################################
     #
@@ -806,11 +961,11 @@ class Atlas(object):
             return
         if property_name in self._properties:
             del self._properties[property_name]
-        if property_name == 'direction_distribution':
-            self._del_one_property('direction_distribution_maxima')
-            self._del_one_property('direction_distribution_candidates')
-            if property_name == 'direction_distribution_maxima':
-                self._del_one_property('direction_distribution_candidates')
+        if property_name == "direction_distribution":
+            self._del_one_property("direction_distribution_maxima")
+            self._del_one_property("direction_distribution_candidates")
+            if property_name == "direction_distribution_maxima":
+                self._del_one_property("direction_distribution_candidates")
         return
 
     def del_property(self, property_name):
@@ -852,13 +1007,13 @@ class Atlas(object):
         -------
 
         """
-        if 'cell_lineage' in self._properties:
-            return self._properties['cell_lineage']
+        if "cell_lineage" in self._properties:
+            return self._properties["cell_lineage"]
         return None
 
     @cell_lineage.setter
     def cell_lineage(self, atlas_properties):
-        self._properties['cell_lineage'] = copy.deepcopy(atlas_properties)
+        self._properties["cell_lineage"] = copy.deepcopy(atlas_properties)
         return
 
     @property
@@ -869,13 +1024,13 @@ class Atlas(object):
         -------
 
         """
-        if 'cell_name' in self._properties:
-            return self._properties['cell_name']
+        if "cell_name" in self._properties:
+            return self._properties["cell_name"]
         return None
 
     @cell_name.setter
     def cell_name(self, atlas_properties):
-        self._properties['cell_name'] = copy.deepcopy(atlas_properties)
+        self._properties["cell_name"] = copy.deepcopy(atlas_properties)
         return
 
     @property
@@ -886,13 +1041,13 @@ class Atlas(object):
         -------
 
         """
-        if 'cell_volume' in self._properties:
-            return self._properties['cell_volume']
+        if "cell_volume" in self._properties:
+            return self._properties["cell_volume"]
         return None
 
     @cell_volume.setter
     def cell_volume(self, atlas_properties):
-        self._properties['cell_volume'] = copy.deepcopy(atlas_properties)
+        self._properties["cell_volume"] = copy.deepcopy(atlas_properties)
         return
 
     @property
@@ -903,13 +1058,13 @@ class Atlas(object):
         -------
 
         """
-        if 'cell_contact_surface' in self._properties:
-            return self._properties['cell_contact_surface']
+        if "cell_contact_surface" in self._properties:
+            return self._properties["cell_contact_surface"]
         return None
 
     @cell_contact_surface.setter
     def cell_contact_surface(self, atlas_properties):
-        self._properties['cell_contact_surface'] = copy.deepcopy(atlas_properties)
+        self._properties["cell_contact_surface"] = copy.deepcopy(atlas_properties)
         return
 
     @property
@@ -920,13 +1075,13 @@ class Atlas(object):
         -------
 
         """
-        if 'cell_barycenter' in self._properties:
-            return self._properties['cell_barycenter']
+        if "cell_barycenter" in self._properties:
+            return self._properties["cell_barycenter"]
         return None
 
     @cell_barycenter.setter
     def cell_barycenter(self, atlas_properties):
-        self._properties['cell_barycenter'] = copy.deepcopy(atlas_properties)
+        self._properties["cell_barycenter"] = copy.deepcopy(atlas_properties)
         return
 
     #
@@ -934,38 +1089,38 @@ class Atlas(object):
     #
     @property
     def temporal_alignment(self):
-        if 'temporal_alignment' in self._properties:
-            return self._properties['temporal_alignment']
+        if "temporal_alignment" in self._properties:
+            return self._properties["temporal_alignment"]
         return None
 
     @property
     def volume_local_estimation(self):
-        if 'volume_local_estimation' in self._properties:
-            return self._properties['volume_local_estimation']
+        if "volume_local_estimation" in self._properties:
+            return self._properties["volume_local_estimation"]
         return None
 
     @property
     def target_volume(self):
-        if 'target_volume' in self._properties:
-            return self._properties['target_volume']
+        if "target_volume" in self._properties:
+            return self._properties["target_volume"]
         return None
 
     @target_volume.setter
     def target_volume(self, volume):
-        self._properties['target_volume'] = volume
+        self._properties["target_volume"] = volume
         return
 
     @property
     def direction_distribution(self):
-        if 'direction_distribution' not in self._properties:
-            self._properties['direction_distribution'] = {}
-        return self._properties['direction_distribution']
+        if "direction_distribution" not in self._properties:
+            self._properties["direction_distribution"] = {}
+        return self._properties["direction_distribution"]
 
     @property
     def direction_distribution_maxima(self):
-        if 'direction_distribution_maxima' not in self._properties:
-            self._properties['direction_distribution_maxima'] = {}
-        return self._properties['direction_distribution_maxima']
+        if "direction_distribution_maxima" not in self._properties:
+            self._properties["direction_distribution_maxima"] = {}
+        return self._properties["direction_distribution_maxima"]
 
     ############################################################
     #
@@ -996,11 +1151,17 @@ class Atlas(object):
         """
         proc = "Atlas.temporally_align_with"
         if not isinstance(reference, Atlas):
-            monitoring.to_log_and_console(str(proc) + ": 'reference' should be of 'Atlas' class")
+            monitoring.to_log_and_console(
+                str(proc) + ": 'reference' should be of 'Atlas' class"
+            )
             return
-        a, b = properties.temporal_alignment(reference.cell_lineage, self.cell_lineage,
-                                             reference.time_digits_for_cell_id, self.time_digits_for_cell_id)
-        self._properties['temporal_alignment'] = (a, b)
+        a, b = properties.temporal_alignment(
+            reference.cell_lineage,
+            self.cell_lineage,
+            reference.time_digits_for_cell_id,
+            self.time_digits_for_cell_id,
+        )
+        self._properties["temporal_alignment"] = (a, b)
         return
 
     #
@@ -1008,7 +1169,7 @@ class Atlas(object):
     #
 
     def _volume_local_fitting(self):
-        div = 10 ** self.time_digits_for_cell_id
+        div = 10**self.time_digits_for_cell_id
         volume = self.cell_volume
         volume_along_time = {}
         #
@@ -1032,7 +1193,10 @@ class Atlas(object):
         ynp = np.array(y)[:, np.newaxis]
         ransac = sklm.RANSACRegressor()
         ransac.fit(xnp, ynp)
-        self._properties['volume_local_estimation'] = (ransac.estimator_.coef_[0][0], ransac.estimator_.intercept_[0])
+        self._properties["volume_local_estimation"] = (
+            ransac.estimator_.coef_[0][0],
+            ransac.estimator_.intercept_[0],
+        )
 
     #
     #
@@ -1052,7 +1216,7 @@ class Atlas(object):
         -------
 
         """
-        if 'volume_local_estimation' not in self._properties:
+        if "volume_local_estimation" not in self._properties:
             self._volume_local_fitting()
         if target_volume != self.target_volume:
             self.target_volume = target_volume
@@ -1061,14 +1225,14 @@ class Atlas(object):
         return np.cbrt(self.target_volume / t_volume)
 
     def get_rectified_cell_volume(self, cell):
-        timepoint = int(cell) // (10 ** self.time_digits_for_cell_id)
+        timepoint = int(cell) // (10**self.time_digits_for_cell_id)
         voxelsize = self.get_voxelsize_correction(timepoint)
         vol = self.cell_volume[cell]
         return vol * voxelsize * voxelsize * voxelsize
 
     def get_rectified_cell_contact_surface(self, cell1, cell2):
-        timepoint = int(cell1) // (10 ** self.time_digits_for_cell_id)
-        if int(cell2) // (10 ** self.time_digits_for_cell_id) != timepoint:
+        timepoint = int(cell1) // (10**self.time_digits_for_cell_id)
+        if int(cell2) // (10**self.time_digits_for_cell_id) != timepoint:
             return 0.0
         voxelsize = self.get_voxelsize_correction(timepoint)
         surf = self.cell_contact_surface[cell1][cell2]
@@ -1080,7 +1244,7 @@ class Atlas(object):
     def get_embryo_volume(self, timepoint):
         s = 0.0
         volumes = self.cell_volume
-        div = 10 ** self.time_digits_for_cell_id
+        div = 10**self.time_digits_for_cell_id
         for c in volumes:
             if int(c) // div != timepoint:
                 continue
@@ -1093,12 +1257,11 @@ class Atlas(object):
     #
     #
     def get_symmetry_axis_from_names(self, timepoint):
-
-        if 'symmetry_axis_from_names' in self._properties:
-            if timepoint in self._properties['symmetry_axis_from_names']:
-                return self._properties['symmetry_axis_from_names'][timepoint]
+        if "symmetry_axis_from_names" in self._properties:
+            if timepoint in self._properties["symmetry_axis_from_names"]:
+                return self._properties["symmetry_axis_from_names"][timepoint]
         else:
-            self._properties['symmetry_axis_from_names'] = {}
+            self._properties["symmetry_axis_from_names"] = {}
 
         volumes = self.cell_volume
         barycenters = self.cell_barycenter
@@ -1110,7 +1273,7 @@ class Atlas(object):
         lefts = 0.0
         rightb = np.zeros(3)
         rights = 0.0
-        div = 10 ** self.time_digits_for_cell_id
+        div = 10**self.time_digits_for_cell_id
         #
         for c in volumes:
             if int(c) // div != timepoint:
@@ -1119,33 +1282,35 @@ class Atlas(object):
                 continue
             if c not in barycenters or c not in names:
                 continue
-            if names[c].split('.')[1][4] == '_':
+            if names[c].split(".")[1][4] == "_":
                 leftb += volumes[c] * barycenters[c]
                 lefts += volumes[c]
-            elif names[c].split('.')[1][4] == '*':
+            elif names[c].split(".")[1][4] == "*":
                 rightb += volumes[c] * barycenters[c]
                 rights += volumes[c]
         if lefts == 0.0 or rights == 0.0:
             return np.zeros(3)
-        symdir = leftb/lefts - rightb/rights
-        self._properties['symmetry_axis_from_names'][timepoint] = symdir / np.linalg.norm(symdir)
-        return self._properties['symmetry_axis_from_names'][timepoint]
+        symdir = leftb / lefts - rightb / rights
+        self._properties["symmetry_axis_from_names"][
+            timepoint
+        ] = symdir / np.linalg.norm(symdir)
+        return self._properties["symmetry_axis_from_names"][timepoint]
 
     #
     #
     #
     def get_embryo_barycenter(self, timepoint):
-        if 'embryo_barycenter' in self._properties:
-            if timepoint in self._properties['embryo_barycenter']:
-                return self._properties['embryo_barycenter'][timepoint]
+        if "embryo_barycenter" in self._properties:
+            if timepoint in self._properties["embryo_barycenter"]:
+                return self._properties["embryo_barycenter"][timepoint]
         else:
-            self._properties['embryo_barycenter'] = {}
+            self._properties["embryo_barycenter"] = {}
 
         b = np.zeros(3)
         s = 0.0
         volumes = self.cell_volume
         barycenters = self.cell_barycenter
-        div = 10 ** self.time_digits_for_cell_id
+        div = 10**self.time_digits_for_cell_id
         for c in volumes:
             if int(c) // div != timepoint:
                 continue
@@ -1155,16 +1320,18 @@ class Atlas(object):
                 continue
             b += volumes[c] * barycenters[c]
             s += volumes[c]
-        self._properties['embryo_barycenter'][timepoint] = b / s
-        return self._properties['embryo_barycenter'][timepoint]
+        self._properties["embryo_barycenter"][timepoint] = b / s
+        return self._properties["embryo_barycenter"][timepoint]
 
     #
     #
     #
     def get_cell_barycenter(self, timepoint):
         barycenters = self.cell_barycenter
-        div = 10 ** self.time_digits_for_cell_id
-        lc = [c for c in barycenters if (int(c) // div == timepoint) and int(c) % div != 1]
+        div = 10**self.time_digits_for_cell_id
+        lc = [
+            c for c in barycenters if (int(c) // div == timepoint) and int(c) % div != 1
+        ]
         b = np.zeros((3, len(lc)))
         for i, c in enumerate(lc):
             b[:, i] = barycenters[c]
@@ -1197,10 +1364,12 @@ class Atlas(object):
         # 'value': the distribution values
         #          the maximal value is 1
         #
-        if 'direction_distribution' not in self._properties:
-            self._properties['direction_distribution'] = {}
+        if "direction_distribution" not in self._properties:
+            self._properties["direction_distribution"] = {}
         if timepoint not in self.direction_distribution:
-            self.direction_distribution[timepoint] = _distribution_build_support(parameters=local_parameters)
+            self.direction_distribution[timepoint] = _distribution_build_support(
+                parameters=local_parameters
+            )
             #
             # fill direction distribution from embryo properties
             #
@@ -1209,16 +1378,19 @@ class Atlas(object):
         #
         # array of dictionaries, with only the local maxima (with value > 0.5)
         #
-        if 'direction_distribution_maxima' not in self._properties:
-            self._properties['direction_distribution_maxima'] = {}
+        if "direction_distribution_maxima" not in self._properties:
+            self._properties["direction_distribution_maxima"] = {}
         if timepoint not in self.direction_distribution_maxima:
             _distribution_direction_maxima(self, timepoint, parameters)
 
         #
         # sort maxima
         #
-        self.direction_distribution_maxima[timepoint] = sorted(self.direction_distribution_maxima[timepoint],
-                                                               reverse=True, key=lambda x: x['value'])
+        self.direction_distribution_maxima[timepoint] = sorted(
+            self.direction_distribution_maxima[timepoint],
+            reverse=True,
+            key=lambda x: x["value"],
+        )
 
         return self.direction_distribution_maxima[timepoint]
 
@@ -1228,6 +1400,7 @@ class Atlas(object):
 # Atlases: set of many atlas
 #
 ############################################################
+
 
 class Atlases(object):
     def __init__(self, parameters=None):
@@ -1259,10 +1432,14 @@ class Atlases(object):
         if self._ref_atlas is None:
             atlases = self.get_atlases()
             if len(atlases) == 0:
-                monitoring.to_log_and_console(proc + ": no reference atlas nor registered atlases")
+                monitoring.to_log_and_console(
+                    proc + ": no reference atlas nor registered atlases"
+                )
                 return None
             names = sorted(list(atlases.keys()))
-            monitoring.to_log_and_console("   ... set reference to '" + str(names[0]) + "'")
+            monitoring.to_log_and_console(
+                "   ... set reference to '" + str(names[0]) + "'"
+            )
             self.set_reference_atlas(names[0])
         return self._ref_atlas
 
@@ -1294,11 +1471,17 @@ class Atlases(object):
         proc = "temporal_alignment"
         ref_atlas = self.get_reference_atlas()
         if ref_atlas is None:
-            monitoring.to_log_and_console(proc + ": no reference atlas, can not perform temporal alignment")
+            monitoring.to_log_and_console(
+                proc + ": no reference atlas, can not perform temporal alignment"
+            )
             return
         atlases = self.get_atlases()
         if ref_atlas not in atlases:
-            msg = "'" + str(ref_atlas) + "' is not in registered atlases, can not perform temporal alignment"
+            msg = (
+                "'"
+                + str(ref_atlas)
+                + "' is not in registered atlases, can not perform temporal alignment"
+            )
             monitoring.to_log_and_console(proc + ": " + msg)
             return
         for a in atlases:
@@ -1336,8 +1519,11 @@ class Atlases(object):
         proc = "add_atlases"
 
         if not isinstance(parameters, AtlasParameters):
-            monitoring.to_log_and_console(str(proc) + ": unexpected type for 'parameters' variable: "
-                                          + str(type(parameters)))
+            monitoring.to_log_and_console(
+                str(proc)
+                + ": unexpected type for 'parameters' variable: "
+                + str(type(parameters))
+            )
             sys.exit(1)
 
         if isinstance(atlasfiles, str):
@@ -1347,9 +1533,15 @@ class Atlases(object):
                 if name.endswith(".xml") or name.endswith(".pkl"):
                     name = name[:-4]
                 if parameters.atlas_diagnosis:
-                    udiagnosis.diagnosis(prop, ['name', 'contact'], parameters,
-                                         time_digits_for_cell_id=time_digits_for_cell_id)
-                self._add_atlas(prop, name, time_digits_for_cell_id=time_digits_for_cell_id)
+                    udiagnosis.diagnosis(
+                        prop,
+                        ["name", "contact"],
+                        parameters,
+                        time_digits_for_cell_id=time_digits_for_cell_id,
+                    )
+                self._add_atlas(
+                    prop, name, time_digits_for_cell_id=time_digits_for_cell_id
+                )
             del prop
         elif isinstance(atlasfiles, list):
             if len(atlasfiles) == 0:
@@ -1362,9 +1554,15 @@ class Atlases(object):
                     if name.endswith(".xml") or name.endswith(".pkl"):
                         name = name[:-4]
                     if parameters.atlas_diagnosis:
-                        udiagnosis.diagnosis(prop, ['name', 'contact'], parameters,
-                                             time_digits_for_cell_id=time_digits_for_cell_id)
-                    self._add_atlas(prop, name, time_digits_for_cell_id=time_digits_for_cell_id)
+                        udiagnosis.diagnosis(
+                            prop,
+                            ["name", "contact"],
+                            parameters,
+                            time_digits_for_cell_id=time_digits_for_cell_id,
+                        )
+                    self._add_atlas(
+                        prop, name, time_digits_for_cell_id=time_digits_for_cell_id
+                    )
                 del prop
 
         #
@@ -1376,8 +1574,16 @@ class Atlases(object):
             atlases = self.get_atlases()
             for n in atlases:
                 msg = "   ... "
-                msg += "linear time warping of '" + str(n) + "' wrt '" + str(self._ref_atlas) + "' is "
-                msg += "({:.3f}, {:.3f})".format(atlases[n].temporal_alignment[0], atlases[n].temporal_alignment[1])
+                msg += (
+                    "linear time warping of '"
+                    + str(n)
+                    + "' wrt '"
+                    + str(self._ref_atlas)
+                    + "' is "
+                )
+                msg += "({:.3f}, {:.3f})".format(
+                    atlases[n].temporal_alignment[0], atlases[n].temporal_alignment[1]
+                )
                 monitoring.to_log_and_console(msg, 1)
         else:
             msg = proc + ": no read atlases ?!"
@@ -1390,17 +1596,35 @@ class Atlases(object):
     ############################################################
 
     def generate_figure(self, parameters):
-        do_generate_figure = (isinstance(parameters.generate_figure, bool) and parameters.generate_figure) or \
-                             (isinstance(parameters.generate_figure, str) and parameters.generate_figure == 'all') or \
-                             (isinstance(parameters.generate_figure, list) and 'all' in parameters.generate_figure)
+        do_generate_figure = (
+            (
+                isinstance(parameters.generate_figure, bool)
+                and parameters.generate_figure
+            )
+            or (
+                isinstance(parameters.generate_figure, str)
+                and parameters.generate_figure == "all"
+            )
+            or (
+                isinstance(parameters.generate_figure, list)
+                and "all" in parameters.generate_figure
+            )
+        )
 
         #
         # plot cell number wrt time without and with temporal registration
         #
-        if (isinstance(parameters.generate_figure, str) and parameters.generate_figure == 'cell-number-wrt-time') \
-                or (isinstance(parameters.generate_figure, list)
-                    and 'cell-number-wrt-time' in parameters.generate_figure) \
-                or do_generate_figure:
+        if (
+            (
+                isinstance(parameters.generate_figure, str)
+                and parameters.generate_figure == "cell-number-wrt-time"
+            )
+            or (
+                isinstance(parameters.generate_figure, list)
+                and "cell-number-wrt-time" in parameters.generate_figure
+            )
+            or do_generate_figure
+        ):
             monitoring.to_log_and_console("... generate cell number wrt time file", 1)
             _figures_temporal_registration(self, parameters)
             monitoring.to_log_and_console("... done", 1)
@@ -1408,9 +1632,17 @@ class Atlases(object):
         #
         # plot embryo volume wrt time without and with temporal registration
         #
-        if (isinstance(parameters.generate_figure, str) and parameters.generate_figure == 'embryo-volume') \
-                or (isinstance(parameters.generate_figure, list) and 'embryo-volume' in parameters.generate_figure) \
-                or do_generate_figure:
+        if (
+            (
+                isinstance(parameters.generate_figure, str)
+                and parameters.generate_figure == "embryo-volume"
+            )
+            or (
+                isinstance(parameters.generate_figure, list)
+                and "embryo-volume" in parameters.generate_figure
+            )
+            or do_generate_figure
+        ):
             monitoring.to_log_and_console("... generate embryo volume figure file", 1)
             _figures_embryo_volume(self, parameters)
             monitoring.to_log_and_console("... done", 1)
@@ -1418,17 +1650,34 @@ class Atlases(object):
         #
         # cell neighbors number wrt total number of cells in the embryo
         #
-        if (isinstance(parameters.generate_figure, str) and parameters.generate_figure == 'neighbors-wrt-cell-number') \
-                or (isinstance(parameters.generate_figure, list)
-                    and 'neighbors-wrt-cell-number' in parameters.generate_figure) \
-                or do_generate_figure:
-            monitoring.to_log_and_console("... generate neighbors histogram figure file", 1)
+        if (
+            (
+                isinstance(parameters.generate_figure, str)
+                and parameters.generate_figure == "neighbors-wrt-cell-number"
+            )
+            or (
+                isinstance(parameters.generate_figure, list)
+                and "neighbors-wrt-cell-number" in parameters.generate_figure
+            )
+            or do_generate_figure
+        ):
+            monitoring.to_log_and_console(
+                "... generate neighbors histogram figure file", 1
+            )
             _figures_neighbor_histogram(self, parameters)
             monitoring.to_log_and_console("... done", 1)
 
-        if (isinstance(parameters.generate_figure, str) and parameters.generate_figure == 'symmetry-axis') \
-                or (isinstance(parameters.generate_figure, list) and 'symmetry-axis' in parameters.generate_figure) \
-                or do_generate_figure:
+        if (
+            (
+                isinstance(parameters.generate_figure, str)
+                and parameters.generate_figure == "symmetry-axis"
+            )
+            or (
+                isinstance(parameters.generate_figure, list)
+                and "symmetry-axis" in parameters.generate_figure
+            )
+            or do_generate_figure
+        ):
             monitoring.to_log_and_console("... generate symmetry axis figure file", 1)
             _figure_symmetry_axis(self, parameters)
             monitoring.to_log_and_console("... done", 1)
@@ -1439,6 +1688,7 @@ class Atlases(object):
 # cell number wrt time without and with temporal registration
 #
 ################################################################################
+
 
 def _figures_temporal_registration(atlases, parameters):
     """
@@ -1454,21 +1704,26 @@ def _figures_temporal_registration(atlases, parameters):
     """
     proc = "_figures_temporal_registration"
 
-    filename = 'figures_temporal_registration'
+    filename = "figures_temporal_registration"
     file_suffix = None
-    if parameters.figurefile_suffix is not None and isinstance(parameters.figurefile_suffix, str) and \
-            len(parameters.figurefile_suffix) > 0:
-        file_suffix = '_' + parameters.figurefile_suffix
+    if (
+        parameters.figurefile_suffix is not None
+        and isinstance(parameters.figurefile_suffix, str)
+        and len(parameters.figurefile_suffix) > 0
+    ):
+        file_suffix = "_" + parameters.figurefile_suffix
     if file_suffix is not None:
         filename += file_suffix
-    filename += '.py'
+    filename += ".py"
 
     if parameters.outputDir is not None and isinstance(parameters.outputDir, str):
         if not os.path.isdir(parameters.outputDir):
             if not os.path.exists(parameters.outputDir):
                 os.makedirs(parameters.outputDir)
             else:
-                monitoring.to_log_and_console(proc + ": '" + str(parameters.outputDir) + "' is not a directory ?!")
+                monitoring.to_log_and_console(
+                    proc + ": '" + str(parameters.outputDir) + "' is not a directory ?!"
+                )
         if os.path.isdir(parameters.outputDir):
             filename = os.path.join(parameters.outputDir, filename)
 
@@ -1479,7 +1734,11 @@ def _figures_temporal_registration(atlases, parameters):
     temporal_coefficients = {}
     for n in atlas_names:
         lineage = ref_atlases[n].cell_lineage
-        cells = list(set(lineage.keys()).union(set([v for values in list(lineage.values()) for v in values])))
+        cells = list(
+            set(lineage.keys()).union(
+                set([v for values in list(lineage.values()) for v in values])
+            )
+        )
         cells = sorted(cells)
         div = 10 ** ref_atlases[n].time_digits_for_cell_id
         cells_per_time[n] = {}
@@ -1509,16 +1768,18 @@ def _figures_temporal_registration(atlases, parameters):
     f.write("    x = sorted(x)\n")
     f.write("    y = [cells_per_time[n][i] for i in x]\n")
     f.write("    ax1.plot(x, y)\n")
-    f.write("ax1.set_title(\"cell number (without alignment)\", fontsize=15)\n")
+    f.write('ax1.set_title("cell number (without alignment)", fontsize=15)\n')
     f.write("ax1.legend(labels, prop={'size': 10})\n")
 
     f.write("for n in cells_per_time:\n")
     f.write("    x = list(cells_per_time[n].keys())\n")
     f.write("    x = sorted(x)\n")
-    f.write("    t = [temporal_coefficients[n][0] * i + temporal_coefficients[n][1] for i in x]\n")
+    f.write(
+        "    t = [temporal_coefficients[n][0] * i + temporal_coefficients[n][1] for i in x]\n"
+    )
     f.write("    y = [cells_per_time[n][i] for i in x]\n")
     f.write("    ax2.plot(t, y)\n")
-    f.write("ax2.set_title(\"cell number (with alignment)\", fontsize=15)\n")
+    f.write('ax2.set_title("cell number (with alignment)", fontsize=15)\n')
     f.write("ax2.legend(labels, prop={'size': 10})\n")
 
     f.write("\n")
@@ -1540,6 +1801,7 @@ def _figures_temporal_registration(atlases, parameters):
 #
 ################################################################################
 
+
 def _figures_embryo_volume(atlases, parameters):
     """
 
@@ -1554,21 +1816,26 @@ def _figures_embryo_volume(atlases, parameters):
     """
     proc = "_figures_embryo_volume"
 
-    filename = 'figures_embryo_volume'
+    filename = "figures_embryo_volume"
     file_suffix = None
-    if parameters.figurefile_suffix is not None and isinstance(parameters.figurefile_suffix, str) and \
-            len(parameters.figurefile_suffix) > 0:
-        file_suffix = '_' + parameters.figurefile_suffix
+    if (
+        parameters.figurefile_suffix is not None
+        and isinstance(parameters.figurefile_suffix, str)
+        and len(parameters.figurefile_suffix) > 0
+    ):
+        file_suffix = "_" + parameters.figurefile_suffix
     if file_suffix is not None:
         filename += file_suffix
-    filename += '.py'
+    filename += ".py"
 
     if parameters.outputDir is not None and isinstance(parameters.outputDir, str):
         if not os.path.isdir(parameters.outputDir):
             if not os.path.exists(parameters.outputDir):
                 os.makedirs(parameters.outputDir)
             else:
-                monitoring.to_log_and_console(proc + ": '" + str(parameters.outputDir) + "' is not a directory ?!")
+                monitoring.to_log_and_console(
+                    proc + ": '" + str(parameters.outputDir) + "' is not a directory ?!"
+                )
         if os.path.isdir(parameters.outputDir):
             filename = os.path.join(parameters.outputDir, filename)
 
@@ -1594,7 +1861,9 @@ def _figures_embryo_volume(atlases, parameters):
             t = int(c) // div
             for d in contact_surface[c]:
                 if d % div == 1 or d % div == 0:
-                    surface_along_time[n][t] = surface_along_time[n].get(t, 0) + contact_surface[c][d]
+                    surface_along_time[n][t] = (
+                        surface_along_time[n].get(t, 0) + contact_surface[c][d]
+                    )
         for t in volume_along_time[n]:
             voxelsize_correction[n][t] = ref_atlases[n].get_voxelsize_correction(t)
 
@@ -1619,7 +1888,9 @@ def _figures_embryo_volume(atlases, parameters):
     f.write("volume_local_estimation = " + str(volume_local_estimation) + "\n")
 
     f.write("\n")
-    f.write("fig, (ax1, ax2, ax3) = plt.subplots(ncols=3, sharey=True, figsize=(24, 8))\n")
+    f.write(
+        "fig, (ax1, ax2, ax3) = plt.subplots(ncols=3, sharey=True, figsize=(24, 8))\n"
+    )
     f.write("labels = []\n")
     f.write("for n in volume_along_time:\n")
     f.write("    labels += [n]\n")
@@ -1627,37 +1898,51 @@ def _figures_embryo_volume(atlases, parameters):
     f.write("    x = sorted(x)\n")
     f.write("    y = [volume_along_time[n][i] for i in x]\n")
     f.write("\n")
-    f.write("    y2 = [volume_local_estimation[n][0] * i + volume_local_estimation[n][1] for i in x]\n")
+    f.write(
+        "    y2 = [volume_local_estimation[n][0] * i + volume_local_estimation[n][1] for i in x]\n"
+    )
     f.write("    p = ax1.plot(x, y, label=n)\n")
     f.write("    ax1.plot(x, y2, color=p[0].get_color())  \n")
     f.write("\n")
     f.write("    ploss = (y[-1] - y[0])/y[0]\n")
     f.write("    ploss2 = (y2[-1] - y2[0])/y2[0]\n")
     f.write("    print(str(n) + ' volume percentage loss from first time point')\n")
-    f.write("    print('\\t to the last one, from measures = ' + str(100.0 * (y[-1] - y[0])/y[0]))\n")
-    f.write("    print('\\t \\t from linear estimation = ' + str(100.0 * ((y2[-1] - y2[0])/y2[0])))\n")
-    f.write("    print('\\t to the 50th one, from linear estimation = ' + str(100.0 * ((y2[50] - y2[0])/y2[0])))\n")
-    f.write("ax1.set_title(\"embryo volume (raw)\", fontsize=15)\n")
+    f.write(
+        "    print('\\t to the last one, from measures = ' + str(100.0 * (y[-1] - y[0])/y[0]))\n"
+    )
+    f.write(
+        "    print('\\t \\t from linear estimation = ' + str(100.0 * ((y2[-1] - y2[0])/y2[0])))\n"
+    )
+    f.write(
+        "    print('\\t to the 50th one, from linear estimation = ' + str(100.0 * ((y2[50] - y2[0])/y2[0])))\n"
+    )
+    f.write('ax1.set_title("embryo volume (raw)", fontsize=15)\n')
     f.write("ax1.legend(prop={'size': 10})\n")
 
     f.write("\n")
     f.write("for n in volume_along_time:\n")
     f.write("    x = list(volume_along_time[n].keys())\n")
     f.write("    x = sorted(x)\n")
-    f.write("    t = [temporal_coefficients[n][0] * i + temporal_coefficients[n][1] for i in x]\n")
+    f.write(
+        "    t = [temporal_coefficients[n][0] * i + temporal_coefficients[n][1] for i in x]\n"
+    )
     f.write("    y = [volume_along_time[n][i] for i in x]\n")
     f.write("    ax2.plot(t, y)\n")
-    f.write("ax2.set_title(\"embryo volume (+ temporal alignment)\", fontsize=15)\n")
+    f.write('ax2.set_title("embryo volume (+ temporal alignment)", fontsize=15)\n')
     f.write("ax2.legend(labels, prop={'size': 10})\n")
 
     f.write("\n")
     f.write("for n in volume_along_time:\n")
     f.write("    x = list(volume_along_time[n].keys())\n")
     f.write("    x = sorted(x)\n")
-    f.write("    t = [temporal_coefficients[n][0] * i + temporal_coefficients[n][1] for i in x]\n")
-    f.write("    y = [volume_along_time[n][i] * voxelsize[n][i] * voxelsize[n][i] * voxelsize[n][i] for i in x]\n")
+    f.write(
+        "    t = [temporal_coefficients[n][0] * i + temporal_coefficients[n][1] for i in x]\n"
+    )
+    f.write(
+        "    y = [volume_along_time[n][i] * voxelsize[n][i] * voxelsize[n][i] * voxelsize[n][i] for i in x]\n"
+    )
     f.write("    ax3.plot(t, y)\n")
-    f.write("ax3.set_title(\"embryo volume (+ constantness)\", fontsize=15)\n")
+    f.write('ax3.set_title("embryo volume (+ constantness)", fontsize=15)\n')
     f.write("ax3.legend(labels, prop={'size': 10})\n")
 
     f.write("\n")
@@ -1671,7 +1956,9 @@ def _figures_embryo_volume(atlases, parameters):
     f.write("    plt.close()\n")
 
     f.write("\n")
-    f.write("fig, (ax1, ax2, ax3) = plt.subplots(ncols=3, sharey=True, figsize=(24, 8))\n")
+    f.write(
+        "fig, (ax1, ax2, ax3) = plt.subplots(ncols=3, sharey=True, figsize=(24, 8))\n"
+    )
     f.write("labels = []\n")
     f.write("for n in surface_along_time:\n")
     f.write("    labels += [n]\n")
@@ -1680,27 +1967,33 @@ def _figures_embryo_volume(atlases, parameters):
     f.write("    y = [surface_along_time[n][i] for i in x]\n")
     f.write("    p = ax1.plot(x, y, label=n)\n")
     f.write("\n")
-    f.write("ax1.set_title(\"embryo surface (raw)\", fontsize=15)\n")
+    f.write('ax1.set_title("embryo surface (raw)", fontsize=15)\n')
     f.write("ax1.legend(prop={'size': 10})\n")
 
     f.write("\n")
     f.write("for n in surface_along_time:\n")
     f.write("    x = list(surface_along_time[n].keys())\n")
     f.write("    x = sorted(x)\n")
-    f.write("    t = [temporal_coefficients[n][0] * i + temporal_coefficients[n][1] for i in x]\n")
+    f.write(
+        "    t = [temporal_coefficients[n][0] * i + temporal_coefficients[n][1] for i in x]\n"
+    )
     f.write("    y = [surface_along_time[n][i] for i in x]\n")
     f.write("    ax2.plot(t, y)\n")
-    f.write("ax2.set_title(\"embryo surface (+ temporal alignment)\", fontsize=15)\n")
+    f.write('ax2.set_title("embryo surface (+ temporal alignment)", fontsize=15)\n')
     f.write("ax2.legend(labels, prop={'size': 10})\n")
 
     f.write("\n")
     f.write("for n in surface_along_time:\n")
     f.write("    x = list(surface_along_time[n].keys())\n")
     f.write("    x = sorted(x)\n")
-    f.write("    t = [temporal_coefficients[n][0] * i + temporal_coefficients[n][1] for i in x]\n")
-    f.write("    y = [surface_along_time[n][i] * voxelsize[n][i] * voxelsize[n][i] for i in x]\n")
+    f.write(
+        "    t = [temporal_coefficients[n][0] * i + temporal_coefficients[n][1] for i in x]\n"
+    )
+    f.write(
+        "    y = [surface_along_time[n][i] * voxelsize[n][i] * voxelsize[n][i] for i in x]\n"
+    )
     f.write("    ax3.plot(t, y)\n")
-    f.write("ax3.set_title(\"embryo surface (+ constantness)\", fontsize=15)\n")
+    f.write('ax3.set_title("embryo surface (+ constantness)", fontsize=15)\n')
     f.write("ax3.legend(labels, prop={'size': 10})\n")
 
     f.write("\n")
@@ -1721,6 +2014,7 @@ def _figures_embryo_volume(atlases, parameters):
 #
 ################################################################################
 
+
 def _neighbor_histogram(neighbors, atlas, atlasname, threshold=0.05):
     contact = atlas.cell_contact_surface
     cellname = atlas.cell_name
@@ -1731,7 +2025,7 @@ def _neighbor_histogram(neighbors, atlas, atlasname, threshold=0.05):
     # nodespertime[t] = #nodes at time t
     #
     nodes = list(contact.keys())
-    div = 10 ** atlas.time_digits_for_cell_id
+    div = 10**atlas.time_digits_for_cell_id
     times = [n // div for n in nodes]
     nodespertime = Counter(times)
 
@@ -1743,7 +2037,7 @@ def _neighbor_histogram(neighbors, atlas, atlasname, threshold=0.05):
         for k in contact[n]:
             if k % div == 0 or k % div == 1:
                 continue
-            frac += [contact[n][k]/surface]
+            frac += [contact[n][k] / surface]
         #
         # frac: array of surface fraction (without the background)
         #
@@ -1755,8 +2049,14 @@ def _neighbor_histogram(neighbors, atlas, atlasname, threshold=0.05):
             msg = "cell " + str(n)
             if n in cellname:
                 msg += " (" + str(cellname[n]) + ")"
-            msg += " of properties '" + str(atlasname) + "' has " + str(ncells) + " neighbors"
-            msg += " (above " + str(threshold*100) + "%)"
+            msg += (
+                " of properties '"
+                + str(atlasname)
+                + "' has "
+                + str(ncells)
+                + " neighbors"
+            )
+            msg += " (above " + str(threshold * 100) + "%)"
             monitoring.to_log_and_console("\t " + msg)
         t = n // div
         neighbors[nodespertime[t]] = neighbors.get(nodespertime[t], []) + [ncells]
@@ -1764,7 +2064,6 @@ def _neighbor_histogram(neighbors, atlas, atlasname, threshold=0.05):
 
 
 def _figures_neighbor_histogram_period(f):
-
     f.write("\n")
     f.write("axtwin = ax.secondary_xaxis('top')\n")
     f.write("axtwin.tick_params('x', direction='inout', length=10, width=2)\n")
@@ -1774,19 +2073,25 @@ def _figures_neighbor_histogram_period(f):
     f.write("x = [2, 76, 76, 2]\n")
     f.write("y = [0, 0, 14, 14]\n")
     f.write("plt.fill(x, y, color='grey', alpha=0.4)\n")
-    f.write("plt.text(15, 13.5, 'cleavage', ha='left', va='center', fontsize=12, wrap=True)\n")
+    f.write(
+        "plt.text(15, 13.5, 'cleavage', ha='left', va='center', fontsize=12, wrap=True)\n"
+    )
 
     f.write("\n")
     f.write("x = [110, 250, 250, 110]\n")
     f.write("y = [0, 0, 14, 14]\n")
     f.write("plt.fill(x, y, color='grey', alpha=0.4)\n")
-    f.write("plt.text(180, 13.5, 'gastrula', ha='center', va='center', fontsize=12, wrap=True)\n")
+    f.write(
+        "plt.text(180, 13.5, 'gastrula', ha='center', va='center', fontsize=12, wrap=True)\n"
+    )
 
     f.write("\n")
     f.write("x = [332, 624, 624, 332]\n")
     f.write("y = [0, 0, 14, 14]\n")
     f.write("plt.fill(x, y, color='grey', alpha=0.4)\n")
-    f.write("plt.text(480, 13.5, 'neurula', ha='center', va='center', fontsize=12, wrap=True)\n")
+    f.write(
+        "plt.text(480, 13.5, 'neurula', ha='center', va='center', fontsize=12, wrap=True)\n"
+    )
 
 
 def _figures_neighbor_histogram(atlases, parameters):
@@ -1812,21 +2117,26 @@ def _figures_neighbor_histogram(atlases, parameters):
     # neighbors is a dictionary indexed by the number of cells of an embryo
     # neighbors[64] is an array containing the number of neighbors
     #
-    filename = 'figures_neighbor_histogram'
+    filename = "figures_neighbor_histogram"
     file_suffix = None
-    if parameters.figurefile_suffix is not None and isinstance(parameters.figurefile_suffix, str) and \
-            len(parameters.figurefile_suffix) > 0:
-        file_suffix = '_' + parameters.figurefile_suffix
+    if (
+        parameters.figurefile_suffix is not None
+        and isinstance(parameters.figurefile_suffix, str)
+        and len(parameters.figurefile_suffix) > 0
+    ):
+        file_suffix = "_" + parameters.figurefile_suffix
     if file_suffix is not None:
         filename += file_suffix
-    filename += '.py'
+    filename += ".py"
 
     if parameters.outputDir is not None and isinstance(parameters.outputDir, str):
         if not os.path.isdir(parameters.outputDir):
             if not os.path.exists(parameters.outputDir):
                 os.makedirs(parameters.outputDir)
             else:
-                monitoring.to_log_and_console(proc + ": '" + str(parameters.outputDir) + "' is not a directory ?!")
+                monitoring.to_log_and_console(
+                    proc + ": '" + str(parameters.outputDir) + "' is not a directory ?!"
+                )
         if os.path.isdir(parameters.outputDir):
             filename = os.path.join(parameters.outputDir, filename)
     #
@@ -1868,7 +2178,7 @@ def _figures_neighbor_histogram(atlases, parameters):
     f.write("ax.set_xlabel('number of cells', fontsize=15)\n")
     f.write("ax.set_ylabel('number of neighbors', fontsize=15)\n")
     f.write("ax.boxplot(neighbors_per_ncell, positions=ncells)\n")
-    f.write("ax.set_title(\"cell neighbors\", fontsize=15)\n")
+    f.write('ax.set_title("cell neighbors", fontsize=15)\n')
     f.write("ax.set_xticklabels(ticks)\n")
     f.write("ax.set_xlim(left=0)\n")
 
@@ -1890,7 +2200,7 @@ def _figures_neighbor_histogram(atlases, parameters):
     f.write("ax.set_xlabel('number of cells', fontsize=15)\n")
     f.write("ax.set_ylabel('average number of neighbors (+/- std dev)', fontsize=15)\n")
     f.write("ax.errorbar(xp, mp, yerr=sp, color='red', fmt='-', ecolor='blue')\n")
-    f.write("ax.set_title(\"cell neighbors\", fontsize=15)\n")
+    f.write('ax.set_title("cell neighbors", fontsize=15)\n')
     f.write("ax.set_xlim(left=0)\n")
 
     _figures_neighbor_histogram_period(f)
@@ -1911,33 +2221,41 @@ def _figures_neighbor_histogram(atlases, parameters):
 #
 ########################################################################################
 
-def _figure_distribution(d, colormap='plasma', figname=None):
 
-    i_indices = [p['voxel'][0] for p in d]
-    j_indices = [p['voxel'][1] for p in d]
-    k_indices = [p['voxel'][2] for p in d]
-    tab = np.zeros((max(i_indices)+1, max(j_indices)+1, max(k_indices)+1), dtype=bool)
+def _figure_distribution(d, colormap="plasma", figname=None):
+    i_indices = [p["voxel"][0] for p in d]
+    j_indices = [p["voxel"][1] for p in d]
+    k_indices = [p["voxel"][2] for p in d]
+    tab = np.zeros(
+        (max(i_indices) + 1, max(j_indices) + 1, max(k_indices) + 1), dtype=bool
+    )
     values = np.zeros(tab.shape)
     for p in d:
-        tab[p['voxel'][0]][p['voxel'][1]][p['voxel'][2]] = True
-        values[p['voxel'][0]][p['voxel'][1]][p['voxel'][2]] = p['value']
+        tab[p["voxel"][0]][p["voxel"][1]][p["voxel"][2]] = True
+        values[p["voxel"][0]][p["voxel"][1]][p["voxel"][2]] = p["value"]
     # normalize values to 1 for visualization
-    maxvalue = max([p['value'] for p in d])
+    maxvalue = max([p["value"] for p in d])
     print("_distribution_plot maxvalue = " + str(maxvalue))
     cmap = plt.get_cmap(colormap)
-    colors = cmap(values/maxvalue)
+    colors = cmap(values / maxvalue)
 
-    ax = plt.figure().add_subplot(projection='3d')
+    ax = plt.figure().add_subplot(projection="3d")
     # ax.voxels(r, g, b, sphere,
     #          facecolors=colors,
     #          edgecolors=np.clip(2*colors - 0.5, 0, 1),  # brighter
     #          linewidth=0.5)
-    ax.voxels(tab, facecolors=colors, edgecolors=np.clip(2*colors - 0.5, 0, 1), linewidth=0.5)
-    ax.set(xlabel='x', ylabel='y', zlabel='z')
+    ax.voxels(
+        tab,
+        facecolors=colors,
+        edgecolors=np.clip(2 * colors - 0.5, 0, 1),
+        linewidth=0.5,
+    )
+    ax.set(xlabel="x", ylabel="y", zlabel="z")
     if figname is not None:
         plt.savefig(figname)
     else:
         plt.show()
+
 
 ########################################################################################
 #
@@ -1948,23 +2266,26 @@ def _figure_distribution(d, colormap='plasma', figname=None):
 
 def _print_candidates(candidates):
     for i, p in enumerate(candidates):
-        msg = "#{:2d} [{:.2f} {:.2f} {:.2f}]".format(i, p['vector'][0], p['vector'][1], p['vector'][2])
-        msg += " error: {:.2f}".format(p['error'])
+        msg = "#{:2d} [{:.2f} {:.2f} {:.2f}]".format(
+            i, p["vector"][0], p["vector"][1], p["vector"][2]
+        )
+        msg += " error: {:.2f}".format(p["error"])
         print("   " + msg)
-        msg = "value: {:.3f} single_pairing: {:.3f}".format(p['value'], p['score_from_single_pairing'])
-        msg += " multiple_pairing: {:.3f}".format(p['score_from_multiple_pairing'])
-        msg += " symmetry_icp: {:.3f}".format(p['score_from_symmetry_icp'])
+        msg = "value: {:.3f} single_pairing: {:.3f}".format(
+            p["value"], p["score_from_single_pairing"]
+        )
+        msg += " multiple_pairing: {:.3f}".format(p["score_from_multiple_pairing"])
+        msg += " symmetry_icp: {:.3f}".format(p["score_from_symmetry_icp"])
         print("      " + msg)
 
 
 def _symmetry_axis_error_wrt_times(atlas, parameters):
-
     icp.monitoring.copy(monitoring)
 
     cells = list(atlas.cell_contact_surface.keys())
     cells = sorted(cells)
     cells_per_time = {}
-    div = 10 ** atlas.time_digits_for_cell_id
+    div = 10**atlas.time_digits_for_cell_id
     for c in cells:
         t = int(c) // div
         cells_per_time[t] = cells_per_time.get(t, 0) + 1
@@ -1973,7 +2294,9 @@ def _symmetry_axis_error_wrt_times(atlas, parameters):
     unnamedtimes = set([int(c) // div for c in unnamedcells])
     if len(unnamedtimes) > 0:
         # print("   unnamed cells = " + str(unnamedcells))
-        monitoring.to_log_and_console("    unnamed times = " + str(sorted(unnamedtimes)))
+        monitoring.to_log_and_console(
+            "    unnamed times = " + str(sorted(unnamedtimes))
+        )
     alltimes = sorted(list(cells_per_time.keys()))
 
     times = []
@@ -1983,20 +2306,27 @@ def _symmetry_axis_error_wrt_times(atlas, parameters):
     for i, t in enumerate(alltimes):
         if t in unnamedtimes:
             continue
-        msg = "    process " + str(i+1) + "/" + str(len(alltimes)-len(unnamedtimes)) + " time " + str(t)
+        msg = (
+            "    process "
+            + str(i + 1)
+            + "/"
+            + str(len(alltimes) - len(unnamedtimes))
+            + " time "
+            + str(t)
+        )
         monitoring.to_log_and_console(msg)
         times += [t]
 
         symdir = atlas.get_symmetry_axis_from_names(t)
         candidates = atlas.get_direction_distribution_candidates(t, parameters)
         for p in candidates:
-            err = math.acos(np.dot(p['vector'], symdir))
+            err = math.acos(np.dot(p["vector"], symdir))
             if err > np.pi / 2:
                 err = np.pi - err
-            p['error'] = err * 180.0 / np.pi
+            p["error"] = err * 180.0 / np.pi
 
-        minimal_error = min([p['error'] for p in candidates])
-        index = [p['error'] for p in candidates].index(minimal_error)
+        minimal_error = min([p["error"] for p in candidates])
+        index = [p["error"] for p in candidates].index(minimal_error)
         # print("ERROR")
         # _print_candidates(candidates)
         # print("   minimal_error = " + str(minimal_error))
@@ -2004,35 +2334,43 @@ def _symmetry_axis_error_wrt_times(atlas, parameters):
 
         err_distribution += [minimal_error]
 
-        candidates = sorted(candidates, reverse=True, key=lambda x: x['value'])
-        index_from_distribution_value += [[p['error'] for p in candidates].index(minimal_error) + 1]
+        candidates = sorted(candidates, reverse=True, key=lambda x: x["value"])
+        index_from_distribution_value += [
+            [p["error"] for p in candidates].index(minimal_error) + 1
+        ]
         # print("VALUE SORTED")
         # _print_candidates(candidates)
         # print("   index_from_distribution_value = " + str(index_from_distribution_value))
 
-        atlas.del_property('direction_distribution')
+        atlas.del_property("direction_distribution")
 
     ncells = [cells_per_time[t] for t in times]
 
     return times, ncells, err_distribution, index_from_distribution_value
 
+
 def _figure_symmetry_axis(atlases, parameters):
     proc = "_figure_symmetry_axis"
-    filename = 'figure_symmetry_axis'
+    filename = "figure_symmetry_axis"
     file_suffix = None
-    if parameters.figurefile_suffix is not None and isinstance(parameters.figurefile_suffix, str) and \
-            len(parameters.figurefile_suffix) > 0:
-        file_suffix = '_' + parameters.figurefile_suffix
+    if (
+        parameters.figurefile_suffix is not None
+        and isinstance(parameters.figurefile_suffix, str)
+        and len(parameters.figurefile_suffix) > 0
+    ):
+        file_suffix = "_" + parameters.figurefile_suffix
     if file_suffix is not None:
         filename += file_suffix
-    filename += '.py'
+    filename += ".py"
 
     if parameters.outputDir is not None and isinstance(parameters.outputDir, str):
         if not os.path.isdir(parameters.outputDir):
             if not os.path.exists(parameters.outputDir):
                 os.makedirs(parameters.outputDir)
             else:
-                monitoring.to_log_and_console(proc + ": '" + str(parameters.outputDir) + "' is not a directory ?!")
+                monitoring.to_log_and_console(
+                    proc + ": '" + str(parameters.outputDir) + "' is not a directory ?!"
+                )
         if os.path.isdir(parameters.outputDir):
             filename = os.path.join(parameters.outputDir, filename)
 
@@ -2048,11 +2386,19 @@ def _figure_symmetry_axis(atlases, parameters):
     ref_atlases = atlases.get_atlases()
     for a in ref_atlases:
         monitoring.to_log_and_console("... processing " + str(a))
-        na = a.replace('-', '_')
-        times, ncells, edist, idist = _symmetry_axis_error_wrt_times(ref_atlases[a], parameters)
-        f.write("temporal_coefficients = " + str(ref_atlases[a].temporal_alignment) + "\n")
+        na = a.replace("-", "_")
+        times, ncells, edist, idist = _symmetry_axis_error_wrt_times(
+            ref_atlases[a], parameters
+        )
+        f.write(
+            "temporal_coefficients = " + str(ref_atlases[a].temporal_alignment) + "\n"
+        )
         f.write("times_" + na + " = " + str(times) + "\n")
-        f.write("atimes_" + na + " = [temporal_coefficients[0] * i + temporal_coefficients[1]")
+        f.write(
+            "atimes_"
+            + na
+            + " = [temporal_coefficients[0] * i + temporal_coefficients[1]"
+        )
         f.write(" for i in times_" + na + "]\n")
         f.write("ncells_" + na + " = " + str(ncells) + "\n")
         f.write("edist_" + na + " = " + str(edist) + "\n")
@@ -2060,29 +2406,39 @@ def _figure_symmetry_axis(atlases, parameters):
         f.write("\n")
 
     f.write("\n")
-    f.write("fig, (ax1, ax2, ax3) = plt.subplots(ncols=3, sharey=True, figsize=(24, 6))\n")
+    f.write(
+        "fig, (ax1, ax2, ax3) = plt.subplots(ncols=3, sharey=True, figsize=(24, 6))\n"
+    )
     for a in ref_atlases:
-        na = a.replace('-', '_')
-        f.write("p = ax1.plot(ncells_" + na + ", atimes_" + na + ", label='" + na + "')\n")
-        f.write("p = ax2.plot(edist_" + na + ", atimes_" + na + ", label='" + na + "')\n")
-        f.write("p = ax3.plot(idist_" + na + ", atimes_" + na + ", label='" + na + "')\n")
+        na = a.replace("-", "_")
+        f.write(
+            "p = ax1.plot(ncells_" + na + ", atimes_" + na + ", label='" + na + "')\n"
+        )
+        f.write(
+            "p = ax2.plot(edist_" + na + ", atimes_" + na + ", label='" + na + "')\n"
+        )
+        f.write(
+            "p = ax3.plot(idist_" + na + ", atimes_" + na + ", label='" + na + "')\n"
+        )
         f.write("\n")
 
     f.write("ax1.grid(True)\n")
     f.write("ax1.legend(prop={'size': 10})\n")
     f.write("ax1.set_xlabel('cell number')\n")
     f.write("ax1.set_ylabel('time')\n")
-    f.write("ax1.set_title(\"cell number\", fontsize=15)\n")
+    f.write('ax1.set_title("cell number", fontsize=15)\n')
     f.write("\n")
     f.write("ax2.grid(True)\n")
     f.write("ax2.set_xlabel('error (degrees)')\n")
-    f.write("ax2.set_title(\"symmetry axis error of the closest vector\", fontsize=15)\n")
+    f.write('ax2.set_title("symmetry axis error of the closest vector", fontsize=15)\n')
     f.write("\n")
     f.write("ax3.grid(True)\n")
     f.write("ax3.set_xlabel('rank')\n")
-    f.write("ax3.set_title(\"rank of the closest vector\", fontsize=15)\n")
+    f.write('ax3.set_title("rank of the closest vector", fontsize=15)\n')
     f.write("\n")
-    f.write("fig.suptitle('Symmetry axis candidate sorted by distribution value', fontsize=16)\n")
+    f.write(
+        "fig.suptitle('Symmetry axis candidate sorted by distribution value', fontsize=16)\n"
+    )
 
     f.write("\n")
     f.write("if savefig:\n")
